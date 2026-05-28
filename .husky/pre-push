@@ -1,0 +1,24 @@
+# PDF_Viewer_Editor pre-push hook. Diego owns. (Backlog-fix wave, 2026-05-28)
+# husky v9 format: a plain shell script. Runs on every `git push`.
+#
+# Pre-commit is intentionally fast (staged-only lint + main-process tsc). Push
+# is the right place for the SLOWER full-repo checks that match CI's gate, so a
+# branch can't be pushed in a state CI will reject.
+
+# Full three-tsconfig typecheck (main + preload + renderer). This is the
+# complete version of the pre-commit main-only safeguard — it catches any
+# consistent-type-imports / type drift in the renderer + preload trees too.
+echo "[pre-push] full typecheck (main + preload + renderer)..."
+npm run typecheck || {
+  echo "[pre-push] BLOCKED: typecheck failed. Fix before pushing (CI gates on this)."
+  exit 1
+}
+
+# Full-repo lint gate — mirrors CI `npm run lint` (--max-warnings 0). Pre-commit
+# only lints staged files; this catches anything that drifted in unstaged files
+# or pre-existing files the commit didn't touch.
+echo "[pre-push] full lint (--max-warnings 0)..."
+npm run lint || {
+  echo "[pre-push] BLOCKED: lint failed. Run 'npm run lint:fix' then re-check with 'npm run lint'."
+  exit 1
+}

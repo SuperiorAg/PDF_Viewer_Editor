@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      CSP mirrors the main-process header per ARCHITECTURE.md §2.2.
+      - 'unsafe-inline' for style-src is required by some React patterns (revisit Phase 7).
+      - worker-src 'self' blob: is required by pdf.js (blob-URL worker bootstrap).
+      - img-src ... blob: is required for pdf.js page rasterization to blob URLs.
+      - script-src is strictly 'self' — no CDN, no eval.
+      - object-src and frame-src 'none' — no embedded objects or frames.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'none';"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDF_Viewer_Editor</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

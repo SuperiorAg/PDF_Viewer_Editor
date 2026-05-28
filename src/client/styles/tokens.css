@@ -1,0 +1,90 @@
+/* Design tokens — CSS custom properties.
+ * Per docs/ui-spec.md §14 (CSS Modules, no Tailwind). Reference these
+ * variables from component-scoped *.module.css files; never hard-code colors
+ * or spacing.
+ */
+
+:root {
+  /* Surface colors (default Light theme; Phase 2 wires Dark) */
+  --color-bg-app: #f5f5f7;
+  --color-bg-surface: #ffffff;
+  --color-bg-sidebar: #ececef;
+  --color-bg-toolbar: #f9f9fb;
+  --color-bg-hover: rgba(0, 0, 0, 0.04);
+  --color-bg-active: rgba(0, 0, 0, 0.08);
+  --color-bg-overlay: rgba(0, 0, 0, 0.45);
+
+  /* Text */
+  --color-text-primary: #1f2024;
+  --color-text-secondary: #4a4d55;
+  --color-text-muted: #8a8d96;
+  --color-text-inverse: #ffffff;
+
+  /* Borders */
+  --color-border-subtle: #e1e2e8;
+  --color-border-strong: #c4c6cf;
+
+  /* Accents */
+  --color-accent-blue: #2867d6;
+  --color-accent-blue-hover: #1a55c0;
+  --color-accent-yellow: #ffeb3b;
+  --color-accent-green: #2da34c;
+  --color-accent-red: #c63a3a;
+  --color-accent-amber: #d68f1f;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* Type */
+  --font-family-ui:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-family-mono:
+    ui-monospace, SFMono-Regular, 'Cascadia Code', Consolas, 'Liberation Mono', monospace;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 13px;
+  --font-size-lg: 15px;
+  --font-size-xl: 18px;
+
+  /* Radii */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.18);
+
+  /* Z-index scale. Phase 4.1 added --z-menu-dropdown (50) between sidebar (20)
+   * and modal-overlay (100) so the File menu's floating list overlays the
+   * sidebar tabs (Pages/Bookmarks/Forms). Don't promote --z-toolbar itself
+   * above the sidebar — the toolbar shares the same plane as the menu strip
+   * and must remain BELOW sidebar tabs for non-dropdown chrome. */
+  --z-toolbar: 10;
+  --z-sidebar: 20;
+  --z-inspector: 20;
+  --z-status-bar: 30;
+  --z-menu-dropdown: 50;
+  --z-modal-overlay: 100;
+  --z-modal: 101;
+  --z-toast: 200;
+
+  /* Focus */
+  --focus-ring: 0 0 0 2px var(--color-accent-blue);
+
+  /* Layout */
+  --toolbar-height: 44px;
+  --status-bar-height: 28px;
+  --menu-bar-height: 32px;
+  --sidebar-width: 200px;
+  --inspector-width: 260px;
+}

@@ -1,0 +1,131 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.stepIndicator {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  gap: var(--space-2);
+  font-size: 0.875rem;
+}
+
+.step {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+}
+
+.stepActive {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: 600;
+}
+
+.stepDone {
+  background: var(--color-success-muted, var(--color-bg-elevated));
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.input,
+.select {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.button {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.buttonPrimary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: var(--color-primary);
+}
+
+.buttonDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.footer {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}
+
+.certInfo {
+  background: var(--color-bg-elevated);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  border: 1px solid var(--color-border);
+}
+
+.certInfo dt {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.certInfo dd {
+  margin: 0 0 var(--space-2) 0;
+  color: var(--color-text-primary);
+}
+
+.warningBlock {
+  background: var(--color-warning-muted, rgba(255, 213, 79, 0.2));
+  border-left: 3px solid var(--color-warning, #ffd54f);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+}
+
+.errorText {
+  color: var(--color-error);
+  font-size: 0.875rem;
+}
+
+.optionRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.optionsBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.spinner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

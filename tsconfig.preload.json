@@ -1,0 +1,22 @@
+{
+  "//": "Preload tsconfig. Node + DOM (preload runs in a hybrid context). No React JSX.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "outDir": "dist/preload",
+    "rootDir": "src"
+  },
+  "include": [
+    "src/preload/**/*.ts",
+    "src/ipc/contracts.ts",
+    "src/shared/**/*.ts"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "node_modules",
+    "dist"
+  ]
+}

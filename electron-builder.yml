@@ -1,0 +1,329 @@
+# electron-builder configuration — PDF_Viewer_Editor (Phase 1 packaging).
+# Owner: Diego. Spec: docs/project-roadmap.md Phase 1 packaging + locked
+# Decision 4 (Windows file-association installer checkbox, default ON).
+#
+# Windows-only for Phase 1. macOS / Linux are explicit Phase-7 scope.
+# Code-signing block is a placeholder — wire env vars in CI once a cert is
+# provisioned. Cert files are NEVER committed.
+
+appId: com.superiorag.pdfviewer
+productName: PDF Viewer & Editor
+copyright: Copyright (c) ${author}
+artifactName: "${productName}-${version}-${arch}.${ext}"
+
+directories:
+  output: release
+  buildResources: build
+
+# ----------------------------------------------------------------------------
+# Files packaged into the asar.
+# Native modules (better-sqlite3) MUST be excluded from asar (asarUnpack) so
+# Electron's loader can dlopen the .node binary at runtime.
+# ----------------------------------------------------------------------------
+files:
+  - "dist/**/*"
+  - "migrations/**/*"
+  - "package.json"
+  - "!**/*.{ts,map}"
+  - "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}"
+  - "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}"
+  - "!**/node_modules/*.d.ts"
+  - "!**/node_modules/.bin"
+  - "!**/{.eslintrc,.prettierrc,tsconfig.json,tsconfig.*.json}"
+  # Wave 8 (D-8.5): test fixtures must never ship in the installer. The
+  # `files:` block above is an inclusive list (dist + migrations + package
+  # only), so `tests/` is already excluded by default — this explicit
+  # negation is defense-in-depth in case the include list is widened later.
+  - "!tests/**"
+  # Phase 6.1 (Diego, 2026-05-27, v0.6.1 repack) — REVERSED the Phase 4.1.3
+  # exclude of node_modules/pdfjs-dist/{standard_fonts,cmaps}/.
+  #
+  # Phase 4.1.3 reasoning (correct at the time): the RENDERER reads fonts +
+  # cmaps only from `dist/renderer/pdfjs/` (Riley's vite-plugin-static-copy
+  # output; standardFontDataUrl / cMapUrl in pdf-render.ts:189-198), so the
+  # in-asar `node_modules/pdfjs-dist/{standard_fonts,cmaps}/` copies were dead
+  # weight (~1.9 MB) and were excluded.
+  #
+  # Phase 6.1 reverses this because the MAIN-process export loader (David's
+  # Phase 6.1 `createProdSourceLoader` -> `createProdPdfJsSource`) needs them
+  # at the NODE_MODULES path. `resolveExportFontData()` in
+  # `src/main/export/export-bootstrap.ts:500-516` does:
+  #   const root = dirname(require.resolve('pdfjs-dist/package.json'));
+  #   standardFontDataUrl = pathToFileURL(join(root, 'standard_fonts') + sep)
+  #   cMapUrl             = pathToFileURL(join(root, 'cmaps') + sep)
+  # i.e. pdf.js is handed file:// URLs into the pdfjs-dist PACKAGE ROOT, NOT
+  # into dist/renderer/pdfjs/. So the renderer path and the main-process path
+  # DIVERGE: renderer = dist/renderer/pdfjs/, main = node_modules/pdfjs-dist/.
+  # Both must exist in the packaged binary. The excludes are removed so the
+  # main path resolves; the two trees are also asarUnpacked below (file:// URLs
+  # cannot read from inside the asar virtual FS — see asarUnpack rationale).
+  #
+  # Net size impact: ~1.9 MB returns to the shipped tree but lands UNPACKED
+  # (app.asar.unpacked/) rather than inside the asar. The renderer's
+  # dist/renderer/pdfjs/ copy stays as-is (it is the renderer's own funnel).
+  # This is the renderer-vs-main asset-path divergence lesson (promoted to
+  # global JSONL in this wave).
+  # Phase 5 (Diego, 2026-05-27, Wave 21) — strip the in-asar copy of
+  # @tesseract.js-data/eng. The 10.4 MB `eng.traineddata.gz` is shipped via
+  # extraResources (below) to `resources/tessdata/eng.traineddata.gz`, which is
+  # where `process.resourcesPath/tessdata` resolves at runtime
+  # (src/main/pdf-ops/ocr-bootstrap.ts:332 + language-pack-manager.ts §4.3).
+  # Same surgical-exclude discipline as pdfjs-dist standard_fonts/cmaps above:
+  # only the data subtree is dropped; the package's `index.js` + `package.json`
+  # are kept inside the asar so any code path that `require('@tesseract.js-data/
+  # eng')` does not break (no current paths do; defense in depth).
+  - "!**/node_modules/@tesseract.js-data/eng/4.0.0/**"
+  - "!**/node_modules/@tesseract.js-data/eng/4.0.0_best_int/**"
+
+asar: true
+asarUnpack:
+  - "node_modules/better-sqlite3/**/*"
+  - "node_modules/bindings/**/*"
+  - "node_modules/file-uri-to-path/**/*"
+  - "**/*.node"
+  # Phase 5 (Diego, 2026-05-27, Wave 21) — R-W19-A mitigation. tesseract.js
+  # creates Workers via `new Worker(workerPath)` where workerPath points at
+  # `node_modules/tesseract.js/src/worker-script/node/index.js`. Node's Worker
+  # constructor reads from the REAL filesystem; inside `app.asar` (a virtual
+  # filesystem) Worker creation can fail because the file is not seekable as
+  # a regular file. Same applies to tesseract.js-core's WASM blob — the .wasm
+  # is `fetch`-loaded by the Worker via a file:// URL that must resolve to a
+  # real file. Both packages must therefore live UNDER `app.asar.unpacked/`.
+  #
+  # `@napi-rs/canvas` is a native module (loads a .node binary via dlopen);
+  # it cannot live inside the asar at all. The blanket `**/*.node` line above
+  # would catch the .node file itself, but the package wrapper around it
+  # (`index.js`, `js-binding.js`) must also be unpacked because the loader
+  # uses `require.resolve` to locate the .node sibling — and that resolution
+  # works correctly only when the entire package tree is on the real FS.
+  #
+  # Reference: docs/architecture-phase-5.md §9.1 R-W19-A; docs/ocr-engine.md
+  # §3.1; David's Wave 20 handoff "R-1 HIGH" in build-report.md.
+  - "node_modules/tesseract.js/src/worker-script/**/*"
+  - "node_modules/tesseract.js-core/**/*"
+  - "node_modules/@napi-rs/canvas/**/*"
+  # Phase 6.1 (Diego, 2026-05-27, v0.6.1 repack) — unpack pdfjs-dist
+  # standard_fonts + cmaps so the MAIN-process export source loader can read
+  # them via file:// URLs. David's `resolveExportFontData()`
+  # (src/main/export/export-bootstrap.ts:500-516) builds:
+  #   standardFontDataUrl = file://<pdfjs-dist root>/standard_fonts/
+  #   cMapUrl             = file://<pdfjs-dist root>/cmaps/
+  # and hands them to `pdfjs.getDocument({ standardFontDataUrl, cMapUrl })`.
+  # pdf.js fetches the .pfb / .bcmap assets from those file:// URLs at render
+  # time. file:// URLs are resolved by Node/Chromium against the REAL
+  # filesystem; an asar virtual path is NOT a real file, so the fetch would
+  # fail (404/ENOENT) and image-export of any text PDF would render with the
+  # internal fallback metrics (glyphs still draw, but standard-font width /
+  # CJK cmap fidelity degrades).
+  #
+  # Unpacking moves the package to app.asar.unpacked/node_modules/pdfjs-dist/.
+  # `require.resolve('pdfjs-dist/package.json')` then resolves to the UNPACKED
+  # path (electron's asar shim redirects require.resolve to .unpacked when the
+  # target is unpacked), so `dirname(pkgJson)` points at the unpacked root and
+  # the sibling standard_fonts/ + cmaps/ dirs are real files beside it.
+  #
+  # We unpack the two asset trees PLUS package.json (NOT all of pdfjs-dist —
+  # build/ + types stay inside the asar). package.json MUST be unpacked too:
+  # `resolveExportFontData()` resolves the font dirs via
+  # `dirname(require.resolve('pdfjs-dist/package.json'))`. Electron's asar shim
+  # redirects a path to app.asar.unpacked/ only when THAT path's file is
+  # unpacked. If package.json stayed inside the asar, require.resolve would
+  # return the in-asar path and `join(root, 'standard_fonts')` would point INTO
+  # the asar (the file:// fetch then fails). Unpacking package.json makes
+  # require.resolve return the unpacked root so the sibling standard_fonts/ +
+  # cmaps/ dirs (also unpacked) resolve as real files. Verified post-build via
+  # scripts/wave-26-1-pdfjs-fonts-evidence.mjs (asserts the unpacked tree exists
+  # AND the prod loader renders a real text PDF using those file:// URLs).
+  # Same surgical-unpack discipline as the tesseract worker-script above.
+  - "node_modules/pdfjs-dist/package.json"
+  - "node_modules/pdfjs-dist/standard_fonts/**/*"
+  - "node_modules/pdfjs-dist/cmaps/**/*"
+
+# Phase 1: bundle migrations alongside the packaged app so the runtime
+# migration runner can read them.
+#
+# Phase 5 (Diego, 2026-05-27, Wave 21) — bundle the English Tesseract trained-
+# data pack so first-run OCR works offline. Resolves to
+# `resources/tessdata/eng.traineddata.gz` at runtime; main-process language
+# pack manager reads from `process.resourcesPath/tessdata` (see
+# src/main/pdf-ops/ocr-bootstrap.ts:332). Locked decision P5-L-4: ship `eng`
+# bundled, lazy-download other langs.
+#
+# Source path note: the @tesseract.js-data/eng@1.0.0 npm package lays out
+# `4.0.0/eng.traineddata.gz` (fast variant, ~10.4 MB) and
+# `4.0.0_best_int/eng.traineddata.gz` (best-int variant, ~2.9 MB). The
+# `_fast` directory name referenced in architecture-phase-5.md §3.3 is
+# the upstream tessdata.projectnaptha.com URL path, not the npm-internal
+# directory name. We bundle the `4.0.0/` variant (fast); the upstream
+# tessdata mirror at `tessdata.projectnaptha.com/4.0.0_fast/` ships the
+# same file under a different parent path.
+extraResources:
+  - from: migrations
+    to: migrations
+    filter: ["**/*"]
+  - from: node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz
+    to: tessdata/eng.traineddata.gz
+
+# ============================================================================
+# Windows targets — NSIS installer + portable .exe
+# ============================================================================
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  # icon: build/icon.ico  # add a 256x256 .ico to build/ before first signed ship
+  # Code-signing placeholder — populate in CI from env when cert is available.
+  # certificateFile: ${env.WIN_CSC_LINK}
+  # certificatePassword: ${env.WIN_CSC_KEY_PASSWORD}
+  # signingHashAlgorithms:
+  #   - sha256
+  # publisherName: Superior AG
+  # File association registered by NSIS via the include script (see below).
+  fileAssociations:
+    - ext: pdf
+      name: PDF Document
+      description: Portable Document Format
+      role: Editor
+      mimeType: application/pdf
+      # icon: build/icon.ico  # add a per-extension .ico when ready
+      # Note: electron-builder writes the registry keys; the installer
+      # checkbox that controls WHETHER these are written is wired in
+      # build/installer.nsh below (Decision 4: default ON).
+
+# ============================================================================
+# NSIS installer config — file-association checkbox default ON (Decision 4)
+# ============================================================================
+nsis:
+  oneClick: false                  # show wizard with checkboxes
+  perMachine: false                # current-user install — no UAC unless cert
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: PDF Viewer & Editor
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false  # preserve recents + settings + bookmarks
+  include: build/installer.nsh     # ships the "Associate .pdf" checkbox flow
+  # installerIcon: build/icon.ico        # add once a .ico is in build/
+  # uninstallerIcon: build/icon.ico
+  # installerHeader: build/installerHeader.bmp
+  # installerSidebar: build/installerSidebar.bmp
+  # uninstallerSidebar: build/installerSidebar.bmp
+  warningsAsErrors: false
+
+# ============================================================================
+# Portable .exe — single-file, no install, runs from any directory.
+# ============================================================================
+portable:
+  artifactName: "${productName}-${version}-${arch}-portable.${ext}"
+
+# ============================================================================
+# macOS targets — Phase 7 (Diego, Wave 29). CONFIG-ONLY, **UNVERIFIED**.
+#
+# !!! UNVERIFIED ON REAL HARDWARE !!! Per locked decision P7-L-1
+# (architecture-phase-7.md §2): mac/linux are configured but NOT built by CI
+# and NOT tested on a real host (none exists in this build environment). The
+# config is correct + reusable; verification is a Phase 7.1 step that requires
+# a real Mac + the L-002 screenshot drill on that host. Shipping an UNVERIFIED
+# mac binary as if verified would be the dishonest move the trust-floor pattern
+# (§8 obligation #3) exists to prevent. Do NOT enable mac/linux in the CI
+# matrix without first running the binary on real hardware + capturing pixels.
+#
+# Native-module risk (architecture-phase-7.md §6, Riley Q-E): the two failure
+# modes most likely to crash an UNVERIFIED mac/linux binary on LAUNCH:
+#   - better-sqlite3 (HIGH): from-source rebuild needs the target toolchain
+#     (Xcode CLT on mac / build-essential on linux). electron-builder runs
+#     `@electron/rebuild` (via the postinstall `install-app-deps`) to compile
+#     the N-API addon against the target platform + Electron ABI. If that
+#     rebuild fails, the DB layer throws on startup -> white-screen app. This
+#     is exactly the class of defect a config-only ship CANNOT catch.
+#   - @napi-rs/canvas (MEDIUM): ships per-platform prebuilt .node binaries
+#     (darwin-x64, darwin-arm64, linux-x64-gnu). The `universal` mac target
+#     below requires electron-builder's universal merge to include BOTH
+#     darwin-x64 AND darwin-arm64 prebuilds in the merged app. UNVERIFIED.
+#     (Currently only @napi-rs/canvas-win32-x64-msvc materializes on this host;
+#     the darwin/linux subpackages show as UNMET OPTIONAL until installed on
+#     the respective platform — normal, npm skips foreign optionalDependencies.)
+#   - tesseract.js-core (LOW): WASM is platform-agnostic; the asarUnpack globs
+#     below are top-level (NOT nested under win:) so they apply to all three
+#     platforms per architecture-phase-7.md §6.1.
+#
+# Native-module rebuild story (the `npmRebuild`/electron-rebuild path):
+#   electron-builder defaults `npmRebuild: true`, which rebuilds native deps
+#   against the target Electron ABI at PACK time on the build host. For mac/
+#   linux this means the rebuild must run ON a mac/linux host (cross-compiling
+#   N-API addons from Windows is not supported). The project's
+#   `postinstall: electron-builder install-app-deps` + `npm run rebuild`
+#   handle the per-platform rebuild; on a real mac/linux CI runner the same
+#   commands compile better-sqlite3 for that platform's toolchain. No config
+#   change is needed — only a real host. (UNVERIFIED.)
+# ============================================================================
+mac:
+  target:
+    - target: dmg
+      arch: [universal] # universal binary intent (x64 + arm64 merged) — UNVERIFIED
+    - target: zip
+      arch: [universal]
+  category: public.app-category.productivity
+  hardenedRuntime: true # required for notarization (Phase 7.1 step)
+  gatekeeperAssess: false # not notarizing in Phase 7
+  # Code-signing + notarization deferred to Phase 7.1 (cert acquisition is a
+  # real-world step; Diego documents the workflow separately). An UNSIGNED dmg
+  # triggers Gatekeeper quarantine on the user's machine — documented limitation
+  # (trust-floor obligation #6). entitlements file is authored in Phase 7.1
+  # alongside the cert; omitted here so an UNVERIFIED config-only build does not
+  # reference a non-existent file.
+  # entitlements: build/entitlements.mac.plist   # Phase 7.1
+  # entitlementsInherit: build/entitlements.mac.plist
+
+# ============================================================================
+# Linux targets — Phase 7 (Diego, Wave 29). CONFIG-ONLY, **UNVERIFIED**.
+# Same UNVERIFIED caveats as the mac block above (P7-L-1). AppImage + deb are
+# both glibc targets; linux-musl (Alpine) is NOT targeted. CI does NOT build
+# these. The better-sqlite3 from-source rebuild on a real linux host needs
+# build-essential; @napi-rs/canvas uses the linux-x64-gnu prebuild.
+# ============================================================================
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Office
+  maintainer: PLACEHOLDER <placeholder@example.com> # honest placeholder until publish
+  desktop:
+    entry:
+      Name: PDF Viewer & Editor
+      Comment: View, edit, annotate, sign, and export PDFs
+      MimeType: application/pdf
+      Categories: Office;Utility;
+
+# ============================================================================
+# Auto-update publish config — Phase 7 (Diego, Wave 29). **PLACEHOLDER**.
+#
+# !!! DOCUMENTED PLACEHOLDER — UPDATES WILL NOT FUNCTION UNTIL CONFIGURED !!!
+# Per locked decision P7-L-2 (architecture-phase-7.md §3.2): the repo is not
+# published, so owner/repo are PLACEHOLDER literals. electron-updater reads
+# this block to emit `app-update.yml` into the packaged binary and to know
+# where to fetch update metadata (`latest.yml` / `latest-mac.yml` /
+# `latest-linux.yml`). Because owner/repo are placeholders, checkForUpdates()
+# cannot resolve a real feed.
+#
+# David's main-process update controller (src/main/auto-update.ts) reads the
+# emitted app-update.yml from process.resourcesPath at startup, detects the
+# PLACEHOLDER, and routes EVERY update call to the honest `update_not_configured`
+# error (NEVER a fake "you're up to date" — trust-floor obligation #2 made
+# executable). The update CLIENT is fully wired; only the publish target is a
+# placeholder. When the project is published for real, replace owner/repo with
+# the live values and the controller auto-detects the feed with ZERO code change.
+#
+# Signature note: even with a real feed, electron-updater REFUSES to apply
+# downloaded bundles until a code-signing cert exists (Authenticode on Windows).
+# That is correct security behavior, documented as trust-floor obligation #6;
+# the cert is the user's Phase 7.1 real-world step.
+# ============================================================================
+publish:
+  provider: github
+  owner: PLACEHOLDER # repo not published yet — see comment above
+  repo: PLACEHOLDER
+  releaseType: release

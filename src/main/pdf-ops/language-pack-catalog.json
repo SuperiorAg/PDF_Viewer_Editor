@@ -1,0 +1,68 @@
+{
+  "version": "2026-05-28",
+  "baseUrl": "https://tessdata.projectnaptha.com/4.0.0_fast",
+  "_note": "Downloadable-pack sha256/sizeBytes are computed over the EXACT bytes the download path fetches: `${baseUrl}/<lang>.traineddata.gz` (tessdata_fast mirror, 4.0.0_fast). Computed 2026-05-28 (David, B-21.1) via fetch + node:crypto sha256 over the gz bytes; the language-pack-manager verifies this SHA-256 of the downloaded .gz before install (language-pack-manager.ts:339). NOTE: the BUNDLED `eng` pack is a DIFFERENT artifact — it ships from the npm package @tesseract.js-data/eng@4.0.0/4.0.0/eng.traineddata.gz (10.9MB), NOT from the 4.0.0_fast CDN (1.98MB). Its sha256 (ed350f37...) is the npm-package hash and is correct as-is; bundled packs resolve via file-existence, not hash, so eng is never verified against the CDN value. Regenerate downloadable SHAs at release via the procedure in ocr-engine.md §4.7 (fetch each URL, sha256 the gz bytes).",
+  "packs": [
+    {
+      "lang": "eng",
+      "displayName": "English",
+      "sizeBytes": 10923060,
+      "sha256": "ed350f3752f81ee8f38769edc14d92d997dababe23b565c59879372cc46a2468",
+      "bundled": true
+    },
+    {
+      "lang": "spa",
+      "displayName": "Spanish",
+      "sizeBytes": 1137561,
+      "sha256": "8db1167a8c9bb015ac8e97278384c3b07dfa9bc8271569beea071d9e296b4487"
+    },
+    {
+      "lang": "fra",
+      "displayName": "French",
+      "sizeBytes": 609363,
+      "sha256": "9800c70d1db21689e1ee91b5c81fe4c822120fa92cf5f0dab0d2b81b616fd468"
+    },
+    {
+      "lang": "deu",
+      "displayName": "German",
+      "sizeBytes": 854318,
+      "sha256": "acb48fa5d63b5088b6299bda4a700d86e97bb9421253be8fc4af8ea2d8247740"
+    },
+    {
+      "lang": "por",
+      "displayName": "Portuguese",
+      "sizeBytes": 1009185,
+      "sha256": "7b0f1749aa255a593b14160c75f74690be740edcae94c5a45efc24ab50235f4d"
+    },
+    {
+      "lang": "ita",
+      "displayName": "Italian",
+      "sizeBytes": 1287268,
+      "sha256": "8a4a1415e492f78d046dab8b8b0efa2c32bd377960ec7db8e9e7b0d28ba54d20"
+    },
+    {
+      "lang": "rus",
+      "displayName": "Russian",
+      "sizeBytes": 1622027,
+      "sha256": "56703dfb466e5d3bac7a5758ab479c5c8a173eb419a146fd934d11406b4bccf3"
+    },
+    {
+      "lang": "chi_sim",
+      "displayName": "Chinese (Simplified)",
+      "sizeBytes": 1730011,
+      "sha256": "3aa140069a09796b8cb8d3ccd0c052e8ed67f20cddb24b70ffa3344b3b94346b"
+    },
+    {
+      "lang": "chi_tra",
+      "displayName": "Chinese (Traditional)",
+      "sizeBytes": 1667198,
+      "sha256": "542b2aecc8e4a3b760694301381543d76bdcd8afdf6d899fb03381801b5e2b47"
+    },
+    {
+      "lang": "jpn",
+      "displayName": "Japanese",
+      "sizeBytes": 1535471,
+      "sha256": "cac936a50547d9546d48bd6d46372fd89f1ba49209b678cf23ed938092688a28"
+    }
+  ]
+}

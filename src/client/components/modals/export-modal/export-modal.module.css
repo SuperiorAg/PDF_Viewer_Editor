@@ -1,0 +1,327 @@
+/* ExportModal styles (Wave 24 — Phase 6). Mirrors the OcrRunModal aesthetic
+ * per ui-spec §15.12. All visual primitives reuse existing CSS variables
+ * (--color-*, --space-*, --font-size-*) defined in the global styles layer. */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 32rem;
+  max-width: 48rem;
+}
+
+.errorMessage {
+  background: var(--color-bg-error-subtle);
+  color: var(--color-text-error);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-error);
+  font-size: var(--font-size-sm);
+}
+
+.stepBar {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.stepBarItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.stepBarItemActive {
+  color: var(--color-accent-blue);
+  font-weight: 600;
+}
+
+.stepBarDivider {
+  color: var(--color-text-disabled);
+}
+
+/* --- Format picker (Step 1) --- */
+
+.formatGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.formatCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
+  cursor: pointer;
+  text-align: left;
+}
+
+.formatCard:hover {
+  border-color: var(--color-accent-blue);
+  background: var(--color-bg-card-hover);
+}
+
+.formatCardActive {
+  border-color: var(--color-accent-blue);
+  background: var(--color-bg-accent-subtle);
+}
+
+.formatCardTitle {
+  font-weight: 600;
+  font-size: var(--font-size-base);
+}
+
+.formatCardExt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.formatCardDescription {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* Image sub-picker — variants */
+.imageSubPicker {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.imageSubVariants {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.imageSubLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+/* --- Quality tier picker (Step 2) --- */
+
+.tierPicker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tierRadioRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.tierRecommendedBadge {
+  background: var(--color-bg-accent-subtle);
+  color: var(--color-accent-blue);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+/* --- Options block --- */
+
+.optionsBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.optionRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.optionLabel {
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  min-width: 8rem;
+}
+
+.optionInput {
+  flex: 1;
+}
+
+.optionInputPath {
+  flex: 1;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Per-format limitations panel (the trust-floor honesty surface) --- */
+
+.limitationsPanel {
+  border: 1px solid var(--color-border-warning);
+  background: var(--color-bg-warning-subtle);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.limitationsHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.limitationsTitle {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-warning);
+  margin: 0;
+}
+
+.limitationsList {
+  margin: 0;
+  padding-left: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.limitationsBullet {
+  line-height: 1.4;
+}
+
+.limitationsFooter {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* --- Buttons row --- */
+
+.buttonRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.buttonRowRight {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.primaryButton {
+  background: var(--color-accent-blue);
+  color: var(--color-text-on-accent);
+  border: 1px solid var(--color-accent-blue);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.primaryButton:disabled {
+  background: var(--color-bg-disabled);
+  border-color: var(--color-border-disabled);
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-subtle);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.secondaryButton:disabled {
+  background: var(--color-bg-disabled);
+  border-color: var(--color-border-disabled);
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+/* --- Step 4 — running view --- */
+
+.runningPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.runningProgress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.progressBar {
+  flex: 1;
+  height: 8px;
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--color-accent-blue);
+  transition: width 0.2s ease;
+}
+
+/* --- Summary / confirm view --- */
+
+.confirmSummary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.confirmRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.confirmLabel {
+  color: var(--color-text-muted);
+}
+
+.confirmValue {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}

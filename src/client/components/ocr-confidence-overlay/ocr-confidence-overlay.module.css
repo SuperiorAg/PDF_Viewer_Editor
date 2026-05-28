@@ -1,0 +1,47 @@
+/* OcrConfidenceOverlay — orange-stroked boxes over low-confidence words.
+ * Per ui-spec.md §14.4.
+ *
+ * Boxes are pointer-events: none — they don't intercept the canvas's own
+ * pointer events (annotation tool, selection drag). Tooltip rendering uses a
+ * separate hoverable container per-box.
+ */
+
+.container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* z-index: above PdfCanvas page bitmap, below annotation layer.
+   * Page bitmap is z-index 0; annotation layer is 5 — we sit at 3. */
+  z-index: 3;
+}
+
+.box {
+  position: absolute;
+  border: 1.5px solid var(--color-accent-amber);
+  border-radius: 2px;
+  background: rgba(214, 143, 31, 0.08);
+  /* Enable hover semantics ONLY on the individual box, not the container.
+   * Tooltip support is a Phase 5.1 enhancement; v1 uses title attribute. */
+  pointer-events: auto;
+  cursor: help;
+}
+
+.banner {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  margin: 0 var(--space-3) var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(214, 143, 31, 0.12);
+  border: 1px solid var(--color-accent-amber);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  pointer-events: auto;
+}
+
+.bannerStrong {
+  font-weight: 600;
+  color: var(--color-accent-amber);
+}

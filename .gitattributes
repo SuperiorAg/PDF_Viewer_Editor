@@ -1,0 +1,13 @@
+# Normalize line endings: let Git decide text vs binary, store LF in the repo.
+* text=auto
+
+# Explicit binary types (no line-ending conversion)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.node binary
+*.traineddata binary
+*.gz binary

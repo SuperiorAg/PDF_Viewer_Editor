@@ -1,0 +1,33 @@
+.boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--space-8);
+  text-align: center;
+}
+
+.heading {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-xl);
+  color: var(--color-accent-red);
+}
+
+.message {
+  margin: 0 0 var(--space-6);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+}
+
+.button {
+  padding: var(--space-2) var(--space-5);
+  background: var(--color-accent-blue);
+  color: var(--color-text-inverse);
+  border-radius: var(--radius-md);
+}
+
+.button:hover {
+  background: var(--color-accent-blue-hover);
+}

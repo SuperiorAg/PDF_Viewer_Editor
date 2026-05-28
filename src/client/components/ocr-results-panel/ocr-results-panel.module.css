@@ -1,0 +1,118 @@
+/* OcrResultsPanel — sidebar tab. Per ui-spec.md §14 amendment.
+ */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  height: 100%;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.summary {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-app);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+}
+
+.search {
+  width: 100%;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong);
+  font-size: var(--font-size-sm);
+}
+
+.searchHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.actionBtn {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+.actionBtnPrimary {
+  background: var(--color-accent-blue);
+  color: var(--color-text-inverse);
+  border-color: var(--color-accent-blue);
+}
+
+.resultsList {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.wordRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-sm);
+  align-items: center;
+}
+
+.wordRow:hover {
+  background: var(--color-bg-hover);
+}
+
+.wordText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.confHigh {
+  color: var(--color-accent-green);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
+
+.confLow {
+  color: var(--color-accent-amber);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
+
+.pageLabel {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.emptyState {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}

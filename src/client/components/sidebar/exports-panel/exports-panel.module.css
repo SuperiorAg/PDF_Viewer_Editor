@@ -1,0 +1,115 @@
+/* ExportsPanel styles — the Phase 6 Exports sidebar tab (5th tab).
+ * Per ui-spec §15.4. Visual primitives reuse existing CSS variables. */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.honestyBanner {
+  background: var(--color-bg-warning-subtle);
+  border: 1px solid var(--color-border-warning);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.honestyBannerTitle {
+  font-weight: 600;
+  color: var(--color-text-warning);
+  margin-bottom: var(--space-1);
+}
+
+.sectionHeader {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+}
+
+.jobRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-card);
+}
+
+.jobRowRunning {
+  border-color: var(--color-accent-blue);
+  background: var(--color-bg-accent-subtle);
+}
+
+.jobRowFailed {
+  border-color: var(--color-border-error);
+  background: var(--color-bg-error-subtle);
+}
+
+.jobTopLine {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+}
+
+.jobFormatBadge {
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-accent-blue);
+}
+
+.jobBasename {
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jobMeta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.jobActions {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.actionButton {
+  font-size: var(--font-size-xs);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.actionButton:hover {
+  background: var(--color-bg-card-hover);
+}
+
+.emptyState {
+  padding: var(--space-3);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.olderVersionBadge {
+  display: inline-block;
+  margin-left: var(--space-1);
+  padding: 0 var(--space-1);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-muted);
+  border-radius: var(--radius-pill);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+}

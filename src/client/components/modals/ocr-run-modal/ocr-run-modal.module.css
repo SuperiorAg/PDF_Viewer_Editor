@@ -1,0 +1,235 @@
+/* OcrRunModal — 4-step wizard styling.
+ * Mirrors the visual language of mail-merge-modal / pades-sign-modal.
+ * All tokens come from styles/tokens.css; no inline styles.
+ */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 480px;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.stepTitle {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-2);
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.langList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.langRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.langRow:hover {
+  background: var(--color-bg-hover);
+}
+
+.langRowDisabled {
+  opacity: 0.6;
+}
+
+.langCode {
+  color: var(--color-text-muted);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
+
+.downloadHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+.pageRangeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.numInput {
+  width: 72px;
+}
+
+.preprocessRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.honestyReminder {
+  background: rgba(214, 143, 31, 0.08);
+  border: 1px solid var(--color-accent-amber);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.honestyReminderTitle {
+  font-weight: 600;
+  color: var(--color-accent-amber);
+  margin: 0 0 var(--space-1);
+}
+
+.confirmInvalidate {
+  background: rgba(198, 58, 58, 0.06);
+  border: 1px solid var(--color-accent-red);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.confirmInvalidateTitle {
+  font-weight: 600;
+  color: var(--color-accent-red);
+  margin: 0;
+}
+
+.runningContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.progressBar {
+  width: 100%;
+  height: 12px;
+  background: var(--color-bg-active);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--color-accent-blue);
+  transition: width 0.2s ease-out;
+}
+
+.runningStat {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.phaseLabel {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.doneSummary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.summaryStat {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-2);
+  background: var(--color-bg-app);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.summaryStatLabel {
+  color: var(--color-text-muted);
+}
+
+.summaryStatValue {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.errorMessage {
+  color: var(--color-accent-red);
+  font-size: var(--font-size-sm);
+  padding: var(--space-2);
+  background: rgba(198, 58, 58, 0.06);
+  border-radius: var(--radius-sm);
+}
+
+.footer {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.primary {
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent-blue);
+  color: var(--color-text-inverse);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.primary:disabled {
+  background: var(--color-border-strong);
+  cursor: not-allowed;
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--color-accent-blue-hover);
+}
+
+.secondary {
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.secondary:hover {
+  background: var(--color-bg-hover);
+}
+
+.danger {
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent-red);
+  color: var(--color-text-inverse);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}

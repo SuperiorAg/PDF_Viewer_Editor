@@ -1,0 +1,13 @@
+node_modules/
+dist/
+release/
+build/
+out/
+coverage/
+playwright-report/
+test-results/
+*.min.js
+*.min.css
+migrations/*.sql
+.vite/
+package-lock.json

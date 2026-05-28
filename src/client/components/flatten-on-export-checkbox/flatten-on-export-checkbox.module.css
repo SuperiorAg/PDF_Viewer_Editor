@@ -1,0 +1,10 @@
+.label,
+.labelDisabled {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.labelDisabled {
+  opacity: 0.5;
+}

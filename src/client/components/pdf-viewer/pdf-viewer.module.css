@@ -1,0 +1,16 @@
+.viewer {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: auto;
+  background: var(--color-bg-app);
+  padding: var(--space-6) 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.empty {
+  flex: 1;
+}

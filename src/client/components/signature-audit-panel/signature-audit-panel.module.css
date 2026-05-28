@@ -1,0 +1,113 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.header {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tableHeader {
+  font-weight: 600;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+}
+
+.row {
+  cursor: pointer;
+}
+
+.row:hover {
+  background: var(--color-bg-hover, rgba(0, 0, 0, 0.04));
+}
+
+.row.selected {
+  background: var(--color-bg-selected, rgba(33, 150, 243, 0.08));
+}
+
+.statusOk {
+  color: var(--color-success);
+}
+
+.statusWarn {
+  color: var(--color-warning);
+}
+
+.statusFail {
+  color: var(--color-error);
+}
+
+.details {
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  font-size: 0.875rem;
+}
+
+.details dt {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.details dd {
+  margin: 0 0 var(--space-2) 0;
+  color: var(--color-text-primary);
+  word-break: break-all;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.disclaimer {
+  background: var(--color-warning-muted, rgba(255, 213, 79, 0.1));
+  border-left: 3px solid var(--color-warning, #ffd54f);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.8125rem;
+  border-radius: var(--radius-sm);
+}
+
+.empty {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.button {
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.select {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-input);
+  font: inherit;
+}

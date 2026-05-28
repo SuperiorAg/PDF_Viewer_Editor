@@ -1,0 +1,42 @@
+node_modules/
+dist/
+out/
+release/
+.vite/
+.cache/
+*.log
+
+# Native addon build output (keep source: *.cc, *.h, binding.gyp, README)
+native/**/build/
+native/**/Release/
+native/**/Debug/
+*.node
+*.o
+*.obj
+
+# Note: build/ is buildResources (installer.nsh + icons) — SOURCE, not output.
+# Do NOT ignore it. Build output goes to dist/ (electron-vite) and release/ (electron-builder).
+.DS_Store
+Thumbs.db
+.env
+.env.local
+.env.*.local
+
+# Electron
+*.dmg
+*.exe
+*.msi
+*.AppImage
+*.snap
+*.deb
+*.rpm
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/

@@ -1,0 +1,24 @@
+{
+  "//": "Main-process tsconfig. Covers src/main, src/ipc, src/shared, src/db. No DOM lib (this is Node only). src/db is included because H-1 wiring (wave-3.5) imports Ravi's repo factories into the main bootstrap.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "outDir": "dist/main",
+    "rootDir": "src",
+    "noEmit": false
+  },
+  "include": [
+    "src/main/**/*.ts",
+    "src/ipc/**/*.ts",
+    "src/shared/**/*.ts",
+    "src/db/**/*.ts"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "node_modules",
+    "dist"
+  ]
+}

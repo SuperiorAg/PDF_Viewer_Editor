@@ -1,0 +1,67 @@
+{
+  "title": "Configuración",
+  "sectionsLabel": "Secciones de configuración",
+  "tabs": {
+    "general": "General",
+    "files": "Archivos",
+    "export": "Exportación",
+    "editing": "Edición",
+    "about": "Acerca de"
+  },
+  "general": {
+    "themeLabel": "Tema",
+    "themeSystem": "Sistema",
+    "themeLight": "Claro",
+    "themeDark": "Oscuro",
+    "themeComingSoon": "Llegará en la fase 2.",
+    "recentsMaxLabel": "Máximo de recientes",
+    "confirmCloseLabel": "Confirmar antes de cerrar sin guardar"
+  },
+  "language": {
+    "groupHeading": "Idioma",
+    "pickerLabel": "Idioma de la interfaz",
+    "sampleSubtext": "{{name}} — muestra de traducción; algunos textos pueden aparecer en inglés"
+  },
+  "privacy": {
+    "groupHeading": "Privacidad",
+    "telemetryLabel": "Compartir estadísticas de uso anónimas",
+    "telemetryDescription": "Desactivado de forma predeterminada. Cuando está activado, la aplicación registra solo recuentos anónimos de uso de funciones — nunca el contenido de los documentos, las rutas de archivo ni información personal. En esta versión nada sale de su equipo (los recuentos se guardan en un búfer local que puede inspeccionar más abajo).",
+    "viewCollectedData": "Ver datos recopilados",
+    "dataCleared": "Datos recopilados borrados."
+  },
+  "updates": {
+    "groupHeading": "Actualizaciones",
+    "policyLabel": "Política de comprobación de actualizaciones",
+    "policyManual": "Solo cuando haga clic en «Buscar ahora»",
+    "policyLaunch": "Automáticamente al iniciar",
+    "checkNow": "Buscar actualizaciones ahora",
+    "lastChecked": "Última comprobación: {{when}}",
+    "placeholderNote": "Las actualizaciones consultan las versiones de GitHub. El canal de publicación es un marcador de posición hasta que el proyecto se publique — las actualizaciones no se descargarán hasta que se configure."
+  },
+  "files": {
+    "maxFileSizeLabel": "Tamaño máximo de archivo para abrir (MB)",
+    "associationLabel": "Asociación de archivos PDF",
+    "associationChecking": "Comprobando el predeterminado actual...",
+    "associationIsDefault": "PDF_Viewer_Editor ES el visor de PDF predeterminado.",
+    "associationNotDefault": "PDF_Viewer_Editor NO es actualmente el visor de PDF predeterminado.",
+    "makeDefault": "Establecer como predeterminado",
+    "relinquishDefault": "Renunciar a predeterminado",
+    "windowsConfirm": "Windows podría pedirle que confirme.",
+    "osDenied": "Windows rechazó el cambio.",
+    "unsupportedOs": "No es compatible con esta plataforma.",
+    "nowDefault": "PDF_Viewer_Editor es ahora el visor de PDF predeterminado.",
+    "noLongerDefault": "Ya no es el visor de PDF predeterminado."
+  },
+  "export": {
+    "engineLabel": "Motor de impresión a PDF predeterminado",
+    "engineAuto": "Automático (recomendado)",
+    "enginePdfLib": "pdf-lib (más pequeño, vectorial)",
+    "engineChromium": "Chromium (mayor compatibilidad)",
+    "showWarningsLabel": "Mostrar advertencias tras exportar"
+  },
+  "about": {
+    "versionLabel": "Versión de la aplicación",
+    "blurb": "PDF_Viewer_Editor está construido sobre Electron, React, pdf.js y pdf-lib, todos con licencias permisivas."
+  },
+  "saveError": "No se pudo guardar: {{message}}"
+}

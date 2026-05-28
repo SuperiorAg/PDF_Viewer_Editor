@@ -1,0 +1,28 @@
+{
+  "telemetry": {
+    "offByDefault": "Off by default. When on, the app records anonymous feature-usage counts only — never document content, file paths, or personal information. In this version nothing leaves your computer (counts stay in a local buffer you can inspect).",
+    "auditable": "Nothing has left your computer — these counts live only in memory and you can clear them at any time."
+  },
+  "update": {
+    "placeholder": "Auto-update checks GitHub releases; the publish target is a placeholder until the project is published — updates will not function until a real release channel is configured. The update client is wired and ready.",
+    "codeSigning": "Applying updates in production requires a code-signing certificate. Acquiring the certificate is a manual real-world step documented in the code-signing workflow; until then, downloaded updates cannot be applied."
+  },
+  "platform": {
+    "macLinuxUnverified": "macOS and Linux build configurations are included but UNVERIFIED on real hardware. Native modules (database, canvas) may fail to load on these platforms until a maintainer verifies on a real host."
+  },
+  "locale": {
+    "proofSample": "Spanish (es-ES) is a translation sample to prove the localization framework works — some strings may remain in English. It is not a complete professional translation."
+  },
+  "a11y": {
+    "auditedWithGaps": "Keyboard navigation and screen-reader (Windows Narrator) support cover the critical paths. Freehand annotation drawing and some canvas interactions remain pointer-centric — documented as known gaps."
+  },
+  "ocr": {
+    "notPublicationQuality": "OCR produces best-effort recognized text, not a publication-quality transcription. Accuracy depends on scan quality; always verify against the original."
+  },
+  "export": {
+    "lossyReconstruction": "Office and image exports are a best-effort reconstruction of the PDF's visual content, not a perfect round-trip. Complex layouts, fonts, and vector art may differ from the source."
+  },
+  "sign": {
+    "notLegalAdvice": "A digital signature proves the file was not altered after signing; it is not legal advice and does not by itself make a document legally binding."
+  }
+}

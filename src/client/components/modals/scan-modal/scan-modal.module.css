@@ -1,0 +1,49 @@
+/* ScanModal — Phase 5.1 placeholder.
+ * Per ui-spec.md §14.6.
+ */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 420px;
+}
+
+.deferralMessage {
+  background: rgba(40, 103, 214, 0.06);
+  border: 1px solid var(--color-accent-blue);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.title {
+  font-weight: 600;
+  color: var(--color-accent-blue);
+  margin: 0 0 var(--space-2);
+}
+
+.list {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.closeButton {
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}

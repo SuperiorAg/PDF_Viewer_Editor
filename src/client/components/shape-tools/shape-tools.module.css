@@ -1,0 +1,41 @@
+.toolbar {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.toolButton {
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.toolButtonActive {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: var(--color-primary);
+}
+
+.svgOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.draftShape {
+  fill: rgba(33, 150, 243, 0.2);
+  stroke: var(--color-primary);
+  stroke-width: 2;
+  stroke-dasharray: 4 4;
+}

@@ -1,0 +1,42 @@
+# PDF_Viewer_Editor pre-commit hook. Diego owns. (Backlog-fix wave, 2026-05-28)
+# husky v9 format: a plain shell script. husky sets core.hooksPath=.husky on
+# `npm install` (via the `prepare` script) so this runs on every `git commit`.
+#
+# Goal: stop lint/format debt from re-accumulating the way it did before Wave 30
+# (448 problems cleared in one cross-agent sweep). Catch drift at the moment it
+# is introduced — one file, one author — instead of letting it pile up.
+
+# 1. Lint + format ONLY the staged files (fast). Config lives in package.json
+#    under "lint-staged":
+#      *.{ts,tsx}     -> eslint --fix --max-warnings 0  +  prettier --write
+#      *.{json,css,md} -> prettier --write
+#    `eslint --fix --max-warnings 0` BLOCKS the commit if any error or warning
+#    survives the autofix (warnings are errors here — matches CI `npm run lint`).
+npx lint-staged || exit 1
+
+# 2. tsc SAFEGUARD (NON-NEGOTIABLE — read this before removing it).
+#    `eslint --fix` for @typescript-eslint/consistent-type-imports AGGRESSIVELY
+#    mis-converts mixed value+type `import { ... }` into `import type { ... }`,
+#    which silently breaks value usages (instanceof operands, `.of()` static
+#    calls, class-as-runtime-arg like lookupMaybe(x, PDFDict)). Lint goes GREEN
+#    but `tsc` goes RED (TS1361 / TS2206). Wave 30 hit this in 6 pdf-lib files
+#    (form-engine, pades-detect, signature-appearance, field-dict-authoring,
+#    shape-annotations, export/pdfjs-source). lint-green != types-green.
+#
+#    So after lint-staged autofixes, run a typecheck. The consistent-type-imports
+#    hazard lives entirely in the MAIN process (pdf-lib is a main-only dep), so
+#    tsconfig.main.json --noEmit covers it and is the fastest of the three
+#    tsconfigs. The FULL three-tsconfig typecheck runs in pre-push (.husky/pre-push)
+#    so the slower renderer/preload checks don't tax every commit.
+echo "[pre-commit] typecheck (main) — guards against consistent-type-imports autofix breakage..."
+npx tsc -p tsconfig.main.json --noEmit || {
+  echo ""
+  echo "[pre-commit] BLOCKED: tsc failed AFTER lint-staged autofix."
+  echo "[pre-commit] Most likely cause: eslint --fix collapsed a mixed value+type"
+  echo "[pre-commit] import into 'import type'. Split it back into:"
+  echo "[pre-commit]   import { <values> } from '...';"
+  echo "[pre-commit]   import type { <types> } from '...';"
+  echo "[pre-commit] (classify each symbol: value use = Sym., new Sym, instanceof Sym,"
+  echo "[pre-commit]  Sym-as-bare-arg; everything else is type-only.)"
+  exit 1
+}

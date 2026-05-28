@@ -1,0 +1,67 @@
+{
+  "title": "Settings",
+  "sectionsLabel": "Settings sections",
+  "tabs": {
+    "general": "General",
+    "files": "Files",
+    "export": "Export",
+    "editing": "Editing",
+    "about": "About"
+  },
+  "general": {
+    "themeLabel": "Theme",
+    "themeSystem": "System",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeComingSoon": "Coming in Phase 2.",
+    "recentsMaxLabel": "Recents max items",
+    "confirmCloseLabel": "Confirm before closing unsaved"
+  },
+  "language": {
+    "groupHeading": "Language",
+    "pickerLabel": "Interface language",
+    "sampleSubtext": "{{name}} — translation sample, some strings may appear in English"
+  },
+  "privacy": {
+    "groupHeading": "Privacy",
+    "telemetryLabel": "Share anonymous usage statistics",
+    "telemetryDescription": "Off by default. When on, the app records anonymous feature-usage counts only — never document content, file paths, or personal information. In this version nothing leaves your computer (counts stay in a local buffer you can inspect below).",
+    "viewCollectedData": "View collected data",
+    "dataCleared": "Collected data cleared."
+  },
+  "updates": {
+    "groupHeading": "Updates",
+    "policyLabel": "Update check policy",
+    "policyManual": "Only when I click \"Check now\"",
+    "policyLaunch": "Automatically on launch",
+    "checkNow": "Check for updates now",
+    "lastChecked": "Last checked: {{when}}",
+    "placeholderNote": "Updates check GitHub releases. The release channel is a placeholder until the project is published — updates will not download until it is configured."
+  },
+  "files": {
+    "maxFileSizeLabel": "Max file size to open (MB)",
+    "associationLabel": "PDF file association",
+    "associationChecking": "Checking current default...",
+    "associationIsDefault": "PDF_Viewer_Editor IS the default PDF viewer.",
+    "associationNotDefault": "PDF_Viewer_Editor is currently NOT the default PDF viewer.",
+    "makeDefault": "Make default",
+    "relinquishDefault": "Relinquish default",
+    "windowsConfirm": "Windows may ask you to confirm.",
+    "osDenied": "Windows declined the change.",
+    "unsupportedOs": "Not supported on this platform.",
+    "nowDefault": "PDF_Viewer_Editor is now the default PDF viewer.",
+    "noLongerDefault": "No longer the default PDF viewer."
+  },
+  "export": {
+    "engineLabel": "Default Print-to-PDF engine",
+    "engineAuto": "Auto (recommended)",
+    "enginePdfLib": "pdf-lib (smaller, vector)",
+    "engineChromium": "Chromium (broader compat)",
+    "showWarningsLabel": "Show warnings after export"
+  },
+  "about": {
+    "versionLabel": "App version",
+    "blurb": "PDF_Viewer_Editor is built on Electron, React, pdf.js, and pdf-lib — all permissively licensed."
+  },
+  "saveError": "Could not save: {{message}}"
+}

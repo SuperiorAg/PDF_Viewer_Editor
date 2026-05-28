@@ -1,0 +1,46 @@
+{
+  "navLabel": "Navegación del documento",
+  "panelsLabel": "Paneles de la barra lateral",
+  "tabs": {
+    "thumbnails": "Páginas",
+    "bookmarks": "Marcadores",
+    "forms": "Formularios",
+    "ocrResults": "OCR",
+    "exports": "Exportaciones"
+  },
+  "pageCount_one": "{{count}} página",
+  "pageCount_other": "{{count}} páginas",
+  "thumbnails": {
+    "label": "Miniaturas de página",
+    "pageNumber": "Página {{number}}",
+    "empty": "Sin páginas"
+  },
+  "bookmarks": {
+    "label": "Marcadores",
+    "empty": "No hay marcadores en este documento.",
+    "addRoot": "Añadir marcador",
+    "editModeOn": "El modo de edición de marcadores está activado.",
+    "goToPage": "Ir a la página {{number}}",
+    "deleteBookmark": "Eliminar marcador",
+    "renameBookmark": "Cambiar nombre del marcador"
+  },
+  "forms": {
+    "label": "Campos de formulario",
+    "empty": "No se detectaron campos de formulario. Use el Diseñador de formularios para crearlos.",
+    "detect": "Detectar campos de formulario",
+    "fieldCount_one": "{{count}} campo",
+    "fieldCount_other": "{{count}} campos"
+  },
+  "ocr": {
+    "label": "Resultados de OCR",
+    "empty": "Aún no se ha ejecutado OCR en este documento.",
+    "confidence": "Confianza",
+    "pageResult": "Resultado de la página {{number}}"
+  },
+  "exports": {
+    "label": "Trabajos de exportación",
+    "empty": "Aún no hay trabajos de exportación.",
+    "openFolder": "Abrir carpeta contenedora",
+    "openFile": "Abrir archivo"
+  }
+}

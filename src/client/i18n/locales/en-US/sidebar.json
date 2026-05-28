@@ -1,0 +1,46 @@
+{
+  "navLabel": "Document navigation",
+  "panelsLabel": "Sidebar panels",
+  "tabs": {
+    "thumbnails": "Pages",
+    "bookmarks": "Bookmarks",
+    "forms": "Forms",
+    "ocrResults": "OCR",
+    "exports": "Exports"
+  },
+  "pageCount_one": "{{count}} page",
+  "pageCount_other": "{{count}} pages",
+  "thumbnails": {
+    "label": "Page thumbnails",
+    "pageNumber": "Page {{number}}",
+    "empty": "No pages"
+  },
+  "bookmarks": {
+    "label": "Bookmarks",
+    "empty": "No bookmarks in this document.",
+    "addRoot": "Add bookmark",
+    "editModeOn": "Bookmarks edit mode is on.",
+    "goToPage": "Go to page {{number}}",
+    "deleteBookmark": "Delete bookmark",
+    "renameBookmark": "Rename bookmark"
+  },
+  "forms": {
+    "label": "Form fields",
+    "empty": "No form fields detected. Use the Form Designer to author fields.",
+    "detect": "Detect form fields",
+    "fieldCount_one": "{{count}} field",
+    "fieldCount_other": "{{count}} fields"
+  },
+  "ocr": {
+    "label": "OCR results",
+    "empty": "No OCR has been run on this document yet.",
+    "confidence": "Confidence",
+    "pageResult": "Page {{number}} result"
+  },
+  "exports": {
+    "label": "Export jobs",
+    "empty": "No export jobs yet.",
+    "openFolder": "Open containing folder",
+    "openFile": "Open file"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "//": "Test tsconfig used by Vitest + IDEs to typecheck *.test.ts(x) files across all src/ surfaces. No emit. Pulls in DOM + Node lib so that main-process and renderer tests can both compile under one config.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vitest/globals", "@testing-library/jest-dom"],
+    "noEmit": true,
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "tests/**/*.ts",
+    "vitest.setup.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

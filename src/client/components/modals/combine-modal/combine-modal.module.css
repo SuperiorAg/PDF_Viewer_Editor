@@ -1,0 +1,110 @@
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.actionButton {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-toolbar);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.actionButton:hover {
+  background: var(--color-bg-hover);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 28px 1fr 100px auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-toolbar);
+  border-radius: var(--radius-sm);
+}
+
+.rowIndex {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.rowLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-sm);
+}
+
+.rowRange {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.rowError {
+  grid-column: 1 / -1;
+  font-size: var(--font-size-xs);
+  color: var(--color-status-warning, var(--color-text-muted));
+}
+
+.rowControls {
+  display: flex;
+  gap: 2px;
+}
+
+.rowControls button {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.rowControls button:hover:not([disabled]) {
+  background: var(--color-bg-hover);
+}
+
+.empty {
+  padding: var(--space-5);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.note {
+  margin-top: var(--space-4);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.primary {
+  padding: var(--space-2) var(--space-5);
+  background: var(--color-accent-blue);
+  color: var(--color-text-inverse);
+  border-radius: var(--radius-sm);
+}
+
+.primary:hover:not([disabled]) {
+  background: var(--color-accent-blue-hover);
+}
+
+.secondary {
+  padding: var(--space-2) var(--space-5);
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.secondary:hover {
+  background: var(--color-bg-hover);
+}

@@ -1,0 +1,28 @@
+{
+  "telemetry": {
+    "offByDefault": "Desactivado de forma predeterminada. Cuando está activado, la aplicación registra solo recuentos anónimos de uso de funciones — nunca el contenido de los documentos, las rutas de archivo ni información personal. En esta versión nada sale de su equipo (los recuentos se guardan en un búfer local que puede inspeccionar).",
+    "auditable": "Nada ha salido de su equipo — estos recuentos viven solo en la memoria y puede borrarlos en cualquier momento."
+  },
+  "update": {
+    "placeholder": "La actualización automática consulta las versiones de GitHub; el destino de publicación es un marcador de posición hasta que el proyecto se publique — las actualizaciones no funcionarán hasta que se configure un canal de publicación real. El cliente de actualización está listo y conectado.",
+    "codeSigning": "Aplicar actualizaciones en producción requiere un certificado de firma de código. Adquirir el certificado es un paso manual del mundo real documentado en el flujo de firma de código; hasta entonces, las actualizaciones descargadas no se pueden aplicar."
+  },
+  "platform": {
+    "macLinuxUnverified": "Las configuraciones de compilación para macOS y Linux están incluidas pero NO VERIFICADAS en hardware real. Los módulos nativos (base de datos, lienzo) podrían no cargarse en estas plataformas hasta que un mantenedor lo verifique en un equipo real."
+  },
+  "locale": {
+    "proofSample": "El español (es-ES) es una muestra de traducción para demostrar que el marco de localización funciona — algunos textos pueden permanecer en inglés. No es una traducción profesional completa."
+  },
+  "a11y": {
+    "auditedWithGaps": "La navegación por teclado y el lector de pantalla (Narrador de Windows) cubren las rutas críticas. El dibujo de anotaciones a mano alzada y algunas interacciones del lienzo siguen siendo centradas en el puntero — documentadas como limitaciones conocidas."
+  },
+  "ocr": {
+    "notPublicationQuality": "El OCR produce texto reconocido con el mejor esfuerzo, no una transcripción de calidad de publicación. La precisión depende de la calidad del escaneo; verifique siempre con el original."
+  },
+  "export": {
+    "lossyReconstruction": "Las exportaciones a Office e imagen son una reconstrucción con el mejor esfuerzo del contenido visual del PDF, no una conversión perfecta. Los diseños complejos, las fuentes y el arte vectorial pueden diferir del original."
+  },
+  "sign": {
+    "notLegalAdvice": "Una firma digital demuestra que el archivo no fue alterado tras firmarlo; no es asesoramiento legal y no hace por sí sola que un documento sea legalmente vinculante."
+  }
+}

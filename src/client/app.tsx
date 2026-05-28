@@ -1,0 +1,232 @@
+import { useEffect } from 'react';
+
+import styles from './app.module.css';
+import { EmptyState } from './components/empty-state';
+import { ErrorBoundary } from './components/error-boundary';
+import { FormDesignerToolbar } from './components/form-designer';
+import { Inspector } from './components/inspector';
+import { MenuBar } from './components/menu-bar';
+import { AboutModal } from './components/modals/about-modal';
+import { CombineModal } from './components/modals/combine-modal';
+import { ConfirmCloseUnsavedModal } from './components/modals/confirm-close-unsaved-modal';
+import { ExportEngineDialog } from './components/modals/export-engine-dialog';
+import { ExportModal } from './components/modals/export-modal';
+import { HelpModal } from './components/modals/help-modal';
+import { ImageImportModal } from './components/modals/image-import-modal';
+import { LanguagePackManagerModal } from './components/modals/language-pack-manager-modal';
+import { MailMergeModal } from './components/modals/mail-merge-modal';
+import { OcrRunModal } from './components/modals/ocr-run-modal';
+import { SaveTemplateModal } from './components/modals/save-template-modal';
+import { ScanModal } from './components/modals/scan-modal';
+import { SettingsModal } from './components/modals/settings-modal';
+import { PdfViewer } from './components/pdf-viewer';
+import { Sidebar } from './components/sidebar';
+import { StatusBar } from './components/status-bar';
+import { TextEditOverlay } from './components/text-edit-overlay';
+import { ToastStack } from './components/toast';
+import { Toolbar } from './components/toolbar';
+import { useAppShortcuts } from './hooks/use-app-shortcuts';
+import { usePhase7Bootstrap } from './i18n/use-phase7-bootstrap';
+import { useT } from './i18n/use-t';
+import { useAppDispatch, useAppSelector } from './state/hooks';
+import { selectCurrentDocument } from './state/slices/document-selectors';
+// Phase 3 — mail-merge wizard has its own modalOpen flag (separate from ui.activeModal)
+import { selectExportModalOpen } from './state/slices/export-selectors';
+import { selectMailMergeOpen } from './state/slices/mail-merge-selectors';
+// Phase 5 — OCR slice owns its own modal flag (mirrors signatures + mail-merge).
+import { selectOcrOpenModal } from './state/slices/ocr-selectors';
+// Phase 6 — Export-to-Office modal owns its own openness flag on the export slice.
+import { selectScanModalOpen } from './state/slices/scan-selectors';
+import { selectActiveModal } from './state/slices/ui-selectors';
+import { openImageImportModal, pushToast, setImageImportPreload } from './state/slices/ui-slice';
+import { openDroppedPathThunk, refreshRecentsThunk } from './state/thunks';
+import { subscribeOcrPackDownloadProgress, subscribeOcrProgress } from './state/thunks-phase5';
+// Phase 6 — subscribe to export:progress events at app mount.
+import { listExportFormatsThunk, subscribeExportProgress } from './state/thunks-phase6';
+
+export function App(): JSX.Element {
+  const { t } = useT();
+  const dispatch = useAppDispatch();
+  const doc = useAppSelector(selectCurrentDocument);
+  const activeModal = useAppSelector(selectActiveModal);
+  const mailMergeOpen = useAppSelector(selectMailMergeOpen);
+  const ocrOpenModal = useAppSelector(selectOcrOpenModal);
+  const scanOpen = useAppSelector(selectScanModalOpen);
+  const exportModalOpen = useAppSelector(selectExportModalOpen);
+
+  useAppShortcuts();
+
+  // Phase 7 — seed locale / telemetry opt-in / update channel from settings on
+  // mount; optionally run the launch update-check on the opt-in channel.
+  usePhase7Bootstrap();
+
+  useEffect(() => {
+    void dispatch(refreshRecentsThunk());
+  }, [dispatch]);
+
+  // Phase 5 — subscribe to OCR progress event streams at app mount.
+  // Each subscription returns its unsubscribe handle; cleanup tears down the
+  // bridge listener on unmount.
+  useEffect(() => {
+    const unsubProgress = subscribeOcrProgress(dispatch);
+    const unsubDownload = subscribeOcrPackDownloadProgress(dispatch);
+    return () => {
+      unsubProgress();
+      unsubDownload();
+    };
+  }, [dispatch]);
+
+  // Phase 6 — subscribe to export:progress + load the format catalog once.
+  useEffect(() => {
+    void dispatch(listExportFormatsThunk());
+    const unsub = subscribeExportProgress(dispatch);
+    return () => {
+      unsub();
+    };
+  }, [dispatch]);
+
+  // Window-level drag/drop hand-off. Phase 2 extends the file-type matrix:
+  //   - .pdf  -> openDroppedPathThunk (Phase 1 behavior, untouched per L-001)
+  //   - .png/.jpg/.jpeg/.tif/.tiff -> open the ImageImportModal with the
+  //     image preloaded (ui-spec.md §11.9 drag-drop matrix).
+  // L-001 invariant: relies on Electron's enableDragDropFiles=true; do NOT
+  // touch window-manager.ts. The `(file as any).path` access depends on it.
+  useEffect(() => {
+    const onDragOver = (e: DragEvent): void => {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    };
+    const onDrop = (e: DragEvent): void => {
+      e.preventDefault();
+      if (!e.dataTransfer) return;
+      const files = Array.from(e.dataTransfer.files);
+      const pdf = files.find((f) => f.name.toLowerCase().endsWith('.pdf'));
+      if (pdf) {
+        // any: Electron extends File with a `.path` string at runtime (L-001).
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const droppedPath = (pdf as any).path as string | undefined;
+        if (!droppedPath) {
+          dispatch(
+            pushToast({
+              kind: 'error',
+              message: t('errors:dropPathFailed'),
+            }),
+          );
+          return;
+        }
+        void dispatch(openDroppedPathThunk(droppedPath));
+        return;
+      }
+      // Phase 2: image drag-drop. Only if a document is already open (ui-spec
+      // §11.9 — image-only documents are NOT Phase 2).
+      const image = files.find((f) => {
+        const n = f.name.toLowerCase();
+        return (
+          n.endsWith('.png') ||
+          n.endsWith('.jpg') ||
+          n.endsWith('.jpeg') ||
+          n.endsWith('.tif') ||
+          n.endsWith('.tiff')
+        );
+      });
+      if (image) {
+        if (!doc) {
+          dispatch(
+            pushToast({
+              kind: 'warning',
+              message: t('errors:openPdfFirst'),
+            }),
+          );
+          return;
+        }
+        void (async () => {
+          const buf = await image.arrayBuffer();
+          const u8 = new Uint8Array(buf);
+          const lower = image.name.toLowerCase();
+          const mime: 'image/png' | 'image/jpeg' | 'image/tiff' = lower.endsWith('.png')
+            ? 'image/png'
+            : lower.endsWith('.tif') || lower.endsWith('.tiff')
+              ? 'image/tiff'
+              : 'image/jpeg';
+          dispatch(
+            setImageImportPreload({
+              bytes: u8,
+              mimeType: mime,
+              fileName: image.name,
+              // Drop position is window-relative; we leave the rect derivation
+              // to the modal (renderer doesn't know the canvas->PDF coord
+              // transform here in app.tsx). The modal defaults to (100,100)
+              // for the rect; user can refine after insert via canvas handles.
+              initialMode: 'overlay',
+              initialOverlayPageIndex: null,
+              initialOverlayRect: null,
+            }),
+          );
+          dispatch(openImageImportModal());
+        })();
+        return;
+      }
+      if (files.length > 0) {
+        dispatch(
+          pushToast({
+            kind: 'warning',
+            message: t('errors:unsupportedDropType'),
+          }),
+        );
+      }
+    };
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('drop', onDrop);
+    return () => {
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('drop', onDrop);
+    };
+  }, [dispatch, doc, t]);
+
+  return (
+    <ErrorBoundary>
+      <div className={styles.app}>
+        <MenuBar />
+        <Toolbar />
+        {/* Phase 3 — designer field-type pills toolbar (visible only in designer mode). */}
+        <FormDesignerToolbar />
+        <main className={styles.main}>
+          {doc ? (
+            <>
+              <Sidebar />
+              <PdfViewer />
+              <Inspector />
+            </>
+          ) : (
+            <EmptyState />
+          )}
+        </main>
+        <StatusBar />
+        <ToastStack />
+        {activeModal === 'combine' && <CombineModal />}
+        {activeModal === 'settings' && <SettingsModal />}
+        {activeModal === 'about' && <AboutModal />}
+        {activeModal === 'confirm-close-unsaved' && <ConfirmCloseUnsavedModal />}
+        {activeModal === 'export-engine' && <ExportEngineDialog />}
+        {activeModal === 'help' && <HelpModal />}
+        {activeModal === 'image-import' && <ImageImportModal />}
+        {/* Phase 3 modals */}
+        {activeModal === 'save-template' && <SaveTemplateModal />}
+        {mailMergeOpen && <MailMergeModal />}
+        {/* Phase 5 modals — OcrRunModal + LanguagePackManagerModal share the
+            ocr-slice's openModal field (mutually exclusive). ScanModal lives
+            on the scan-slice's modalOpen flag (placeholder). */}
+        {ocrOpenModal === 'run' && <OcrRunModal />}
+        {ocrOpenModal === 'language-pack-manager' && <LanguagePackManagerModal />}
+        {scanOpen && <ScanModal />}
+        {/* Phase 6 — Export-to-Office modal. The export-slice carries its own
+            modalStep flag (separate from ui.activeModal) so it composes with
+            other modal pipelines (Settings + Export simultaneously is not
+            possible by intent, but the structural separation mirrors Phase 5
+            ocr-slice). */}
+        {exportModalOpen && <ExportModal />}
+        <TextEditOverlay />
+      </div>
+    </ErrorBoundary>
+  );
+}

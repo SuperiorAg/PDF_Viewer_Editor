@@ -1,0 +1,240 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-size: 13px;
+  background: var(--surface-1, #1c1c1f);
+  color: var(--text-1, #e5e7eb);
+}
+
+.banner {
+  padding: 8px 10px;
+  background: var(--surface-2, #25252a);
+  border-bottom: 1px solid var(--border-1, #2e2e34);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bannerError {
+  color: var(--danger-400, #ef4444);
+}
+
+.bannerWarning {
+  font-size: 12px;
+  color: var(--warning-400, #f59e0b);
+}
+
+.retryButton {
+  margin-top: 6px;
+  align-self: flex-start;
+  background: transparent;
+  color: inherit;
+  border: 1px solid var(--border-1, #2e2e34);
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.commitBanner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--accent-900, #1e3a8a);
+  border-bottom: 1px solid var(--border-1, #2e2e34);
+  font-size: 12px;
+}
+
+.commitActions {
+  display: flex;
+  gap: 4px;
+}
+
+.commitButton,
+.discardButton {
+  background: var(--surface-0, #131316);
+  color: inherit;
+  border: 1px solid var(--border-1, #2e2e34);
+  padding: 3px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.commitButton:hover {
+  background: var(--accent-700, #2563eb);
+}
+
+.placeholder {
+  padding: 12px 10px;
+  color: var(--text-2, #9ca3af);
+}
+
+.fieldTree {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.pageGroup {
+  margin-bottom: 4px;
+}
+
+.pageHeader {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: inherit;
+  border: none;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.pageCount {
+  color: var(--text-2, #9ca3af);
+  font-weight: 400;
+  margin-left: 4px;
+  font-size: 11px;
+}
+
+.fieldList {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 18px;
+}
+
+.fieldRow {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: transparent;
+  color: inherit;
+  border: none;
+  padding: 3px 10px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.fieldRow:hover {
+  background: var(--surface-2, #25252a);
+}
+
+.fieldName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.required {
+  color: var(--danger-400, #ef4444);
+  margin-left: 2px;
+}
+
+.fieldType {
+  color: var(--text-2, #9ca3af);
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+.dirtyDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning-400, #f59e0b);
+  margin-left: 6px;
+}
+
+.bottomBar {
+  border-top: 1px solid var(--border-1, #2e2e34);
+  padding: 6px 8px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  background: var(--surface-2, #25252a);
+}
+
+.templatesGroup {
+  position: relative;
+}
+
+.templateToggle,
+.saveTemplateButton,
+.designerToggle {
+  background: var(--surface-0, #131316);
+  color: inherit;
+  border: 1px solid var(--border-1, #2e2e34);
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.templateToggle:hover,
+.saveTemplateButton:hover:not(:disabled),
+.designerToggle:hover {
+  background: var(--surface-1, #1c1c1f);
+}
+
+.saveTemplateButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.templatesDropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 4px;
+  background: var(--surface-0, #131316);
+  border: 1px solid var(--border-1, #2e2e34);
+  border-radius: 3px;
+  min-width: 180px;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.templatesDropdown ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.templatesEmpty {
+  padding: 10px;
+  color: var(--text-2, #9ca3af);
+  margin: 0;
+  font-size: 12px;
+}
+
+.templateItem {
+  width: 100%;
+  background: transparent;
+  color: inherit;
+  border: none;
+  padding: 6px 10px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.templateItem:hover {
+  background: var(--surface-2, #25252a);
+}
+
+.templateName {
+  font-weight: 500;
+}
+
+.templateCount {
+  font-size: 11px;
+  color: var(--text-2, #9ca3af);
+}

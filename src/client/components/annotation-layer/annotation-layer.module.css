@@ -1,0 +1,59 @@
+.layer {
+  position: absolute;
+  inset: 0;
+}
+
+.annot {
+  position: absolute;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.annot:focus-visible {
+  outline: 2px solid var(--color-accent-blue);
+  outline-offset: 2px;
+}
+
+.highlight {
+  border-radius: 2px;
+}
+
+.selected {
+  outline: 2px solid var(--color-accent-blue);
+  outline-offset: 2px;
+}
+
+.sticky {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  box-shadow: var(--shadow-sm);
+}
+
+.freeText {
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  border: 2px solid;
+  border-radius: 2px;
+  padding: 2px 4px;
+  background: rgba(255, 255, 255, 0.9);
+  text-align: left;
+  font-size: 12px;
+}
+
+.freeTextContents {
+  white-space: pre-wrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+}
+
+.draftRect {
+  position: absolute;
+  pointer-events: none;
+  border: 2px dashed var(--color-accent-blue);
+  background: rgba(40, 103, 214, 0.12);
+}

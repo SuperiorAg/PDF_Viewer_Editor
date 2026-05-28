@@ -1,0 +1,212 @@
+# CI pipeline — PDF_Viewer_Editor. Diego owns.
+#
+# Triggers on PR + push to main. Matrix runs:
+#   - windows-latest (primary; only platform that runs Playwright Electron + packaging)
+#   - ubuntu-latest  (lint + typecheck + Vitest smoke; no packaging, no e2e)
+#
+# Cache strategy:
+#   - npm via setup-node's `cache: npm` (uses package-lock.json)
+#   - Playwright browsers via actions/cache keyed on Playwright version
+#
+# Native module ABI — the binary better-sqlite3 needs DIFFERS by job, because
+# the ABI of the runtime that loads it differs:
+#   - Vitest loads better-sqlite3 under PLAIN NODE 20  -> needs node ABI v115.
+#   - Electron 30 loads it at runtime (e2e + packaged) -> needs electron ABI v123.
+# These two ABIs are NOT the same (Node 20 = v115, Electron 30's bundled Node
+# = v123). `npm ci`'s `postinstall` (electron-builder install-app-deps) leaves
+# the ELECTRON-ABI binary in place, so each job sets up the binary it needs:
+#   - check job (lint/typecheck/TEST): `npm rebuild better-sqlite3` after npm ci
+#       -> fetches the node-v115 prebuild so vitest can dlopen it. (Backlog-fix
+#          wave, Diego 2026-05-28 — this step was DESCRIBED in this comment for
+#          waves but never actually present in the YAML, so the db tests would
+#          have hit ERR_DLOPEN_FAILED in CI too; the step now exists.)
+#   - e2e + build jobs: `npm run rebuild` (electron-builder install-app-deps)
+#       -> Electron-ABI v123 binary, which is what the launched/packaged app loads.
+# Background on the ABI skew error class:
+# `.learnings/failures/2026-05-27-vitest-node24-discovery-regression.md` (Wave 25).
+# Local Node-24 dev hosts use `npm run rebuild:node` (escape hatch) or Node 20.
+#
+# Vitest version: pinned to ^2.1.9 (was ^1.6.0 pre-Wave-25). Node 24 + vitest
+# 1.6 produced the silent test-discovery regression; 2.x supports both Node
+# 20 (CI) and Node 24 (local dev). CI itself stays on Node 20 LTS.
+#
+# Backlog-fix wave (Diego, 2026-05-28): Node 20 is now the ENFORCED local
+# baseline. `engines.node` = ">=20.10.0 <21" (matches this Node-20 matrix +
+# .nvmrc); `scripts/check-node.mjs` (wired into the `pretest` script) gates the
+# test run with a loud, actionable message when the host Node can't load
+# better-sqlite3, instead of letting vitest emit ~350 cryptic ERR_DLOPEN_FAILED
+# failures. On CI (Node 20) the guard is a fast no-op: Node 20 == the bound +
+# the v115 prebuild loads, so check-node prints "supported; loads. OK." and the
+# suite runs green. The guard is why `npm test` below is safe to call directly.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs on the same branch/PR.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ==========================================================================
+  # lint + typecheck + unit tests — runs on both Windows + Linux.
+  # ==========================================================================
+  check:
+    name: Lint / Typecheck / Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      # Install deps. `npm ci` is reproducible from package-lock.json.
+      # NOTE: `npm ci` runs the `postinstall` hook (electron-builder
+      # install-app-deps), which leaves better-sqlite3 built for the ELECTRON
+      # ABI (v123). Vitest runs under plain Node 20 (ABI v115), so the next
+      # step rebuilds the binding for the Node-20 ABI BEFORE tests run.
+      - name: Install dependencies
+        run: npm ci
+
+      # Rebuild better-sqlite3 for the PLAIN NODE-20 ABI (v115) so Vitest can
+      # dlopen it. `npm rebuild` runs the package's install script
+      # (`prebuild-install || node-gyp rebuild`), which fetches the published
+      # node-v115 prebuild on the Node-20 runner. WITHOUT this step the db
+      # repository tests fail with ERR_DLOPEN_FAILED because the postinstall
+      # left the Electron-ABI binary in place — this is the Node-ABI-vs-Electron
+      # -ABI skew documented in the Wave 25 RCA. The `check` job does NOT
+      # package, so it needs the Node-ABI binary, not the Electron one. (The
+      # separate e2e + build jobs run `npm run rebuild` for the Electron ABI
+      # because they DO launch/package Electron.)
+      - name: Rebuild native modules for Node (test ABI)
+        run: npm rebuild better-sqlite3
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck (main + preload + renderer)
+        run: npm run typecheck
+
+      # `pretest` (scripts/check-node.mjs --strict) gates first: on Node 20 the
+      # v115 binding loads, so it prints "supported; loads. OK." and vitest runs.
+      - name: Unit tests (Vitest)
+        run: npm test
+
+  # ==========================================================================
+  # e2e — Windows only. Boots Electron via Playwright fixture.
+  # Skipped on Linux because: (a) the release target is Windows, (b) headless
+  # Electron in CI Linux needs xvfb wrapping which adds complexity for no gain.
+  # ==========================================================================
+  e2e:
+    name: Playwright e2e (windows-latest)
+    runs-on: windows-latest
+    needs: check
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules for Electron
+        run: npm run rebuild
+
+      # Cache Playwright browser binaries between runs.
+      - name: Get Playwright version
+        id: pw-version
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).devDependencies.'@playwright/test'
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/AppData/Local/ms-playwright
+          key: pw-${{ runner.os }}-${{ steps.pw-version.outputs.version }}
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+
+      # Build the Electron bundle so the e2e harness can launch the packaged
+      # main entry. The e2e test launches via _electron.launch({ args: ['.'] })
+      # which loads dist/main/index.js per package.json main field.
+      - name: Build Electron bundle
+        run: npm run build
+
+      - name: Run Playwright e2e
+        run: npm run e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+  # ==========================================================================
+  # Build artifacts — Windows only. Produces .exe installer + portable .exe.
+  # Runs on push to main (not on PRs) so PRs stay fast.
+  # ==========================================================================
+  build:
+    name: Build Windows artifacts
+    runs-on: windows-latest
+    needs: [check, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules for Electron
+        run: npm run rebuild
+
+      - name: Build + Package (electron-builder)
+        # Code-signing env vars (WIN_CSC_LINK, WIN_CSC_KEY_PASSWORD) come from
+        # GitHub Secrets in a real deploy. Without them, electron-builder
+        # produces an unsigned installer (the build still succeeds, just emits
+        # a warning).
+        env:
+          # WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          # WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run dist:win
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers
+          path: |
+            release/*.exe
+            release/*.msi
+            release/latest*.yml
+          retention-days: 30

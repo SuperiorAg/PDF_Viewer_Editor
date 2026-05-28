@@ -1,0 +1,25 @@
+{
+  "//": "Renderer tsconfig. DOM + JSX. No node:* modules (renderer is sandboxed; only window.pdfApi crosses the boundary). NOTE: `composite: true` removed in Phase 1.1 (D-1.1) — the renderer config is consumed only by `tsc --noEmit` (typecheck) and by electron-vite (which bundles via Vite, not tsc). Project-reference declaration emit was not in use, but the implied `declaration: true` forced TS to NAME every transitive slice-state type for each `createSelector` export, producing a 74-error TS4023 cascade in document-selectors.ts / annotations-selectors.ts / bookmarks-slice.ts / store.ts. Removing `composite` collapses the cascade (verified Wave 5 / Phase 1.1).",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "outDir": "dist/renderer",
+    "rootDir": "src",
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "src/client/**/*.ts",
+    "src/client/**/*.tsx",
+    "src/ipc/contracts.ts",
+    "src/shared/**/*.ts"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "src/client/vite.config.ts",
+    "src/client/vitest.setup.ts",
+    "node_modules",
+    "dist"
+  ]
+}

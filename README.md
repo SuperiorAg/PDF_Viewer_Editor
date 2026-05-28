@@ -1,0 +1,279 @@
+# PDF_Viewer_Editor
+
+A desktop PDF viewer and editor, built on permissive open-source libraries. **Windows verified; macOS + Linux configured but unverified — see [Platform support](#platform-support).**
+
+> **Status — Phase 7 Polish & Cross-Platform (0.7.1). The 7-phase roadmap is implementation-complete; the post-roadmap backlog-fix wave resolved most documented follow-ups.** The app opens PDFs, renders them, edits pages and forms, ships visual + PAdES cryptographic signatures, runs local OCR via Tesseract.js (multi-language download supported), exports to Word / Excel / PowerPoint / image formats (all six export formats now fully functional, including standard-font text in image exports), and adds the polish layer: an **auto-update client** (electron-updater; publish target is a placeholder until the project is published), an **opt-in / default-OFF telemetry framework** (anonymous feature-usage counts only, nothing leaves your machine), **WCAG 2.1 AA accessibility** for the critical paths (keyboard navigation + Windows Narrator), an **i18next localization framework** (English baseline + a Spanish translation sample), and **macOS + Linux build configuration**. A few items remain genuinely blocked on external resources (real hardware, a published release channel + signing cert, a native scanner binding) — read [Platform support](#platform-support) and [Roadmap status](#roadmap-status) before relying on any of them.
+
+---
+
+## What this is
+
+PDF_Viewer_Editor is a desktop PDF tool built with Electron, TypeScript, and React. It uses **only permissively licensed PDF libraries** (pdf.js, pdf-lib, utif, exceljs, node-signpdf, node-forge, pkijs, asn1js, tesseract.js, docx, pptxgenjs, i18next, react-i18next, electron-updater) — no AGPL components, no commercial SDKs, no per-seat licensing.
+
+Phase 7 is the **polish phase**. It adds no new document-editing capability; instead it makes the feature-complete app updatable, measurable (opt-in), accessible, and translatable, and adds the build configuration for non-Windows platforms. Open Settings (**Ctrl+,**) → **General** to switch the interface language, opt into anonymous telemetry, or pick an update channel; open **Help → About** to check for updates and see acknowledgments. Each of these surfaces is built to tell you the truth about its limits at the point of action — telemetry is OFF by default and stores counts in memory only; the update channel is a placeholder; Spanish is a partial translation sample.
+
+The **0.7.1** point release follows the post-roadmap backlog-fix wave: image export now renders standard-font text (it was blank in 0.7.0); all nine downloadable OCR languages have real integrity hashes (multi-language OCR download works); the deep modal i18n extraction is complete (816 keys); the annotation drawing surface has an accessible name + documented keyboard alternative; the toolchain enforces Node 20 with a pre-test guard; and a pre-commit lint hook prevents lint-debt re-accumulation. See [Roadmap status](#roadmap-status) for the resolved-vs-deferred breakdown.
+
+The full feature surface across all seven phases:
+
+| Phase | Capability | State in 0.7.1 |
+|---|---|---|
+| 1 | Open / render / navigate (pan, zoom, thumbnails); page edit (reorder, insert, delete, rotate); combine; bookmarks; print; Print-to-PDF | Live |
+| 2 | Edit-replay engine; atomic Save that preserves edits; command-pattern undo/redo; image import (page or overlay); replace-only text edit | Live |
+| 3 | AcroForm detect / fill / flatten; form designer (create fields); mail-merge from CSV / XLSX | Live |
+| 4 | Annotations (highlight, strikethrough, sticky note, freehand, 7 shapes, text box); visual signatures (typed / drawn / image); PAdES cryptographic signing + audit log | Live |
+| 5 | Local OCR via Tesseract.js; searchable-PDF authoring; confidence overlay; language-pack manager (English bundled; nine additional languages download on demand with SHA-256 verification) | Live |
+| 6 | Export to Word / Excel / PowerPoint / image (PNG / JPEG / TIFF) — all six formats fully functional, including standard-font text in image exports | Live |
+| 7 | Auto-update client; opt-in telemetry; WCAG 2.1 AA a11y; i18next localization; macOS + Linux build config | See [Platform support](#platform-support) + [Roadmap status](#roadmap-status) |
+
+The Phase 2 architecture (replay engine, atomic save, command-pattern undo), Phase 3 surface (forms + mail merge), Phase 4 surface (visual + PAdES signing), Phase 5 surface (OCR + searchable PDFs), and Phase 6 surface (Office + image export) all carry through unchanged. See the [project roadmap](docs/project-roadmap.md) for the phased plan and [Roadmap status](#roadmap-status) for the honest close-out.
+
+---
+
+## Install
+
+Two Windows builds ship with the 0.7.1 milestone:
+
+| File | Type | Notes |
+|---|---|---|
+| `release/PDF Viewer & Editor-0.7.1-x64.exe` | NSIS installer (~137 MB) | One-click install, file-association checkbox is **on by default** (you can uncheck it during install). Adds Start Menu + Desktop entries. |
+| `release/PDF Viewer & Editor-0.7.1-x64-portable.exe` | Portable executable (~137 MB) | Single file, no install. Stores user data under `%APPDATA%/PDF Viewer & Editor/`. |
+
+The 0.7.1 binaries are a backlog-fix repack of 0.7.0 — same Phase 7 dependency set (`electron-updater`, `i18next`, `react-i18next`, `i18next-resources-to-backend`, all MIT and pure JS). The headline change is verified from the packaged binary: image export now renders standard-font text (25,688 dark pixels in the packaged-binary PNG proof versus 0 / blank in 0.6.1). The backlog-fix toolchain wave also added `husky` + `lint-staged` (both MIT, build/test-only — they do NOT ship in the binary); the license walk over that subtree found 25 packages, all permissive, zero AGPL/GPL/LGPL/EPL ingress.
+
+Upgrading from 0.6.x (or earlier) is non-destructive: recents, settings, bookmarks, saved form templates, the Phase 4 signature audit log, the Phase 5 OCR jobs + results + language packs, and the Phase 6 export job history all survive the schema-v7 migration (`migrations/0007_phase7_polish.sql`) that runs automatically on first launch. The 0.7.0 → 0.7.1 upgrade touches no database schema — it is the same schema v7. The Phase 7 migration is the **smallest in the project** — it seeds four new key-value rows in the existing `settings` table (`telemetry.optIn`, `i18n.locale`, `update.channel`, `update.lastCheckedAt`) and adds **no new table and no new column** on any prior table. There is deliberately **no `telemetry_events` table** — the telemetry buffer is in-memory only by privacy design (see [user guide → Telemetry](docs/user-guide.md#telemetry-and-privacy)). See [`docs/build-report.md`](docs/build-report.md) for the wave-by-wave upgrade story.
+
+### A note on SmartScreen
+
+Phase 7 binaries are still **unsigned** (carrying over from Phases 1–6). The first time you launch the installer or portable build, Windows SmartScreen will show a blue "Windows protected your PC" prompt. Click **More info → Run anyway**. Code-signing certificate acquisition is a real-world manual step deferred to Phase 7.1 (it is also a prerequisite for auto-update to apply downloaded bundles — see [Roadmap status](#roadmap-status)). The binaries you build from this source tree are exactly what you'd expect; the SmartScreen warning is the cost of skipping the cert for now.
+
+### System requirements
+
+- Windows 10 1809 or Windows 11 (the verified platform — see [Platform support](#platform-support))
+- 4 GB RAM minimum (8 GB recommended if you OCR large multi-page documents or export image-heavy PDFs at high DPI — image rasterization at 300+ DPI on a 100-page magazine holds substantial transient memory)
+- 200 MB disk for the app, plus working space for the documents you open, any language packs you download, and any exported Office / image files you produce
+- For PAdES signing (Phase 4): a PFX/P12 certificate file plus its password — the app does NOT bundle a test cert. See [user guide → PAdES signing](docs/user-guide.md#pades-cryptographic-signing).
+- For RFC 3161 timestamps (Phase 4): a TSA URL of your choice. See [user guide → Timestamping](docs/user-guide.md#timestamping-rfc-3161).
+- For OCR (Phase 5): nothing extra. English ships in the installer; nine additional languages (Spanish / French / German / Portuguese / Italian / Russian / Simplified + Traditional Chinese / Japanese) download on demand from the language manager with SHA-256 verification.
+- For Export to Office (Phase 6): nothing extra. The Word / Excel / PowerPoint / image writers ship inside the binary.
+- For localization (Phase 7): nothing extra. English (en-US) is the default; Spanish (es-ES, a partial translation sample) ships in the binary and switches live from Settings → General.
+
+---
+
+## Platform support
+
+Honesty first: **Windows is the only platform verified to run.** macOS and Linux build configuration ships in 0.7.0, but no macOS or Linux binary has been produced and launched on real hardware.
+
+| Platform | Build config | Produced + launched | Status |
+|---|---|---|---|
+| **Windows** (x64) | NSIS installer + portable `.exe` | **YES** — the packaged 0.7.1 binary is verified with pixel-level evidence (full UI, Settings, live Spanish switch, About modal, plus a packaged-binary PNG-text-render proof confirming image-export glyphs) | **VERIFIED** |
+| **macOS** (universal: x64 + arm64) | `dmg` + `zip` (`electron-builder.yml`, `hardenedRuntime: true`) | **NO** — config-only; not built, not launched | **CONFIGURED BUT UNVERIFIED** |
+| **Linux** (x64) | `AppImage` + `deb` (`electron-builder.yml`, `category: Office`) | **NO** — config-only; not built, not launched | **CONFIGURED BUT UNVERIFIED** |
+
+The macOS and Linux configs are **produced by CI build configuration and have not been tested on real machines.** They are structurally complete and reusable, but the project's locked decision (P7-L-1: *configure all, verify Windows only*) is deliberate — a green CI package step does not prove a binary runs. The riskiest unverified surface is the **native-module rebuild**: `better-sqlite3` (the database layer) must compile against each target platform's Electron ABI, and `@napi-rs/canvas` (the raster pipeline behind OCR + image export) must merge both arm64 and x64 prebuilds into the macOS universal binary. If either fails to rebuild on a real host, the app would crash on launch. Verifying macOS + Linux on real hardware (with a launch screenshot, mirroring the Windows verification discipline) is the headline **Phase 7.1** work item.
+
+If you want to run on macOS or Linux today, build from source on that host (`npm install && npm run dist`) and treat the result as unverified — please file an issue with what you observe, since that is exactly the verification Phase 7.1 needs.
+
+---
+
+## Use
+
+For the full walkthrough, see [`docs/user-guide.md`](docs/user-guide.md). Headline use cases:
+
+- **[Open and read a PDF](docs/user-guide.md#opening-a-pdf)** — file dialog, drag-and-drop, or the recents menu.
+- **[Navigate with zoom, pan, and thumbnails](docs/user-guide.md#navigating-a-document)** — keyboard shortcuts for everything.
+- **[Edit pages in memory](docs/user-guide.md#editing-pages)** — drag-reorder, insert blank, delete, rotate, insert image as page or overlay, edit text on existing pages.
+- **[Combine multiple PDFs](docs/user-guide.md#combining-pdfs)** — merge two or more files into one.
+- **[Annotate](docs/user-guide.md#annotating)** — highlight, sticky note, text box, freehand, and seven shape tools.
+- **[Capture and place a signature](docs/user-guide.md#capturing-a-signature)** — three modes (typed / drawn / image).
+- **[Sign cryptographically with PAdES](docs/user-guide.md#pades-cryptographic-signing)** — 3-step wizard.
+- **[Review the signature audit log](docs/user-guide.md#signature-audit-panel)** — local "what have I signed and when?" panel.
+- **[Run OCR on a page or document](docs/user-guide.md#running-ocr)** — 4-step wizard; produces a searchable PDF with an invisible text layer aligned to recognized words.
+- **[Manage language packs](docs/user-guide.md#manage-language-packs)** — English ships bundled; other languages download on demand with SHA-256 verification.
+- **[Toggle the OCR confidence overlay](docs/user-guide.md#ocr-confidence-overlay)** — orange boxes over low-confidence recognized words.
+- **[Browse OCR results](docs/user-guide.md#ocr-results-panel)** — 4th sidebar tab with per-page word counts, mean confidence, searchable word list.
+- **[Export to Word / Excel / PowerPoint / image](docs/user-guide.md#exporting-to-office-and-images)** — **NEW in 0.6.0.** 4-step wizard (Format → Quality + options → Confirm → Background). Output is a new file alongside the source; the source PDF is never mutated.
+- **[Browse the Exports sidebar tab](docs/user-guide.md#exports-sidebar)** — **NEW in 0.6.0.** 5th sidebar tab listing in-flight + recent export jobs with Cancel / Open / Show in folder / Re-run actions.
+- **[Working with forms](docs/user-guide.md#working-with-forms)** — detect, fill, and save AcroForm fields (text / checkbox / radio / dropdown / date / signature placeholder).
+- **[Designing forms](docs/user-guide.md#designing-forms)** — toggle the designer (Ctrl+Shift+F), click-to-place new fields, edit properties, save reusable templates.
+- **[Mail merge](docs/user-guide.md#mail-merge)** — 4-step wizard (Ctrl+M): template → data source (CSV or XLSX) → column mapping → output (folder or concatenated, optionally flattened).
+- **[Working with bookmarks](docs/user-guide.md#working-with-bookmarks)** — create, rename, nest, and reorder a full bookmark tree.
+- **[Save the result](docs/user-guide.md#saving)** — produces a valid PDF with all edits, annotations, form values, signatures, AND any OCR text-behind-image layer preserved. (Export is a separate operation; Save is unchanged.)
+- **[Print to PDF with optional flatten](docs/user-guide.md#print-to-pdf)** — exports via pdf-lib (default) or Chromium (fallback); flatten-on-output checkbox available.
+- **[Print](docs/user-guide.md#printing)** — dispatches to the system print dialog via Electron `webContents.print()`.
+- **[Change the interface language](docs/user-guide.md#changing-the-interface-language)** — **NEW in 0.7.0.** Settings → General → language picker. English (default) + Spanish (a partial translation sample — some strings stay English).
+- **[Opt into anonymous telemetry](docs/user-guide.md#telemetry-and-privacy)** — **NEW in 0.7.0.** OFF by default. Anonymous feature-usage counts only; nothing leaves your machine; inspect the buffer in the debug panel.
+- **[Check for updates](docs/user-guide.md#checking-for-updates)** — **NEW in 0.7.0.** Help → About → Check for updates. The update channel is a placeholder until the project is published — see the honest placeholder state.
+- **[About modal](docs/user-guide.md#the-about-modal)** — **NEW in 0.7.0.** Version, acknowledgments, and the update-status area.
+- **[Keyboard navigation + screen-reader support](docs/user-guide.md#accessibility)** — **NEW in 0.7.0.** WCAG 2.1 AA for the critical paths; tested with Windows Narrator. Some pointer-centric gaps documented.
+- **[Undo / Redo](docs/user-guide.md#editing-pages)** — across page, annotation, image, text, bookmark, form-design, Phase-4 shape + visual-signature, and Phase-5 OCR operations. Export is **NOT** undoable — the exported file lives on disk, separate from the source document's edit history (the source itself is untouched).
+
+---
+
+## Roadmap status
+
+The 7-phase roadmap is **implementation-complete** as of 0.7.0 (Julian's Wave 29 review verdict: GREEN), and a post-roadmap **backlog-fix wave (0.7.1)** resolved most of the documented follow-ups (Julian's backlog-fix review verdict: GREEN). What ships in 0.7.1 is honest about its scope; the [resolved backlog](#resolved-in-the-071-backlog-fix-wave) lists what the backlog-fix wave closed, and [Deferred — requires external resources](#deferred--requires-external-resources) lists the three items that genuinely cannot be cleared without resources outside the codebase.
+
+### Phases 1–7 — what's done
+
+All seven phases are implemented. Viewing, page editing, combine, bookmarks, print, Print-to-PDF, annotations, forms, mail-merge, visual + PAdES signing, OCR (with multi-language download), and Office + image export (all six formats, including standard-font text in image exports) are all live (with the per-feature trust-floor caveats documented in the [user guide](docs/user-guide.md)). Phase 7 adds the auto-update client, opt-in telemetry, WCAG 2.1 AA accessibility, the i18next localization framework, and macOS + Linux build config.
+
+### Phase 7 — the four honesty obligations
+
+These are surfaced at the point of action in the app and explained in full in [user guide → Phase 7 trust floor](docs/user-guide.md#phase-7-trust-floor--what-the-app-does-and-doesnt-promise):
+
+- **Telemetry is OFF by default.** When enabled, it records anonymous feature-usage counts only — never document content, file paths, or personal information. In 0.7.0 nothing leaves your machine at all; the transport is an in-memory buffer you can inspect. There is no analytics endpoint, no third-party SDK, no `telemetry_events` table.
+- **The auto-update publish target is a placeholder.** The update *client* is wired and ready, but the release channel is a placeholder until the project is published — updates will not download or install until a real channel is configured. The app reports this honestly ("update channel not configured"); it never shows a fake "you're up to date".
+- **macOS and Linux builds are UNVERIFIED.** They are produced by the build config but have not been tested on real hardware — see [Platform support](#platform-support).
+- **Spanish (es-ES) is a translation sample, not a complete localization.** It exists to prove the localization framework works (~68% of strings translated, on a denominator that grew to 816 keys in 0.7.1); the rest fall back to English. It is not a complete professional translation.
+
+Two more Phase 7 disclosures: **accessibility** is audited to WCAG 2.1 AA for the critical paths with documented pointer-centric gaps (freehand annotation drawing, drawn-signature canvas — see [user guide → Accessibility](docs/user-guide.md#accessibility)); and **a code-signing certificate** is a real-world manual step that auto-update requires before it can apply downloaded bundles in production.
+
+### Resolved in the 0.7.1 backlog-fix wave
+
+The post-roadmap backlog-fix wave closed these previously-documented follow-ups. They are no longer pending.
+
+| Item | Was | Now |
+|---|---|---|
+| Image-export standard-font text (Phase 6.2) | Standard-font text (Helvetica / Times / Courier) came out **blank** in image exports | **FIXED.** Image export (PNG / JPEG / TIFF) renders standard-font text. Root cause was a `file://`-URL-vs-`fs.readFile` ambiguity in the pdf.js font factory; verified from the packaged 0.7.1 binary (25,688 dark pixels versus 0 blank). All six export formats are now fully functional |
+| Word / PowerPoint / image export end-to-end (Phase 6.1) | docx / pptx / image depended on the production pdf.js source-loader wire | **FIXED.** All six formats (docx / xlsx / pptx / PNG / JPEG / TIFF) produce valid output end-to-end |
+| Non-English OCR language packs (Phase 5.1.x) | Downloads failed with `pack_integrity_failed` — the catalog shipped `TBD-FILL-AT-RELEASE` SHA-256 sentinels for the nine non-bundled rows | **FIXED.** All nine downloadable languages (spa / fra / deu / por / ita / rus / chi_sim / chi_tra / jpn) have real SHA-256 hashes; multi-language download works |
+| Deep modal-step i18n (28c) | The deep Phase-4..6 modal-*step* prose was not yet `t()`-extracted | **FIXED.** i18n extraction completed: 482 → 816 keys; es-ES is ~68% (high-traffic surface translated, the rest falls back to English) |
+| Annotation-layer accessibility | The freehand drawing surface was a nameless static `<div>` with a scoped a11y-lint disable | **FIXED.** The drawing surface now has `role="application"` + an accessible name + a documented keyboard alternative (highlight / text / sticky / shape annotations via toolbar + Inspector) |
+| Auto-update unsaved-work install gate (H-29.1) | `quitAndInstall` had no dirty-document prompt | **FIXED in source** (main-process gate + renderer dirty-state gate). See the [developer guide](docs/developer-guide.md#auto-update-architecture-phase-7) for the honest binary-vs-source note: the gate is correct in the source, the 0.7.1 binary predates the final renderer wire, and the install code path is unreachable until a real publish target exists, so functional impact is zero and it self-resolves at the next packaging pass |
+| Test env-skew (better-sqlite3 Node-24 ABI) | ~350 db tests failed under Node 24 with `ERR_DLOPEN_FAILED` | **FIXED.** Node 20 is the enforced baseline (L-003) with a `check-node.mjs` pre-test guard and a non-destructive rebuild escape hatch; the full suite runs green via the documented path. The latent CI Node-ABI bug was also fixed |
+| Lint-debt re-accumulation | `npm run lint` carried pre-existing `--max-warnings 0` debt | **ADDRESSED.** A husky pre-commit hook runs `lint-staged` + a `tsc`-after-autofix safeguard (the safeguard catches `consistent-type-imports` autofix breaking type-only imports of pdf-lib runtime values) |
+
+### Deferred — requires external resources
+
+These three items cannot be cleared by the engineering swarm. Each is blocked on a resource or decision outside the codebase, not on remaining work the team can simply do. They are tracked honestly as deferred, not as a to-do list.
+
+| Item | Why it is blocked | Honest current status |
+|---|---|---|
+| **macOS / Linux verification** | Requires real Mac and Linux hardware to build and launch on; the build host is Windows-only and a green CI package step does not prove a binary runs | Configs exist (dmg / zip / AppImage / deb) and are produced by the CI build config, but **untested on real hardware** — see [Platform support](#platform-support) |
+| **Real auto-update publish target + code-signing certificate** | Requires publishing the repo to a real GitHub org with release infrastructure plus a Windows code-signing certificate — both are user/business decisions (which org, which certificate authority), not engineering tasks | Placeholder returns the honest `update_not_configured`; the update client works with zero code change once a real channel + cert are configured |
+| **Native WIA / TWAIN scanner (Phase 5.1)** | No MIT-licensed WIA Node binding exists (11 candidates surveyed: all 404, commercial, or name-collisions); a custom Node-API WIA COM addon is a 1–2 week native-build effort | Deferred. File-import + OCR covers the scan-to-searchable-PDF use case in the meantime |
+
+The full per-feature limitation tables live in the [user guide](docs/user-guide.md#known-limitations). The phase trust-floor banners surface the realities up front; see [user guide → Phase 7 trust floor](docs/user-guide.md#phase-7-trust-floor--what-the-app-does-and-doesnt-promise), [Export trust floor](docs/user-guide.md#export-trust-floor--what-the-app-does-and-doesnt-promise), [OCR trust floor](docs/user-guide.md#ocr-trust-floor--what-the-app-does-and-doesnt-promise), and [PAdES trust floor](docs/user-guide.md#pades-trust-floor--what-the-app-does-and-doesnt-promise) for the full mappings.
+
+### Phase 6 known limitations (carried forward)
+
+- **Layout-preserving conversion is best-effort.** Complex multi-column layouts, embedded vector graphics, intricate tables (especially borderless or merged-cell), and decorative typography may not convert faithfully. The fast `text-only` tier is even more reductive — accurate text in a flat structure with no images, no tables, no headings. Review the output before relying on it for downstream work.
+- **All six export formats now produce valid output end-to-end.** As of the 0.7.1 backlog-fix wave, docx / xlsx / pptx / PNG / JPEG / TIFF all work — the production pdf.js source-loader wire landed and the image-export standard-font glyph defect (text came out blank) is fixed. Verified from the packaged 0.7.1 binary: a Helvetica/Times/Courier text page renders to PNG with 25,688 dark pixels (it produced 0 / blank in 0.6.1), and xlsx + docx both write valid OOXML.
+- **ExportQueue concurrency is currently inline (concurrency=1 IS the contract, but inline execution is not the documented FIFO queue).** Julian's Wave 25 H-25.1 finding flagged that the `ExportQueue` from `docs/architecture-phase-6.md §4.6` is documented but not implemented. The engine today runs every IPC call inline and rejects new requests at the `queue_full` HARD CAP (default 50). The actual FIFO queue module (~50 LOC) so concurrent requests against the same output path no longer race the `.export-temp` file is a later follow-up. The modal surfaces a warning if you try to export to a path that is already running.
+- **Export does NOT mutate the source PDF.** The exported docx / xlsx / pptx / image is a NEW file at the path you choose; the source PDF on disk is unchanged. Any prior PAdES signature on the source PDF stays valid (it was never touched). The exported Office file has no signature semantics — those formats either don't support PAdES (docx, xlsx, pptx) or are unsigned by definition (images). If you need a signed Office document, sign it in Office after export.
+- **Conversion time depends on document complexity.** Plan for ~5-30 seconds per page on the layout-preserving tier, ~0.5 seconds per page on the text-only tier. A 100-page magazine with full-color images at layout-preserving can take 30+ minutes; the cancel button is always available; partial output is cleaned up automatically on cancel.
+- **XFA form values do NOT export.** Phase-3-flattened AcroForms produce inline text in the output. XFA forms (read-only in Phase 3) are inaccessible to pdf.js's text extraction; the engine sees only the static template. Workaround: save with the form flattened via `forms:flattenForExport` first, then export.
+- **OCR status determines text fidelity.** If the source PDF has been OCR'd (Phase 5), text exports as native selectable text. If the source is image-only and was NOT OCR'd, the Word / PowerPoint output is mostly raster image with no selectable text. The engine does NOT auto-OCR before export (that would be a silent mutation of the source). Run OCR first, save the searchable PDF, then export.
+- **macOS / Linux packaging is config-only.** Unchanged in 0.7.0 — the `electron-builder.yml` profile is structurally complete for macOS + Linux, but only Windows is verified. See [Platform support](#platform-support); real-hardware verification is the Phase 7.1 work item.
+
+Other carried limitations (full text editing, dark mode, third-party PAdES verification) — see [user guide → Known limitations](docs/user-guide.md#known-limitations) and the [roadmap](docs/project-roadmap.md). Items that Phase 7 addressed (accessibility audit, localization, auto-update client, cross-platform build config) are covered in [Roadmap status](#roadmap-status) above with their honest partial/unverified states.
+
+### Phase 5 archive (historical)
+
+- The Phase 5 OCR trust-floor banner (four obligations: low-confidence-may-be-wrong, no-cloud-upload, OCR-text-becomes-part-of-PDF, re-OCR-duplicates) continues to surface on every OCR flow.
+- v0.5.0's English-only language-pack-download story is **resolved** as of 0.7.1: the catalog now carries real SHA-256 hashes for all nine non-bundled languages, so multi-language download works (see [Resolved in the 0.7.1 backlog-fix wave](#resolved-in-the-071-backlog-fix-wave)).
+- The Phase 5.1 native scanner integration (TWAIN/WIA) remains DEFERRED — no MIT-licensed Node binding exists; see [Deferred — requires external resources](#deferred--requires-external-resources).
+
+### Phase 4 archive (historical)
+
+- The Phase 4 PAdES trust-floor banner (four obligations: invalidate-on-edit, cert-zero-on-finally, no-default-TSA, verify-is-informational) continues to surface in 0.6.0 on every signing flow.
+- The Phase 4 signature audit log table is unchanged in 0.6.0 (Phase 6 does not touch `signature_audit_log` — export is read-only on the source).
+
+### Phase 3 archive (historical)
+
+- The Phase 3 Forms sidebar status banner's three honesty warnings (JS strip, XFA read-only, signed-fields-invalidated) continue to surface in 0.6.0 on every affected document.
+- Mail merge with optional output flatten ships unchanged in 0.6.0.
+
+### Phase 1.1 archive (historical)
+
+- MIT [`LICENSE`](LICENSE) file added at the repo root in Phase 1.1 (matches the existing `package.json` declaration).
+- Renderer typecheck TS4023 cascade cleared in Phase 1.1.
+
+---
+
+## Develop
+
+For full local development setup, build, test, and release instructions see [`docs/developer-guide.md`](docs/developer-guide.md). The short version:
+
+```bash
+git clone <repo-url>
+cd PDF_Viewer_Editor
+npm install            # postinstall runs electron-builder install-app-deps; prepare installs husky hooks
+npm run dev            # launches Electron with hot reload
+npm test               # vitest 2.x unit + integration suite (1765 passing / 5 pre-existing jsdom failures as of v0.7.1; gated by a pretest Node-version guard)
+npm run dist:win       # builds release/*.exe on Windows
+```
+
+The 5 pre-existing test failures are jsdom environment limitations (canvas in `use-signature-canvas`; duplicate-element ambiguities in `annotation-summary-panel`, `signature-audit-panel`, and `pades-sign-modal` ×2) — none backlog-fix related, all reproduced verbatim before and after the wave. **Note on lint:** the 0.7.1 backlog-fix wave added a husky pre-commit hook (`lint-staged` + a `tsc`-after-autofix safeguard) to prevent lint-debt re-accumulation — see [developer guide → CI lint debt](docs/developer-guide.md#ci-lint-debt-phase-7-status).
+
+**Use Node 20 LTS — it is the enforced baseline (lock L-003).** `better-sqlite3` ships matched Electron-ABI and Node-20-ABI prebuilds; Node 24 has neither, which silently broke ~350 db tests across several waves. A `pretest` guard (`scripts/check-node.mjs`) now stops the suite with a recovery message when the host Node can't load the binding; on a Node-24-only host, the documented non-destructive escape hatch is `node scripts/rebuild-native-for-node.mjs && npm test` (then `--electron` to restore the packaging binary). The CI matrix locks Node 20. See [developer guide → Prerequisites](docs/developer-guide.md#prerequisites) and [developer guide → Node 24 vs Electron 30 ABI](docs/developer-guide.md#node-24-vs-electron-30-abi).
+
+---
+
+## Project status and history
+
+| Doc | What it covers |
+|---|---|
+| [`docs/project-roadmap.md`](docs/project-roadmap.md) | Phases 1–7, what ships when |
+| [`docs/phase-3-release-notes.md`](docs/phase-3-release-notes.md) | What changed in 0.3.0 — historical |
+| [`docs/phase-2-release-notes.md`](docs/phase-2-release-notes.md) | What changed in 0.2.0 — historical |
+| [`docs/build-report.md`](docs/build-report.md) | Wave-by-wave build history, every verdict (Phase 7 sections at the end: Wave 27 Riley design, Wave 28a/28b David/Ravi/Riley implement, Wave 29 Diego v0.7.0 packaging + Julian review, Wave 30 Nathan docs) |
+| [`docs/code-review.md`](docs/code-review.md) | Julian's reviews — Phase 1 + Phase 2 + Phase 3 + Phase 4 + Phase 5 + Phase 6 + **Phase 7 (Wave 29 — the final roadmap-phase audit, GREEN)** |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Phase 1 system design, security floor, the four locked decisions |
+| [`docs/architecture-phase-2.md`](docs/architecture-phase-2.md) | Phase 2 — edit-replay engine, lynchpin |
+| [`docs/architecture-phase-3.md`](docs/architecture-phase-3.md) | Phase 3 — forms, HYBRID commit boundary, mail-merge runner |
+| [`docs/architecture-phase-4.md`](docs/architecture-phase-4.md) | Phase 4 — visual + PAdES signatures, expanded annotation toolset, signature audit log |
+| [`docs/architecture-phase-5.md`](docs/architecture-phase-5.md) | Phase 5 — file-import OCR via Tesseract.js, text-behind-image authorship, language pack management |
+| [`docs/architecture-phase-6.md`](docs/architecture-phase-6.md) | Phase 6 — Export to Office and image formats: per-page streaming engine, 8-step layout extractor, line-grid table detector, CTM-tracking image extractor, four writers (docx / exceljs / pptxgenjs / @napi-rs/canvas + utif), background queue, schema v6 (Wave 23 design) |
+| [`docs/architecture-phase-7.md`](docs/architecture-phase-7.md) | **Phase 7 — Polish & Cross-Platform: macOS + Linux build config (unverified), auto-update via electron-updater (placeholder publish target), opt-in/default-OFF telemetry, WCAG 2.1 AA a11y, i18next localization, schema v7 (settings-keys-only), the sixth trust-floor instance (Wave 27 design)** |
+| [`docs/a11y-audit.md`](docs/a11y-audit.md) | **Phase 7 — WCAG 2.1 AA accessibility audit: eight critical paths, the ARIA tab-pattern remediation map, Windows Narrator expectations, honest known gaps** |
+| [`docs/i18n-strategy.md`](docs/i18n-strategy.md) | **Phase 7 — i18next localization design: 8 namespaces, typed keys, lazy loading, the es-ES proof locale, pluralization + Intl formatting, RTL deferral** |
+| [`docs/export-engine.md`](docs/export-engine.md) | **Export engine deep dive — single-funnel pipeline, layout-detect algorithm (X-clustering for columns, MODE-of-bucketed-sizes for headings), table-detect algorithm (5-step line-grid), image-extract (OPS.paintImageXObject walk + CTM stack), per-format writers, atomic .export-temp → rename, job lifecycle, trust-floor obligations** |
+| [`docs/ocr-engine.md`](docs/ocr-engine.md) | OCR engine deep dive |
+| [`docs/signature-engine.md`](docs/signature-engine.md) | Signature engine deep dive |
+| [`docs/edit-replay-engine.md`](docs/edit-replay-engine.md) | Edit-replay engine deep dive |
+| [`docs/form-engine.md`](docs/form-engine.md) | Form engine deep dive |
+| [`docs/api-reference.md`](docs/api-reference.md) | IPC channel reference card for contributors (Phase 1 + 2 + 3 + 4 + 5 + 6 + **7**: `update:*` / `telemetry:*` / `i18n:*`) |
+
+---
+
+## License
+
+The project itself: **MIT** — see [`LICENSE`](LICENSE) at the repo root. The MIT file was added in Phase 1.1; `package.json` declares the same (`"license": "MIT"`).
+
+For the licenses of every dependency that ships in the binaries, see [`LICENSES.md`](LICENSES.md). Every direct and transitive dependency is under a permissive license (MIT, Apache-2.0, BSD, ISC, BlueOak-1.0.0, Python-2.0, or similar). No AGPL/GPL/commercial code is bundled. The four new Phase 7 direct dependencies are all **MIT** and pure-JS (no native module): `electron-updater` (the auto-update client), `i18next` (the localization engine), `react-i18next` (the React bindings — peer-requires i18next ≥ 26.2), and `i18next-resources-to-backend` (the lazy locale loader). Diego's Wave 29 license walk over the full reachable subtree from these four roots scanned 23 packages — all permissive (MIT / ISC / BlueOak-1.0.0 / Python-2.0), zero AGPL/GPL/LGPL/EPL ingress. Earlier-phase additions remain in place: `docx` + `pptxgenjs` (MIT, Phase 6 writers), `exceljs` / `@napi-rs/canvas` / `utif` (MIT, reused across phases). The pre-existing `buffers@0.1.1` UNKNOWN-license flag from Phase 3 is unchanged.
+
+---
+
+## Acknowledgments
+
+PDF_Viewer_Editor stands on permissive open-source work by:
+
+- **[pdf.js](https://github.com/mozilla/pdf.js)** (Mozilla, Apache-2.0) — page rendering; Phase 6 layout + text + operator-list + image extraction inside the export engine
+- **[pdf-lib](https://github.com/Hopding/pdf-lib)** (MIT) — page-tree editing, edit-replay engine, AcroForm read/fill/flatten/create, visual signature widgets (Phase 4), text-behind-image authoring (Phase 5); Phase 6 reads source-PDF page sizes + form-field objects
+- **[tesseract.js](https://github.com/naptha/tesseract.js)** (Apache-2.0) — local OCR engine (Phase 5)
+- **[@tesseract.js-data/eng](https://github.com/naptha/tessdata)** (Apache-2.0 trained data) — bundled English language pack (Phase 5)
+- **[@napi-rs/canvas](https://github.com/Brooooooklyn/canvas)** (MIT) — Skia-backed canvas for OCR page rasterization (Phase 5); Phase 6 image-format rasterization at chosen DPI
+- **[docx](https://github.com/dolanmiu/docx)** (MIT) — Word document writer (Phase 6); Acknowledgment: Dolan Miu
+- **[pptxgenjs](https://github.com/gitbrent/PptxGenJS)** (MIT) — PowerPoint presentation writer (Phase 6); Acknowledgment: Brent Ely
+- **[exceljs](https://github.com/exceljs/exceljs)** (MIT) — XLSX read for mail-merge data sources (Phase 3); Phase 6 xlsx writer (streaming write API for memory-bounded large workbooks)
+- **[utif](https://github.com/photopea/UTIF.js)** (MIT) — TIFF first-page decoding (Phase 2); Phase 6 multi-page TIFF encode (`utif.encodeImage` + `utif.encode` for multi-page bundling)
+- **[node-signpdf](https://github.com/vbuch/node-signpdf)** (MIT) — primary PAdES cryptographic signing engine (Phase 4)
+- **[node-forge](https://github.com/digitalbazaar/forge)** (BSD-3-Clause) — PFX / ASN.1 / PKCS#7 (Phase 4)
+- **[pkijs](https://github.com/PeculiarVentures/PKI.js)** (BSD-3-Clause) — X.509 + CMS for the manual PAdES fallback engine (Phase 4)
+- **[asn1js](https://github.com/PeculiarVentures/ASN1.js)** (BSD-3-Clause) — ASN.1 codec (Phase 4)
+- **[electron-updater](https://github.com/electron-userland/electron-builder/tree/master/packages/electron-updater)** (MIT) — auto-update client (Phase 7); placeholder publish target until the project is published
+- **[i18next](https://github.com/i18next/i18next)** (MIT) — localization engine: interpolation, plurals, namespaces, fallback (Phase 7)
+- **[react-i18next](https://github.com/i18next/react-i18next)** (MIT) — React bindings for i18next: `useTranslation`, `<Trans>`, Suspense integration (Phase 7)
+- **[i18next-resources-to-backend](https://github.com/i18next/i18next-resources-to-backend)** (MIT) — lazy `import()` backend for code-split locale chunks (Phase 7)
+- **[Electron](https://github.com/electron/electron)** (MIT) — desktop shell
+- **[React](https://github.com/facebook/react)** (MIT) — UI layer
+- **[Redux Toolkit](https://github.com/reduxjs/redux-toolkit)** (MIT) — state + undo/redo
+- **[better-sqlite3](https://github.com/WiseLibs/better-sqlite3)** (MIT) — recents/settings/bookmarks/form-templates/signature-audit-log/ocr-jobs/export-jobs persistence
+- **[dnd-kit](https://github.com/clauderic/dnd-kit)** (MIT) — drag-and-drop reorder and bookmark tree drag-nest
+- **[Vite](https://github.com/vitejs/vite)** and **[electron-builder](https://github.com/electron-userland/electron-builder)** (MIT) — build + packaging
+- **[vite-plugin-static-copy](https://github.com/sapphi-red/vite-plugin-static-copy)** (MIT) — build-time pdfjs font + cmap asset copy (Phase 4.1.1); the OCR language-pack-catalog copy in Phase 5; carries through unchanged in Phase 6
+- **[vitest](https://github.com/vitest-dev/vitest)** (MIT) — Phase 6 Wave 25 bumped 1.6.x → 2.1.9 for Node 24 host compatibility (CI still runs Node 20)
+
+Full attributions in [`LICENSES.md`](LICENSES.md).

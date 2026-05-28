@@ -1,0 +1,71 @@
+-- ============================================================
+-- 0007_phase7_polish.sql — Phase 7 polish (telemetry / i18n / auto-update)
+--
+-- Canonical reference: docs/data-models.md §12 (Phase 7 amendment) +
+-- docs/architecture-phase-7.md §3 (auto-update) / §4 (telemetry) +
+-- docs/i18n-strategy.md (locale). If this file and any of those docs
+-- disagree, the doc wins; open a Marcus-approved amendment to update both.
+--
+-- Adds (Phase 7):
+--   * FOUR settings keys via INSERT OR IGNORE INTO app_settings(key, value).
+--     Per data-models §12.1 + §12.2.
+--
+-- This is the SMALLEST migration in the project: NO CREATE TABLE, NO ALTER
+-- TABLE, NO new column, NO new index. Phase 7 is polish — telemetry opt-in,
+-- selected locale, auto-update channel, and last-check timestamp — all of
+-- which fold into the existing key-value app_settings store. There is no new
+-- persistent state beyond these four key-value rows (data-models §12.1).
+--
+-- DELIBERATE NON-TABLE (data-models §12.4, privacy stance P7-L-3):
+-- The telemetry event buffer is an IN-MEMORY, renderer-side bounded array
+-- (default 500 events, `NoOpRingBufferTransport`). It is intentionally NOT a
+-- SQLite table and NOT persisted to app_settings — telemetry events must not
+-- survive a restart, must not be forensically recoverable from the .db file,
+-- and must not be a tamper surface. Only the opt-in *flag* persists (below);
+-- the events themselves never touch disk. A future maintainer must NOT
+-- "helpfully" add a `telemetry_events` table — that would violate the privacy
+-- stance. This comment is the audit trail for that decision.
+--
+-- IMPORTANT (table-name slip, reaffirmed from Wave 24): the data-models §12.1
+-- spec text writes the INSERT against a table named "settings", but the actual
+-- canonical table name created by Phase 1 (0001_init.sql) is `app_settings`.
+-- The INSERT OR IGNORE below uses the real table name. Documented for any
+-- future amendment that copies the spec verbatim.
+--
+-- The schema_migrations(version=7, applied_at=...) row is written by the
+-- runner (src/db/migrate.ts) inside the wrapping transaction — matching the
+-- 0001..0006 convention. Including an explicit INSERT here would PRIMARY
+-- KEY-conflict the runner's record on every retry (cf. Wave 7/12/16/20/24
+-- takeaways).
+--
+-- Anti-sentinel discipline (data-models §12.2 / §12.8; the four-times-bitten
+-- 2026-05-26 lesson): `update.lastCheckedAt` seeds as JSON `null`, NOT `0`.
+-- The renderer's About-modal selector pattern-matches `lastCheckedAt === null`
+-- to render "never checked"; a sentinel `0` would render "Jan 1, 1970" — the
+-- exact defect class this discipline prevents.
+--
+-- No foreign keys, no relationships, no index (data-models §12.6): the four
+-- keys are independent key-value entries; the app_settings PK on `key`
+-- suffices.
+--
+-- Forward-only per migrations/README.md "Rollback".
+-- ============================================================
+
+-- ============================================================
+-- Phase 7 settings seeds (data-models §12.1 + §12.2).
+--
+-- FOUR new keys, all defaulted via INSERT OR IGNORE so a user who upgrades
+-- from a Phase 6 build keeps any value they have already customized. The
+-- migration MUST NOT use INSERT OR REPLACE — that would clobber user
+-- preferences (Phase 1 convention).
+--
+-- Values are JSON-encoded TEXT (Phase 1 convention; settings-repo.ts parses
+-- on read). Strings get double-quoted ('"en-US"', '"manual"'); booleans are
+-- bare ('false'); the JSON null literal is bare ('null').
+-- ============================================================
+
+INSERT OR IGNORE INTO app_settings (key, value) VALUES
+  ('telemetry.optIn',      'false'),     -- DEFAULT OFF (P7-L-6 obligation #1; trust-floor)
+  ('i18n.locale',          '"en-US"'),   -- baseline locale (JSON-string per Phase 1 convention)
+  ('update.channel',       '"manual"'),  -- DEFAULT manual (no auto-check vs placeholder; P7-L-6 #2)
+  ('update.lastCheckedAt', 'null');      -- nullable + late-init (NO sentinel 0; anti-sentinel)
