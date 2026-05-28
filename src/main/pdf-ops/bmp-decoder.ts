@@ -17,6 +17,7 @@
 
 import type { Result } from '../../shared/result.js';
 import { fail, ok } from '../../shared/result.js';
+
 import { encodePngRgbaForTest } from './tiff-decoder.js';
 
 export type BmpDecodeError = 'bmp_decode_failed' | 'bmp_unsupported';

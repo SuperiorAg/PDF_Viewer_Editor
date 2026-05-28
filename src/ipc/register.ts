@@ -23,6 +23,9 @@ import type {
   OcrWorkerPool,
   RasterPageOptions,
 } from '../main/pdf-ops/ocr-engine.js';
+// Phase 5.1 (Wave 5.1, David): WIA scanner wiring.
+import type { ScanPage, ScanToPdfError } from '../main/pdf-ops/scan-to-pdf.js';
+import type { WiaAddon } from '../main/pdf-ops/wia-scanner.js';
 import { replay } from '../main/pdf-ops/replay-engine.js';
 // Wave 8 (Diego, D-8.2 + D-8.3): real Chromium export + Electron print
 // dispatch adapters, replacing the Phase-2 conservative stubs below.
@@ -30,6 +33,8 @@ import type { ReplayInput } from '../main/pdf-ops/replay-engine.js';
 import { dispatchPrintViaElectron, exportViaChromium } from '../main/print-window.js';
 import { sanitizeDirectoryPath, sanitizePath } from '../main/security/path-sanitizer.js';
 import type { TelemetryService } from '../main/telemetry.js';
+
+import type { Result } from '../shared/result.js';
 
 import { Channels } from './contracts.js';
 import type {
@@ -175,6 +180,27 @@ export interface RegisterOcrOptions {
   rasterDpi: number;
 }
 
+/**
+ * Phase 5.1 (Wave 5.1, David) — scanner options.
+ *
+ * The `addon` FIELD is REQUIRED (library-injection seam), but its VALUE may be
+ * null — that's the explicit graceful-degrade path (non-Windows / addon not
+ * built), surfaced to the renderer as a typed `scanner_unavailable` Result.
+ * Production wiring is `bootstrapScan()` in `scan-bootstrap.ts`; tests inject a
+ * synthetic addon + composer + register.
+ */
+export interface RegisterScanOptions {
+  addon: WiaAddon | null;
+  composeScanToPdf: (
+    pages: ScanPage[],
+  ) => Promise<Result<{ bytes: Uint8Array; pageCount: number; warnings: string[] }, ScanToPdfError>>;
+  registerScannedPdf: (
+    bytes: Uint8Array,
+    displayName: string,
+    pageCount: number,
+  ) => { handle: number; displayName: string };
+}
+
 export interface RegisterIpcOptions {
   ipcMain: IpcMain;
   /** Returns the active BrowserWindow used for native dialogs + window controls. */
@@ -220,6 +246,12 @@ export interface RegisterIpcOptions {
    * in `src/main/index.ts`; tests inject a synthetic service.
    */
   telemetry: TelemetryService;
+  /**
+   * Phase 5.1 (Wave 5.1): WIA scanner wiring. REQUIRED — no optional fallback.
+   * The `addon` value may be null (graceful-degrade). Production wires it via
+   * `bootstrapScan()` in `scan-bootstrap.ts`; tests inject a synthetic addon.
+   */
+  scan: RegisterScanOptions;
 }
 
 // Reference unused imports to keep them from being tree-shaken in type-only
@@ -227,8 +259,16 @@ export interface RegisterIpcOptions {
 export type _UnusedOcrEngineError = OcrEngineError;
 
 export function registerIpcHandlers(opts: RegisterIpcOptions): void {
-  const { ipcMain, getMainWindow, loadPdfMetadata, ocr, exportEngine, autoUpdate, telemetry } =
-    opts;
+  const {
+    ipcMain,
+    getMainWindow,
+    loadPdfMetadata,
+    ocr,
+    exportEngine,
+    autoUpdate,
+    telemetry,
+    scan,
+  } = opts;
 
   // -------- helpers ------------------------------------------------------
   const browserWindowToWindowLike = (w: BrowserWindow | null): WindowLike | null => {
@@ -877,10 +917,19 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
     }),
   );
 
-  // Phase 5.1 placeholder handlers — always return the documented
-  // not_implemented_phase_5_1 error variant.
-  ipcMain.handle(Channels.ScanListDevices, (_evt, payload) => handleScanListDevices(payload));
-  ipcMain.handle(Channels.ScanAcquire, (_evt, payload) => handleScanAcquire(payload));
+  // Phase 5.1 (Wave 5.1, David): scan channels are LIVE on Windows via the
+  // native WIA addon. A null addon (non-Windows / addon not built) degrades to
+  // a typed scanner_unavailable Result inside the handlers — never a crash.
+  ipcMain.handle(Channels.ScanListDevices, (_evt, payload) =>
+    handleScanListDevices(payload, { addon: scan.addon }),
+  );
+  ipcMain.handle(Channels.ScanAcquire, (_evt, payload) =>
+    handleScanAcquire(payload, {
+      addon: scan.addon,
+      composeScanToPdf: scan.composeScanToPdf,
+      registerScannedPdf: scan.registerScannedPdf,
+    }),
+  );
 
   // ============================================================================
   // Phase 6 (Wave 24) — export-to-Office channels (api-contracts.md §17).

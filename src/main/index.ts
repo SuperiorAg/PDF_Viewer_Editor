@@ -98,6 +98,7 @@ import {
 import { bootstrapExportEngine, createProdSourceLoader } from './export/export-bootstrap.js';
 import { bootstrapOcr } from './pdf-ops/ocr-bootstrap.js';
 import { loadPdfMetadata } from './pdf-ops/pdf-metadata-loader.js';
+import { bootstrapScan } from './pdf-ops/scan-bootstrap.js';
 import { installCsp } from './security/csp.js';
 import { createTelemetryService, NoOpRingBufferTransport } from './telemetry.js';
 import { createMainWindow, getMainWindow } from './window-manager.js';
@@ -283,6 +284,10 @@ function bootstrap(): void {
     // tesseract.js is not yet installed (pre-Wave-21 dev), the pool returns
     // typed `worker_init_failed` Results at run time — never a crash.
     const ocrWiring = bootstrapOcr();
+    // Phase 5.1 (Wave 5.1, David): the WIA scanner wiring is REQUIRED (no
+    // optional fallback), but `addon` is null on non-Windows / when the
+    // native addon isn't built — the handlers degrade to scanner_unavailable.
+    const scanWiring = bootstrapScan();
     // Phase 6.1 (David): wire the export engine. REQUIRED (no optional
     // fallback per conventions §17.4.1). The production source bundle is now
     // REAL — pdf.js opens the per-job document (rebound via loader.bind(spec))
@@ -377,6 +382,7 @@ function bootstrap(): void {
       exportEngine,
       autoUpdate: autoUpdateController,
       telemetry: telemetryService,
+      scan: scanWiring,
     });
 
     // Step 5 — main window

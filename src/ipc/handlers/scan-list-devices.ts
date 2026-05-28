@@ -21,4 +21,48 @@ import {
 import { fail, ok } from '../../shared/result.js';
 import type {
   ScanListDevicesError,
-  ScanListDevicesRequ
+  ScanListDevicesRequest,
+  ScanListDevicesResponse,
+} from '../contracts.js';
+
+export interface ScanListDevicesDeps {
+  /**
+   * REQUIRED on the interface (no optional stub fallback). The VALUE may be
+   * null — that's the explicit, tested graceful-degrade path (non-Windows /
+   * addon missing), not an omitted dep.
+   */
+  addon: WiaAddon | null;
+}
+
+// Native ScanError -> handler error union. listDevices only surfaces the
+// enumeration-relevant subset; everything else collapses to scanner_unavailable.
+function mapError(e: ScanError): ScanListDevicesError {
+  switch (e) {
+    case 'enumeration_failed':
+      return 'enumeration_failed';
+    case 'addon_internal_error':
+      return 'addon_internal_error';
+    case 'scanner_unavailable':
+    case 'no_device':
+    case 'device_open_failed':
+    case 'no_scan_item':
+    case 'transfer_unsupported':
+    case 'acquisition_failed':
+    default:
+      return 'scanner_unavailable';
+  }
+}
+
+export async function handleScanListDevices(
+  _req: unknown,
+  deps: ScanListDevicesDeps,
+): Promise<ScanListDevicesResponse> {
+  const result = await listDevicesVia(deps.addon);
+  if (!result.ok) {
+    return fail<ScanListDevicesError>(mapError(result.error), result.message);
+  }
+  return ok({ devices: result.value.devices });
+}
+
+// Keep the alias alive under verbatimModuleSyntax.
+export type _UnusedReq = ScanListDevicesRequest;

@@ -26,7 +26,7 @@
 'use strict';
 
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -77,10 +77,9 @@ function runNodeGyp(extraArgs) {
 
 function electronVersion() {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const pkg = join(repoRoot, 'node_modules', 'electron', 'package.json');
     if (existsSync(pkg)) {
-      return JSON.parse(spawnSync(process.execPath, ['-e', `process.stdout.write(require(${JSON.stringify(pkg)}).version)`], { encoding: 'utf8' }).stdout);
+      return JSON.parse(readFileSync(pkg, 'utf8')).version;
     }
   } catch {
     /* fall through */
