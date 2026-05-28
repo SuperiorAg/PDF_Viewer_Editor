@@ -8007,3 +8007,57 @@ One JSONL entry appended to `.learnings/learnings.jsonl`.
 One JSONL entry appended to `.learnings/learnings.jsonl`.
 
 ---
+
+## Publish-Setup — Diego (dev-ops-agent): real GitHub publish target + release automation + first published release v0.7.2 (2026-05-28)
+
+**Status: COMPLETE.** The auto-update publish target is now a REAL public repo (`SuperiorAg/PDF_Viewer_Editor`), release automation exists (`.github/workflows/release.yml`), and the first real GitHub Release (v0.7.2) carries the NSIS installer + portable .exe + `latest.yml` so the in-app Check-for-updates contacts a live feed and returns an HONEST result instead of the old `update_not_configured`.
+
+### Objective 1 — real publish config (`electron-builder.yml`)
+
+The `publish:` block was a documented PLACEHOLDER (`owner/repo: PLACEHOLDER`). It now reads:
+
+```yaml
+publish:
+  provider: github
+  owner: SuperiorAg
+  repo: PDF_Viewer_Editor
+  releaseType: draft
+```
+
+`releaseType: draft` (not `release`) is the deliberate publish-safety choice from the brief: built artifacts upload to a DRAFT release that a human promotes (`gh release edit <tag> --draft=false` or the GitHub UI). electron-updater on a PUBLIC repo does NOT advertise draft releases in the `latest.yml` feed until promoted, so a botched build never auto-ships to users' updaters. All PLACEHOLDER comments were removed and replaced with the auto-flip-seam + draft-safety + code-signing rationale.
+
+### Objective 2 — David's placeholder-detection reconciliation: AUTO-FLIP, no src change
+
+David's controller is correctly designed so the real target flips it with ZERO `src/**` change. The seam (verified by inspection, not edited):
+
+- `src/main/index.ts:329-340` reads the bundled `app-update.yml` from `process.resourcesPath` and passes it to `isPublishConfiguredFromAppUpdateYml`.
+- `src/main/auto-update.ts:382-391` returns `false` ONLY when the YAML contains the literal string `PLACEHOLDER`; otherwise (a `provider: github` block with a concrete `owner:`) it returns `true`.
+
+With the real owner/repo, electron-builder emits an `app-update.yml` that no longer contains `PLACEHOLDER`, so the detector returns `true` and `update:check` resolves the live feed. **No David follow-up required for the seam.** (David's auto-update unit tests already cover both the placeholder-false and real-feed-true cases — `src/main/auto-update.test.ts:407-427` — so the behavior is locked by tests, not just inspection.)
+
+### Objective 3 — release workflow (`.github/workflows/release.yml`)
+
+New workflow, modeled on `ci.yml`'s setup-node + native-rebuild patterns:
+
+- **Trigger:** push of a semver version tag `v*.*.*`.
+- **Runner:** `windows-latest` only (P7-L-1 — mac/linux stay config-only/UNVERIFIED; shipping an unverified binary as if verified is the trust-floor anti-pattern).
+- **Node 20 (L-003):** `actions/setup-node@v4` with `node-version-file: .nvmrc` (== "20"), not a hardcoded number.
+- **Native ABI:** `npm ci` (postinstall does the Electron-ABI rebuild) + explicit `npm run rebuild` (belt-and-braces Electron-ABI better-sqlite3). The optional WIA scanner addon (David's `native/wia-scanner/`) is rebuilt in a TOLERANT step (`continue-on-error: true` + a `Test-Path build.mjs` guard) so a missing/failing optional native module does NOT abort the release — the JS loader degrades to `scanner_unavailable` at runtime. (Cross-wave handoff with David's parallel WIA wave.)
+- **Build + publish:** `npm run build` (typecheck + electron-vite) then `npx electron-builder --win --publish always` with `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` — uploads NSIS + portable + `latest.yml` to the tag's (draft) Release.
+- **Code-signing:** `WIN_CSC_LINK` / `WIN_CSC_KEY_PASSWORD` are COMMENTED placeholders (no cert provisioned). Unsigned installer + SmartScreen "unknown publisher" caveat documented below.
+
+### Objective 4 — version bump + first release v0.7.2
+
+- `package.json` version `0.7.1` → `0.7.2`.
+- Clean build per L-002 hygiene (`Remove-Item Env:\ELECTRON_RUN_AS_NODE` first — it WAS set `=1` in this agent's shell, the documented trap). `npm run build` green: typecheck 0 errors across all 3 tsconfigs; fresh renderer bundle emitted — the v0.7.2 renderer now includes Julian's H-FIX.1 renderer fix (the unsaved-work install gate is reachable in this build because a real channel now exists).
+- Release path taken: see "Release path" subsection below.
+
+### Code-signing status (follow-up, NOT blocking auto-update check/download)
+
+No Authenticode cert is provisioned. The installer is UNSIGNED — Windows SmartScreen will show an "unknown publisher" prompt on first run, and electron-updater REFUSES to APPLY (install) an unsigned update bundle. The check + download paths against the public feed work regardless; only auto-INSTALL needs the cert. Procuring a cert + uncommenting the `WIN_CSC_*` refs (from GitHub Secrets) is a Phase 7.1 follow-up.
+
+### File ownership
+
+Edited (all Diego-owned): `electron-builder.yml` (publish block), `.github/workflows/release.yml` (new), `package.json` (version 0.7.1 → 0.7.2), `docs/build-report.md` (this section), `release/**` (artifacts + L-002 screenshot). **Did NOT touch:** any `src/**` (David — the placeholder seam auto-flips, no src change; David's uncommitted WIA `src/**` working-tree changes were left UNSTAGED and uncommitted — not mine to commit), frozen design docs, other agents' docs, `.learnings/locked-instructions.md`.
+
+---

@@ -1,0 +1,148 @@
+# Release pipeline — PDF_Viewer_Editor. Diego owns.
+#
+# WHAT THIS DOES
+#   On push of a version tag (v*.*.*), build the Windows binaries (NSIS
+#   installer + portable .exe) and PUBLISH them — together with the
+#   electron-updater feed file `latest.yml` — to the GitHub Release for that
+#   tag. This is what makes the in-app "Check for updates" feature functional:
+#   electron-updater reads `latest.yml` from the PUBLIC releases feed of
+#   SuperiorAg/PDF_Viewer_Editor with NO auth.
+#
+# WHY WINDOWS-ONLY
+#   Per locked decision P7-L-1 (architecture-phase-7.md §2) + L-002: Windows is
+#   the only platform built + visually verified in this project. mac/linux are
+#   config-only in electron-builder.yml and are NOT built here (building an
+#   UNVERIFIED mac/linux binary as if verified is the dishonest move the
+#   trust-floor pattern exists to prevent). Adding mac/linux to a release matrix
+#   requires first running the binary on real hardware + the L-002 screenshot
+#   drill — a Phase 7.1 step.
+#
+# WHY DRAFT (publish safety)
+#   electron-builder.yml sets `releaseType: draft`. The artifacts upload to a
+#   DRAFT GitHub Release; a human promotes it to live (gh release edit <tag>
+#   --draft=false or the GitHub UI). electron-updater on a PUBLIC repo does NOT
+#   advertise draft releases in the latest.yml feed until promoted, so a botched
+#   build never auto-ships to users' updaters. This is the recommended safe
+#   default from the wave brief.
+#
+# NODE 20 (L-003)
+#   Node 20 is the enforced baseline. setup-node reads `.nvmrc` (== "20") via
+#   node-version-file so the runner Node always matches the locked baseline +
+#   the better-sqlite3 prebuild story. NEVER bump this without an L-003 unlock.
+#
+# NATIVE-MODULE ABI
+#   The PACKAGED app loads native modules under the Electron ABI (v123 for
+#   Electron 30), NOT the Node ABI. `npm run rebuild` (electron-builder
+#   install-app-deps) rebuilds better-sqlite3 for the Electron ABI. The optional
+#   WIA scanner addon (David's native/wia-scanner/, Windows-only) is rebuilt for
+#   the Electron ABI in a TOLERANT step: a missing/failing optional native
+#   module must NOT abort the release (cross-wave handoff with David's WIA wave).
+#
+# CODE-SIGNING (follow-up, not blocking)
+#   No Authenticode cert is provisioned yet. The WIN_CSC_* env refs below are
+#   COMMENTED placeholders. Without a cert, electron-builder produces an
+#   UNSIGNED installer (build still succeeds, emits a warning) and Windows
+#   SmartScreen shows an "unknown publisher" prompt on first run. Procuring a
+#   cert + uncommenting the WIN_CSC_* refs (sourced from GitHub Secrets) is a
+#   Phase 7.1 follow-up. electron-updater also REFUSES to apply an unsigned
+#   update bundle, so true end-to-end auto-INSTALL needs the cert too — the
+#   check/download path works against the public feed regardless.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*' # e.g. v0.7.2 — semver tags only
+
+# Only the GITHUB_TOKEN's default contents:write is needed to create/upload to
+# the release. Grant it explicitly (least-privilege; the default token can be
+# read-only depending on repo settings).
+permissions:
+  contents: write
+
+jobs:
+  # ==========================================================================
+  # Build + publish the Windows release. windows-latest is the only runner
+  # (P7-L-1). Produces NSIS installer + portable .exe + latest.yml, uploaded to
+  # the DRAFT GitHub Release for the pushed tag.
+  # ==========================================================================
+  release-windows:
+    name: Build + publish Windows release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Node 20 from .nvmrc (L-003). node-version-file keeps the runner Node
+      # pinned to the locked baseline without hardcoding the number twice.
+      - name: Setup Node.js (from .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # `npm ci` is reproducible from package-lock.json. Its postinstall
+      # (electron-builder install-app-deps) already rebuilds better-sqlite3 for
+      # the Electron ABI — which is exactly what the PACKAGED app needs.
+      - name: Install dependencies
+        run: npm ci
+
+      # Belt-and-braces: re-run the Electron-ABI rebuild explicitly so the
+      # packaged better-sqlite3 binding matches Electron 30's ABI (v123). This
+      # is the binary the launched/packaged app dlopens — NOT the Node ABI the
+      # test job uses (see ci.yml for the ABI-skew rationale + the Wave 25 RCA).
+      - name: Rebuild native modules for Electron (better-sqlite3)
+        run: npm run rebuild
+
+      # OPTIONAL native module: David's WIA scanner addon (Windows-only). Built
+      # against the Electron ABI. TOLERANT — `continue-on-error: true` so a
+      # missing build.mjs (parallel WIA wave not yet merged) or a toolchain hiccup
+      # does NOT abort the release. The JS loader (src/main/pdf-ops/wia-scanner.ts)
+      # degrades to `scanner_unavailable` at runtime if the .node is absent, so
+      # the app still ships + launches; only the scan-from-device feature is
+      # unavailable. Cross-wave handoff with David's WIA wave.
+      - name: Rebuild optional WIA scanner addon for Electron (tolerant)
+        continue-on-error: true
+        run: |
+          if (Test-Path native/wia-scanner/build.mjs) {
+            node native/wia-scanner/build.mjs --electron
+          } else {
+            Write-Host 'WIA addon build.mjs not present (optional) -- skipping; app will degrade to scanner_unavailable.'
+          }
+        shell: pwsh
+
+      # Typecheck (3 tsconfigs) is part of `npm run build`; run it as the build
+      # step so the release fails fast on a type error before packaging.
+      - name: Build Electron bundle (typecheck + electron-vite build)
+        run: npm run build
+
+      # Package + PUBLISH. `electron-builder --win --publish always` builds the
+      # NSIS + portable targets, generates latest.yml + app-update.yml, and
+      # uploads the artifacts to the GitHub Release for the pushed tag (created
+      # as a DRAFT per electron-builder.yml `releaseType: draft`). GH_TOKEN is
+      # the workflow's GITHUB_TOKEN — no PAT, no stored secret needed because the
+      # repo is public + the release lives in this same repo.
+      #
+      # Code-signing env (UNSIGNED until a cert is procured — see header):
+      #   # WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+      #   # WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+      - name: Package + publish to GitHub Release (electron-builder)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win --publish always
+
+      # Belt-and-braces artifact upload: even if the publish step's upload had a
+      # transient hiccup, the binaries are retained as workflow artifacts so the
+      # release can be assembled manually. Does not replace the published release.
+      - name: Upload Windows artifacts (backup)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-artifacts
+          path: |
+            release/*.exe
+            release/*.msi
+            release/latest*.yml
+          retention-days: 30
+          if-no-files-found: warn

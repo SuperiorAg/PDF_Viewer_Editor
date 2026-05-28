@@ -299,31 +299,42 @@ linux:
       Categories: Office;Utility;
 
 # ============================================================================
-# Auto-update publish config — Phase 7 (Diego, Wave 29). **PLACEHOLDER**.
+# Auto-update publish config — Phase 7 (Diego, Wave 29; REAL target wired
+# Wave Publish-Setup, Diego 2026-05-28).
 #
-# !!! DOCUMENTED PLACEHOLDER — UPDATES WILL NOT FUNCTION UNTIL CONFIGURED !!!
-# Per locked decision P7-L-2 (architecture-phase-7.md §3.2): the repo is not
-# published, so owner/repo are PLACEHOLDER literals. electron-updater reads
-# this block to emit `app-update.yml` into the packaged binary and to know
-# where to fetch update metadata (`latest.yml` / `latest-mac.yml` /
-# `latest-linux.yml`). Because owner/repo are placeholders, checkForUpdates()
-# cannot resolve a real feed.
+# The project is now published at https://github.com/SuperiorAg/PDF_Viewer_Editor
+# (PUBLIC). electron-builder reads this block to (a) emit `app-update.yml` into
+# the packaged binary (its publish coordinates) and (b) on `--publish always`,
+# upload the built NSIS + portable + `latest.yml` to the GitHub Release for the
+# current version's tag. electron-updater then reads `latest.yml` from the
+# PUBLIC releases feed with NO auth at runtime (the simplest update path).
 #
-# David's main-process update controller (src/main/auto-update.ts) reads the
-# emitted app-update.yml from process.resourcesPath at startup, detects the
-# PLACEHOLDER, and routes EVERY update call to the honest `update_not_configured`
-# error (NEVER a fake "you're up to date" — trust-floor obligation #2 made
-# executable). The update CLIENT is fully wired; only the publish target is a
-# placeholder. When the project is published for real, replace owner/repo with
-# the live values and the controller auto-detects the feed with ZERO code change.
+# AUTO-FLIP SEAM (the reconciliation with David's controller): David's
+# main-process update controller (src/main/auto-update.ts) reads the emitted
+# app-update.yml from process.resourcesPath at startup and runs it through
+# `isPublishConfiguredFromAppUpdateYml`, which returns false ONLY when the YAML
+# contains the literal string 'PLACEHOLDER'. With the REAL owner/repo below,
+# the emitted app-update.yml no longer contains 'PLACEHOLDER', so the detector
+# returns true and `update:check` contacts the real feed — ZERO David src
+# change required. (Verified by inspection: src/main/auto-update.ts:382-391 +
+# src/main/index.ts:329-340.)
+#
+# releaseType: draft — built artifacts upload to a DRAFT release so a human
+# promotes it to live (publish safety: a botched build does not auto-go-live to
+# users' updaters). To cut a public release, promote the draft in the GitHub UI
+# (or `gh release edit <tag> --draft=false`). electron-updater on PUBLIC repos
+# does NOT see draft releases in the latest.yml feed until promoted, so the
+# update channel only advertises promoted (live) releases.
 #
 # Signature note: even with a real feed, electron-updater REFUSES to apply
 # downloaded bundles until a code-signing cert exists (Authenticode on Windows).
 # That is correct security behavior, documented as trust-floor obligation #6;
-# the cert is the user's Phase 7.1 real-world step.
+# the cert is the user's Phase 7.1 real-world step (WIN_CSC_* in release.yml are
+# commented placeholders until a cert is procured -> unsigned + SmartScreen
+# caveat documented in build-report.md).
 # ============================================================================
 publish:
   provider: github
-  owner: PLACEHOLDER # repo not published yet — see comment above
-  repo: PLACEHOLDER
-  releaseType: release
+  owner: SuperiorAg
+  repo: PDF_Viewer_Editor
+  releaseType: draft
