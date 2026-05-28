@@ -8,7 +8,11 @@ const CSP = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "font-src 'self' data:",
+  // blob: is required for pdf.js embedded-font rendering — it loads font faces
+  // via blob: URLs; without it the browser refuses the font and pdf.js falls
+  // back to canvas path-rendering (visibly "not smooth" / irregular glyph
+  // spacing vs Acrobat). data: covers the inline-font path. (2026-05-28)
+  "font-src 'self' data: blob:",
   "img-src 'self' data: blob:",
   "worker-src 'self' blob:",
   "connect-src 'self'",
