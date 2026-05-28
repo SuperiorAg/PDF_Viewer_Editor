@@ -102,6 +102,7 @@ Per swarm rules. Each file belongs to exactly one agent:
 ## Conventions
 
 - `feat(scope):` / `fix(scope):` / `refactor(scope):` commit format
+- **Commit frequently — per wave / per fix, at every verified checkpoint. Do NOT batch a large amount of (especially parallel) work into one deferred commit.** Commit when a coherent unit lands and typecheck/build/test is green; use judgment but err toward smaller, more-frequent commits. *Why: on 2026-05-28 a single batched initial commit (after many parallel agent waves) hid two concurrent-write corruptions — a truncated `scan-list-devices.ts` and a `package.json` that lost its `scripts` block — until CI failed and a user hit a runtime "window.pdfApi is not exposed". Per-wave commits surface such corruption immediately via small, attributable diffs.*
 - TypeScript strict mode, no `any` without a comment explaining why
 - ESLint + Prettier enforced in CI
 - All IPC channels typed via a shared contract module
