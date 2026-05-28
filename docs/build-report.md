@@ -8197,3 +8197,79 @@ Build-state **(a)** on the dev host. The ONLY environment-specific caveat: a bui
 Created (David-owned): `native/wia-scanner/{binding.gyp,build.mjs,README.md,.gitignore}`, `native/wia-scanner/src/{addon.cc,wia-com.h,wia-com.cc,stub-nonwin.cc}`, `src/main/pdf-ops/{wia-scanner.ts,bmp-decoder.ts,scan-to-pdf.ts,scan-bootstrap.ts}`, plus tests. Edited (David-owned): `src/ipc/handlers/scan-list-devices.ts` + `scan-acquire.ts` (+ their tests), `src/ipc/contracts.ts §scan`, `src/ipc/register.ts`, `src/main/index.ts`, `docs/build-report.md` (this section). **Did NOT touch:** `src/client/**` (Riley), `src/db/**`/`migrations/**` (Ravi), `electron-builder.yml`/`package.json`/configs/`scripts/**` (Diego — documented above), other agents' docs, `.learnings/locked-instructions.md`.
 
 ---
+
+## v0.7.3 — Diego (clean release cut from post-fix `main`) — 2026-05-28
+
+**Why this release exists.** The `v0.7.2` git tag was cut from a commit whose source tree carried a TRUNCATED `src/ipc/handlers/scan-list-devices.ts` (concurrent-write corruption — file cut mid-token at `ScanListDevicesRequ`, no closing brace → `TS1005: '}' expected`). The v0.7.2 *binary assets* are fine, but anyone building from the v0.7.2 *tag* hit the truncation; the tag-triggered `release.yml` CI run for v0.7.2 died at typecheck. David's WIA fix landed on `main` (`8be4bd5` complete WIA handler files) plus the commit-frequency convention (`44e8faa`). v0.7.3 re-cuts the release tag from correct, buildable source.
+
+### 1 — `main` pushed + clean
+
+- On entry: `main` was 2 commits ahead of `origin/main` (`8be4bd5`, `44e8faa`) — exactly the expected post-fix state. **Pushed `main` to origin** (`64d1413..44e8faa`). `git status` → up-to-date with `origin/main`, working tree clean.
+- Verified the corruption is fixed: `src/ipc/handlers/scan-list-devices.ts:22-26` now has the COMPLETE `import type { ScanListDevicesError, ScanListDevicesRequest, ScanListDevicesResponse } from '../contracts.js';` with closing brace.
+- **All three typechecks clean** (`tsc -p tsconfig.main.json/preload/renderer --noEmit` → 0 errors each). The truncation fix means `main` compiles — confirmed before tagging.
+
+### 2 — Version bump (commit-frequency convention)
+
+- `package.json` 0.7.2 → 0.7.3. Committed JUST the version bump (`chore(release): v0.7.3`, commit `3f58913`) per the new per-checkpoint commit convention, pushed to `main` (`44e8faa..3f58913`). Husky pre-commit (lint-staged) passed.
+
+### 3 — Build + verify locally (L-003 honored)
+
+- `ELECTRON_RUN_AS_NODE` cleared first (L-002 env hygiene).
+- **L-003:** this is a Node-24-only host (no Node 20 / nvm). Used the sanctioned escape hatch `node scripts/rebuild-native-for-node.mjs` (non-destructive cache-prebuild swap — NO from-source rebuild) then `--electron` to restore the Electron-ABI binding before packaging. No working binary was deleted.
+- `npm run build` → 3 typechecks clean + electron-vite emits main/preload/renderer (185 pdfjs assets copied). The `pades-detect` dynamic-vs-static-import notice is a pre-existing benign chunk-strategy warning, not an error.
+- `npx electron-builder --win` → NSIS `PDF Viewer & Editor-0.7.3-x64.exe` (130.86 MB) + portable `…-x64-portable.exe` (130.64 MB) + `release/latest.yml` (v0.7.3). One transient `d3dcompiler_47.dll: Access is denied` on the first pack attempt — a STALE leftover `win-unpacked` `PDF Viewer & Editor.exe` instance (4-process Electron family, PIDs 95336/82500/28576/17396, from a prior wave's verification launch, no document loaded) held the DLL handle. Closed the stale instance (safe — leftover background app, no unsaved data), cleared `win-unpacked`, repacked clean.
+
+### 4 — Tag + publish: CI-DRIVEN path (the workflow proof)
+
+**Took the preferred CI-driven path** to prove `release.yml` now works post-fix.
+
+- `git tag v0.7.3 3f58913 && git push origin v0.7.3` → triggered `.github/workflows/release.yml` on `windows-latest`.
+- **Run `26577753983` completed `success` in 3m32s.** Every step green: checkout → setup-node (Node 20 via `.nvmrc`, L-003) → `npm ci` → rebuild better-sqlite3 (Electron ABI) → tolerant WIA addon rebuild → **build (typecheck + electron-vite)** → **package + publish (electron-builder `--publish always`)** → upload artifacts.
+- **The headline confirmation:** the SAME workflow on the v0.7.2 tag = `completed failure` in 1m10s (died at typecheck on the truncated file). On v0.7.3 it is `completed success`. The truncation fix is proven by CI, end-to-end. No local-publish fallback was needed.
+
+### Tag + release
+
+- Tag `v0.7.3` on origin → `3f589131a058ae20e1e7cc233e4af445b7d012a5` (post-fix commit `3f58913`).
+- **GitHub Release v0.7.3 (CI-published, author `github-actions[bot]`)** with assets: `latest.yml`, `pdf-viewer-editor-0.7.3.exe` (portable), `pdf-viewer-editor-setup-0.7.3.exe` (NSIS) + `.blockmap`.
+- **Release URL:** https://github.com/SuperiorAg/PDF_Viewer_Editor/releases/tag/v0.7.3
+
+### 5 — Promote to live + reconcile v0.7.2
+
+- Promoted: `gh release edit v0.7.3 --draft=false` → `draft: false`, published 2026-05-28T13:34:07Z. `gh release list` now marks **`0.7.3` as `Latest`**. Set descriptive release notes documenting the fix + supersession + unsigned caveat.
+- **v0.7.2 reconciliation decision: LEFT LIVE, NOT deleted.** Rationale: (a) GitHub already marks v0.7.3 as Latest, so electron-updater's `latest.yml` feed resolves v0.7.3 — updaters never advertise v0.7.2 over v0.7.3; (b) v0.7.2's published *binaries* are verified-good (corruption was in the tag's *source*, not the assets); (c) no destructive ops per brief; (d) the v0.7.3 release notes explicitly state it supersedes v0.7.2 for transparency. Non-destructive default preserves history.
+
+### 6 — L-002 visual verification (regression proof — a PDF opens via `window.pdfApi`)
+
+Verified against the SHIPPED `release/win-unpacked` v0.7.3 binary. `_electron.launch` cannot attach to a packaged production binary (no piped debug line), so used the L-002-sanctioned remote-debugging-port + Playwright `connectOverCDP` path against the genuine packaged renderer (`ELECTRON_RUN_AS_NODE` cleared first). Scripts: `release/verify-v073-pdfapi.mjs` + `release/verify-v073-update.mjs`.
+
+1. **`window.pdfApi` exposed — the exact thing the corruption threatened.** `typeof window.pdfApi === 'object'`, **18 namespaces**: `annotations, app, bookmarks, dialog, events, export, forms, fs, i18n, ocr, pdf, recents, scan, settings, signatures, telemetry, update, window`.
+2. **Version = 0.7.3.** `pdfApi.app.getVersion()` → `{appVersion: "0.7.3", electronVersion: "30.5.1", nodeVersion: "20.16.0"}` (Node 20 in the packaged runtime confirms the L-003 baseline shipped).
+3. **Bridge round-trip OK.** `pdfApi.fs.readPdf({droppedPath})` → `{displayName:"wave21-sample.pdf", pageCount:1}`; `pdfApi.fs.readBytesByHandle` → 1392 bytes. The full IPC bridge to the main process works.
+4. **A PDF OPENS + RENDERS (the regression that started the incident).** Drove the app's OWN drag-drop open pipeline (`app.tsx` window `drop` handler reading `File.path` per L-001 → `openDroppedPathThunk` → render). Render state `{canvases:2, sawPage:true}`.
+5. **Check-for-updates is HONEST.** `pdfApi.update.check({trigger:'explicit'})` contacted the live public feed → `{status:"up-to-date", availableVersion:null, currentVersion:"0.7.3"}` — correct, since v0.7.3 is now Latest. The auto-flip seam works (real owner/repo → `app-update.yml` has no PLACEHOLDER → real feed contacted, NOT the `update_not_configured` short-circuit).
+
+**Screenshot (L-002 evidence): `D:\Projects\PDF_Viewer_Editor\release\wave-v073-pdfapi-verified.png`.** Shows the fully-rendered v0.7.3 window: localized menu strip (Archivo/Editar/Insertar/Ver/Herramientas/Ayuda — i18n working, persisted es-ES locale), full toolbar, sidebar tabs (Páginas active/Marcadores/Formularios/OCR/Exportaciones) with a page-1 thumbnail, and **the sample PDF rendered in the main canvas** ("Hello PDF Viewer & Editor v0.5.0" + "The quick brown fox jumps over the lazy dog" + alphabet/contract text — drawn via pdf.js), status bar "Página 1 de 1", Zoom 100%. This is pixels-on-screen proof that `window.pdfApi` works end-to-end in the packaged binary.
+
+### Final status
+
+| Objective | Status |
+|---|---|
+| `main` pushed + clean + typechecks | DONE (origin/main @ `3f58913`, 3/3 typechecks green) |
+| Version bump 0.7.2 → 0.7.3 committed | DONE (`3f58913`, focused commit) |
+| Local build + package (L-003) | DONE (NSIS 130.86 MB + portable 130.64 MB + latest.yml) |
+| Tag v0.7.3 on origin (post-fix commit) | DONE (`3f589131…`) |
+| Publish path | **CI-DRIVEN** — release.yml run `26577753983` GREEN (3m32s); v0.7.2 run was RED |
+| GitHub Release v0.7.3 live + assets | DONE — promoted `--draft=false`, marked Latest |
+| L-002: a PDF opens in the v0.7.3 binary | DONE — `wave-v073-pdfapi-verified.png`, 18 pdfApi namespaces |
+| v0.7.2 reconciliation | LEFT LIVE (non-destructive; v0.7.3 is Latest) |
+
+### Gaps / caveats
+
+- **Unsigned build** (no Authenticode cert) — Windows SmartScreen "unknown publisher" on first run; electron-updater check/download against the public feed works, but auto-INSTALL of updates needs the cert (Phase 7.1). Documented in the release notes + the existing release.yml header.
+- No `src/**` edits this wave — the WIA fix was already on `main` (David). Verification-only artifacts (`release/verify-v073-*.mjs`, the PNG) are in Diego's `release/**` domain.
+
+### File ownership
+
+Edited (Diego-owned): `package.json` (version 0.7.2 → 0.7.3), `docs/build-report.md` (this section). Created (Diego-owned): `release/verify-v073-pdfapi.mjs`, `release/verify-v073-update.mjs`, `release/wave-v073-pdfapi-verified.png`. Tag/release ops on origin via gh. **Did NOT touch:** `src/**` (David/Riley/Ravi), `electron-builder.yml`/`release.yml` (no change needed — both already correct from Wave Publish-Setup), frozen design docs, other agents' docs, `.learnings/locked-instructions.md`.
+
+---
