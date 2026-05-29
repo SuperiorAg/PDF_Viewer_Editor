@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PDF Viewer & Editor — application icon (v2, PDF-first)
+  Concept: a clean white document with a folded top-right corner (classic
+  document cue) carrying a bold red "PDF" ribbon/badge — the universally
+  recognized PDF-file look. Red = instant PDF recognition. NO SSI branding.
+  Original mark; evokes the PDF convention without copying any vendor logo.
+  Master vector source. 512x512 viewport, designed to read at 16px..256px.
+  Author: SuperiorAg marketing-os brand/design team, 2026-05-29.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- App-icon plate: soft neutral so the white page + red PDF badge pop -->
+    <linearGradient id="plate" x1="64" y1="40" x2="448" y2="472" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f4f6fa"/>
+      <stop offset="1" stop-color="#dfe4ec"/>
+    </linearGradient>
+    <!-- White page with a faint cool shade toward the bottom for depth -->
+    <linearGradient id="page" x1="150" y1="80" x2="362" y2="432" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#eef1f6"/>
+    </linearGradient>
+    <!-- Folded-corner triangle shading -->
+    <linearGradient id="fold" x1="300" y1="80" x2="356" y2="140" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#cfd6e2"/>
+      <stop offset="1" stop-color="#aab4c6"/>
+    </linearGradient>
+    <!-- The hero red — a confident modern scarlet/crimson PDF ribbon -->
+    <linearGradient id="red" x1="120" y1="312" x2="392" y2="392" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F03A33"/>
+      <stop offset="1" stop-color="#D11F22"/>
+    </linearGradient>
+    <filter id="ds" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="9" stdDeviation="14" flood-color="#28324a" flood-opacity="0.30"/>
+    </filter>
+    <filter id="ribbonShadow" x="-25%" y="-40%" width="150%" height="180%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#7a0d0f" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Rounded-square app-icon plate (modern Windows/macOS convention) -->
+  <rect x="32" y="32" width="448" height="448" rx="96" fill="url(#plate)"/>
+  <rect x="32" y="32" width="448" height="448" rx="96" fill="#ffffff" opacity="0.04"/>
+
+  <!-- White document page with folded top-right corner. Bold silhouette = "document" at 16px. -->
+  <g filter="url(#ds)">
+    <path d="M138 110
+             a28 28 0 0 1 28 -28
+             h138
+             l66 66
+             v254
+             a28 28 0 0 1 -28 28
+             H166
+             a28 28 0 0 1 -28 -28
+             Z" fill="url(#page)"/>
+    <!-- Folded corner -->
+    <path d="M304 82 l66 66 h-50 a16 16 0 0 1 -16 -16 Z" fill="url(#fold)"/>
+  </g>
+
+  <!-- Hero: a bold red PDF ribbon/badge spanning the page. The focal point. -->
+  <g filter="url(#ribbonShadow)">
+    <!-- Ribbon body with a notched/flagged left end so it reads as a badge, not a bar -->
+    <path d="M104 312
+             h300
+             v92
+             h-300
+             l26 -46
+             Z" fill="url(#red)"/>
+  </g>
+  <!-- Bold "PDF" wordmark — the universally recognized label -->
+  <text x="268" y="384" text-anchor="middle"
+        font-family="Arial, 'Segoe UI', Helvetica, sans-serif"
+        font-size="68" font-weight="900" letter-spacing="3"
+        fill="#ffffff">PDF</text>
+</svg>
