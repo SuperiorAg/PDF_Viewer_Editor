@@ -146,7 +146,14 @@ export function PdfCanvas(props: PdfCanvasProps): JSX.Element {
         width: screenWidth,
         height: screenHeight,
         transform: `scale(${props.displayScale})`,
-        transformOrigin: '0 0',
+        // Scale from the page's horizontal CENTER (not top-left) so the page
+        // stays centered in the window during a wheel gesture — the .viewer is
+        // a flex column with align-items:center, so its committed layout centers
+        // each page horizontally; matching that with a 50%-x origin removes the
+        // off-center drift + the "snap back to center" on commit. Vertical
+        // origin stays at the top so the page grows downward from a fixed top
+        // edge (predictable for tall pages / scroll position).
+        transformOrigin: '50% 0',
         willChange: 'transform',
       }}
       aria-label={`Page ${props.index + 1}`}
