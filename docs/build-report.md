@@ -8273,3 +8273,82 @@ Verified against the SHIPPED `release/win-unpacked` v0.7.3 binary. `_electron.la
 Edited (Diego-owned): `package.json` (version 0.7.2 → 0.7.3), `docs/build-report.md` (this section). Created (Diego-owned): `release/verify-v073-pdfapi.mjs`, `release/verify-v073-update.mjs`, `release/wave-v073-pdfapi-verified.png`. Tag/release ops on origin via gh. **Did NOT touch:** `src/**` (David/Riley/Ravi), `electron-builder.yml`/`release.yml` (no change needed — both already correct from Wave Publish-Setup), frozen design docs, other agents' docs, `.learnings/locked-instructions.md`.
 
 ---
+
+## v0.7.4 — Diego (ship the viewer UX fixes) — 2026-05-29
+
+**Why this release exists.** Three real viewer UX fixes were committed to local `main` but never pushed and never in any release — the published v0.7.3 binary still had blocky HiDPI text + jerky per-tick ctrl+scroll zoom. The fixes (all Riley `src/client/**`, already correct + committed):
+
+- `a4989a6` fix(csp): allow `blob:` in `font-src` — pdf.js embedded-font loading.
+- `fc28dbc` fix(viewer): crisp HiDPI text (DPR-aware raster + offscreen double-buffer) + fluid ctrl+scroll zoom (two-tier `displayZoom` CSS transform + rAF-coalesce + 120ms debounce commit) + synced zoom dropdown.
+- `a7f956d` fix(viewer): keep page horizontally centered during ctrl+scroll zoom (`transformOrigin: '50% 0'`).
+
+v0.7.4 pushes these and ships them via the GitHub Release + auto-update feed.
+
+### 1 — main pushed + sanity
+
+- `git push origin main` → `7b2aeac..a7f956d` (the 3 unpushed fix commits). origin/main now `a7f956d`, branch in sync.
+- All 3 typechecks clean: `tsc -p tsconfig.{renderer,main,preload}.json --noEmit` → `RENDERER_OK / MAIN_OK / PRELOAD_OK`. The UX fixes typecheck.
+
+### 2 — version bump
+
+- `package.json` 0.7.3 → 0.7.4. Focused commit `chore(release): v0.7.4` (`421c82e`), pushed `a7f956d..421c82e`. Husky pre-commit (lint-staged) passed.
+
+### 3 — build (L-003 honored)
+
+- `Remove-Item env:ELECTRON_RUN_AS_NODE` first (L-002 hygiene). `node scripts/rebuild-native-for-node.mjs` → better-sqlite3 v137 (Node-24) prebuild swapped in for the local toolchain. `npm run build` GREEN — 3/3 typechecks, fresh renderer bundle `dist/renderer/assets/index-BylSVg_9.js` (carries the UX fixes). Then `node scripts/rebuild-native-for-node.mjs --electron` to restore the Electron-ABI binding before packaging, and `npx electron-builder --dir` → local `release/win-unpacked` at **ProductVersion 0.7.4.0** for L-002 verification.
+
+### 4 — publish: CI-DRIVEN (preferred path, like v0.7.3)
+
+- `git tag v0.7.4 421c82e && git push origin v0.7.4` → triggered `.github/workflows/release.yml` on `windows-latest`.
+- **Run `26633044498` — completed SUCCESS in 3m8s.** All steps green: Setup Node (from `.nvmrc`, Node 20 per L-003), Install deps, Rebuild native modules for Electron (better-sqlite3), tolerant WIA addon rebuild, Build (typecheck + electron-vite), `electron-builder --publish always`, artifact upload. No local-publish fallback needed.
+- Non-blocking annotations only (Node-20 GH-Actions deprecation notice; windows-latest → windows-2025 redirect notice).
+
+### GitHub Release: v0.7.4 (CI-published, author `github-actions[bot]`)
+
+- **Release URL:** https://github.com/SuperiorAg/PDF_Viewer_Editor/releases/tag/v0.7.4
+- Tag `v0.7.4` on origin → `421c82ec56fc4d2291f1ede1e12965bba29553c9`.
+- **Assets:** `latest.yml` (363 B), `pdf-viewer-editor-0.7.4.exe` (portable, 135.38 MB), `pdf-viewer-editor-setup-0.7.4.exe` (NSIS, 135.61 MB) + `.blockmap` (142 KB).
+
+### 5 — promote to live
+
+- `gh release edit v0.7.4 --draft=false` → `draft: false`, published `2026-05-29T10:53:49Z`. `gh release list` now marks **`0.7.4` as `Latest`**.
+- **Prior releases left intact** (non-destructive): v0.7.3 / v0.7.2 not deleted. GitHub marks highest semver as Latest, so electron-updater's feed resolves v0.7.4.
+- **Live feed confirmed:** fetched `releases/latest/download/latest.yml` → `version: 0.7.4`, points at `pdf-viewer-editor-setup-0.7.4.exe`, sha512 + `size: 135608502` match the published asset. Auto-update resolves v0.7.4 as Latest — this is what every updater reads.
+
+### 6 — L-002 visual verification (verified THE FIXES, not just "a window opens")
+
+Driven against the genuine packaged **v0.7.4** `win-unpacked` binary via the L-002-sanctioned remote-debugging-port + Playwright `connectOverCDP` path (`ELECTRON_RUN_AS_NODE` cleared first). Script: `release/verify-v074-ux.mjs`. Opened `release/wave21-sample.pdf` through the app's OWN drop pipeline, then fired a REAL ctrl+wheel gesture and sampled the DOM. Results:
+
+1. **Version:** `app.getVersion().value.appVersion == "0.7.4"` (Electron 30.5.1, Node 20.16.0, Chromium 124 in the binary).
+2. **FIX 1 — CRISP HiDPI text (DPR raster):** at `devicePixelRatio = 1.5`, the page canvas backing store is **165 px** wide vs a CSS box of **110 px** = exactly `round(110 × 1.5) = 165`. The pixel buffer is 1.5× the CSS box → sharp glyphs, not blocky. PASS.
+3. **FIX 2 — FLUID ctrl+scroll zoom:** mid-gesture (6 ticks of 1.1×, before the 120ms debounce commit) the `.page` carried a live GPU transform `matrix(1.61051, …)` — the two-tier `displayZoom` CSS transform driving an instant visual zoom while pdf.js re-rasters once on commit. PASS.
+4. **FIX 3 — CENTERED during zoom:** `.page` `transformOrigin` resolved to `306px 0px` (= 50% of page width, vertical 0) → horizontal-center anchor; no off-center drift / snap-back. PASS.
+5. **FIX 4 — zoom % tracks:** committed zoom flipped **100% → 177%** in the status-bar `<select>` after the gesture; the live transform returned to identity (`matrix(1,…)`) on commit (layout box re-sized at the new committed zoom). Status bar shows `177%`, not blank. PASS.
+
+**Screenshot (L-002 evidence): `D:\Projects\PDF_Viewer_Editor\release\wave-v074-ux-verified.png`.** Shows the fully-rendered v0.7.4 window at **Zoom 177%**: menu strip (File/Edit/Insert/View/Tools/Help), full toolbar, sidebar tabs (Pages active/Bookmarks/Forms/OCR/Exports) with the page-1 thumbnail, the sample PDF rendered crisply in the centered main canvas ("Hello PDF Viewer & Editor v0.5.0" heading + "The quick brown fox jumps over the lazy dog" + alphabet/numerals + contract paragraph — all sharp anti-aliased glyphs at >100% zoom), status bar "Page 1 of 1" + "Zoom 177%". Pixels-on-screen proof the DPR-raster + fluid-centered-zoom fixes are present in the published binary.
+
+### Objective summary
+
+| Objective | Status |
+|---|---|
+| `main` pushed (3 fix commits) + typechecks | DONE (origin/main @ `421c82e`, 3/3 typechecks green) |
+| Version bump 0.7.3 → 0.7.4 committed | DONE (`421c82e`, focused commit) |
+| Local build + package (L-003) | DONE (`win-unpacked` @ 0.7.4.0; native ABI restored to Electron) |
+| Tag v0.7.4 on origin | DONE (`421c82e…`) |
+| Publish path | **CI-DRIVEN** — release.yml run `26633044498` GREEN (3m8s) |
+| GitHub Release v0.7.4 live + assets | DONE — promoted `--draft=false`, marked Latest |
+| Live feed advertises v0.7.4 | DONE — `latest.yml` `version: 0.7.4`, sha512/size match |
+| L-002: FIXES verified in v0.7.4 binary | DONE — `wave-v074-ux-verified.png` + DOM assertions (crisp DPR, fluid transform, centered origin, 177% tracked) |
+| Prior releases reconciliation | LEFT LIVE (non-destructive; v0.7.4 is Latest) |
+
+### Gaps / caveats
+
+- **Unsigned build** (no Authenticode cert) — Windows SmartScreen "unknown publisher" on first run; same caveat as v0.7.2/v0.7.3 (Phase 7.1 cert work). electron-updater check/download against the public feed works; auto-INSTALL needs the cert.
+- **Local-pack update-check artifact (NOT a defect):** the local `electron-builder --dir` tree does NOT emit `app-update.yml` (only a real `--publish`/dist build does), so the local binary's `update.check()` returned `update_not_configured`. The CI-PUBLISHED installer embeds the real feed (the auto-flip seam keys on the published `app-update.yml`), and the live `latest.yml` advertises v0.7.4 — confirmed above. v0.7.3's CI binary already proved honest `up-to-date` against the live feed.
+- No `src/**` edits this wave — the UX fixes were already correct + committed (Riley). Verification-only artifacts (`release/verify-v074-ux.mjs`, the PNG) are in Diego's `release/**` domain.
+
+### File ownership
+
+Edited (Diego-owned): `package.json` (version 0.7.3 → 0.7.4), `docs/build-report.md` (this section). Created (Diego-owned): `release/verify-v074-ux.mjs`, `release/wave-v074-ux-verified.png`. Tag/release ops on origin via gh. **Did NOT touch:** `src/**` (the UX fixes are already correct + committed — Riley), `electron-builder.yml`/`release.yml` (no change needed — both already correct from the v0.7.2 publish-setup wave), frozen design docs, other agents' docs, `.learnings/locked-instructions.md`.
+
+---
