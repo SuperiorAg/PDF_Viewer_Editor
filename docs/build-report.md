@@ -8352,3 +8352,85 @@ Driven against the genuine packaged **v0.7.4** `win-unpacked` binary via the L-0
 Edited (Diego-owned): `package.json` (version 0.7.3 → 0.7.4), `docs/build-report.md` (this section). Created (Diego-owned): `release/verify-v074-ux.mjs`, `release/wave-v074-ux-verified.png`. Tag/release ops on origin via gh. **Did NOT touch:** `src/**` (the UX fixes are already correct + committed — Riley), `electron-builder.yml`/`release.yml` (no change needed — both already correct from the v0.7.2 publish-setup wave), frozen design docs, other agents' docs, `.learnings/locked-instructions.md`.
 
 ---
+
+## v0.7.5 — Diego (Director of Platform Engineering & Release Operations), 2026-05-29
+
+**Headline: v0.7.5 is live, the app + installer carry the new PDF icon, and the "default Electron icon is used" warning is finally gone.**
+
+The marketing-os brand team produced (and the user APPROVED) a v2 app icon — a white PDF document with a folded top-right corner + a bold red "PDF" ribbon on a rounded-square cool-neutral plate (all SSI swoosh branding dropped; design rationale + multi-res proof in `build/ICON-README.md`). The assets existed in `build/` but were UNTRACKED and not wired into the build, so electron-builder kept logging "default Electron icon is used — application icon is not set." This wave commits them, wires them, and ships v0.7.5.
+
+### 1 — icon assets committed (CRITICAL — CI builds from the pushed commit)
+
+- Independently re-verified each asset before committing: `icon.ico` is a 7-layer multi-res ICO (16/24/32/48/64/128/256, all PNG-payload, **256px present** — NSIS hard requirement met); `icon.icns` has valid `icns` magic with declared length == file size (312097 B); `icon.png` is a valid 512×512 raster. Matches the design team's documented proof exactly.
+- `git add build/{icon.svg,icon.png,icon.ico,icon.icns,ICON-README.md}` → commit **`fb6af07`** `feat(brand): add SSI PDF app icon (PDF-document + red ribbon)` (5 files, 199 insertions).
+- Post-commit integrity check: `git show HEAD:build/icon.ico` re-parses to the same 7-layer header (46792 B); `git show HEAD:build/icon.icns` is byte-identical to disk (312097 B, valid magic). Git auto-detected the binaries (`.ico`/`.png` marked `binary` via `.gitattributes`; `.icns` stored verbatim by NUL-byte detection) — no CRLF mangling of the binary payloads.
+
+### 2 — icon wired into electron-builder.yml
+
+Commit **`216418e`** `feat(build): wire app icon into electron-builder (win/nsis/mac)`. Per `build/ICON-README.md`:
+
+- `win:` → `icon: build/icon.ico`
+- `win.fileAssociations[0]:` → `icon: build/icon.ico` (per-extension document icon)
+- `nsis:` → `installerIcon: build/icon.ico` + `uninstallerIcon: build/icon.ico` (uncommented the existing placeholders)
+- `mac:` → `icon: build/icon.icns` — the mac block IS active (Phase 7 / Wave 29 config-only), so the icon is wired; mac stays **UNVERIFIED / not built by CI** per locked decision P7-L-1 (the comment says so), so this is a config-only line a future real-Mac build will honor.
+- Removed the obsolete "add a 256x256 .ico" / "add a per-extension .ico" placeholder comments.
+- Validated via `js-yaml`: `win.icon=build/icon.ico`, `nsis.installerIcon/uninstallerIcon=build/icon.ico`, `mac.icon=build/icon.icns`, `fileAssociations[0].icon=build/icon.ico` — all resolve.
+
+### 3 — version bump + push
+
+- `package.json` 0.7.4 → 0.7.5 → focused commit **`287f6ac`** `chore(release): v0.7.5` (husky pre-commit lint-staged + tsc safeguard passed).
+- `git push origin main` → `29c755f..287f6ac`. origin/main in sync (0 ahead / 0 behind).
+
+### 4 — build (L-003 honored) + the default-icon warning is GONE
+
+- Host is **Node 24.14.1**, so per L-003 used the sanctioned non-destructive escape hatch (NOT a from-source rebuild): `Remove-Item env:ELECTRON_RUN_AS_NODE` (L-002 hygiene) → `node scripts/rebuild-native-for-node.mjs` (Node-ABI v137 prebuild from cache) → `npm run build` GREEN (3/3 typechecks clean, all three vite bundles built) → `node scripts/rebuild-native-for-node.mjs --electron` (Electron-ABI v123 prebuild restored, packaging-ready) → `npx electron-builder --win`.
+- electron-builder packaged `release\win-unpacked` (electron=30.5.1) + built the NSIS installer `PDF Viewer & Editor-0.7.5-x64.exe` (137,354,975 B) + portable `…-0.7.5-x64-portable.exe` (137,057,002 B) + blockmap.
+- **KEY SUCCESS SIGNAL — the warning is GONE.** Full build log teed to `release/v075-build.log`; `grep -i "default Electron icon|application icon is not set"` → **no match (exit 1)**. There is now zero icon-related warning in the output (electron-builder found `build/icon.ico` and embedded it). This is the concrete proof the wiring took.
+
+### 5 — publish: CI-DRIVEN (preferred path)
+
+- `git tag v0.7.5 && git push origin v0.7.5` → triggered `.github/workflows/release.yml`.
+- **Run `26638464974` — completed SUCCESS in 3m42s** on `windows-latest`. All steps green: Setup Node (from `.nvmrc`, Node 20 per L-003), Install deps, Rebuild native modules for Electron (better-sqlite3), tolerant WIA addon rebuild, Build (typecheck + electron-vite), `electron-builder --publish` (uploaded to draft Release), artifact backup upload. No local-publish fallback needed.
+- Non-blocking annotations only (GitHub's Node-20-actions deprecation notice; windows-latest → windows-2025 redirect notice).
+
+### GitHub Release: v0.7.5 (CI-published)
+
+- **Release URL:** https://github.com/SuperiorAg/PDF_Viewer_Editor/releases/tag/v0.7.5
+- **Assets:** `latest.yml` (363 B), `pdf-viewer-editor-0.7.5.exe` (portable, 135.45 MB), `pdf-viewer-editor-setup-0.7.5.exe` (NSIS, 135.75 MB) + `.blockmap` (142 KB).
+- **Promote to live (step 5):** `gh release edit v0.7.5 --draft=false` → `draft: false`. `gh release list` now marks **`0.7.5` as `Latest`** (published `2026-05-29T12:59:39Z`). Prior releases (v0.7.4, v0.7.3, …) left intact — non-destructive.
+
+### 6 — L-002 visual verification (verified THE ICON — the release deliverable)
+
+Three layers of evidence, all against the genuine packaged binary (`ELECTRON_RUN_AS_NODE` cleared first):
+
+1. **Embedded-icon extraction:** `[System.Drawing.Icon]::ExtractAssociatedIcon("release/win-unpacked/PDF Viewer & Editor.exe")` → `release/v075-embedded-icon.png`. Viewing it shows the white document + folded corner + red "PDF" ribbon — **NOT the Electron atom**. Matches the source master `build/icon.png` (512px) pixel-for-pixel in design.
+2. **Live-launch window screenshot (the L-002 gold-standard):** launched the `win-unpacked` exe — healthy **4-process Electron family** (main+GPU+utility+renderer; not the single-process `ELECTRON_RUN_AS_NODE` misfire), window owner with a valid `MainWindowHandle`. Captured via Win32 `PrintWindow(hwnd, hdc, PW_RENDERFULLCONTENT=0x2)` (the reliable technique for background Chromium/Electron windows). **`release/wave-v075-icon-verified.png`** (23 KB) shows: the **new red-ribbon PDF icon in the window titlebar** (top-left, beside "PDF_Viewer_Editor"), the native menu strip (File/Edit/View/Window/Help), the in-app menu bar (File/Edit/Insert/View/Tools/Help), the full toolbar, the "Open a PDF to get started" empty state with the document placeholder + blue "Open file..." button + "or drag and drop", and the RECENTS panel. Fully-rendered UI (not white-screened) AND the new icon present.
+3. **Zoomed titlebar close-up:** `release/v075-titlebar-icon-zoom.png` — 6× nearest-neighbor crop of the titlebar icon, resolving the white document + red "PDF" ribbon unambiguously.
+
+The "default Electron icon is used" warning's absence (step 4) + the embedded icon visible in the binary (this step) together prove the icon shipped.
+
+### Objective summary
+
+| Objective | Status |
+|---|---|
+| Icon assets committed + pushed (tracked) | DONE (`fb6af07`; 5 files; binaries byte-verified post-commit) |
+| Icon wired into electron-builder.yml (win/nsis/mac/fileAssoc) | DONE (`216418e`; js-yaml-validated) |
+| Version bump 0.7.4 → 0.7.5 | DONE (`287f6ac`) |
+| Local build + package (L-003 honored) | DONE (`win-unpacked` + NSIS + portable at 0.7.5; ABI restored to Electron) |
+| **"default Electron icon is used" warning GONE** | **DONE — grep of `release/v075-build.log` = no match** |
+| Tag v0.7.5 + CI publish | **CI-DRIVEN** — release.yml run `26638464974` GREEN (3m42s) |
+| GitHub Release v0.7.5 live + assets | DONE — promoted `--draft=false`, marked Latest |
+| L-002: ICON verified in the binary | DONE — `wave-v075-icon-verified.png` (titlebar icon + rendered UI) + extraction + zoom |
+| Prior releases reconciliation | LEFT LIVE (non-destructive; v0.7.5 is Latest) |
+
+### Gaps / caveats
+
+- **Pre-existing CI `Lint` failure (NOT caused by this wave, NOT mine to fix):** the separate `ci.yml` workflow on the main push (run `26638281436`) failed at the Lint step with **3 `import/order` warnings** (`replay-engine.js` import ordering + an empty line in an import group) in `src/main/pdf-ops/` + `src/ipc/handlers/` — files owned by David/Riley, not Diego. The v0.7.4 main-push CI failed identically (this is standing lint debt, not a regression from the icon work — my commits only touched binary assets, a YAML file, and a version string, none of which eslint covers). The `release.yml` workflow is independent of `ci.yml` and shipped GREEN. Reported to Marcus for the owning agent to `eslint --fix`.
+- **Unsigned build** (no Authenticode cert) — Windows SmartScreen "unknown publisher" on first run; same Phase 7.1 caveat as v0.7.2–v0.7.4. The icon is still embedded and displayed regardless of signing.
+- **mac icon UNVERIFIED:** `mac.icon: build/icon.icns` is wired but mac is config-only and not built by CI (P7-L-1) — the icns is valid (verified) but the embedded-in-a-real-.app proof is a future real-Mac step.
+
+### File ownership
+
+Edited (Diego-owned): `package.json` (version 0.7.4 → 0.7.5), `electron-builder.yml` (icon wiring), `docs/build-report.md` (this section). Committed (Diego-owned, design-team-produced): `build/{icon.svg,icon.png,icon.ico,icon.icns,ICON-README.md}`. Created (Diego-owned): `release/v075-build.log`, `release/v075-embedded-icon.png`, `release/wave-v075-icon-verified.png`, `release/v075-titlebar-icon-zoom.png`. Tag/release ops on origin via gh. **Did NOT touch:** `src/**`, frozen design docs, other agents' docs, `.learnings/locked-instructions.md`.
+
+---
