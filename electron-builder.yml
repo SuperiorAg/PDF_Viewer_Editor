@@ -173,7 +173,11 @@ win:
       arch: [x64]
     - target: portable
       arch: [x64]
-  # icon: build/icon.ico  # add a 256x256 .ico to build/ before first signed ship
+  # App icon (v0.7.5, Diego). Multi-res ICO (16/24/32/48/64/128/256) authored by
+  # the marketing-os brand team — the white PDF document + red "PDF" ribbon mark.
+  # 256px layer present (NSIS hard requirement). Clears the "default Electron icon
+  # is used — application icon is not set" warning. Source + proof: build/ICON-README.md.
+  icon: build/icon.ico
   # Code-signing placeholder — populate in CI from env when cert is available.
   # certificateFile: ${env.WIN_CSC_LINK}
   # certificatePassword: ${env.WIN_CSC_KEY_PASSWORD}
@@ -187,7 +191,7 @@ win:
       description: Portable Document Format
       role: Editor
       mimeType: application/pdf
-      # icon: build/icon.ico  # add a per-extension .ico when ready
+      icon: build/icon.ico   # per-extension document icon (v0.7.5, Diego)
       # Note: electron-builder writes the registry keys; the installer
       # checkbox that controls WHETHER these are written is wired in
       # build/installer.nsh below (Decision 4: default ON).
@@ -206,8 +210,8 @@ nsis:
   runAfterFinish: true
   deleteAppDataOnUninstall: false  # preserve recents + settings + bookmarks
   include: build/installer.nsh     # ships the "Associate .pdf" checkbox flow
-  # installerIcon: build/icon.ico        # add once a .ico is in build/
-  # uninstallerIcon: build/icon.ico
+  installerIcon: build/icon.ico    # NSIS setup .exe icon (v0.7.5, Diego)
+  uninstallerIcon: build/icon.ico  # NSIS uninstaller icon (same asset)
   # installerHeader: build/installerHeader.bmp
   # installerSidebar: build/installerSidebar.bmp
   # uninstallerSidebar: build/installerSidebar.bmp
@@ -266,6 +270,7 @@ mac:
       arch: [universal] # universal binary intent (x64 + arm64 merged) — UNVERIFIED
     - target: zip
       arch: [universal]
+  icon: build/icon.icns # Retina icon set 16-1024 (v0.7.5, Diego). Config-only/UNVERIFIED per P7-L-1 — mac is not built by CI; wired so a future real-Mac build embeds the mark.
   category: public.app-category.productivity
   hardenedRuntime: true # required for notarization (Phase 7.1 step)
   gatekeeperAssess: false # not notarizing in Phase 7
