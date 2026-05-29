@@ -134,18 +134,16 @@ beforeEach(() => {
 
 /**
  * jsdom doesn't ship a real Canvas2D backend — `canvas.getContext('2d')`
- * returns `null` by default, which trips our wrapper's null-context guard.
- * Provide a no-op stub so the render path can complete in tests.
+ * throws "Not implemented" by default, which trips our wrapper's null-context
+ * guard (and the wrapper also creates an OFFSCREEN canvas internally that a
+ * per-instance stub can't reach). The shared vitest.setup.ts installs a
+ * complete no-op 2D context on `HTMLCanvasElement.prototype` so both the
+ * visible canvas and the wrapper's offscreen canvas — including the
+ * `ctx.drawImage(off, 0, 0)` blit on completion — resolve against the same
+ * stub. We just return a plain canvas here and let the prototype stub apply.
  */
 function makeCanvas(): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  const stub: Partial<CanvasRenderingContext2D> = {
-    fillStyle: '#000',
-    fillRect: () => undefined,
-  };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (canvas as any).getContext = () => stub as CanvasRenderingContext2D;
-  return canvas;
+  return document.createElement('canvas');
 }
 
 describe('pdf-render — worker bootstrap', () => {

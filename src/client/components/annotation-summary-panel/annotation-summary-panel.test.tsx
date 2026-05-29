@@ -110,8 +110,12 @@ describe('AnnotationSummaryPanel', () => {
       </Provider>,
     );
     expect(screen.getByLabelText(/Highlight on page 1/)).toBeInTheDocument();
-    // Uncheck Highlight filter
-    fireEvent.click(screen.getByLabelText(/Highlight/));
+    // Uncheck the Highlight filter checkbox. A plain getByLabelText(/Highlight/)
+    // is ambiguous — it matches BOTH the filter checkbox (accessible name
+    // "Highlight") and the annotation button (aria-label "Highlight on page 1").
+    // Target the checkbox specifically by role + an exact name so only the
+    // filter control is clicked.
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Highlight' }));
     expect(screen.queryByLabelText(/Highlight on page 1/)).toBeNull();
   });
 });

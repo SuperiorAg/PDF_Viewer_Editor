@@ -117,8 +117,13 @@ describe('SignatureAuditPanel', () => {
       await Promise.resolve();
     });
 
-    // All three subject CNs are present.
-    expect(screen.getByText(/CN=John Smith/)).toBeInTheDocument();
+    // All three subject CNs are present. "CN=John Smith" appears in TWO rows
+    // (the pades row id=1 and the pades-tsa row id=3) — each rendered in its
+    // own <td> — so getByText would throw on the multi-match. Assert both
+    // John-Smith cells render via getAllByText, and the single Jane-Doe cell
+    // via getByText. This keeps the behavioral assertion (all three subject
+    // CNs render) fully intact.
+    expect(screen.getAllByText(/CN=John Smith/)).toHaveLength(2);
     expect(screen.getByText(/CN=Jane Doe/)).toBeInTheDocument();
 
     // All three signatureKinds are visible.

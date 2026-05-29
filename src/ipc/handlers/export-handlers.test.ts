@@ -3,6 +3,9 @@
 // IPC handler tests for the six Phase 6 export channels + dialog +
 // cancel. Covers the zod boundary, pre-flight, and happy/failure dispatch.
 
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, expect, it, beforeEach } from 'vitest';
 
 import type {
@@ -11,6 +14,18 @@ import type {
   ExportEngineResult,
 } from '../../main/export/export-engine.js';
 import type { ExportJobSummary } from '../contracts.js';
+
+// The shared preflight() runs a real `fs.access(parentDir, W_OK)` writability
+// probe before dispatching to the engine. Earlier these specs hard-coded
+// POSIX `/tmp/...` output paths; on a Windows CI runner `path.dirname('/tmp/
+// out.docx')` resolves to a drive-relative `\tmp` directory that does NOT
+// exist, so EVERY engine-reaching test failed with `output_path_unwritable`
+// instead of exercising the code path under test. Anchoring the output path to
+// the OS temp dir (guaranteed to exist + be writable on every platform and CI
+// runner) keeps the writability probe a real check while letting the
+// engine-dispatch / error-mapping assertions run as intended.
+const TMP = tmpdir();
+const outPath = (name: string): string => join(TMP, name);
 
 import { handleDialogPickExportOutputPath } from './dialog-pick-export-output-path.js';
 import { handleExportCancelJob } from './export-cancel-job.js';
@@ -100,7 +115,7 @@ describe('handleExportToDocx (api-contracts.md §17.1)', () => {
         qualityTier: 'layout-preserving',
         includeAnnotations: false,
         pageSize: 'auto',
-        outputPath: '/tmp/out.docx',
+        outputPath: outPath('out.docx'),
       },
       commonDeps(),
     );
@@ -115,7 +130,7 @@ describe('handleExportToDocx (api-contracts.md §17.1)', () => {
         pageRange: { start: 0, end: 1 },
         includeAnnotations: false,
         pageSize: 'auto',
-        outputPath: '/tmp/out.docx',
+        outputPath: outPath('out.docx'),
       },
       commonDeps(),
     );
@@ -131,7 +146,7 @@ describe('handleExportToDocx (api-contracts.md §17.1)', () => {
         qualityTier: 'layout-preserving',
         includeAnnotations: false,
         pageSize: 'auto',
-        outputPath: '/tmp/out.docx',
+        outputPath: outPath('out.docx'),
       },
       commonDeps({ getBytes: () => null }),
     );
@@ -147,7 +162,7 @@ describe('handleExportToDocx (api-contracts.md §17.1)', () => {
         qualityTier: 'layout-preserving',
         includeAnnotations: false,
         pageSize: 'auto',
-        outputPath: '/tmp/out.docx',
+        outputPath: outPath('out.docx'),
       },
       commonDeps(),
     );
@@ -163,7 +178,7 @@ describe('handleExportToDocx (api-contracts.md §17.1)', () => {
         qualityTier: 'layout-preserving',
         includeAnnotations: false,
         pageSize: 'auto',
-        outputPath: '/tmp/out.docx',
+        outputPath: outPath('out.docx'),
       },
       commonDeps({ getActiveJobCount: () => 50, getMaxQueueSize: () => 50 }),
     );
@@ -179,7 +194,7 @@ describe('handleExportToDocx (api-contracts.md §17.1)', () => {
         qualityTier: 'layout-preserving',
         includeAnnotations: false,
         pageSize: 'auto',
-        outputPath: '/tmp/out.docx',
+        outputPath: outPath('out.docx'),
       },
       commonDeps(),
     );
@@ -198,7 +213,7 @@ describe('handleExportToDocx (api-contracts.md §17.1)', () => {
         qualityTier: 'layout-preserving',
         includeAnnotations: false,
         pageSize: 'auto',
-        outputPath: '/tmp/out.docx',
+        outputPath: outPath('out.docx'),
       },
       commonDeps({
         engine: syntheticEngine({
@@ -219,7 +234,7 @@ describe('handleExportToDocx (api-contracts.md §17.1)', () => {
         qualityTier: 'layout-preserving',
         includeAnnotations: false,
         pageSize: 'auto',
-        outputPath: '/tmp/out.docx',
+        outputPath: outPath('out.docx'),
       },
       commonDeps({
         engine: syntheticEngine({
@@ -245,7 +260,7 @@ describe('handleExportToXlsx (api-contracts.md §17.2)', () => {
         pageRange: { start: 0, end: 0 },
         qualityTier: 'text-only',
         includeAnnotations: false,
-        outputPath: '/tmp/out.xlsx',
+        outputPath: outPath('out.xlsx'),
       },
       commonDeps(),
     );
@@ -259,7 +274,7 @@ describe('handleExportToXlsx (api-contracts.md §17.2)', () => {
         pageRange: { start: 0, end: 0 },
         qualityTier: 'high-fidelity',
         includeAnnotations: false,
-        outputPath: '/tmp/out.xlsx',
+        outputPath: outPath('out.xlsx'),
       },
       commonDeps(),
     );
@@ -276,7 +291,7 @@ describe('handleExportToPptx (api-contracts.md §17.3)', () => {
         pageRange: { start: 0, end: 0 },
         qualityTier: 'layout-preserving',
         includeAnnotations: true,
-        outputPath: '/tmp/out.pptx',
+        outputPath: outPath('out.pptx'),
       },
       commonDeps(),
     );
@@ -297,7 +312,7 @@ describe('handleExportToImages (api-contracts.md §17.4)', () => {
         format: 'png',
         dpi: 9999,
         includeAnnotations: true,
-        outputPath: '/tmp/out.png',
+        outputPath: outPath('out.png'),
       },
       commonDeps(),
     );
@@ -314,7 +329,7 @@ describe('handleExportToImages (api-contracts.md §17.4)', () => {
         dpi: 150,
         jpegQuality: 5,
         includeAnnotations: true,
-        outputPath: '/tmp/out.jpeg',
+        outputPath: outPath('out.jpeg'),
       },
       commonDeps(),
     );
@@ -330,7 +345,7 @@ describe('handleExportToImages (api-contracts.md §17.4)', () => {
         format: 'bmp',
         dpi: 150,
         includeAnnotations: true,
-        outputPath: '/tmp/out.bmp',
+        outputPath: outPath('out.bmp'),
       },
       commonDeps(),
     );
@@ -346,7 +361,7 @@ describe('handleExportToImages (api-contracts.md §17.4)', () => {
         format: 'png',
         dpi: 150,
         includeAnnotations: true,
-        outputPath: '/tmp/out.png',
+        outputPath: outPath('out.png'),
       },
       commonDeps({
         engine: syntheticEngine({
@@ -368,7 +383,7 @@ describe('handleExportToImages (api-contracts.md §17.4)', () => {
         format: 'png',
         dpi: 150,
         includeAnnotations: true,
-        outputPath: '/tmp/out.png',
+        outputPath: outPath('out.png'),
       },
       commonDeps({
         engine: syntheticEngine({

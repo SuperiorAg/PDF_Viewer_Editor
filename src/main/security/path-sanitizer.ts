@@ -25,7 +25,27 @@
 // codes are exposed via the optional `sanitizePathDetailed` export for
 // diagnostic logging only — they intentionally do NOT widen the wire contract.
 
-import { isAbsolute, normalize, resolve, extname, basename } from 'node:path';
+import { normalize, resolve, extname, basename, posix, win32 } from 'node:path';
+
+/**
+ * Cross-platform absolute-path test.
+ *
+ * `node:path.isAbsolute` is platform-specific: on POSIX it rejects Windows
+ * drive paths (`C:/Users/...`), and on Windows it accepts both. This app is
+ * Windows-first but its CI runs the same suite on Linux, and its recents DB /
+ * replay engine can legitimately carry a Windows-shaped path to any host. A
+ * path that is absolute under EITHER convention is absolute for our trust-
+ * boundary purposes — a relative path (no drive letter, no leading slash) is
+ * relative under both. Using the union keeps `relative_not_allowed` meaning
+ * the same thing on every platform instead of silently rejecting valid
+ * Windows paths when the suite (or a non-Windows build) runs on POSIX.
+ *
+ * Normalization / resolution still use the platform-default helpers; only the
+ * absolute/relative CLASSIFICATION is made platform-independent here.
+ */
+function isAbsoluteCrossPlatform(p: string): boolean {
+  return posix.isAbsolute(p) || win32.isAbsolute(p);
+}
 
 // eslint-disable-next-line no-control-regex -- intentional: this regex EXISTS to detect and reject ASCII control chars (\x00-\x1f) in IPC-boundary paths. Removing the control chars would defeat the security check (vectors 1-3, NUL-injection / CR-LF path splitting).
 const CONTROL_CHAR_RE = /[\x00-\x1f]/;
@@ -254,7 +274,7 @@ export function sanitizePathDetailed(raw: unknown, opts: SanitizeOptions = {}): 
     return { ok: false, code: 'normalize_failed' };
   }
 
-  if (!opts.allowRelative && !isAbsolute(normalized)) {
+  if (!opts.allowRelative && !isAbsoluteCrossPlatform(normalized)) {
     return { ok: false, code: 'relative_not_allowed' };
   }
 
