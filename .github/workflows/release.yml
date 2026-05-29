@@ -72,12 +72,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Node 20 from .nvmrc (L-003). node-version-file keeps the runner Node
       # pinned to the locked baseline without hardcoding the number twice.
       - name: Setup Node.js (from .nvmrc)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -137,7 +137,7 @@ jobs:
       # release can be assembled manually. Does not replace the published release.
       - name: Upload Windows artifacts (backup)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: windows-release-artifacts
           path: |

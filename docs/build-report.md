@@ -8586,3 +8586,30 @@ The "default Electron icon is used" warning's absence (step 4) + the embedded ic
 Edited (Diego-owned): `package.json` (version 0.7.4 → 0.7.5), `electron-builder.yml` (icon wiring), `docs/build-report.md` (this section). Committed (Diego-owned, design-team-produced): `build/{icon.svg,icon.png,icon.ico,icon.icns,ICON-README.md}`. Created (Diego-owned): `release/v075-build.log`, `release/v075-embedded-icon.png`, `release/wave-v075-icon-verified.png`, `release/v075-titlebar-icon-zoom.png`. Tag/release ops on origin via gh. **Did NOT touch:** `src/**`, frozen design docs, other agents' docs, `.learnings/locked-instructions.md`.
 
 ---
+
+## CI Maintenance — clear GitHub Actions Node-20 runtime deprecation (Diego, 2026-05-29)
+
+**Why:** CI was fully GREEN, but every run carried GitHub's Node-20 Actions-runtime deprecation annotations (GitHub forces the Actions JS runtime to Node 24 by ~2026-06-02; Node 20 runtime removed 2026-09-16). This is the **Actions runtime** (the Node that runs each action's own JS), **NOT** the app's Node-20 baseline (L-003) — `node-version: '20'`, `.nvmrc`, and `engines.node` are untouched and remain Node 20.
+
+**Empirical verification (did NOT guess):** for each action I confirmed `runs.using: node24` in the candidate tag's `action.yml` via `gh api repos/<action>/contents/action.yml?ref=<tag>` before bumping. Verified live 2026-05-29.
+
+| Action                    | Was   | Now   | `runs.using` (verified) | Breaking-change note                                                                                                                                                                                                     |
+| ------------------------- | ----- | ----- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `actions/checkout`        | `@v4` | `@v5` | `node24`                | v5 = pure node24 bump; no param changes affect our zero-arg usage.                                                                                                                                                       |
+| `actions/setup-node`      | `@v4` | `@v5` | `node24`                | v5's only breaking change is _auto-caching when `packageManager` is set in package.json_ — inert here because BOTH workflows pass `cache: npm` explicitly, so caching behavior is unchanged.                             |
+| `actions/cache`           | `@v4` | `@v5` | `node24`                | v5 = pure node24 bump; path/key semantics unchanged (Playwright-browser cache key intact).                                                                                                                               |
+| `actions/upload-artifact` | `@v4` | `@v6` | `node24`                | **`@v5` is still `node20`** (skipped). v6 = first node24 major; `name`/`path`/`retention-days`/`if-no-files-found` all unchanged (the v3→v4 breaking artifact-merge change predates our usage; v4→v6 is API-compatible). |
+
+**No FORCE bridge needed** — every flagged action had a published node24 release, so `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` was unnecessary. Runner-version floor (>= 2.327.1) required by these majors is already exceeded by GitHub-hosted `windows-latest` + `ubuntu-latest`.
+
+**Scope:** all 12 `uses:` lines bumped — 9 in `ci.yml` (3× checkout, 3× setup-node, 1× cache, 2× upload-artifact), 3 in `release.yml` (checkout, setup-node, upload-artifact). Both files re-validated as YAML (js-yaml). No other actions in use (electron-builder handles release publishing — no `softprops/action-gh-release` / `download-artifact`).
+
+**`windows-latest` redirect NOTICE — deliberately left as-is.** GitHub's "windows-latest redirects to windows-2025-vs2026 by 2026-06-15" is an informational runner-LABEL redirect, not a deprecation we must fix. Pinning to `windows-2025` now would diverge from the documented redirect and pre-commit us to a label before the redirect lands. Decision: keep `windows-latest`; revisit only if the redirect causes an observed problem.
+
+**Verification:** push to `main` triggered `ci.yml` run — see commit `chore(ci): bump GH actions to Node-24 runtime versions`. Confirmed (a) run concluded **success** (version bumps broke nothing) and (b) the `actions/*@v4` Node-20 deprecation annotations are **GONE** (run-id + annotation check recorded in the commit/PR trail). `release.yml` won't run without a tag push — its identical bump was statically validated (valid YAML + same verified node24 versions) and takes effect on the next real release.
+
+### File ownership
+
+Edited (Diego-owned): `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `docs/build-report.md` (this section). **Did NOT touch:** app Node version (`.nvmrc` / `engines.node` — L-003 stays), `src/**`, `package.json` deps, other agents' docs, `.learnings/locked-instructions.md`. Additive commit to `main`; no force-push.
+
+---
