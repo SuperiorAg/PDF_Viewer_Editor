@@ -69,7 +69,7 @@ const db = initDatabase({
 setDbBridge({
   recents: adaptRecentsRepo(createRecentFilesRepo(db)),
   bookmarks: adaptBookmarksRepo(createBookmarksRepo(db)),
-  settings: createSettingsRepo(db),  // no adapter needed — settings is key-based
+  settings: createSettingsRepo(db), // no adapter needed — settings is key-based
 });
 ```
 
@@ -78,6 +78,7 @@ setDbBridge({
 **Error handling:** Wrap the `initDatabase` + `setDbBridge` block in a try/catch. On failure, log via `console.error` (the codebase doesn't have `electron-log` wired yet per Phase 1 plan), surface a single "Database initialization failed; running in non-persistent mode" toast at the renderer once the window is ready, and continue to register handlers — the in-memory bridge is the safe fallback. Do NOT call `app.quit()`; an app that crashes on first launch because of a corrupted SQLite file is worse than an app that runs with non-persistent state.
 
 **Acceptance:**
+
 - Launching the packaged app (`release/PDF Viewer & Editor-0.1.0-x64-portable.exe` or the installer) and confirming via Recents that an opened file survives a restart. **Diego or the user manually verifies this** — David's automated test for this would require booting Electron, which is the e2e path, not the unit path.
 - No regression in existing 172-test suite (allowing for the 35 ABI-mismatch failures that are environmental).
 
@@ -121,6 +122,7 @@ Replace the `payload: { kind: 'ops', ... }` block in `thunks.ts` with logic that
 - **Do NOT touch the thunk** — the contract says `ops` is the right payload kind when the renderer holds ops + annotations and lets main do the replay. The thunk is correct; main was missing the dep. This realigns the implementation to the contract instead of the other way around.
 
 **Acceptance:**
+
 - `Ctrl+S` on an opened PDF surfaces "Saved X.pdf (Y bytes)" success toast.
 - The saved file exists at the chosen destination and opens in a separate reader.
 - `handleFsWritePdf` test suite continues to pass (the existing test of the `'ops' rejected when deps.applyOpsToBytes undefined'` path still works — David's deps in tests don't inject the shim; production deps do).
@@ -138,6 +140,7 @@ Diego's `npm run typecheck:main` fails with 5 TS2379 errors:
 - `src/main/index.ts:111` (`CreateMainWindowOptions.rendererFile`)
 
 **Pattern:** assigning `number | undefined` (or `string | undefined`) into an optional property that's typed as `number` (without `| undefined`). Either:
+
 - Widen the property type to `T | undefined`, OR
 - Use conditional spread: `...(value !== undefined ? { id: value } : {})`
 
@@ -202,6 +205,7 @@ Apply to any other `no-control-regex` hits in `src/main/security/*` or `src/ipc/
 #### 2.1 H-2 — Fix factory selectors and update conventions §6.3 (BLOCKER for Phase-1 ship)
 
 **Where:**
+
 - Code: `src/client/state/slices/document-selectors.ts` — `selectAnnotationsForPage` and `selectPage`
 - Doc: `docs/conventions.md` §6.3 (the `selectPage = (pageIndex) => createSelector(...)` example endorses the broken pattern)
 - Consumer: `src/client/components/pdf-canvas/*:31` (per Julian, `PdfCanvas` calls `useAppSelector(selectAnnotationsForPage(props.index))` inside render — defeats memo)
@@ -259,6 +263,7 @@ Replace the broken example with the parameterized one. Add a NOTE block:
 Add a one-line cross-reference to `docs/code-review.md` H-2 finding so the next reader sees the source of the amendment.
 
 **Acceptance:**
+
 - `npm run lint` and `npm run typecheck:renderer` clean for the changed files.
 - A new Vitest case in `src/client/state/slices/document-selectors.test.ts` asserts memoization: call `selectAnnotationsForPage(state, 0)` twice with the same state and assert both calls return the **same array reference** (`===` identity, not just deep-equal). If the convention amendment authorizes a different pattern (e.g. RTK 2.2's default memoizer is sufficient without `maxSize`), pin the assertion to that behaviour explicitly so a future regression is caught.
 - Render-loop check: a Vitest case (or a comment-flagged manual smoke note) confirming `PdfCanvas` re-renders only when its dependencies actually change. Riley's call on which form is testable in jsdom.
@@ -342,8 +347,9 @@ The following items from `docs/code-review.md` are deliberately NOT in scope. Th
 **Verdict: implementation drift, NOT contract drift.** No amendment to `docs/api-contracts.md`.
 
 **Rationale:**
+
 - `api-contracts.md` §3.2 defines `payload` as a discriminated union of `'bytes' | 'ops'`. Both kinds are first-class. The `ops` branch is the **architecturally correct** Phase-2 design: renderer holds the dirty ops + annotations, main holds the original bytes, main replays. This minimises round-tripping a multi-MB byte buffer through the IPC bridge.
-- Phase-1 walking skeleton needs `Ctrl+S` to round-trip *something* end-to-end. The renderer thunk picking `kind: 'ops'` is correct for the contract; what's missing is the main-side `applyOpsToBytes` dep that the handler explicitly checks for (`if (!deps.applyOpsToBytes) return invalid_payload`). The contract anticipated Phase 1 not having the engine and surfaces the gap as a clean error — that's *good* contract design. The implementation just didn't supply the Phase-1 shim.
+- Phase-1 walking skeleton needs `Ctrl+S` to round-trip _something_ end-to-end. The renderer thunk picking `kind: 'ops'` is correct for the contract; what's missing is the main-side `applyOpsToBytes` dep that the handler explicitly checks for (`if (!deps.applyOpsToBytes) return invalid_payload`). The contract anticipated Phase 1 not having the engine and surfaces the gap as a clean error — that's _good_ contract design. The implementation just didn't supply the Phase-1 shim.
 - Fixing the contract to use `bytes` Phase-1 would require the renderer to fetch the document bytes via a new channel (currently `Uint8Array` is forbidden in the renderer store by conventions §10), then upload them via `fs:writePdf`. That's a worse design and would need a Phase 2 reversal.
 - David's task §1.2 wires the shim. No contract amendment.
 
@@ -401,7 +407,7 @@ The four locked decisions remain in effect through this wave. Neither David's no
 
 1. **Hybrid Print-to-PDF (pdf-lib default + Chromium fallback)** — untouched. `exportSlice` and `pdf:export` channel remain Phase-2 stubs as designed.
 2. **PDF-native annotations, no sidecar** — untouched. Annotations live on `document.annotations[]` and round-trip through the `payload.ops + annotations` save path (Phase 1 ship: shim returns bytes unchanged; Phase 2 ship: real replay).
-3. **Redux Toolkit (NOT Zustand)** — H-2 fix is *more* RTK-aligned (parameterized memoized selectors are the canonical RTK pattern).
+3. **Redux Toolkit (NOT Zustand)** — H-2 fix is _more_ RTK-aligned (parameterized memoized selectors are the canonical RTK pattern).
 4. **Windows file-association installer checkbox, default ON** — untouched. NSIS `installer.nsh` and electron-builder fileAssociations stand as Diego shipped.
 
 L-001 (`enableDragDropFiles`) holds — neither agent touches `window-manager.ts` or `enableDragDropFiles`.

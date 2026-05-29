@@ -25,13 +25,13 @@ Each section below describes the architectural deltas. Phase-1 `ARCHITECTURE.md`
 
 ## 1. Locked decisions encoded (Wave 6 self-check)
 
-| ID | Decision | Encoded where in this doc |
-|---|---|---|
-| **P2-L-2** | Main keeps original bytes per handle | §3 (lynchpin) — full design with lifecycle, memory budget, eviction |
-| **P2-L-3** | Text editing: replace-only, original font | §4 — failure modes, glyph coverage, missing-glyph UX; `edit-replay-engine.md` §4.6 |
-| **P2-L-4** | Image import: both modes, PNG/JPEG/TIFF | §5 — new EditOperation variants, embed model; `edit-replay-engine.md` §4.3-§4.5, §8 |
-| **P2-L-5** | ARCHITECTURE.md frozen; this is the delta | This doc exists. Phase-1 ARCHITECTURE.md is untouched by Wave 6. |
-| **P2-L-6** | Bookmarks: full CRUD + nesting + reorder | §6 — schema delta, IPC contract, UI; `data-models.md` §7 |
+| ID         | Decision                                  | Encoded where in this doc                                                           |
+| ---------- | ----------------------------------------- | ----------------------------------------------------------------------------------- |
+| **P2-L-2** | Main keeps original bytes per handle      | §3 (lynchpin) — full design with lifecycle, memory budget, eviction                 |
+| **P2-L-3** | Text editing: replace-only, original font | §4 — failure modes, glyph coverage, missing-glyph UX; `edit-replay-engine.md` §4.6  |
+| **P2-L-4** | Image import: both modes, PNG/JPEG/TIFF   | §5 — new EditOperation variants, embed model; `edit-replay-engine.md` §4.3-§4.5, §8 |
+| **P2-L-5** | ARCHITECTURE.md frozen; this is the delta | This doc exists. Phase-1 ARCHITECTURE.md is untouched by Wave 6.                    |
+| **P2-L-6** | Bookmarks: full CRUD + nesting + reorder  | §6 — schema delta, IPC contract, UI; `data-models.md` §7                            |
 
 ---
 
@@ -100,15 +100,15 @@ Conventions §10 still holds: **renderer never holds `Uint8Array` of document by
 
 11 new channels (full spec in `api-contracts.md` §12):
 
-| Channel | Purpose | Phase |
-|---|---|---|
-| `pdf:embedImage` | Embed a single image; returns appended EditOperation | 2 |
-| `pdf:replaceText` | Replace a text span; returns appended EditOperation | 2 |
-| `pdf:identifyTextSpan` | Renderer asks main for `objectId` at a click point | 2 |
-| `pdf:print` | Physical-printer export via Electron `webContents.print` | 2 |
-| `bookmarks:move` | Reorder + re-parent | 2 |
-| `bookmarks:listTree` | Hierarchical fetch | 2 |
-| `bookmarks:rename` | Title-only update (also via `bookmarks:upsert`; convenience) | 2 |
+| Channel                  | Purpose                                                                                                                                                     | Phase        |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `pdf:embedImage`         | Embed a single image; returns appended EditOperation                                                                                                        | 2            |
+| `pdf:replaceText`        | Replace a text span; returns appended EditOperation                                                                                                         | 2            |
+| `pdf:identifyTextSpan`   | Renderer asks main for `objectId` at a click point                                                                                                          | 2            |
+| `pdf:print`              | Physical-printer export via Electron `webContents.print`                                                                                                    | 2            |
+| `bookmarks:move`         | Reorder + re-parent                                                                                                                                         | 2            |
+| `bookmarks:listTree`     | Hierarchical fetch                                                                                                                                          | 2            |
+| `bookmarks:rename`       | Title-only update (also via `bookmarks:upsert`; convenience)                                                                                                | 2            |
 | `fs:getDocumentMetadata` | Renderer queries main for things like `pdflibLoadWarnings` post-save (was inlined in `fs:writePdf` response Phase 1; Phase 2 surfaces it as a refresh path) | 2 (optional) |
 
 The Phase-1 contract surface (§1-§11 of `api-contracts.md`) remains frozen and additive-only. The `'not_implemented'` variant on `fs:writePdf kind:'ops'` and on `pdf:export` is removed (handlers now return real results).
@@ -137,19 +137,19 @@ interface OpenDocument {
   handle: DocumentHandle;
   displayName: string;
   fileHash: string;
-  sourcePath: string | null;        // null for combine-result handles
-  bytes: Uint8Array;                // NEW — held for handle lifetime
+  sourcePath: string | null; // null for combine-result handles
+  bytes: Uint8Array; // NEW — held for handle lifetime
   pageCount: number;
   pdflibLoadWarnings: string[];
-  openedAt: number;                 // ms epoch; for eviction heuristic if Phase 5 multi-doc
-  bytesSize: number;                // for memory accounting
+  openedAt: number; // ms epoch; for eviction heuristic if Phase 5 multi-doc
+  bytesSize: number; // for memory accounting
 }
 
 class DocumentStore {
   // New methods:
   getBytes(handle: DocumentHandle): Uint8Array | null;
-  setBytes(handle: DocumentHandle, bytes: Uint8Array): void;    // called post-save to refresh
-  releaseHandle(handle: DocumentHandle): void;                   // existing; now clears the bytes slot too
+  setBytes(handle: DocumentHandle, bytes: Uint8Array): void; // called post-save to refresh
+  releaseHandle(handle: DocumentHandle): void; // existing; now clears the bytes slot too
   getOpenDocCount(): number;
   getTotalBytesHeld(): number;
 }
@@ -157,15 +157,15 @@ class DocumentStore {
 
 ### 3.3 Lifetime contract
 
-| Event | Bytes action |
-|---|---|
-| `dialog:openPdf` succeeds | `setBytes(handle, freshlyReadBytes)` — held in memory |
-| `fs:readPdf` (drag-drop) succeeds | Same |
-| `pdf:combine` succeeds | `setBytes(newHandle, combinedOutputBytes)` |
-| `fs:writePdf kind:'ops'` succeeds | `setBytes(handle, replayOutputBytes)` — REPLACE source-of-truth with newly-saved version (see §3.9 / edit-replay-engine §13.1) |
-| `pdf:export` succeeds | **No change to main's bytes** — export writes a new file but the open document's bytes remain whatever they were. The exported file is a destination, not the new source. |
-| `fs:closePdf` | Bytes evicted, handle freed |
-| App quit | All bytes freed |
+| Event                             | Bytes action                                                                                                                                                              |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dialog:openPdf` succeeds         | `setBytes(handle, freshlyReadBytes)` — held in memory                                                                                                                     |
+| `fs:readPdf` (drag-drop) succeeds | Same                                                                                                                                                                      |
+| `pdf:combine` succeeds            | `setBytes(newHandle, combinedOutputBytes)`                                                                                                                                |
+| `fs:writePdf kind:'ops'` succeeds | `setBytes(handle, replayOutputBytes)` — REPLACE source-of-truth with newly-saved version (see §3.9 / edit-replay-engine §13.1)                                            |
+| `pdf:export` succeeds             | **No change to main's bytes** — export writes a new file but the open document's bytes remain whatever they were. The exported file is a destination, not the new source. |
+| `fs:closePdf`                     | Bytes evicted, handle freed                                                                                                                                               |
+| App quit                          | All bytes freed                                                                                                                                                           |
 
 ### 3.4 Memory budget
 
@@ -212,17 +212,17 @@ Detail in `edit-replay-engine.md` §7.
 
 Phase 1 architected the heuristic in `ARCHITECTURE.md` §6.1. Phase 2 extends with new signals for the new ops:
 
-| Source signal | Phase 1? | Phase 2 extension |
-|---|---|---|
-| Encrypted source | Yes — Chromium | (unchanged) |
-| pdf-lib load warnings include xref/repair | Yes — Chromium | (unchanged) |
-| CMYK + ICC profile | Yes — Chromium | (unchanged) |
-| `/Ink` annotation present | Yes — Chromium | (unchanged; now actually fires since Ink is authored in Phase 2) |
-| AcroForm fields present | — | **NEW** Chromium (forms are Phase 3; pdf-lib drops appearance streams) |
-| Embedded JavaScript actions (`/Names → /JavaScript`) | — | **NEW** Chromium (pdf-lib strips) |
-| text-replace op present | — | **NEW** pdf-lib (Chromium would substitute the font, violating P2-L-3) |
-| image-overlay op count > 10 | — | **NEW** pdf-lib (Chromium's printToPDF reflows the source; many overlays compose better via direct write) |
-| Document is signed (`/Sig` field present) | — | **NEW** Chromium with warning ("signature will be invalidated") |
+| Source signal                                        | Phase 1?       | Phase 2 extension                                                                                         |
+| ---------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
+| Encrypted source                                     | Yes — Chromium | (unchanged)                                                                                               |
+| pdf-lib load warnings include xref/repair            | Yes — Chromium | (unchanged)                                                                                               |
+| CMYK + ICC profile                                   | Yes — Chromium | (unchanged)                                                                                               |
+| `/Ink` annotation present                            | Yes — Chromium | (unchanged; now actually fires since Ink is authored in Phase 2)                                          |
+| AcroForm fields present                              | —              | **NEW** Chromium (forms are Phase 3; pdf-lib drops appearance streams)                                    |
+| Embedded JavaScript actions (`/Names → /JavaScript`) | —              | **NEW** Chromium (pdf-lib strips)                                                                         |
+| text-replace op present                              | —              | **NEW** pdf-lib (Chromium would substitute the font, violating P2-L-3)                                    |
+| image-overlay op count > 10                          | —              | **NEW** pdf-lib (Chromium's printToPDF reflows the source; many overlays compose better via direct write) |
+| Document is signed (`/Sig` field present)            | —              | **NEW** Chromium with warning ("signature will be invalidated")                                           |
 
 The heuristic table lives in `src/main/export/engine-selector.ts`; Phase 2 updates the literals and adds tests. User manual override always wins.
 
@@ -388,6 +388,7 @@ INSERT INTO schema_migrations (version, applied_at) VALUES (2, 1716394500000);
 ```
 
 **Defaults:**
+
 - `parent_id = NULL` for existing rows (every Phase-1 bookmark becomes top-level after migration).
 - `sort_order = 0` for existing rows (ties broken by `id` ascending for stability).
 
@@ -495,14 +496,14 @@ Per `phase-2-plan.md` §7 question 2. **Whole-save abort.** Already in `edit-rep
 
 The renderer's save thunk surfaces the failure via the existing error-toast pattern, with a specific message per error variant:
 
-| Error variant | Toast message |
-|---|---|
-| `op_apply_failed` (text-replace + missing_glyph) | "Save failed: the text you replaced contains characters not in the original font. Cancel that edit and try again." |
-| `image_decode_failed` | "Save failed: one of the images couldn't be processed. The file may be corrupt." |
-| `text_span_not_found` | "Save failed: a text edit references a span that no longer exists. Cancel and re-edit." |
-| `fs_write_failed` | "Save failed: couldn't write to disk. Try Save As to choose a different location." |
-| `handle_not_found` | "Save failed: document state was lost. Please re-open the file." |
-| `encrypted_unsupported` | "Save failed: the source PDF is encrypted in a way the default engine can't preserve. Try Export to PDF with the Chromium engine." |
+| Error variant                                    | Toast message                                                                                                                      |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `op_apply_failed` (text-replace + missing_glyph) | "Save failed: the text you replaced contains characters not in the original font. Cancel that edit and try again."                 |
+| `image_decode_failed`                            | "Save failed: one of the images couldn't be processed. The file may be corrupt."                                                   |
+| `text_span_not_found`                            | "Save failed: a text edit references a span that no longer exists. Cancel and re-edit."                                            |
+| `fs_write_failed`                                | "Save failed: couldn't write to disk. Try Save As to choose a different location."                                                 |
+| `handle_not_found`                               | "Save failed: document state was lost. Please re-open the file."                                                                   |
+| `encrypted_unsupported`                          | "Save failed: the source PDF is encrypted in a way the default engine can't preserve. Try Export to PDF with the Chromium engine." |
 
 ---
 
@@ -545,17 +546,17 @@ Per `phase-2-plan.md` §7 question 7. **Click-into-text + main-process content-s
 
 These are the doc-loop honesty obligations. Wave 9 (Nathan) must update each user-facing surface:
 
-| Phase 1 limitation | Phase 2 reality | Doc update target |
-|---|---|---|
-| "Save does not preserve edits — saved file is a valid placeholder, not your work" | "Save preserves edits via the edit-replay engine" | `README.md` Phase 1 limitations section; `docs/user-guide.md` Known Limitations; `docs/user-guide.md` Saving section; HelpModal Phase-1 bullet; status-bar tooltip if any |
-| `fs:writePdf kind:'ops'` returns `not_implemented` | Returns real `{ bytesWritten, newFileHash, annotationRefAssignments }` | `docs/api-reference.md`; `docs/api-contracts.md` (Phase-2 amendment) |
-| `pdf:export` is a stub | Real implementation with dual-engine | Same as above |
-| Undo/redo disabled in Phase 1 | Activated; Ctrl+Z / Ctrl+Y wired | `docs/user-guide.md` shortcuts table; HelpModal table |
-| Bookmarks are flat (no nesting) | Tree with parent_id + sort_order | `docs/user-guide.md` Bookmarks section |
-| Text editing "coming in Phase 2" | Replace-only with original font; limitations documented | `docs/user-guide.md` new section "Editing text"; HelpModal Phase 2 bullets removed for text edit |
-| Image import "coming in Phase 2" | New-page + overlay; PNG/JPEG/TIFF | `docs/user-guide.md` new section "Inserting images" |
-| Print "coming in Phase 2" | Live | `docs/user-guide.md` new section "Printing" |
-| Export "coming in Phase 2" | Live | Same |
+| Phase 1 limitation                                                                | Phase 2 reality                                                        | Doc update target                                                                                                                                                         |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Save does not preserve edits — saved file is a valid placeholder, not your work" | "Save preserves edits via the edit-replay engine"                      | `README.md` Phase 1 limitations section; `docs/user-guide.md` Known Limitations; `docs/user-guide.md` Saving section; HelpModal Phase-1 bullet; status-bar tooltip if any |
+| `fs:writePdf kind:'ops'` returns `not_implemented`                                | Returns real `{ bytesWritten, newFileHash, annotationRefAssignments }` | `docs/api-reference.md`; `docs/api-contracts.md` (Phase-2 amendment)                                                                                                      |
+| `pdf:export` is a stub                                                            | Real implementation with dual-engine                                   | Same as above                                                                                                                                                             |
+| Undo/redo disabled in Phase 1                                                     | Activated; Ctrl+Z / Ctrl+Y wired                                       | `docs/user-guide.md` shortcuts table; HelpModal table                                                                                                                     |
+| Bookmarks are flat (no nesting)                                                   | Tree with parent_id + sort_order                                       | `docs/user-guide.md` Bookmarks section                                                                                                                                    |
+| Text editing "coming in Phase 2"                                                  | Replace-only with original font; limitations documented                | `docs/user-guide.md` new section "Editing text"; HelpModal Phase 2 bullets removed for text edit                                                                          |
+| Image import "coming in Phase 2"                                                  | New-page + overlay; PNG/JPEG/TIFF                                      | `docs/user-guide.md` new section "Inserting images"                                                                                                                       |
+| Print "coming in Phase 2"                                                         | Live                                                                   | `docs/user-guide.md` new section "Printing"                                                                                                                               |
+| Export "coming in Phase 2"                                                        | Live                                                                   | Same                                                                                                                                                                      |
 
 Nathan's Wave 9 brief MUST address each row. The "three impressions of honesty at point-of-action" pattern (Nathan Wave 4 lesson) extends to Phase 2: where the limitation was repeated at front-door + section-top + point-of-action, the closure must be reflected at all three.
 
@@ -565,16 +566,16 @@ Nathan's Wave 9 brief MUST address each row. The "three impressions of honesty a
 
 Phase 2 closes the H-3 boundary but introduces new fidelity boundaries the user-guide must document. These are NOT bugs — they are deliberate Phase-2 scope fences per locked decisions:
 
-| Boundary | Description | Where to surface |
-|---|---|---|
-| Text-replace clipping | New text wider than original box clips at the edge | Tooltip during edit; user-guide Editing-text section |
-| Text-replace missing glyph | New text contains codepoints not in original font | Inline indicator + tooltip during edit; user-guide |
-| Image overlay round-trip | Once saved, an overlay becomes page content; re-opening the saved PDF shows the image as a fixed drawing, not an editable overlay | user-guide Inserting-images section (with example screenshot) |
-| TIFF multi-page | Only first page imported | Tooltip in image-import modal when multi-page TIFF selected; user-guide |
-| TIFF compression subtypes | LZW / Deflate / Uncompressed supported; CCITT-G4 + JPEG-in-TIFF best-effort | user-guide |
-| Form fields | Pdf-lib loses appearance streams; pages with forms route to Chromium engine | Export dialog "Auto will choose: Chromium — source contains form fields" |
-| Encrypted source | pdf-lib drops the security handler on save; export only via Chromium with warning | Export dialog + toast on save attempt |
-| Linearization | Lost on save (pdf-lib doesn't emit linearized output) | user-guide Known Limitations |
+| Boundary                   | Description                                                                                                                       | Where to surface                                                         |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Text-replace clipping      | New text wider than original box clips at the edge                                                                                | Tooltip during edit; user-guide Editing-text section                     |
+| Text-replace missing glyph | New text contains codepoints not in original font                                                                                 | Inline indicator + tooltip during edit; user-guide                       |
+| Image overlay round-trip   | Once saved, an overlay becomes page content; re-opening the saved PDF shows the image as a fixed drawing, not an editable overlay | user-guide Inserting-images section (with example screenshot)            |
+| TIFF multi-page            | Only first page imported                                                                                                          | Tooltip in image-import modal when multi-page TIFF selected; user-guide  |
+| TIFF compression subtypes  | LZW / Deflate / Uncompressed supported; CCITT-G4 + JPEG-in-TIFF best-effort                                                       | user-guide                                                               |
+| Form fields                | Pdf-lib loses appearance streams; pages with forms route to Chromium engine                                                       | Export dialog "Auto will choose: Chromium — source contains form fields" |
+| Encrypted source           | pdf-lib drops the security handler on save; export only via Chromium with warning                                                 | Export dialog + toast on save attempt                                    |
+| Linearization              | Lost on save (pdf-lib doesn't emit linearized output)                                                                             | user-guide Known Limitations                                             |
 
 Phase 3 (forms), Phase 4 (signing), and Phase 5 (multi-page TIFF, scan + OCR) progressively close these.
 

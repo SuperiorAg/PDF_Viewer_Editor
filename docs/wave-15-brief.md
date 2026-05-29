@@ -30,10 +30,12 @@ Design the Phase 4 visual + PAdES cryptographic signature system + expanded anno
 ## Files you own this wave (doc-only)
 
 **NEW:**
+
 - `docs/architecture-phase-4.md` — Phase 4 system additions
 - `docs/signature-engine.md` — detailed design of the main-process signature operations (visual + PAdES + TSA + appearance streams)
 
 **AMEND (additive only):**
+
 - `docs/api-contracts.md` — add Phase 4 channels with `### Phase 4 amendment (2026-MM-DD, Riley)` banner
 - `docs/data-models.md` — add signature audit log schema v4 DDL + TypeScript types
 - `docs/ui-spec.md` — signature capture modal, signature placement overlay, PAdES sign modal, expanded annotation tools, annotation summary
@@ -52,47 +54,60 @@ Design the Phase 4 visual + PAdES cryptographic signature system + expanded anno
 ## Specific design questions you must answer
 
 ### A. PAdES library selection
+
 Research both candidates:
+
 - `node-signpdf` — MIT; how mature is the byte-range handling? Does it support timestamping? Does it handle multi-signature workflows (not needed Phase 4 but design awareness)?
 - `node-forge` + `pkijs` manual — MIT each; significantly more code but full control over ASN.1 + byte-range + appearance.
 
 Recommend one. Document both with their trade-offs.
 
 ### B. Cert/password lifecycle
+
 Diagram the full lifecycle of the PFX bytes + password from user input → in-memory load → signing → cleanup. Where exactly is the password zeroed? When is the cert object destroyed? Are there any GC pauses where the bytes could linger? (Practical answer: V8 GC will eventually collect, but explicit `Buffer.fill(0)` on the PFX bytes + overwriting the password variable with empty string is the discipline. Document this.)
 
 ### C. TSA URL trust model
+
 - Default: empty / off
 - User config: provide a TSA URL in Settings
 - Validation: ping the TSA on save with a small test request? Or just attempt the real request and fail clearly if invalid?
 - Document acceptable TSA URLs (RFC 3161-compliant; HTTPS; user responsibility for trust)
 
 ### D. Signature appearance stream design
+
 PDF widget annotation needs an `AP` dictionary with `N` (normal appearance) and optionally `R` (rollover) + `D` (down). The N stream contains the visual elements. Design:
+
 - Layout: signature image OR typed name (positioned)
 - Date / Reason text
 - Padding + sizing
 - How user customizes (Settings option? per-signature option in the sign modal?)
 
 ### E. Visual signature vs PAdES — UI distinction
+
 User flow when clicking the Sign affordance:
+
 - "Quick stamp" (visual only — typed/drawn/image, no crypto)
 - "Cryptographic signature" (PAdES — opens cert picker + password)
 
 How does the UI present these? Two buttons? One button with sub-menu? Modal step?
 
 ### F. Verification UX (out of scope or in scope?)
+
 Phase 4 plan says verification of OTHER docs is Phase 4.1. But the user signing their OWN doc may want a "Verify this signature works" preview. Design: post-sign confirmation modal showing "Signature valid; cert: <subject CN>; signed at: <time>"? Or just trust that Acrobat Reader will verify and skip the preview?
 
 ### G. Annotation toolset expansion
+
 For each new tool (shapes, arrows, callouts, measure):
+
 - PDF annotation subtype mapping (`/Square`, `/Circle`, `/Polygon`, `/PolyLine`, `/FreeText` with callout, `/Line` with measure unit)
 - Configuration options (color, line weight, fill, arrow style)
 - Tool selection UX (toolbar buttons; cursor changes)
 - Measure tool calibration (user sets a known length to scale; per-document calibration persisted in document state)
 
 ### H. Signature placement
+
 After capture, the user drags the signature onto:
+
 - A Phase-3 signature-placeholder field → snaps to field bounds
 - A freeform position → drag/resize/rotate handles
 
@@ -113,6 +128,7 @@ Per phase-4-plan §risk-register: 7 risks. Address each with mitigation in your 
 7. The Phase-3 signature-placeholder type is referenced + leveraged
 
 ## L-001
+
 Doc-only. Don't propose new BrowserWindow constructions in your design without security-floor inheritance.
 
 ## Output

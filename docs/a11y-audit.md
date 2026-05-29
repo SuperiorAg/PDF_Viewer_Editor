@@ -66,7 +66,7 @@ Each path lists: the keyboard contract, the ARIA roles/labels, focus management,
 - **ARIA:** annotation toolbar `role="toolbar"` `aria-label="Annotation tools"` with arrow-key navigation within the group; each tool button `aria-pressed` for the active tool. Annotation layer `role="list"`; each annotation `role="listitem"` with accessible name = type + page (e.g. "Highlight, page 2"). Properties popover is a `role="dialog"` with focus trap.
 - **Focus:** placing a text annotation moves focus into the contents editor. Closing the popover returns focus to the annotation.
 - **Narrator:** announces the selected tool ("Highlight tool, pressed") and, on annotation creation, "Annotation added".
-- **Honest gap:** freehand drawing is inherently pointer-driven — there is no keyboard equivalent for drawing an arbitrary stroke. Documented §7; not a Phase-7 blocker (the *other* annotation types provide a complete keyboard-accessible annotation workflow).
+- **Honest gap:** freehand drawing is inherently pointer-driven — there is no keyboard equivalent for drawing an arbitrary stroke. Documented §7; not a Phase-7 blocker (the _other_ annotation types provide a complete keyboard-accessible annotation workflow).
 
 ### Path 4 — Fill an existing form (AcroForm) — **SHOULD (rank 1)**
 
@@ -133,18 +133,18 @@ The headline Phase-7 a11y debt is the **proper ARIA tab pattern**. The pattern (
 
 Roving tabindex: only the active tab is in the tab order (`tabIndex={0}`); arrow keys move the active tab (and focus); `Home`/`End` jump to first/last. This is the WAI-ARIA Authoring Practices tab pattern.
 
-| # | Component (path) | Current gap (from code-review.md) | Wave 28 fix | Priority |
-|---|---|---|---|---|
-| R-1 | `sidebar/index.tsx:11-16` | tab semantics dropped for `jsx-a11y/aria-proptypes` workaround | apply the ARIA tab pattern above (Thumbnails / Bookmarks / Forms / Exports tabs) | **MUST** |
-| R-2 | `modals/settings-modal/` (General / Files / Export / Editing / About) | same workaround; no tab semantics | apply the ARIA tab pattern (horizontal `aria-orientation`) | **MUST** |
-| R-3 | `toolbar/` | no `role="toolbar"`; arrow-key group nav absent | add `role="toolbar"` + roving tabindex within toolbar groups | **MUST** |
-| R-4 | `thumbnail-strip/` | keyboard nav (ui-spec §11.7 I-4 added `tabIndex`/`role=option`; arrow keys + Delete need wiring) | wire arrow-key roving + Enter/Space activate + Delete fires delete-page | **MUST** |
-| R-5 | `bookmarks-panel/` | Space key doesn't activate (LOW, code-review.md:725) | map Space + Enter to activate bookmark; tree nodes `role="treeitem"` | MUST (cheap) |
-| R-6 | `empty-state/` | recents not keyboard-clickable (LOW) | recents are `<button>`s, focusable, Enter/Space opens | MUST (cheap) |
-| R-7 | `modals/combine-modal/` | empty-path validation surfaced visually only (LOW) | add `aria-invalid` + `aria-describedby` error text | SHOULD |
-| R-8 | `modals/*` (all) | focus-trap + focus-return + `aria-modal` discipline inconsistent | standardize a `useFocusTrap` hook applied to every modal | **MUST** |
-| R-9 | `status-bar/` | async announcements not in a live region | wrap the page/zoom/save-status widgets in `aria-live="polite"` | MUST |
-| R-10 | `modals/settings-modal/` (NEW Phase 7 controls) | n/a (new) | telemetry toggle + locale picker + update controls all keyboard + Narrator accessible (see ui-spec §16) | MUST |
+| #    | Component (path)                                                      | Current gap (from code-review.md)                                                                | Wave 28 fix                                                                                             | Priority     |
+| ---- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ------------ |
+| R-1  | `sidebar/index.tsx:11-16`                                             | tab semantics dropped for `jsx-a11y/aria-proptypes` workaround                                   | apply the ARIA tab pattern above (Thumbnails / Bookmarks / Forms / Exports tabs)                        | **MUST**     |
+| R-2  | `modals/settings-modal/` (General / Files / Export / Editing / About) | same workaround; no tab semantics                                                                | apply the ARIA tab pattern (horizontal `aria-orientation`)                                              | **MUST**     |
+| R-3  | `toolbar/`                                                            | no `role="toolbar"`; arrow-key group nav absent                                                  | add `role="toolbar"` + roving tabindex within toolbar groups                                            | **MUST**     |
+| R-4  | `thumbnail-strip/`                                                    | keyboard nav (ui-spec §11.7 I-4 added `tabIndex`/`role=option`; arrow keys + Delete need wiring) | wire arrow-key roving + Enter/Space activate + Delete fires delete-page                                 | **MUST**     |
+| R-5  | `bookmarks-panel/`                                                    | Space key doesn't activate (LOW, code-review.md:725)                                             | map Space + Enter to activate bookmark; tree nodes `role="treeitem"`                                    | MUST (cheap) |
+| R-6  | `empty-state/`                                                        | recents not keyboard-clickable (LOW)                                                             | recents are `<button>`s, focusable, Enter/Space opens                                                   | MUST (cheap) |
+| R-7  | `modals/combine-modal/`                                               | empty-path validation surfaced visually only (LOW)                                               | add `aria-invalid` + `aria-describedby` error text                                                      | SHOULD       |
+| R-8  | `modals/*` (all)                                                      | focus-trap + focus-return + `aria-modal` discipline inconsistent                                 | standardize a `useFocusTrap` hook applied to every modal                                                | **MUST**     |
+| R-9  | `status-bar/`                                                         | async announcements not in a live region                                                         | wrap the page/zoom/save-status widgets in `aria-live="polite"`                                          | MUST         |
+| R-10 | `modals/settings-modal/` (NEW Phase 7 controls)                       | n/a (new)                                                                                        | telemetry toggle + locale picker + update controls all keyboard + Narrator accessible (see ui-spec §16) | MUST         |
 
 **ESLint restoration (acceptance criterion):** once R-1/R-2 land, Diego restores `jsx-a11y/aria-proptypes` to `error` (from `warn`) in the ESLint config and confirms renderer typecheck + lint stay at 0. The `allowedDynamic` option Diego flagged (code-review.md:160) may be the enabler; if the proper tab pattern resolves the warnings without it, the rule simply goes back to `error`.
 
@@ -152,33 +152,33 @@ Roving tabindex: only the active tab is in the tab order (`tabIndex={0}`); arrow
 
 ## 5. Priority tiering (Q-D)
 
-| Tier | Paths / components | Phase 7 (Wave 28) verdict |
-|---|---|---|
-| **MUST** | Path 1 (open) · Path 2 (render/navigate) · Path 3 (annotate — tool selection + text) · Path 8 (save) · R-1..R-6, R-8, R-9, R-10 | Ships in Wave 28. These are the walking-skeleton core + the deferred ARIA tab debt + focus-trap standardization. |
-| **SHOULD** (Wave 28 if budget; else 7.1) | Path 4 (forms, rank 1) · Path 7 (export, rank 2) · Path 6 (OCR, rank 3) · Path 5 (sign, rank 4) · R-7 | Ranked by user frequency + risk. Forms first (high frequency, native controls = cheap). Export second (the limitations panel MUST reach Narrator — obligation overlap). OCR third (the destructive-confirm a11y matters). Sign last (lowest frequency, native password input already covers the critical surface). |
-| **DOCUMENT-ONLY** (defer to 7.1, disclose now) | freehand annotation drawing via keyboard · drawn-signature canvas via keyboard · full Narrator narration of the rendered page raster | Inherently pointer-centric or image-content; no Phase-7 fix. Disclosed §7 + trust-floor obligation #5. The keyboard-accessible alternatives (typed/image signature; text/highlight/shape annotations) provide complete workflows. |
+| Tier                                           | Paths / components                                                                                                                   | Phase 7 (Wave 28) verdict                                                                                                                                                                                                                                                                                          |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **MUST**                                       | Path 1 (open) · Path 2 (render/navigate) · Path 3 (annotate — tool selection + text) · Path 8 (save) · R-1..R-6, R-8, R-9, R-10      | Ships in Wave 28. These are the walking-skeleton core + the deferred ARIA tab debt + focus-trap standardization.                                                                                                                                                                                                   |
+| **SHOULD** (Wave 28 if budget; else 7.1)       | Path 4 (forms, rank 1) · Path 7 (export, rank 2) · Path 6 (OCR, rank 3) · Path 5 (sign, rank 4) · R-7                                | Ranked by user frequency + risk. Forms first (high frequency, native controls = cheap). Export second (the limitations panel MUST reach Narrator — obligation overlap). OCR third (the destructive-confirm a11y matters). Sign last (lowest frequency, native password input already covers the critical surface). |
+| **DOCUMENT-ONLY** (defer to 7.1, disclose now) | freehand annotation drawing via keyboard · drawn-signature canvas via keyboard · full Narrator narration of the rendered page raster | Inherently pointer-centric or image-content; no Phase-7 fix. Disclosed §7 + trust-floor obligation #5. The keyboard-accessible alternatives (typed/image signature; text/highlight/shape annotations) provide complete workflows.                                                                                  |
 
-**Rationale for the MUST/SHOULD split:** the MUST set is the walking-skeleton (the Phase-1 milestone flows) plus the explicit deferred debt — these are what "the app is accessible" means at minimum. The SHOULD set is the later-phase features; they degrade gracefully (native form controls and the native password input are already accessible) so a Wave-28 budget overflow defers them to 7.1 without shipping an *inaccessible* feature — just an *unaudited* one, which is honestly disclosed.
+**Rationale for the MUST/SHOULD split:** the MUST set is the walking-skeleton (the Phase-1 milestone flows) plus the explicit deferred debt — these are what "the app is accessible" means at minimum. The SHOULD set is the later-phase features; they degrade gracefully (native form controls and the native password input are already accessible) so a Wave-28 budget overflow defers them to 7.1 without shipping an _inaccessible_ feature — just an _unaudited_ one, which is honestly disclosed.
 
 ---
 
 ## 6. WCAG 2.1 AA success-criteria coverage
 
-| SC | Level | Covered by | Notes |
-|---|---|---|---|
-| 1.1.1 Non-text Content | A | aria-label on icon buttons (R-3), thumbnails (Path 2), annotations (Path 3) | page raster is decorative-image gap (§7) |
-| 1.3.1 Info and Relationships | A | ARIA roles (tablist/tab/tabpanel, toolbar, listbox, radiogroup) R-1..R-4, Path 7 | the core of the deferred-debt fix |
-| 1.4.3 Contrast (Minimum) | AA | Phase-1 floor (≥4.5:1) carried forward | re-verify default + dark theme |
-| 1.4.11 Non-text Contrast | AA | focus ring + control borders ≥3:1 (tokens.css `--focus-ring`) | new in Phase 7 |
-| 2.1.1 Keyboard | A | all critical paths §3; roving tabindex R-1..R-4 | freehand/drawn = documented exception (§7) |
-| 2.1.2 No Keyboard Trap | A | focus-trap hook R-8 traps WITHIN modals but Esc always escapes | |
-| 2.4.3 Focus Order | A | logical order (conventions §18.3 rule 4); focus-return on modal close (R-8) | |
-| 2.4.7 Focus Visible | AA | `:focus-visible` discipline (global rule 2) | carried + enforced |
-| 3.2.1 On Focus / 3.2.2 On Input | A | no context change on focus; commit boundaries are explicit (forms §14 commit) | |
-| 3.3.1 Error Identification | A | `aria-invalid` + `aria-describedby` (R-7, Path 4) | |
-| 4.1.2 Name, Role, Value | A | every interactive element named (global rule 1); ARIA states (aria-selected/pressed/checked) | the deferred-debt SC |
-| 4.1.3 Status Messages | AA | live regions (global rule 6; R-9; Path 7 progress) | new in Phase 7 |
-| 2.3.3 Animation from Interactions | AAA (bonus) | `prefers-reduced-motion` (global rule 8) | above-AA nicety |
+| SC                                | Level       | Covered by                                                                                   | Notes                                      |
+| --------------------------------- | ----------- | -------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| 1.1.1 Non-text Content            | A           | aria-label on icon buttons (R-3), thumbnails (Path 2), annotations (Path 3)                  | page raster is decorative-image gap (§7)   |
+| 1.3.1 Info and Relationships      | A           | ARIA roles (tablist/tab/tabpanel, toolbar, listbox, radiogroup) R-1..R-4, Path 7             | the core of the deferred-debt fix          |
+| 1.4.3 Contrast (Minimum)          | AA          | Phase-1 floor (≥4.5:1) carried forward                                                       | re-verify default + dark theme             |
+| 1.4.11 Non-text Contrast          | AA          | focus ring + control borders ≥3:1 (tokens.css `--focus-ring`)                                | new in Phase 7                             |
+| 2.1.1 Keyboard                    | A           | all critical paths §3; roving tabindex R-1..R-4                                              | freehand/drawn = documented exception (§7) |
+| 2.1.2 No Keyboard Trap            | A           | focus-trap hook R-8 traps WITHIN modals but Esc always escapes                               |                                            |
+| 2.4.3 Focus Order                 | A           | logical order (conventions §18.3 rule 4); focus-return on modal close (R-8)                  |                                            |
+| 2.4.7 Focus Visible               | AA          | `:focus-visible` discipline (global rule 2)                                                  | carried + enforced                         |
+| 3.2.1 On Focus / 3.2.2 On Input   | A           | no context change on focus; commit boundaries are explicit (forms §14 commit)                |                                            |
+| 3.3.1 Error Identification        | A           | `aria-invalid` + `aria-describedby` (R-7, Path 4)                                            |                                            |
+| 4.1.2 Name, Role, Value           | A           | every interactive element named (global rule 1); ARIA states (aria-selected/pressed/checked) | the deferred-debt SC                       |
+| 4.1.3 Status Messages             | AA          | live regions (global rule 6; R-9; Path 7 progress)                                           | new in Phase 7                             |
+| 2.3.3 Animation from Interactions | AAA (bonus) | `prefers-reduced-motion` (global rule 8)                                                     | above-AA nicety                            |
 
 ---
 
@@ -230,6 +230,7 @@ rg -n 'aria-label="[A-Z]' src/client/    # matches with a literal string (not {t
 ### 8.2 Manual Narrator drill (Wave 29)
 
 Run the packaged Windows binary with Windows Narrator on. Walk each MUST path (open → navigate → annotate text → save) and confirm:
+
 - Each control announces name + role + state.
 - Tab order matches §2 rule 4.
 - Modals trap focus and return it on close.

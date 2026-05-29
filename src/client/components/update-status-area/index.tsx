@@ -157,7 +157,11 @@ export function UpdateStatusArea(): JSX.Element {
       </div>
 
       {confirmInstall && update.availableVersion !== null && (
-        <div className={styles.installConfirm} role="alertdialog" aria-label={t('modals:about.installConfirmTitle')}>
+        <div
+          className={styles.installConfirm}
+          role="alertdialog"
+          aria-label={t('modals:about.installConfirmTitle')}
+        >
           <p className={styles.installConfirmBody}>{t('modals:about.installConfirmBody')}</p>
           <div className={styles.actions}>
             <button

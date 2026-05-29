@@ -24,10 +24,12 @@ Design the Phase 3 forms + mail-merge system to enable Wave 12 implementers (Dav
 ## Files you own this wave (doc-only)
 
 ### NEW
+
 - `docs/architecture-phase-3.md` — Phase 3 system additions (analogous to architecture-phase-2.md)
 - `docs/form-engine.md` — detailed design of the main-process form fill + flatten + mail-merge engine (analogous to edit-replay-engine.md)
 
 ### AMEND (additive only — never break Phase 1 or Phase 2 contracts)
+
 - `docs/api-contracts.md` — add new channels: `forms:detect`, `forms:fill`, `forms:flatten`, `forms:designAdd`, `forms:designRemove`, `forms:listTemplates`, `forms:saveTemplate`, `forms:loadTemplate`, `forms:runMailMerge`. Each new channel: typed request/response + error variants. Mark all as Phase 3. Banner: `### Phase 3 amendment (2026-05-22, Riley)`.
 - `docs/data-models.md` — add `FormFieldDefinition` (discriminated union: text/checkbox/radio/dropdown/signature/date), `FormTemplate` (collection of FormFieldDefinitions + metadata), `FormFillValue` (the runtime per-doc fill state), `MailMergeJob` (template ref + data source + output config). Schema v3 DDL for `form_templates` table.
 - `docs/ui-spec.md` — Forms sidebar tab (detection + cycle through fields), Form Designer mode (toggle in toolbar; click-to-place; field-properties panel), Mail Merge Wizard modal (4 steps: template → data source → mapping → output), Flatten-on-export checkbox in Save As. Update shortcuts table.
@@ -46,7 +48,9 @@ Design the Phase 3 forms + mail-merge system to enable Wave 12 implementers (Dav
 ## Specific deliverable details
 
 ### `docs/architecture-phase-3.md`
+
 Sections:
+
 - **Scope** (one paragraph per goal area)
 - **Form-state model** — how forms are represented in renderer state; how that maps to PDF AcroForm objects on save
 - **EditOperation integration** — your call (see Locked decision 7); document the chosen path
@@ -57,7 +61,9 @@ Sections:
 - **What's NOT in Phase 3** — explicit scope fence
 
 ### `docs/form-engine.md`
+
 The detailed design. Sections:
+
 - **Goal** — single paragraph
 - **Function signatures** — `detectForms(bytes): FormFieldDefinition[]`, `fillForm(bytes, values): bytes`, `flattenForms(bytes): bytes`, `createField(bytes, fieldDef): bytes`, `removeField(bytes, fieldId): bytes`, `runMailMerge(template, dataSource, output): MailMergeResult`. All pure/deterministic over (bytes, args) → bytes or structured result.
 - **pdf-lib boundary** — what pdf-lib supports natively for AcroForm READ + FILL + FLATTEN; what's required for CREATE (research and document — this is the headline Phase 3 risk). If CREATE is hard, propose a manual-PDF-dict approach (write the form field dict + widget annotation directly using pdf-lib's lower-level API).
@@ -68,6 +74,7 @@ The detailed design. Sections:
 ### Amendment specifics
 
 **api-contracts.md** — for each new channel, specify:
+
 - Request type
 - Response type (success + error variants)
 - Whether it streams progress events
@@ -76,6 +83,7 @@ The detailed design. Sections:
 **data-models.md** — Wave 8.5-style §amendment banner; include the DDL for migration 0003_phase3_forms.sql; include TypeScript interfaces.
 
 **ui-spec.md** — wireframe-level prose for:
+
 - Forms sidebar tab (resembles bookmarks sidebar in structure)
 - Form Designer mode (toolbar toggle; cursor changes; click-to-place; properties panel docks right)
 - Mail Merge Wizard (modal, 4 steps with Back/Next navigation; preview panel showing 1 filled sample)
@@ -97,6 +105,7 @@ The detailed design. Sections:
 ## Verification (your responsibility)
 
 After writing:
+
 1. Cross-reference: every new IPC channel in api-contracts has a matching mention in architecture-phase-3.md AND (if applicable) a Phase-3 EditOperation variant in data-models.md
 2. Schema v3 DDL is idempotent + safe migration from schema v2
 3. Mail-merge perf considerations addressed (caching, batching) — don't ship a quadratic algorithm
@@ -104,6 +113,7 @@ After writing:
 5. L-001 not implicitly weakened (e.g. mail-merge runner doesn't spawn new BrowserWindows; if it does, they inherit security floor)
 
 ## L-001
+
 Doc-only work. Not at runtime risk. If your design proposes a new BrowserWindow (e.g. mail-merge progress window), specify the security-floor inheritance explicitly in architecture-phase-3.md.
 
 ## Output

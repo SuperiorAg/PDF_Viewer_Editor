@@ -86,7 +86,12 @@ export function MailMergeModal(): JSX.Element {
     );
 
   return (
-    <ModalShell title={t('modals:mailMerge.title')} onClose={onClose} size="lg" footer={<WizardFooter />}>
+    <ModalShell
+      title={t('modals:mailMerge.title')}
+      onClose={onClose}
+      size="lg"
+      footer={<WizardFooter />}
+    >
       {step !== 'running' && step !== 'done' && step !== 'error' && <StepIndicator step={step} />}
       <div className={styles.body}>{body}</div>
     </ModalShell>
@@ -633,7 +638,9 @@ function DoneView(): JSX.Element {
   if (!result) return <p>{t('modals:mailMerge.done')}</p>;
   return (
     <div className={styles.step}>
-      <h3>{result.wasCancelled ? t('modals:mailMerge.cancelled') : t('modals:mailMerge.complete')}</h3>
+      <h3>
+        {result.wasCancelled ? t('modals:mailMerge.cancelled') : t('modals:mailMerge.complete')}
+      </h3>
       <p>
         {t('modals:mailMerge.rowsWritten', {
           written: result.rowsWritten,

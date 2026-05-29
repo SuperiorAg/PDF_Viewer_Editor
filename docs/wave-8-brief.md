@@ -21,16 +21,16 @@ Wave 7 ownership boundaries STILL apply. Diego owns `package.json`, `electron-bu
 
 David, Ravi, Riley ran Wave 7 in parallel and all delivered green status rows. Spot-check on disk by Marcus confirms:
 
-| Surface | Verified on disk |
-|---|---|
-| `replay-engine.ts` exports `replay(input: ReplayInput): Promise<ReplayResult>` with 11 op handlers, pure (no FS/DB/network/console.log) | PASS |
-| `migrations/0002_phase2_bookmarks.sql` matches `data-models.md` §7.3 DDL (parent_id FK CASCADE + sort_order + idx) | PASS |
-| 9 new IPC channels live in `src/ipc/contracts.ts`; types match `api-contracts.md` §12 (sampled `pdf:embedImage`, `bookmarks:move`, `fs:applyEditOps`) | PASS |
-| `src/client/types/ipc-contract.ts` re-exports Phase-2 types (gatekeeper boundary held; David's accidental direct-import was re-routed by Riley) | PASS |
-| `src/client/state/middleware/history-middleware.ts` active (computes inverses, compacts image bytes, re-entrancy flag `meta.__history`) | PASS |
-| `src/client/state/thunks.ts` `saveDocumentThunk` calls `api.fs.applyEditOps(...)` — H-3 PHASE-1 INLINE block GONE; the pdf-lib import is removed | PASS — Walking-skeleton goal #8 truly functional |
-| `src/db/types.ts` Phase-2 SettingKey extension matches `src/ipc/contracts.ts` (no drift between Ravi and David) | PASS |
-| File ownership: 150 source files, every path falls under exactly one owner | PASS |
+| Surface                                                                                                                                               | Verified on disk                                 |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `replay-engine.ts` exports `replay(input: ReplayInput): Promise<ReplayResult>` with 11 op handlers, pure (no FS/DB/network/console.log)               | PASS                                             |
+| `migrations/0002_phase2_bookmarks.sql` matches `data-models.md` §7.3 DDL (parent_id FK CASCADE + sort_order + idx)                                    | PASS                                             |
+| 9 new IPC channels live in `src/ipc/contracts.ts`; types match `api-contracts.md` §12 (sampled `pdf:embedImage`, `bookmarks:move`, `fs:applyEditOps`) | PASS                                             |
+| `src/client/types/ipc-contract.ts` re-exports Phase-2 types (gatekeeper boundary held; David's accidental direct-import was re-routed by Riley)       | PASS                                             |
+| `src/client/state/middleware/history-middleware.ts` active (computes inverses, compacts image bytes, re-entrancy flag `meta.__history`)               | PASS                                             |
+| `src/client/state/thunks.ts` `saveDocumentThunk` calls `api.fs.applyEditOps(...)` — H-3 PHASE-1 INLINE block GONE; the pdf-lib import is removed      | PASS — Walking-skeleton goal #8 truly functional |
+| `src/db/types.ts` Phase-2 SettingKey extension matches `src/ipc/contracts.ts` (no drift between Ravi and David)                                       | PASS                                             |
+| File ownership: 150 source files, every path falls under exactly one owner                                                                            | PASS                                             |
 
 The integration is clean enough to proceed. The YELLOW verdict is because **five known follow-ups must be absorbed in Wave 8** rather than dispatched as a separate remediation wave (see "Triage of Wave 7 discoveries" below).
 
@@ -38,14 +38,14 @@ The integration is clean enough to proceed. The YELLOW verdict is because **five
 
 ## Triage of Wave 7 discoveries
 
-| # | Discovery | Verdict | Owner in Wave 8 |
-|---|---|---|---|
-| 1 | `utif` runtime dep not in package.json; `tiff-decoder.ts` dynamic-imports it via string-variable to keep the build green | **FIX-NOW (Diego adds dep).** License is MIT (verified by Marcus against npm registry: `utif@3.1.0` license MIT). On the project's allow-list. | Diego |
-| 2 | Chromium export adapter returns `engine_failed_chromium` stub; `pdf-export-pdf.ts` channel is live, the pdf-lib engine is live, only Chromium is deferred | **FIX-NOW (Diego wires).** This is packaging-adjacent work (offscreen `BrowserWindow` factory in `src/main/export/`, `webContents.printToPDF()` integration). Diego owns. Rolled into Wave 8 rather than a Wave 7.5 split because it touches Electron-lifecycle code Diego already owns from Wave 3. | Diego |
-| 3 | `pdf:print` channel live but `dispatchPrint` adapter returns `print_dispatch_failed` stub; needs `webContents.print()` wiring | **FIX-NOW (Diego wires).** Same boundary as #2. Both adapters land in the same `src/main/export/` module. | Diego |
-| 4 | `pdf:identifyTextSpan` scanner returns `no_text_at_point` — renderer's pdf.js hit-test is the Phase-2 substitute per architecture-phase-2.md §4.3 | **ACCEPT for Phase 2 ship — defer real scanner to Phase 2.5.** Renderer-cached font-metrics works as designed (verified by `text-edit-overlay.test.tsx`). Channel surface is type-correct; the real content-stream walker is a measurable Phase-2.5 ticket. Do NOT block Wave 8 on this. | (Phase 2.5 backlog) |
-| 5 | Ravi's `MoveBookmarkResult` discriminated union (`cycle_detected` / `not_found` / `invalid_parent` / `ok`) is BETTER than data-models §7.5's `boolean`, but David's `src/main/db-bridge.ts` re-typed the adapter's `move(...)` as `boolean` and the IPC handler `bookmarks-phase2.ts` now INFERS cycle-vs-not_found from `newParentId === null`. The api-contracts §12.6 demand for distinct `cycle_detected` is at risk: a not-found bookmark moved under a real parent is misclassified as `cycle_detected`. | **YELLOW — fix at the bridge in Wave 8.5 (Marcus dispatches David), AND amend data-models §7.5 doc to match Ravi's shipped reality.** This is the schema-deviation-becomes-contract pattern from Wave 2 lesson #5 (`window:*` ACCEPT). The fix: (a) amend data-models §7.5 to specify `MoveBookmarkResult` union; (b) David widens `RaviBookmarksRepoPhase2.move` return type in `src/main/db-bridge.ts`; (c) `bookmarks-phase2.ts` switches on the variant directly instead of the request-shape heuristic. Julian flags during Wave 8 audit; Marcus dispatches a 30-min David patch as Wave 8.5 after Julian lands. | Julian (flag); Marcus + David (Wave 8.5) |
-| 6 | Ravi's 5 SettingKey additions in `src/db/types.ts` were pre-emptively shipped without explicit brief authorization (to unblock David's typecheck) | **ACCEPT.** Verified Ravi's keys exactly match David's keys in `src/ipc/contracts.ts` — zero drift. The cross-wave coordination payoff Ravi documented in her learning is the right precedent. Note in build-report and move on. | (no-op) |
+| #   | Discovery                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Verdict                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Owner in Wave 8                          |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| 1   | `utif` runtime dep not in package.json; `tiff-decoder.ts` dynamic-imports it via string-variable to keep the build green                                                                                                                                                                                                                                                                                                                                                                                       | **FIX-NOW (Diego adds dep).** License is MIT (verified by Marcus against npm registry: `utif@3.1.0` license MIT). On the project's allow-list.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Diego                                    |
+| 2   | Chromium export adapter returns `engine_failed_chromium` stub; `pdf-export-pdf.ts` channel is live, the pdf-lib engine is live, only Chromium is deferred                                                                                                                                                                                                                                                                                                                                                      | **FIX-NOW (Diego wires).** This is packaging-adjacent work (offscreen `BrowserWindow` factory in `src/main/export/`, `webContents.printToPDF()` integration). Diego owns. Rolled into Wave 8 rather than a Wave 7.5 split because it touches Electron-lifecycle code Diego already owns from Wave 3.                                                                                                                                                                                                                                                                                                                  | Diego                                    |
+| 3   | `pdf:print` channel live but `dispatchPrint` adapter returns `print_dispatch_failed` stub; needs `webContents.print()` wiring                                                                                                                                                                                                                                                                                                                                                                                  | **FIX-NOW (Diego wires).** Same boundary as #2. Both adapters land in the same `src/main/export/` module.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Diego                                    |
+| 4   | `pdf:identifyTextSpan` scanner returns `no_text_at_point` — renderer's pdf.js hit-test is the Phase-2 substitute per architecture-phase-2.md §4.3                                                                                                                                                                                                                                                                                                                                                              | **ACCEPT for Phase 2 ship — defer real scanner to Phase 2.5.** Renderer-cached font-metrics works as designed (verified by `text-edit-overlay.test.tsx`). Channel surface is type-correct; the real content-stream walker is a measurable Phase-2.5 ticket. Do NOT block Wave 8 on this.                                                                                                                                                                                                                                                                                                                              | (Phase 2.5 backlog)                      |
+| 5   | Ravi's `MoveBookmarkResult` discriminated union (`cycle_detected` / `not_found` / `invalid_parent` / `ok`) is BETTER than data-models §7.5's `boolean`, but David's `src/main/db-bridge.ts` re-typed the adapter's `move(...)` as `boolean` and the IPC handler `bookmarks-phase2.ts` now INFERS cycle-vs-not_found from `newParentId === null`. The api-contracts §12.6 demand for distinct `cycle_detected` is at risk: a not-found bookmark moved under a real parent is misclassified as `cycle_detected`. | **YELLOW — fix at the bridge in Wave 8.5 (Marcus dispatches David), AND amend data-models §7.5 doc to match Ravi's shipped reality.** This is the schema-deviation-becomes-contract pattern from Wave 2 lesson #5 (`window:*` ACCEPT). The fix: (a) amend data-models §7.5 to specify `MoveBookmarkResult` union; (b) David widens `RaviBookmarksRepoPhase2.move` return type in `src/main/db-bridge.ts`; (c) `bookmarks-phase2.ts` switches on the variant directly instead of the request-shape heuristic. Julian flags during Wave 8 audit; Marcus dispatches a 30-min David patch as Wave 8.5 after Julian lands. | Julian (flag); Marcus + David (Wave 8.5) |
+| 6   | Ravi's 5 SettingKey additions in `src/db/types.ts` were pre-emptively shipped without explicit brief authorization (to unblock David's typecheck)                                                                                                                                                                                                                                                                                                                                                              | **ACCEPT.** Verified Ravi's keys exactly match David's keys in `src/ipc/contracts.ts` — zero drift. The cross-wave coordination payoff Ravi documented in her learning is the right precedent. Note in build-report and move on.                                                                                                                                                                                                                                                                                                                                                                                      | (no-op)                                  |
 
 ---
 
@@ -176,18 +176,18 @@ This becomes a runbook entry. Optionally promote to `D:\Vault\Agents\Projects\PD
 
 ### Diego deliverable summary
 
-| Output | Format |
-|---|---|
-| `package.json` + `package-lock.json` updates | EDIT |
-| `src/main/export/chromium-export.ts` + test | NEW |
-| `src/main/export/print-dispatch.ts` + test | NEW |
+| Output                                                                      | Format      |
+| --------------------------------------------------------------------------- | ----------- |
+| `package.json` + `package-lock.json` updates                                | EDIT        |
+| `src/main/export/chromium-export.ts` + test                                 | NEW         |
+| `src/main/export/print-dispatch.ts` + test                                  | NEW         |
 | `src/main/export/security-floor.test.ts` (or extend window-manager.test.ts) | NEW or EDIT |
-| `src/main/index.ts` deps-wiring extensions | EDIT |
-| `electron-builder.yml` review (likely no changes) | VERIFY |
-| `.github/workflows/ci.yml` (likely no changes) | VERIFY |
-| `tests/e2e/smoke.spec.ts` + fixtures | EDIT or NEW |
-| `LICENSES.md` `utif` row | EDIT |
-| Status row appended to `docs/build-report.md` | APPEND |
+| `src/main/index.ts` deps-wiring extensions                                  | EDIT        |
+| `electron-builder.yml` review (likely no changes)                           | VERIFY      |
+| `.github/workflows/ci.yml` (likely no changes)                              | VERIFY      |
+| `tests/e2e/smoke.spec.ts` + fixtures                                        | EDIT or NEW |
+| `LICENSES.md` `utif` row                                                    | EDIT        |
+| Status row appended to `docs/build-report.md`                               | APPEND      |
 
 ---
 
@@ -309,11 +309,11 @@ Marcus dispatches this as a Wave 8.5 30-minute David patch IF Julian rates it HI
 
 ### Julian deliverable summary
 
-| Output | Format |
-|---|---|
-| `docs/code-review.md` — APPEND `## Wave 7 Phase 2 review` section | APPEND (do NOT overwrite Phase 1 section) |
-| Status row in `docs/build-report.md` summarizing findings count by severity | APPEND |
-| Specific recommendations for Marcus's Wave 8.5 dispatch decision (if any HIGHs) | INLINE in code-review.md |
+| Output                                                                          | Format                                    |
+| ------------------------------------------------------------------------------- | ----------------------------------------- |
+| `docs/code-review.md` — APPEND `## Wave 7 Phase 2 review` section               | APPEND (do NOT overwrite Phase 1 section) |
+| Status row in `docs/build-report.md` summarizing findings count by severity     | APPEND                                    |
+| Specific recommendations for Marcus's Wave 8.5 dispatch decision (if any HIGHs) | INLINE in code-review.md                  |
 
 ---
 

@@ -193,7 +193,10 @@ export async function listDevicesVia(
   addon: WiaAddon | null,
 ): Promise<Result<{ devices: ScanDevice[] }, ScanError>> {
   if (!addon) {
-    return fail<ScanError>('scanner_unavailable', 'WIA scanner addon not available on this platform');
+    return fail<ScanError>(
+      'scanner_unavailable',
+      'WIA scanner addon not available on this platform',
+    );
   }
   let raw: NativeListResult;
   try {
@@ -224,7 +227,10 @@ export async function acquireVia(
   options: NativeAcquireOptions,
 ): Promise<Result<{ pages: AcquiredPage[] }, ScanError>> {
   if (!addon) {
-    return fail<ScanError>('scanner_unavailable', 'WIA scanner addon not available on this platform');
+    return fail<ScanError>(
+      'scanner_unavailable',
+      'WIA scanner addon not available on this platform',
+    );
   }
   let raw: NativeAcquireResult;
   try {

@@ -5,7 +5,7 @@ Welcome. This guide walks you through everything PDF_Viewer_Editor 0.7.1 can do,
 > **Phase 7 honesty banner — read this before relying on telemetry, auto-update, the Spanish locale, or a non-Windows build.** Four things in 0.7.1 ship in an honest, partial, or unverified state, and the app is built to tell you so at the point of action. The full enumeration is in [Phase 7 trust floor](#phase-7-trust-floor--what-the-app-does-and-doesnt-promise):
 >
 > 1. **Telemetry is OFF by default.** When enabled, it records anonymous feature-usage counts only — never document content, file paths, or personal information. In 0.7.1 nothing leaves your machine at all; the transport is an in-memory buffer you can inspect. See [Telemetry and privacy](#telemetry-and-privacy).
-> 2. **The auto-update publish target is a placeholder.** The update *client* is wired and ready, but the release channel is a placeholder until the project is published — updates will not download or install until it is configured. The app reports "update channel not configured" honestly; it never shows a fake "you're up to date". See [Checking for updates](#checking-for-updates).
+> 2. **The auto-update publish target is a placeholder.** The update _client_ is wired and ready, but the release channel is a placeholder until the project is published — updates will not download or install until it is configured. The app reports "update channel not configured" honestly; it never shows a fake "you're up to date". See [Checking for updates](#checking-for-updates).
 > 3. **macOS and Linux builds are UNVERIFIED.** They are produced by the build config but have not been tested on real hardware. See [README → Platform support](../README.md#platform-support).
 > 4. **Spanish (es-ES) is a translation sample, not a complete localization.** ~68% of strings are translated to prove the framework works (the denominator grew to 816 keys in 0.7.1); the rest fall back to English. See [Changing the interface language](#changing-the-interface-language).
 
@@ -89,110 +89,110 @@ This is the full, honest list across all seven phases. Most limitations are inte
 
 ### Phase 7 partial features
 
-| Limitation | Why | Ships in |
-|---|---|---|
-| **Telemetry sends nothing — the transport is an in-memory buffer only.** When you opt in, events accumulate in a bounded in-memory ring buffer (default 500 entries) that you can inspect via Settings → "View collected data". Nothing is written to disk, nothing is sent over the network. | P7-L-3: the Phase 7 deliverable is the framework + opt-in UI + allowlist + a no-op local transport. A real (self-hosted) network transport would go behind the same interface in a future phase. Opt-in default OFF; nothing leaves the machine. | Future phase (network transport) |
-| **The auto-update publish target is a placeholder.** "Check for updates" reports "update channel not configured" — it does NOT download, does NOT install, and never shows a fake "you're up to date". The update *client* is fully wired; only the publish target is a placeholder. | P7-L-2: the project is not yet published to a release channel. When a real GitHub release channel is configured (Phase 7.1), the client auto-detects it with zero code change. | Phase 7.1 (real publish target) |
-| **Auto-update cannot apply downloaded bundles without a code-signing certificate.** electron-updater verifies an update bundle's signature before applying it; until a cert is acquired, a downloaded bundle on a real channel would fail signature verification (correct security behavior). | The cert is a real-world manual step. Acquiring + configuring it is Phase 7.1. | Phase 7.1 (cert) |
-| **The "Restart and install" unsaved-work gate is fixed in source; the 0.7.1 binary predates the final wire.** When a real channel is configured, clicking install prompts to save unsaved edits first. | Julian H-29.1, then H-FIX.1: the gate (main-process + renderer dirty-state check) is correct in the source code, but the 0.7.1 packaged binary likely predates the final renderer fix (it landed during the parallel repack). **Functional impact is zero** — the install code path is unreachable until a real publish target exists, and the fix self-resolves at the next packaging pass once a real update channel lands. | Fixed in source; active in the first build after a real channel exists |
-| **Spanish (es-ES) is a ~68% translation sample.** First-paint + high-traffic + honesty surfaces are translated, and 0.7.1 extended coverage into the deep modal *steps*; the rest fall back to English (never a raw key). | P7-L-6 obligation #4: es-ES exists to prove the framework works, not as a complete professional localization. The 0.7.1 backlog-fix wave completed the deep modal-step extraction (482 → 816 keys); the remaining English fallback is the long tail of low-traffic strings. | Resolved (28c extraction complete in 0.7.1) |
-| **macOS and Linux builds are configured but UNVERIFIED.** The `electron-builder.yml` config is structurally complete for both, but no binary has been produced and launched on real hardware. | P7-L-1: configure all, verify Windows only — a green CI package step does not prove a binary runs, and the native-module rebuild (`better-sqlite3`, `@napi-rs/canvas` universal merge) is the riskiest unverified surface. | Phase 7.1 (real-hardware verification) |
-| **Accessibility has documented pointer-centric gaps.** Freehand annotation drawing and the drawn-signature canvas require a pointer (no keyboard equivalent for an arbitrary stroke). The rendered page raster is not narrated unless the page was OCR'd. Only Windows Narrator is tested. | These are inherently pointer-centric or image-content surfaces. As of 0.7.1 the freehand drawing surface has an accessible name (`role="application"`) that names the keyboard-operable alternative; the keyboard-accessible workflows (typed/image signatures; highlight/shape/text annotations via toolbar + Inspector; OCR to expose page text) give complete coverage. See [Accessibility](#accessibility). | Drawing surface named in 0.7.1; full keyboard stroke-authoring + NVDA/JAWS/VoiceOver/Orca are later candidates |
-| **No light/dark theme toggle yet.** The Theme setting honors system colors; explicit light/dark toggles are a later-phase item. | Out of Phase 7 scope. | Later phase |
+| Limitation                                                                                                                                                                                                                                                                                    | Why                                                                                                                                                                                                                                                                                                                                                                                                                           | Ships in                                                                                                       |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Telemetry sends nothing — the transport is an in-memory buffer only.** When you opt in, events accumulate in a bounded in-memory ring buffer (default 500 entries) that you can inspect via Settings → "View collected data". Nothing is written to disk, nothing is sent over the network. | P7-L-3: the Phase 7 deliverable is the framework + opt-in UI + allowlist + a no-op local transport. A real (self-hosted) network transport would go behind the same interface in a future phase. Opt-in default OFF; nothing leaves the machine.                                                                                                                                                                              | Future phase (network transport)                                                                               |
+| **The auto-update publish target is a placeholder.** "Check for updates" reports "update channel not configured" — it does NOT download, does NOT install, and never shows a fake "you're up to date". The update _client_ is fully wired; only the publish target is a placeholder.          | P7-L-2: the project is not yet published to a release channel. When a real GitHub release channel is configured (Phase 7.1), the client auto-detects it with zero code change.                                                                                                                                                                                                                                                | Phase 7.1 (real publish target)                                                                                |
+| **Auto-update cannot apply downloaded bundles without a code-signing certificate.** electron-updater verifies an update bundle's signature before applying it; until a cert is acquired, a downloaded bundle on a real channel would fail signature verification (correct security behavior). | The cert is a real-world manual step. Acquiring + configuring it is Phase 7.1.                                                                                                                                                                                                                                                                                                                                                | Phase 7.1 (cert)                                                                                               |
+| **The "Restart and install" unsaved-work gate is fixed in source; the 0.7.1 binary predates the final wire.** When a real channel is configured, clicking install prompts to save unsaved edits first.                                                                                        | Julian H-29.1, then H-FIX.1: the gate (main-process + renderer dirty-state check) is correct in the source code, but the 0.7.1 packaged binary likely predates the final renderer fix (it landed during the parallel repack). **Functional impact is zero** — the install code path is unreachable until a real publish target exists, and the fix self-resolves at the next packaging pass once a real update channel lands. | Fixed in source; active in the first build after a real channel exists                                         |
+| **Spanish (es-ES) is a ~68% translation sample.** First-paint + high-traffic + honesty surfaces are translated, and 0.7.1 extended coverage into the deep modal _steps_; the rest fall back to English (never a raw key).                                                                     | P7-L-6 obligation #4: es-ES exists to prove the framework works, not as a complete professional localization. The 0.7.1 backlog-fix wave completed the deep modal-step extraction (482 → 816 keys); the remaining English fallback is the long tail of low-traffic strings.                                                                                                                                                   | Resolved (28c extraction complete in 0.7.1)                                                                    |
+| **macOS and Linux builds are configured but UNVERIFIED.** The `electron-builder.yml` config is structurally complete for both, but no binary has been produced and launched on real hardware.                                                                                                 | P7-L-1: configure all, verify Windows only — a green CI package step does not prove a binary runs, and the native-module rebuild (`better-sqlite3`, `@napi-rs/canvas` universal merge) is the riskiest unverified surface.                                                                                                                                                                                                    | Phase 7.1 (real-hardware verification)                                                                         |
+| **Accessibility has documented pointer-centric gaps.** Freehand annotation drawing and the drawn-signature canvas require a pointer (no keyboard equivalent for an arbitrary stroke). The rendered page raster is not narrated unless the page was OCR'd. Only Windows Narrator is tested.    | These are inherently pointer-centric or image-content surfaces. As of 0.7.1 the freehand drawing surface has an accessible name (`role="application"`) that names the keyboard-operable alternative; the keyboard-accessible workflows (typed/image signatures; highlight/shape/text annotations via toolbar + Inspector; OCR to expose page text) give complete coverage. See [Accessibility](#accessibility).               | Drawing surface named in 0.7.1; full keyboard stroke-authoring + NVDA/JAWS/VoiceOver/Orca are later candidates |
+| **No light/dark theme toggle yet.** The Theme setting honors system colors; explicit light/dark toggles are a later-phase item.                                                                                                                                                               | Out of Phase 7 scope.                                                                                                                                                                                                                                                                                                                                                                                                         | Later phase                                                                                                    |
 
 ### Phase 6 partial features
 
-| Limitation | Why | Ships in |
-|---|---|---|
-| **All six export formats produce valid output end-to-end (as of 0.7.1).** docx / xlsx / pptx / PNG / JPEG / TIFF all run through the production engine and write valid files. The image-export standard-font glyph defect (standard-font text came out blank) is fixed — verified from the packaged 0.7.1 binary at 25,688 dark pixels on a Helvetica/Times/Courier page (it was 0 / blank in 0.6.1). | The production pdf.js source-loader wire landed, and the font factory now reads standard-14 font + cmap bytes via `fs.readFile` on an absolute path (the earlier blank-text bug was a `file://`-URL-vs-filesystem-path ambiguity that pdf.js could not resolve). | Resolved (0.7.1 backlog-fix wave) |
-| **ExportQueue concurrency is currently inline (runs IPC calls in line) rather than the documented FIFO queue with concurrency=1.** Two concurrent IPC requests against the same output path can race the `.export-temp` file. The handler still enforces a `queue_full` HARD CAP (default 50) — new requests beyond that count return `queue_full` immediately. | Julian Wave 25 H-25.1 flagged that `ExportQueue` from `docs/architecture-phase-6.md §4.6` is documented but not implemented. Phase 6.1 ships the ~50 LOC queue module (single in-flight job + FIFO waiters + `queue_full` returned at the 50th waiter). The current inline path is correct-but-incomplete; collisions surface as `output_path_unwritable` from the atomic-rename probe. | Phase 6.1 |
-| **Layout-preserving conversion is best-effort.** Complex multi-column layouts, embedded vector graphics, intricate tables (especially borderless or merged-cell), decorative typography, drop caps, custom kerning, and ligatures may not convert faithfully. The text-only tier is even more reductive (flat text, no images, no tables, no headings). | Algorithmic layout reconstruction from pdf.js text fragments + operator-list is inherently best-effort. Vector graphics, math equations rendered as paths, and chart elements are extracted as embedded images via page rasterization for the layout-preserving tier; the text-only tier drops them entirely. | n/a — algorithmic floor (no plan to upgrade beyond best-effort) |
-| **Borderless or merged-cell tables won't be detected.** Tables that visually exist via whitespace alignment alone produce a flat sequence of paragraphs in the Word / PowerPoint output. | The 5-step line-grid table detector requires explicit horizontal AND vertical line segments to identify a table region. Fails-soft on diagonal-only / borderless inputs (returns ZERO `TableRegion`, NOT a wrong table). | n/a — algorithmic floor |
-| **Filled form values export as text; XFA-form values do NOT export.** Phase-3-flattened AcroForms produce inline text in the output. Unflattened AcroForms also produce text via the form-field-object fallback. XFA forms are inaccessible to pdf.js text extraction — the engine sees only the static template, not the dynamic XFA dataset. | XFA is a PDF-1.7 fork with its own XML schema; pdf.js does not expose XFA dataset values. If you need XFA values exported, save the PDF with the form flattened (`forms:flattenForExport`) first, then export. | Wontfix unless explicit XFA demand surfaces |
-| **Exporting from a signed PDF: the source signature stays valid; the exported file has no signature semantics.** Export does NOT mutate the source PDF — the cryptographic envelope on the source is untouched. The exported docx / xlsx / pptx / image has no PAdES surface (those formats either don't support PAdES or are unsigned by definition). | Read-only-on-source is the Phase 6 P6-L-9 locked decision (conventions §17.1). If you need a signed Office document, sign it in Office after export. | n/a — by design |
-| **OCR status determines text fidelity.** If the source PDF has been OCR'd (Phase 5), text exports as native selectable text. If the source is image-only and was NOT OCR'd, the Word / PowerPoint output is mostly raster image with no selectable text. | The engine does NOT auto-OCR before export — that would be a silent mutation of the source (it would change the source PDF's bytes, which violates the Phase 6 read-only-on-source rule and would invalidate any prior PAdES signature). Run OCR first (Phase 5), save the searchable PDF, then export. | n/a — by design |
-| **Conversion time scales with document complexity.** Plan for ~5-30 seconds per page on the layout-preserving tier, ~0.5 seconds per page on the text-only tier. A 100-page magazine with full-color images at layout-preserving can take 30+ minutes. | Per-page streaming pipeline: text extraction + table detection + image extraction + writer compose. Layout-preserving tier embeds images at original resolution; text-only tier omits them. Cancel button is always available; partial output cleaned up automatically on cancel via atomic `.export-temp` → rename. | n/a — algorithmic floor |
-| **Hyperlinks in the source PDF do NOT export.** The output Word / Excel / PowerPoint / image carries the link's text but not the underlying URL. | Phase 6.1 candidate. | Phase 6.1 |
-| **PDF metadata (author, subject, keywords) does NOT export.** The Word / Excel / PowerPoint output uses generic defaults. | Phase 6.1 candidate. | Phase 6.1 |
-| **Lossless round-trip is NOT promised.** PDF → docx → PDF would not be byte-identical or visually identical. | The engine extracts content into the target format's native primitives (paragraphs / cells / shapes / images); reconstructing a PDF from the exported file is a separate path. | Wontfix |
-| **No translation.** Output is in the source language(s). The engine recognizes text via pdf.js's text-extraction APIs (Phase 5 OCR's recognized text rides along when the source was OCR'd). | The engine has no translation step. Use a dedicated tool downstream. | Wontfix |
-| **Multi-page TIFF bundles into ONE file. Single-page formats (PNG / JPEG / single-page TIFF) write ONE file per page.** | The `multi-page TIFF` checkbox is honored only when format='tiff' (silently ignored otherwise — documented behavior). PNG and JPEG always write one file per page; the filename gets a `-p001`, `-p002`, ... suffix. | n/a — by design |
-| **Output-path collisions surface in the modal.** If you pick an existing file path, Electron's native save-as dialog handles the overwrite prompt. If a parallel process (or a parallel export job) has touched the path between dialog and rename, the rename fails with `output_path_unwritable`. | Belt-and-suspenders atomic write: engine writes to `<output>.export-temp` then renames to `<output>` on success. Phase 6.1 ExportQueue will additionally serialize concurrent export jobs targeting the same path. | Phase 6.1 (queue) |
+| Limitation                                                                                                                                                                                                                                                                                                                                                                                            | Why                                                                                                                                                                                                                                                                                                                                                                                     | Ships in                                                        |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| **All six export formats produce valid output end-to-end (as of 0.7.1).** docx / xlsx / pptx / PNG / JPEG / TIFF all run through the production engine and write valid files. The image-export standard-font glyph defect (standard-font text came out blank) is fixed — verified from the packaged 0.7.1 binary at 25,688 dark pixels on a Helvetica/Times/Courier page (it was 0 / blank in 0.6.1). | The production pdf.js source-loader wire landed, and the font factory now reads standard-14 font + cmap bytes via `fs.readFile` on an absolute path (the earlier blank-text bug was a `file://`-URL-vs-filesystem-path ambiguity that pdf.js could not resolve).                                                                                                                        | Resolved (0.7.1 backlog-fix wave)                               |
+| **ExportQueue concurrency is currently inline (runs IPC calls in line) rather than the documented FIFO queue with concurrency=1.** Two concurrent IPC requests against the same output path can race the `.export-temp` file. The handler still enforces a `queue_full` HARD CAP (default 50) — new requests beyond that count return `queue_full` immediately.                                       | Julian Wave 25 H-25.1 flagged that `ExportQueue` from `docs/architecture-phase-6.md §4.6` is documented but not implemented. Phase 6.1 ships the ~50 LOC queue module (single in-flight job + FIFO waiters + `queue_full` returned at the 50th waiter). The current inline path is correct-but-incomplete; collisions surface as `output_path_unwritable` from the atomic-rename probe. | Phase 6.1                                                       |
+| **Layout-preserving conversion is best-effort.** Complex multi-column layouts, embedded vector graphics, intricate tables (especially borderless or merged-cell), decorative typography, drop caps, custom kerning, and ligatures may not convert faithfully. The text-only tier is even more reductive (flat text, no images, no tables, no headings).                                               | Algorithmic layout reconstruction from pdf.js text fragments + operator-list is inherently best-effort. Vector graphics, math equations rendered as paths, and chart elements are extracted as embedded images via page rasterization for the layout-preserving tier; the text-only tier drops them entirely.                                                                           | n/a — algorithmic floor (no plan to upgrade beyond best-effort) |
+| **Borderless or merged-cell tables won't be detected.** Tables that visually exist via whitespace alignment alone produce a flat sequence of paragraphs in the Word / PowerPoint output.                                                                                                                                                                                                              | The 5-step line-grid table detector requires explicit horizontal AND vertical line segments to identify a table region. Fails-soft on diagonal-only / borderless inputs (returns ZERO `TableRegion`, NOT a wrong table).                                                                                                                                                                | n/a — algorithmic floor                                         |
+| **Filled form values export as text; XFA-form values do NOT export.** Phase-3-flattened AcroForms produce inline text in the output. Unflattened AcroForms also produce text via the form-field-object fallback. XFA forms are inaccessible to pdf.js text extraction — the engine sees only the static template, not the dynamic XFA dataset.                                                        | XFA is a PDF-1.7 fork with its own XML schema; pdf.js does not expose XFA dataset values. If you need XFA values exported, save the PDF with the form flattened (`forms:flattenForExport`) first, then export.                                                                                                                                                                          | Wontfix unless explicit XFA demand surfaces                     |
+| **Exporting from a signed PDF: the source signature stays valid; the exported file has no signature semantics.** Export does NOT mutate the source PDF — the cryptographic envelope on the source is untouched. The exported docx / xlsx / pptx / image has no PAdES surface (those formats either don't support PAdES or are unsigned by definition).                                                | Read-only-on-source is the Phase 6 P6-L-9 locked decision (conventions §17.1). If you need a signed Office document, sign it in Office after export.                                                                                                                                                                                                                                    | n/a — by design                                                 |
+| **OCR status determines text fidelity.** If the source PDF has been OCR'd (Phase 5), text exports as native selectable text. If the source is image-only and was NOT OCR'd, the Word / PowerPoint output is mostly raster image with no selectable text.                                                                                                                                              | The engine does NOT auto-OCR before export — that would be a silent mutation of the source (it would change the source PDF's bytes, which violates the Phase 6 read-only-on-source rule and would invalidate any prior PAdES signature). Run OCR first (Phase 5), save the searchable PDF, then export.                                                                                 | n/a — by design                                                 |
+| **Conversion time scales with document complexity.** Plan for ~5-30 seconds per page on the layout-preserving tier, ~0.5 seconds per page on the text-only tier. A 100-page magazine with full-color images at layout-preserving can take 30+ minutes.                                                                                                                                                | Per-page streaming pipeline: text extraction + table detection + image extraction + writer compose. Layout-preserving tier embeds images at original resolution; text-only tier omits them. Cancel button is always available; partial output cleaned up automatically on cancel via atomic `.export-temp` → rename.                                                                    | n/a — algorithmic floor                                         |
+| **Hyperlinks in the source PDF do NOT export.** The output Word / Excel / PowerPoint / image carries the link's text but not the underlying URL.                                                                                                                                                                                                                                                      | Phase 6.1 candidate.                                                                                                                                                                                                                                                                                                                                                                    | Phase 6.1                                                       |
+| **PDF metadata (author, subject, keywords) does NOT export.** The Word / Excel / PowerPoint output uses generic defaults.                                                                                                                                                                                                                                                                             | Phase 6.1 candidate.                                                                                                                                                                                                                                                                                                                                                                    | Phase 6.1                                                       |
+| **Lossless round-trip is NOT promised.** PDF → docx → PDF would not be byte-identical or visually identical.                                                                                                                                                                                                                                                                                          | The engine extracts content into the target format's native primitives (paragraphs / cells / shapes / images); reconstructing a PDF from the exported file is a separate path.                                                                                                                                                                                                          | Wontfix                                                         |
+| **No translation.** Output is in the source language(s). The engine recognizes text via pdf.js's text-extraction APIs (Phase 5 OCR's recognized text rides along when the source was OCR'd).                                                                                                                                                                                                          | The engine has no translation step. Use a dedicated tool downstream.                                                                                                                                                                                                                                                                                                                    | Wontfix                                                         |
+| **Multi-page TIFF bundles into ONE file. Single-page formats (PNG / JPEG / single-page TIFF) write ONE file per page.**                                                                                                                                                                                                                                                                               | The `multi-page TIFF` checkbox is honored only when format='tiff' (silently ignored otherwise — documented behavior). PNG and JPEG always write one file per page; the filename gets a `-p001`, `-p002`, ... suffix.                                                                                                                                                                    | n/a — by design                                                 |
+| **Output-path collisions surface in the modal.** If you pick an existing file path, Electron's native save-as dialog handles the overwrite prompt. If a parallel process (or a parallel export job) has touched the path between dialog and rename, the rename fails with `output_path_unwritable`.                                                                                                   | Belt-and-suspenders atomic write: engine writes to `<output>.export-temp` then renames to `<output>` on success. Phase 6.1 ExportQueue will additionally serialize concurrent export jobs targeting the same path.                                                                                                                                                                      | Phase 6.1 (queue)                                               |
 
 ### Phase 5 partial features (carried through)
 
-| Limitation | Why | Ships in |
-|---|---|---|
-| **Multi-language OCR download works (as of 0.7.1).** Bundled English plus the other 9 catalog languages (Spanish / French / German / Portuguese / Italian / Russian / Simplified Chinese / Traditional Chinese / Japanese) all download and install. v0.5.0 / v0.6.0 / v0.7.0 shipped English-only because the catalog carried `TBD-FILL-AT-RELEASE` SHA-256 sentinels for the non-bundled rows. | The 0.7.1 backlog-fix wave fetched the real bytes from `tessdata.projectnaptha.com/4.0.0_fast/` and computed real SHA-256 for all 9 downloadable packs, replacing the sentinels. The integrity check itself is unchanged — the manager still refuses any download whose hash doesn't match the catalog (Wave 21 Julian B-21.1 defense-in-depth). | Resolved (0.7.1) |
-| **Native scanner integration (TWAIN / WIA) is deferred.** The Tools → Scan from device menu item ships disabled with a tooltip. Riley's Wave 19 library survey found no MIT/Apache-2.0/BSD WIA Node binding at the maturity bar this project requires; every candidate either didn't exist, wrapped a commercial product, used VBS-bridging instead of a real native addon, or required a paid backend service. | The IPC contract reserves `scan:listDevices` and `scan:acquire` channel names so Phase 5.1 can add the real binding additively. Until then, use the Windows built-in Scan app, your scanner manufacturer's software, or any third-party scanner utility to produce a PDF or image, then open it here and run OCR. | Phase 5.1 |
-| **OCR-recognized text accuracy depends on scan quality.** Low-DPI scans, faded or off-axis pages, complex layouts, decorative fonts, and CJK / Cyrillic / Arabic scripts all reduce confidence. The confidence overlay (View → Toggle OCR confidence overlay) marks words below the threshold (default 60) — review and correct as needed before relying on the output. | Tesseract's LSTM recognizer is excellent but not perfect; we surface confidence honestly rather than hide it. | n/a — physics of OCR |
-| **Re-running OCR on an already-OCR'd page produces duplicate selectable text.** The engine does NOT auto-detect "this page already has a text-behind-image layer". | The detector is a Phase 5.2+ deliverable (see R-W19-F in the Phase 5 risk register). For v0.5.0, undo the prior OCR op (Ctrl+Z) before re-running, OR open the original (pre-OCR) file. | Phase 5.2+ |
-| **CJK / Cyrillic / Arabic glyphs may copy-paste as garbled text.** The Phase 5 text-behind-image authoring uses the built-in `/Helvetica` PDF font (no font embedding). For Latin scripts this is invisible and works perfectly; for non-Latin scripts, the recognized text is searchable but copy-paste may produce wrong glyphs in some PDF readers. | Phase 5 doesn't embed CJK / Cyrillic / Arabic fonts in the output. Full font embedding for non-Latin scripts is a Phase 5.1+ candidate. | Phase 5.1+ |
-| **OCR cannot mid-page-cancel.** The Cancel button on the running modal aborts between pages (graceful) — once a page is mid-recognition, it finishes before the cancel takes effect. | tesseract.js v7 doesn't expose a per-recognition abort signal. | Phase 5.1+ |
-| **OCR does not auto-rotate misaligned scans.** The deskew preprocessing helper handles small rotations (< 10°) but a 90° / 180° rotated scan must be rotated manually (Ctrl+R / Ctrl+Shift+R) before OCR runs. | Auto-detecting page orientation is a separate Tesseract feature (OSD) not wired in v1. | Phase 5.1+ |
-| **OCR result panel cannot rehydrate per-word data after document reopen.** The panel shows the per-doc + per-page summary across restarts (stored in `ocr_results` table), but jumping to specific words and the confidence-overlay box rendering requires the word-level JSON which is loaded into memory only during the OCR run. Reopen the doc → run OCR again to repopulate, or wait for Phase 5.1's per-page word hydration IPC channel. | M-21.5 finding (Julian Wave 21). The hydration channel is on the Phase 5.1 carry list. | Phase 5.1 |
-| **"Don't ask me again" on the OCR-invalidates-signatures prompt is not yet honored.** The checkbox appears in the confirm dialog but doesn't suppress the prompt on subsequent runs in v0.5.0. The confirm is non-skippable per session regardless of the checkbox state. | M-21.4 finding (Julian Wave 21). The toggle is wired in Phase 5.1 once the per-session-flag semantics are finalized (see conventions §16.5 — the persistence is deliberately per-session, never permanent). | Phase 5.1 |
-| **macOS / Linux packaging is config-only.** The `electron-builder.yml` profile is structurally complete, but Phase 5 verifies Windows only. | One platform per phase keeps the verification loop honest. | Phase 7 |
+| Limitation                                                                                                                                                                                                                                                                                                                                                                                                                                     | Why                                                                                                                                                                                                                                                                                                                                              | Ships in             |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
+| **Multi-language OCR download works (as of 0.7.1).** Bundled English plus the other 9 catalog languages (Spanish / French / German / Portuguese / Italian / Russian / Simplified Chinese / Traditional Chinese / Japanese) all download and install. v0.5.0 / v0.6.0 / v0.7.0 shipped English-only because the catalog carried `TBD-FILL-AT-RELEASE` SHA-256 sentinels for the non-bundled rows.                                               | The 0.7.1 backlog-fix wave fetched the real bytes from `tessdata.projectnaptha.com/4.0.0_fast/` and computed real SHA-256 for all 9 downloadable packs, replacing the sentinels. The integrity check itself is unchanged — the manager still refuses any download whose hash doesn't match the catalog (Wave 21 Julian B-21.1 defense-in-depth). | Resolved (0.7.1)     |
+| **Native scanner integration (TWAIN / WIA) is deferred.** The Tools → Scan from device menu item ships disabled with a tooltip. Riley's Wave 19 library survey found no MIT/Apache-2.0/BSD WIA Node binding at the maturity bar this project requires; every candidate either didn't exist, wrapped a commercial product, used VBS-bridging instead of a real native addon, or required a paid backend service.                                | The IPC contract reserves `scan:listDevices` and `scan:acquire` channel names so Phase 5.1 can add the real binding additively. Until then, use the Windows built-in Scan app, your scanner manufacturer's software, or any third-party scanner utility to produce a PDF or image, then open it here and run OCR.                                | Phase 5.1            |
+| **OCR-recognized text accuracy depends on scan quality.** Low-DPI scans, faded or off-axis pages, complex layouts, decorative fonts, and CJK / Cyrillic / Arabic scripts all reduce confidence. The confidence overlay (View → Toggle OCR confidence overlay) marks words below the threshold (default 60) — review and correct as needed before relying on the output.                                                                        | Tesseract's LSTM recognizer is excellent but not perfect; we surface confidence honestly rather than hide it.                                                                                                                                                                                                                                    | n/a — physics of OCR |
+| **Re-running OCR on an already-OCR'd page produces duplicate selectable text.** The engine does NOT auto-detect "this page already has a text-behind-image layer".                                                                                                                                                                                                                                                                             | The detector is a Phase 5.2+ deliverable (see R-W19-F in the Phase 5 risk register). For v0.5.0, undo the prior OCR op (Ctrl+Z) before re-running, OR open the original (pre-OCR) file.                                                                                                                                                          | Phase 5.2+           |
+| **CJK / Cyrillic / Arabic glyphs may copy-paste as garbled text.** The Phase 5 text-behind-image authoring uses the built-in `/Helvetica` PDF font (no font embedding). For Latin scripts this is invisible and works perfectly; for non-Latin scripts, the recognized text is searchable but copy-paste may produce wrong glyphs in some PDF readers.                                                                                         | Phase 5 doesn't embed CJK / Cyrillic / Arabic fonts in the output. Full font embedding for non-Latin scripts is a Phase 5.1+ candidate.                                                                                                                                                                                                          | Phase 5.1+           |
+| **OCR cannot mid-page-cancel.** The Cancel button on the running modal aborts between pages (graceful) — once a page is mid-recognition, it finishes before the cancel takes effect.                                                                                                                                                                                                                                                           | tesseract.js v7 doesn't expose a per-recognition abort signal.                                                                                                                                                                                                                                                                                   | Phase 5.1+           |
+| **OCR does not auto-rotate misaligned scans.** The deskew preprocessing helper handles small rotations (< 10°) but a 90° / 180° rotated scan must be rotated manually (Ctrl+R / Ctrl+Shift+R) before OCR runs.                                                                                                                                                                                                                                 | Auto-detecting page orientation is a separate Tesseract feature (OSD) not wired in v1.                                                                                                                                                                                                                                                           | Phase 5.1+           |
+| **OCR result panel cannot rehydrate per-word data after document reopen.** The panel shows the per-doc + per-page summary across restarts (stored in `ocr_results` table), but jumping to specific words and the confidence-overlay box rendering requires the word-level JSON which is loaded into memory only during the OCR run. Reopen the doc → run OCR again to repopulate, or wait for Phase 5.1's per-page word hydration IPC channel. | M-21.5 finding (Julian Wave 21). The hydration channel is on the Phase 5.1 carry list.                                                                                                                                                                                                                                                           | Phase 5.1            |
+| **"Don't ask me again" on the OCR-invalidates-signatures prompt is not yet honored.** The checkbox appears in the confirm dialog but doesn't suppress the prompt on subsequent runs in v0.5.0. The confirm is non-skippable per session regardless of the checkbox state.                                                                                                                                                                      | M-21.4 finding (Julian Wave 21). The toggle is wired in Phase 5.1 once the per-session-flag semantics are finalized (see conventions §16.5 — the persistence is deliberately per-session, never permanent).                                                                                                                                      | Phase 5.1            |
+| **macOS / Linux packaging is config-only.** The `electron-builder.yml` profile is structurally complete, but Phase 5 verifies Windows only.                                                                                                                                                                                                                                                                                                    | One platform per phase keeps the verification loop honest.                                                                                                                                                                                                                                                                                       | Phase 7              |
 
 ### Phase 4 partial features (carried through)
 
-| Limitation | Why | Ships in |
-|---|---|---|
-| **You supply the PFX/P12 certificate + password.** The app does not bundle a test cert; it has no built-in "issue me a cert" flow. Self-signed certs work for testing; CA-issued certs work for production. | Locked decision P4-L-1: cert + password NEVER persisted by the app. Bundling a test cert would imply persistence + distribution; both are out of scope. | n/a — by design |
-| **Cert + password live in memory ONLY during the signing operation.** Closing the PAdES sign modal, calling `signatures:certRelease`, or quitting the app zeroes both via `Buffer.fill(0)`. There is no "remember this cert" affordance. | Locked decision P4-L-1: every PFX byte + password buffer has a deterministic finally-block zeroer. No log statement, no `.env`, no Electron-Store, no SQLite, no temp file. | n/a — by design |
-| **TSA timestamping is OFF by default and ships no default URL.** If you want RFC 3161 timestamps, paste a TSA URL into Settings → Signing and toggle "Enable TSA" on. The app visits the URL only at sign time. | Locked decision P4-L-2: the app makes no per-user trust call. HTTPS only; no userinfo (`user:pass@`); no fragment; bounded query. HTTP / LAN TSA appliances are a Phase 4.1 candidate. | Phase 4.1 (HTTP toggle if demand surfaces) |
-| **`signatures:verify` is informational, not third-party trust verification.** It re-hashes the signed byte-range against the local audit-log row and confirms the bytes match. It does NOT validate the cert's CA trust chain, check CRLs/OCSP, or attest to signer identity. | Phase 4 makes no notarization claim. The local audit log is tamper-vulnerable by design — SQLite write access means any process can edit it. Phase 4.1+ may add full third-party CMS verify. | Phase 4.1+ |
-| **Signing or editing a previously-signed PDF invalidates the prior signatures.** A signed PDF's byte-range hash covers the document bytes at sign time; subsequent edits change those bytes. The Forms sidebar status banner warns when the document carries already-signed `/Sig` fields. | The PDF signature spec ties the cryptographic envelope to specific bytes; any edit invalidates the hash. Out of scope to preserve prior signatures across edits. | Phase 5+ may add a "preserve signed bytes, append new edits as a new revision" mode. |
-| **The PAdES engine is `node-signpdf` (MIT) by default; a `node-forge` + `pkijs` (MIT / BSD-3-Clause) manual fallback ships behind the same `signatures.padesEngine` setting.** | Locked decision P4-L-3: both engines satisfy the same external contract; the fallback exists so we can swap if `node-signpdf` regresses upstream. | Phase 4.1 (UI exposure of the engine toggle) |
-| **The PAdES `/Contents` placeholder defaults to 16384 hex chars (8192 bytes).** Very long certificate chains may need 32768. Configurable via Settings → Signing → Advanced → `signatures.placeholderSize`. | The /Contents field must be large enough to hold the CMS envelope. 16384 is the conservative default per signature-engine.md §3.3. | n/a — configurable |
-| **macOS / Linux packaging is config-only.** The `electron-builder.yml` profile is structurally complete for macOS + Linux, but Phase 4 verifies Windows only. Phase 7 actually produces + tests cross-platform binaries. | One platform per phase keeps the verification loop honest. | Phase 7 |
-| **JavaScript form actions are stripped on save** (Phase 3 P3-L-2 carries through). A warning toast surfaces on save when JS actions were present. | Locked decision P3-L-2: JS in PDFs is a sandbox-escape attack surface. | Phase 3.1 (read-only preservation candidate) |
-| **Signature placeholder fields placed in Phase 3 round-trip with `/V` undefined** — Phase 4 fills them. Clicking an empty `/Sig` placeholder now opens the Signature Capture or PAdES Sign modal (your choice). | Phase 3 laid the dict + appearance-stream groundwork; Phase 4 wires the fill. | Already shipped in Phase 4 |
-| **Date fields show as text inputs in Acrobat.** In-app date-picker UX is renderer-side only; the underlying PDF stores ISO-8601 text plus a `/TU` hint. | PDF spec uses JavaScript for date formatting; Phase 3 forbids JS (P3-L-2). | n/a — accepted fidelity boundary |
-| **XFA forms (LiveCycle Designer) are not editable.** XFA-only documents show a banner "This PDF uses XFA forms which aren't supported"; AcroForm fields in mixed docs remain fillable. | XFA is a PDF-1.7 fork with its own XML schema. | Wontfix unless explicit demand |
-| **Excel multi-sheet workbooks read sheet 1 only.** Wizard step 2 surfaces a warning when XLSX has >1 sheet. | exceljs supports multi-sheet but the wizard UX is sheet-1-only in Phase 3. | Phase 3.1 (sheet picker) |
-| **Excel formula evaluation is not supported.** `exceljs` reads the cached value when Excel saved it, otherwise the formula text. | exceljs does not run formulas; Phase 3 does not embed a formula engine. | Wontfix — paste-as-values upstream |
-| **List-box fields (`PDFOptionList`) are not exposed as a distinct type.** | Dropdown covers the common case. | Phase 3.1 if demand surfaces |
-| **Push-button fields are not exposed.** | Buttons in PDFs are typically JS-action triggers, which Phase 3 forbids (P3-L-2). | Wontfix |
-| **Form-template fields whose font/size aren't available in the target doc may render with substitute glyphs.** A toast surfaces on template load: "Some template fields couldn't be applied (N skipped)." | Templates carry coords + properties, not embedded fonts. | Phase 4 (font substitution lands then) |
-| **Form-design undo edge cases.** Cross-op-chain undo (e.g. add-field → remove-field → load-template) unwinds one op at a time; the per-op pattern from Phase 2 carries through. Form-fill, by contrast, commits as one batch and Ctrl+Z unwinds the whole batch. | History middleware is single-op-inverse for design ops; form-fill is HYBRID commit-boundary (see [developer guide](developer-guide.md#forms-architecture-phase-3)). | Phase 3.1 (compaction candidate) |
+| Limitation                                                                                                                                                                                                                                                                                 | Why                                                                                                                                                                                          | Ships in                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **You supply the PFX/P12 certificate + password.** The app does not bundle a test cert; it has no built-in "issue me a cert" flow. Self-signed certs work for testing; CA-issued certs work for production.                                                                                | Locked decision P4-L-1: cert + password NEVER persisted by the app. Bundling a test cert would imply persistence + distribution; both are out of scope.                                      | n/a — by design                                                                      |
+| **Cert + password live in memory ONLY during the signing operation.** Closing the PAdES sign modal, calling `signatures:certRelease`, or quitting the app zeroes both via `Buffer.fill(0)`. There is no "remember this cert" affordance.                                                   | Locked decision P4-L-1: every PFX byte + password buffer has a deterministic finally-block zeroer. No log statement, no `.env`, no Electron-Store, no SQLite, no temp file.                  | n/a — by design                                                                      |
+| **TSA timestamping is OFF by default and ships no default URL.** If you want RFC 3161 timestamps, paste a TSA URL into Settings → Signing and toggle "Enable TSA" on. The app visits the URL only at sign time.                                                                            | Locked decision P4-L-2: the app makes no per-user trust call. HTTPS only; no userinfo (`user:pass@`); no fragment; bounded query. HTTP / LAN TSA appliances are a Phase 4.1 candidate.       | Phase 4.1 (HTTP toggle if demand surfaces)                                           |
+| **`signatures:verify` is informational, not third-party trust verification.** It re-hashes the signed byte-range against the local audit-log row and confirms the bytes match. It does NOT validate the cert's CA trust chain, check CRLs/OCSP, or attest to signer identity.              | Phase 4 makes no notarization claim. The local audit log is tamper-vulnerable by design — SQLite write access means any process can edit it. Phase 4.1+ may add full third-party CMS verify. | Phase 4.1+                                                                           |
+| **Signing or editing a previously-signed PDF invalidates the prior signatures.** A signed PDF's byte-range hash covers the document bytes at sign time; subsequent edits change those bytes. The Forms sidebar status banner warns when the document carries already-signed `/Sig` fields. | The PDF signature spec ties the cryptographic envelope to specific bytes; any edit invalidates the hash. Out of scope to preserve prior signatures across edits.                             | Phase 5+ may add a "preserve signed bytes, append new edits as a new revision" mode. |
+| **The PAdES engine is `node-signpdf` (MIT) by default; a `node-forge` + `pkijs` (MIT / BSD-3-Clause) manual fallback ships behind the same `signatures.padesEngine` setting.**                                                                                                             | Locked decision P4-L-3: both engines satisfy the same external contract; the fallback exists so we can swap if `node-signpdf` regresses upstream.                                            | Phase 4.1 (UI exposure of the engine toggle)                                         |
+| **The PAdES `/Contents` placeholder defaults to 16384 hex chars (8192 bytes).** Very long certificate chains may need 32768. Configurable via Settings → Signing → Advanced → `signatures.placeholderSize`.                                                                                | The /Contents field must be large enough to hold the CMS envelope. 16384 is the conservative default per signature-engine.md §3.3.                                                           | n/a — configurable                                                                   |
+| **macOS / Linux packaging is config-only.** The `electron-builder.yml` profile is structurally complete for macOS + Linux, but Phase 4 verifies Windows only. Phase 7 actually produces + tests cross-platform binaries.                                                                   | One platform per phase keeps the verification loop honest.                                                                                                                                   | Phase 7                                                                              |
+| **JavaScript form actions are stripped on save** (Phase 3 P3-L-2 carries through). A warning toast surfaces on save when JS actions were present.                                                                                                                                          | Locked decision P3-L-2: JS in PDFs is a sandbox-escape attack surface.                                                                                                                       | Phase 3.1 (read-only preservation candidate)                                         |
+| **Signature placeholder fields placed in Phase 3 round-trip with `/V` undefined** — Phase 4 fills them. Clicking an empty `/Sig` placeholder now opens the Signature Capture or PAdES Sign modal (your choice).                                                                            | Phase 3 laid the dict + appearance-stream groundwork; Phase 4 wires the fill.                                                                                                                | Already shipped in Phase 4                                                           |
+| **Date fields show as text inputs in Acrobat.** In-app date-picker UX is renderer-side only; the underlying PDF stores ISO-8601 text plus a `/TU` hint.                                                                                                                                    | PDF spec uses JavaScript for date formatting; Phase 3 forbids JS (P3-L-2).                                                                                                                   | n/a — accepted fidelity boundary                                                     |
+| **XFA forms (LiveCycle Designer) are not editable.** XFA-only documents show a banner "This PDF uses XFA forms which aren't supported"; AcroForm fields in mixed docs remain fillable.                                                                                                     | XFA is a PDF-1.7 fork with its own XML schema.                                                                                                                                               | Wontfix unless explicit demand                                                       |
+| **Excel multi-sheet workbooks read sheet 1 only.** Wizard step 2 surfaces a warning when XLSX has >1 sheet.                                                                                                                                                                                | exceljs supports multi-sheet but the wizard UX is sheet-1-only in Phase 3.                                                                                                                   | Phase 3.1 (sheet picker)                                                             |
+| **Excel formula evaluation is not supported.** `exceljs` reads the cached value when Excel saved it, otherwise the formula text.                                                                                                                                                           | exceljs does not run formulas; Phase 3 does not embed a formula engine.                                                                                                                      | Wontfix — paste-as-values upstream                                                   |
+| **List-box fields (`PDFOptionList`) are not exposed as a distinct type.**                                                                                                                                                                                                                  | Dropdown covers the common case.                                                                                                                                                             | Phase 3.1 if demand surfaces                                                         |
+| **Push-button fields are not exposed.**                                                                                                                                                                                                                                                    | Buttons in PDFs are typically JS-action triggers, which Phase 3 forbids (P3-L-2).                                                                                                            | Wontfix                                                                              |
+| **Form-template fields whose font/size aren't available in the target doc may render with substitute glyphs.** A toast surfaces on template load: "Some template fields couldn't be applied (N skipped)."                                                                                  | Templates carry coords + properties, not embedded fonts.                                                                                                                                     | Phase 4 (font substitution lands then)                                               |
+| **Form-design undo edge cases.** Cross-op-chain undo (e.g. add-field → remove-field → load-template) unwinds one op at a time; the per-op pattern from Phase 2 carries through. Form-fill, by contrast, commits as one batch and Ctrl+Z unwinds the whole batch.                           | History middleware is single-op-inverse for design ops; form-fill is HYBRID commit-boundary (see [developer guide](developer-guide.md#forms-architecture-phase-3)).                          | Phase 3.1 (compaction candidate)                                                     |
 
 ### Phase 2/3 limitations that carry through
 
-| Limitation | Ships in |
-|---|---|
-| Text editing is replace-only with the original font (no reflow, no font substitution, no multilang shaping); `clipped` / `missing_glyph` errors on too-wide or unsupported replacements | Phase 5+ |
-| TIFF imports use the first page only | Phase 5+ candidate |
-| Bookmarks are scoped to a single file (cross-file navigation not supported) | Phase 5+ |
-| No in-app print preview pane | Phase 5+ (re-prioritized) |
-| `pdf:identifyTextSpan` real content-stream walker is stubbed (renderer-cached metrics carry the UX) | Phase 5 absorb |
-| `MoveBookmarkResult` `invalid_parent` surfaces as `invalid_payload` on the wire | Phase 5 absorb |
-| Chromium engine produces non-deterministic bytes; forms / signatures / embedded JavaScript are flattened in Chromium output | n/a (force `pdf-lib` for deterministic output) |
-| XFA forms (LiveCycle Designer) are not editable; mixed AcroForm + XFA docs surface a banner | Wontfix unless demand surfaces |
-| Excel multi-sheet workbooks read sheet 1 only | Phase 3.1 candidate |
-| Excel formula evaluation is not supported (`exceljs` cached-value only) | Wontfix — paste-as-values upstream |
+| Limitation                                                                                                                                                                              | Ships in                                       |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Text editing is replace-only with the original font (no reflow, no font substitution, no multilang shaping); `clipped` / `missing_glyph` errors on too-wide or unsupported replacements | Phase 5+                                       |
+| TIFF imports use the first page only                                                                                                                                                    | Phase 5+ candidate                             |
+| Bookmarks are scoped to a single file (cross-file navigation not supported)                                                                                                             | Phase 5+                                       |
+| No in-app print preview pane                                                                                                                                                            | Phase 5+ (re-prioritized)                      |
+| `pdf:identifyTextSpan` real content-stream walker is stubbed (renderer-cached metrics carry the UX)                                                                                     | Phase 5 absorb                                 |
+| `MoveBookmarkResult` `invalid_parent` surfaces as `invalid_payload` on the wire                                                                                                         | Phase 5 absorb                                 |
+| Chromium engine produces non-deterministic bytes; forms / signatures / embedded JavaScript are flattened in Chromium output                                                             | n/a (force `pdf-lib` for deterministic output) |
+| XFA forms (LiveCycle Designer) are not editable; mixed AcroForm + XFA docs surface a banner                                                                                             | Wontfix unless demand surfaces                 |
+| Excel multi-sheet workbooks read sheet 1 only                                                                                                                                           | Phase 3.1 candidate                            |
+| Excel formula evaluation is not supported (`exceljs` cached-value only)                                                                                                                 | Wontfix — paste-as-values upstream             |
 
 ### Coming in Phase 6.1 / 7
 
-| Feature | Ships in |
-|---|---|
-| ~~Word / PowerPoint / image-format exports wired to the production pdf.js source-loader~~ | **DONE in 0.7.1** — all six formats produce valid output |
-| ~~Non-English language pack download~~ | **DONE in 0.7.1** — all 9 downloadable languages have real SHA-256 |
-| ExportQueue FIFO module (concurrency=1; `queue_full` at the 50th waiter) replaces the current inline path | later follow-up |
-| Hyperlinks in source PDF → hyperlinks in exported Word / Excel / PowerPoint | later follow-up |
-| PDF metadata (author, subject, keywords) → exported Office file metadata | later follow-up |
-| Native scanner integration (TWAIN / WIA) | DEFERRED — no MIT Node binding exists ([details](../README.md#deferred--requires-external-resources)) |
-| Per-page word-data rehydration on document reopen (full overlay + page-jump after restart) | Phase 5.1 |
-| Mid-page OCR cancellation | Phase 5.1+ |
-| OCR auto-detect-already-OCR'd | Phase 5.2+ |
-| CJK / Cyrillic / Arabic font embedding in text-behind-image output | Phase 5.1+ |
-| Text editing with reflow + font substitution + multilang shaping | Phase 7+ |
-| Cross-file bookmark navigation | Phase 7+ |
-| Dark mode + accessibility audit + localization | Phase 7 |
-| Full third-party PAdES verification (cert chain + CRL/OCSP) | Phase 4.1+ |
-| macOS / Linux builds | Phase 7 |
-| Auto-update | Phase 7 |
-| Code signing | Phase 7+ |
+| Feature                                                                                                   | Ships in                                                                                              |
+| --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| ~~Word / PowerPoint / image-format exports wired to the production pdf.js source-loader~~                 | **DONE in 0.7.1** — all six formats produce valid output                                              |
+| ~~Non-English language pack download~~                                                                    | **DONE in 0.7.1** — all 9 downloadable languages have real SHA-256                                    |
+| ExportQueue FIFO module (concurrency=1; `queue_full` at the 50th waiter) replaces the current inline path | later follow-up                                                                                       |
+| Hyperlinks in source PDF → hyperlinks in exported Word / Excel / PowerPoint                               | later follow-up                                                                                       |
+| PDF metadata (author, subject, keywords) → exported Office file metadata                                  | later follow-up                                                                                       |
+| Native scanner integration (TWAIN / WIA)                                                                  | DEFERRED — no MIT Node binding exists ([details](../README.md#deferred--requires-external-resources)) |
+| Per-page word-data rehydration on document reopen (full overlay + page-jump after restart)                | Phase 5.1                                                                                             |
+| Mid-page OCR cancellation                                                                                 | Phase 5.1+                                                                                            |
+| OCR auto-detect-already-OCR'd                                                                             | Phase 5.2+                                                                                            |
+| CJK / Cyrillic / Arabic font embedding in text-behind-image output                                        | Phase 5.1+                                                                                            |
+| Text editing with reflow + font substitution + multilang shaping                                          | Phase 7+                                                                                              |
+| Cross-file bookmark navigation                                                                            | Phase 7+                                                                                              |
+| Dark mode + accessibility audit + localization                                                            | Phase 7                                                                                               |
+| Full third-party PAdES verification (cert chain + CRL/OCSP)                                               | Phase 4.1+                                                                                            |
+| macOS / Linux builds                                                                                      | Phase 7                                                                                               |
+| Auto-update                                                                                               | Phase 7                                                                                               |
+| Code signing                                                                                              | Phase 7+                                                                                              |
 
 ---
 
@@ -320,9 +320,9 @@ The Settings → General pane surfaces these obligations at the point of action,
 
 ### The four highest-stakes Phase 7 obligations
 
-1. **Telemetry is OFF by default.** When you enable it, it records **anonymous feature-usage counts only** — never document content, never file paths, never personal information. In 0.7.0 **nothing leaves your machine at all**: the transport is an in-memory buffer that you can read in full via the debug panel. There is no analytics endpoint, no third-party SDK (no Google Analytics, no Sentry, no PostHog), and no `telemetry_events` table in the database. The absence of personal data is enforced *structurally* — the event shape physically cannot carry a name, path, or value beyond an event name and a day bucket (see [Telemetry and privacy](#telemetry-and-privacy)).
+1. **Telemetry is OFF by default.** When you enable it, it records **anonymous feature-usage counts only** — never document content, never file paths, never personal information. In 0.7.0 **nothing leaves your machine at all**: the transport is an in-memory buffer that you can read in full via the debug panel. There is no analytics endpoint, no third-party SDK (no Google Analytics, no Sentry, no PostHog), and no `telemetry_events` table in the database. The absence of personal data is enforced _structurally_ — the event shape physically cannot carry a name, path, or value beyond an event name and a day bucket (see [Telemetry and privacy](#telemetry-and-privacy)).
 
-2. **The auto-update publish target is a placeholder.** The update *client* is fully wired and ready, but the release channel is a placeholder until the project is published. **Updates will not download or install** until a real channel is configured. When you click "Check for updates", the app reports the honest **"update channel not configured"** state — it never claims you are up to date when it hasn't actually checked a real feed. Auto-update also requires a code-signing certificate (a real-world Phase 7.1 step) before it can apply downloaded bundles in production (see [Checking for updates](#checking-for-updates)).
+2. **The auto-update publish target is a placeholder.** The update _client_ is fully wired and ready, but the release channel is a placeholder until the project is published. **Updates will not download or install** until a real channel is configured. When you click "Check for updates", the app reports the honest **"update channel not configured"** state — it never claims you are up to date when it hasn't actually checked a real feed. Auto-update also requires a code-signing certificate (a real-world Phase 7.1 step) before it can apply downloaded bundles in production (see [Checking for updates](#checking-for-updates)).
 
 3. **macOS and Linux builds are UNVERIFIED.** The build configuration for both platforms ships in 0.7.0, but **no macOS or Linux binary has been produced and launched on real hardware.** They are produced by the build config and have not been tested on real machines. Native modules (the database, the canvas raster pipeline) may fail to load on these platforms until a maintainer verifies on a real host. Real-hardware verification is the headline Phase 7.1 work item — see [README → Platform support](../README.md#platform-support).
 
@@ -383,25 +383,25 @@ Once a document is open, the main viewer takes the center of the window. The **t
 
 ### Zoom and pan
 
-| Action | Shortcut | Mouse |
-|---|---|---|
-| Zoom in | **Ctrl++** | **Ctrl+wheel up** |
-| Zoom out | **Ctrl+-** | **Ctrl+wheel down** |
-| Reset to 100% | **Ctrl+0** | — |
-| Fit width | **Ctrl+1** | — |
-| Fit page | **Ctrl+2** | — |
-| Pan | — | Click and drag on the canvas |
+| Action        | Shortcut   | Mouse                        |
+| ------------- | ---------- | ---------------------------- |
+| Zoom in       | **Ctrl++** | **Ctrl+wheel up**            |
+| Zoom out      | **Ctrl+-** | **Ctrl+wheel down**          |
+| Reset to 100% | **Ctrl+0** | —                            |
+| Fit width     | **Ctrl+1** | —                            |
+| Fit page      | **Ctrl+2** | —                            |
+| Pan           | —          | Click and drag on the canvas |
 
 The current zoom is displayed in the status bar at the bottom of the window.
 
 ### Page navigation
 
-| Action | Shortcut |
-|---|---|
-| Previous page | **Page Up** |
-| Next page | **Page Down** |
-| First page | **Home** |
-| Last page | **End** |
+| Action         | Shortcut                                                                    |
+| -------------- | --------------------------------------------------------------------------- |
+| Previous page  | **Page Up**                                                                 |
+| Next page      | **Page Down**                                                               |
+| First page     | **Home**                                                                    |
+| Last page      | **End**                                                                     |
 | Jump to page N | Click the page-number field in the status bar, type the number, press Enter |
 
 You can also click any thumbnail in the left sidebar to jump to that page.
@@ -434,19 +434,19 @@ Select one or more thumbnails and press **Delete** (or right-click → **Delete 
 
 ### Rotate
 
-| Action | Shortcut |
-|---|---|
-| Rotate 90° clockwise | **Ctrl+R** |
+| Action                       | Shortcut         |
+| ---------------------------- | ---------------- |
+| Rotate 90° clockwise         | **Ctrl+R**       |
 | Rotate 90° counter-clockwise | **Ctrl+Shift+R** |
 
 Acts on the currently selected page(s). Each press applies an incremental 90° rotation; four presses returns to the original orientation.
 
 ### Undo and redo
 
-| Action | Shortcut |
-|---|---|
-| Undo | **Ctrl+Z** |
-| Redo | **Ctrl+Y** or **Ctrl+Shift+Z** |
+| Action | Shortcut                       |
+| ------ | ------------------------------ |
+| Undo   | **Ctrl+Z**                     |
+| Redo   | **Ctrl+Y** or **Ctrl+Shift+Z** |
 
 Undo unwinds the most recent operation: rotate, delete, insert, reorder, annotation add/edit/delete, image import, text replace, or bookmark op. Phase 2 limitation: each undo press unwinds exactly one op. Compaction of multi-step sequences into a single undo step is Phase 3.
 
@@ -471,15 +471,15 @@ Main loads each source via pdf-lib, concatenates the requested page ranges into 
 
 Choose a tool from the toolbar or via shortcut. Phase 1/2 ships the basic annotation set; Phase 4 layers seven additional shape + measure tools on top — see [Shape and measure annotations](#shape-and-measure-annotations) below.
 
-| Tool | Shortcut | Use |
-|---|---|---|
-| Highlight | **H** | Click and drag to highlight a rectangular region of text. |
-| Sticky note | **S** | Click anywhere on the page to drop a sticky note. Edit text in the inspector. |
-| Text box | **T** | Click and drag to create a text box. Type to fill. |
-| Underline | **Ctrl+U** | Click and drag to underline a text region. |
-| Strikethrough | **Ctrl+K** | Click and drag to strike through text. |
-| Freehand (ink) | **Shift+F** | Click and drag to draw freehand strokes. (Phase 3 reclaimed Ctrl+Shift+F for Form Designer.) |
-| Cursor / select | **V** or **Esc** | Default cursor; click an existing annotation to select. |
+| Tool            | Shortcut         | Use                                                                                          |
+| --------------- | ---------------- | -------------------------------------------------------------------------------------------- |
+| Highlight       | **H**            | Click and drag to highlight a rectangular region of text.                                    |
+| Sticky note     | **S**            | Click anywhere on the page to drop a sticky note. Edit text in the inspector.                |
+| Text box        | **T**            | Click and drag to create a text box. Type to fill.                                           |
+| Underline       | **Ctrl+U**       | Click and drag to underline a text region.                                                   |
+| Strikethrough   | **Ctrl+K**       | Click and drag to strike through text.                                                       |
+| Freehand (ink)  | **Shift+F**      | Click and drag to draw freehand strokes. (Phase 3 reclaimed Ctrl+Shift+F for Form Designer.) |
+| Cursor / select | **V** or **Esc** | Default cursor; click an existing annotation to select.                                      |
 
 Selected annotations show their properties in the **inspector** on the right (color, opacity, contents). Edit there. Delete with the **Delete** key.
 
@@ -489,15 +489,15 @@ All annotations are stored as standard PDF annotation objects (`Highlight`, `Und
 
 Phase 4 adds seven new annotation tools as standard PDF annotation subtypes — `Square`, `Circle`, `Polygon`, `PolyLine`, `Line` (used for both arrows and line-measure), and `FreeText` with `/IT FreeTextCallout`. All seven are interoperable with Acrobat Reader, Edge, Foxit, and any other ISO-32000-compliant reader.
 
-| Tool | Toolbar icon | What it does |
-|---|---|---|
-| **Rectangle** | □ | Click and drag to draw an outlined rectangle. The Inspector exposes border color, border width, border style (solid / dashed / dotted), and optional fill color + opacity. PDF subtype: `Square`. |
-| **Ellipse** | ○ | Same controls as Rectangle. PDF subtype: `Circle`. |
-| **Polygon** | ⬠ | Click to drop each vertex; double-click (or press Enter) to close the polygon. The first and last vertices auto-connect. PDF subtype: `Polygon`. |
-| **Arrow** | → | Click and drag to draw a line with an arrowhead at the end. The Inspector lets you change the start and end style (None / Butt / OpenArrow / ClosedArrow) so the same tool draws bare lines, single-headed arrows, or double-headed arrows. PDF subtype: `Line`. |
-| **Callout** | ⌖ | Click to drop the pointer tip (e.g. on the thing you're calling out); drag the text box to its final position. The Inspector exposes the callout text. PDF subtype: `FreeText` with `/IT FreeTextCallout`. |
-| **Line measure** | ⊢ | Click and drag a single line; the line's real-world length is computed from the per-document measure calibration (see Calibrating measurements below) and shown in the Inspector. PDF subtype: `Line` with `/Measure` dict. |
-| **Polyline measure** | ⊢⊢ | Click to drop each vertex; double-click (or press Enter) to finish. The cumulative segment length is computed and shown in the Inspector. PDF subtype: `PolyLine` with `/Measure` dict. |
+| Tool                 | Toolbar icon | What it does                                                                                                                                                                                                                                                     |
+| -------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Rectangle**        | □            | Click and drag to draw an outlined rectangle. The Inspector exposes border color, border width, border style (solid / dashed / dotted), and optional fill color + opacity. PDF subtype: `Square`.                                                                |
+| **Ellipse**          | ○            | Same controls as Rectangle. PDF subtype: `Circle`.                                                                                                                                                                                                               |
+| **Polygon**          | ⬠            | Click to drop each vertex; double-click (or press Enter) to close the polygon. The first and last vertices auto-connect. PDF subtype: `Polygon`.                                                                                                                 |
+| **Arrow**            | →            | Click and drag to draw a line with an arrowhead at the end. The Inspector lets you change the start and end style (None / Butt / OpenArrow / ClosedArrow) so the same tool draws bare lines, single-headed arrows, or double-headed arrows. PDF subtype: `Line`. |
+| **Callout**          | ⌖            | Click to drop the pointer tip (e.g. on the thing you're calling out); drag the text box to its final position. The Inspector exposes the callout text. PDF subtype: `FreeText` with `/IT FreeTextCallout`.                                                       |
+| **Line measure**     | ⊢            | Click and drag a single line; the line's real-world length is computed from the per-document measure calibration (see Calibrating measurements below) and shown in the Inspector. PDF subtype: `Line` with `/Measure` dict.                                      |
+| **Polyline measure** | ⊢⊢           | Click to drop each vertex; double-click (or press Enter) to finish. The cumulative segment length is computed and shown in the Inspector. PDF subtype: `PolyLine` with `/Measure` dict.                                                                          |
 
 The tool palette is in the right side of the toolbar, between the freehand-ink and the bookmark icons. Default properties (border width, border style, fill enabled, line-end style for the Arrow tool) are configurable in Settings → Annotations.
 
@@ -544,13 +544,13 @@ Pick the file, then click-drag a rectangle on the page where the image should la
 
 ### What formats work
 
-| Format | Status | Notes |
-|---|---|---|
-| PNG (8-bit, 16-bit) | LIVE | Embedded via pdf-lib `embedPng`. |
-| JPEG (baseline, progressive) | LIVE | Embedded via pdf-lib `embedJpg`. |
-| TIFF (single-page) | LIVE | Decoded via [utif](https://github.com/photopea/UTIF.js) (MIT). |
-| TIFF (multi-page) | **First page only** | Only the first frame is decoded. Multi-page TIFF extraction is a Phase 2.5 candidate; you'll see a warning toast when this fires. |
-| Other formats (BMP, GIF, WebP, HEIC, RAW) | Not supported | Convert to PNG or JPEG before import. |
+| Format                                    | Status              | Notes                                                                                                                             |
+| ----------------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| PNG (8-bit, 16-bit)                       | LIVE                | Embedded via pdf-lib `embedPng`.                                                                                                  |
+| JPEG (baseline, progressive)              | LIVE                | Embedded via pdf-lib `embedJpg`.                                                                                                  |
+| TIFF (single-page)                        | LIVE                | Decoded via [utif](https://github.com/photopea/UTIF.js) (MIT).                                                                    |
+| TIFF (multi-page)                         | **First page only** | Only the first frame is decoded. Multi-page TIFF extraction is a Phase 2.5 candidate; you'll see a warning toast when this fires. |
+| Other formats (BMP, GIF, WebP, HEIC, RAW) | Not supported       | Convert to PNG or JPEG before import.                                                                                             |
 
 ### Limitations
 
@@ -581,9 +581,9 @@ The replacement is queued as an edit op (kind: `text-replace`). On Save, the eng
 
 ### Failure modes
 
-| Indicator | Meaning | What to do |
-|---|---|---|
-| **Amber clip indicator** while typing | Your replacement is wider than the original run; on commit you'll get a `clipped` error toast. | Shorten your replacement, or wait for Phase 4 reflow. |
+| Indicator                                    | Meaning                                                                                                         | What to do                                                                         |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Amber clip indicator** while typing        | Your replacement is wider than the original run; on commit you'll get a `clipped` error toast.                  | Shorten your replacement, or wait for Phase 4 reflow.                              |
 | **Red missing-glyph indicator** while typing | Your replacement uses a character the original font doesn't have (e.g. a Cyrillic letter in a Latin-only font). | Pick characters the original font supports, or wait for Phase 4 font substitution. |
 
 ### What doesn't work
@@ -602,14 +602,14 @@ PDF_Viewer_Editor 0.3.0 detects, fills, and saves AcroForm fields. When you open
 
 ### Field types supported
 
-| Type | What it does in the renderer | What lands in the saved PDF |
-|---|---|---|
-| Text | Standard input box with the original font's display metrics. | AcroForm text field with `/V` set to your text. |
-| Checkbox | Toggle on click. | AcroForm checkbox with `/V` set to `/Yes` or `/Off`. |
-| Radio (group) | Mutually-exclusive group; clicking selects one and deselects siblings. | AcroForm radio group with `/V` set to the chosen option's export value. |
-| Dropdown (combo) | Single-select list from the field's options. | AcroForm dropdown with `/V` set to the chosen value. |
-| Date | In-app date picker honoring your `forms.dateLocale` setting (`system` / `en-US` / `en-GB` / `ISO`). | Stored as a text field with an ISO-8601 string in `/V` plus a `/TU` hint. **In Acrobat the field shows a text input, not a date picker** — the date-picker UX is renderer-side only. |
-| Signature placeholder | Visual "click to sign" affordance; clicking surfaces "Signing arrives in Phase 4." | `/FT /Sig` field with `/V` undefined; Phase 4 will populate. |
+| Type                  | What it does in the renderer                                                                        | What lands in the saved PDF                                                                                                                                                          |
+| --------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Text                  | Standard input box with the original font's display metrics.                                        | AcroForm text field with `/V` set to your text.                                                                                                                                      |
+| Checkbox              | Toggle on click.                                                                                    | AcroForm checkbox with `/V` set to `/Yes` or `/Off`.                                                                                                                                 |
+| Radio (group)         | Mutually-exclusive group; clicking selects one and deselects siblings.                              | AcroForm radio group with `/V` set to the chosen option's export value.                                                                                                              |
+| Dropdown (combo)      | Single-select list from the field's options.                                                        | AcroForm dropdown with `/V` set to the chosen value.                                                                                                                                 |
+| Date                  | In-app date picker honoring your `forms.dateLocale` setting (`system` / `en-US` / `en-GB` / `ISO`). | Stored as a text field with an ISO-8601 string in `/V` plus a `/TU` hint. **In Acrobat the field shows a text input, not a date picker** — the date-picker UX is renderer-side only. |
+| Signature placeholder | Visual "click to sign" affordance; clicking surfaces "Signing arrives in Phase 4."                  | `/FT /Sig` field with `/V` undefined; Phase 4 will populate.                                                                                                                         |
 
 ### Filling fields
 
@@ -634,23 +634,23 @@ If you've saved templates (see [Designing forms](#designing-forms)), the **Forms
 
 The top of the Forms sidebar surfaces a status banner that summarizes anything in the document the Phase 3 forms engine will alter or refuse to honor on save. **These three warnings are the trust-floor: nothing is hidden, no claim is implicit.** Each warning maps to a flag returned by the [`forms:detect`](api-reference.md#formsdetect--live-phase-3) IPC channel.
 
-| Warning row | When it shows | What will happen on save |
-|---|---|---|
-| **"Document contains JavaScript actions — they will be stripped on save."** | Set whenever the document carries `/Names /JavaScript` at the catalog level OR any field carries an `/AA` (additional-actions) dict. | **Every save** writes a file with no JavaScript. Calculations, regex validators, date hooks, and any other JS-driven field behaviors no longer run after a round-trip through the editor. This is the locked Phase 3 decision **P3-L-2**. There is no "preserve JS" toggle in Phase 3 — the strip is unconditional. Phase 3.1 may add a read-only preservation mode; track that phase for updates. |
-| **"This PDF uses XFA forms — XFA isn't editable in Phase 3."** | Set when the document's AcroForm dict carries an `/XFA` entry (typically authored in Adobe LiveCycle Designer). | XFA fields stay **read-only**. AcroForm fields in the same document (mixed documents are rare but exist) remain fillable. The XFA tree itself is preserved on save (Phase 3 does not strip XFA), but no XFA edits are produced by the editor. XFA support is wontfix unless explicit demand surfaces. |
-| **"This document has signed fields — saving will invalidate any existing signatures."** | Set when any `/Sig` field has a non-empty `/V` entry (i.e. the document has been digitally signed). | Phase 3 does NOT preserve PKCS#7 / PAdES signatures across a save round-trip — the byte-range hash captured at sign time covers the original bytes, and the editor produces fresh bytes. **A sign-then-edit-then-save flow will leave the saved file with signatures that fail validation.** If the file is signed and you only need to read it, do not save it. Cryptographic signing (and signature preservation) ship in Phase 4. The signature placeholder authored by the Phase 3 form designer is distinct — that's a `/Sig` field with `/V` intentionally absent (sign-ready), which round-trips cleanly. |
+| Warning row                                                                             | When it shows                                                                                                                        | What will happen on save                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **"Document contains JavaScript actions — they will be stripped on save."**             | Set whenever the document carries `/Names /JavaScript` at the catalog level OR any field carries an `/AA` (additional-actions) dict. | **Every save** writes a file with no JavaScript. Calculations, regex validators, date hooks, and any other JS-driven field behaviors no longer run after a round-trip through the editor. This is the locked Phase 3 decision **P3-L-2**. There is no "preserve JS" toggle in Phase 3 — the strip is unconditional. Phase 3.1 may add a read-only preservation mode; track that phase for updates.                                                                                                                                                                                                               |
+| **"This PDF uses XFA forms — XFA isn't editable in Phase 3."**                          | Set when the document's AcroForm dict carries an `/XFA` entry (typically authored in Adobe LiveCycle Designer).                      | XFA fields stay **read-only**. AcroForm fields in the same document (mixed documents are rare but exist) remain fillable. The XFA tree itself is preserved on save (Phase 3 does not strip XFA), but no XFA edits are produced by the editor. XFA support is wontfix unless explicit demand surfaces.                                                                                                                                                                                                                                                                                                            |
+| **"This document has signed fields — saving will invalidate any existing signatures."** | Set when any `/Sig` field has a non-empty `/V` entry (i.e. the document has been digitally signed).                                  | Phase 3 does NOT preserve PKCS#7 / PAdES signatures across a save round-trip — the byte-range hash captured at sign time covers the original bytes, and the editor produces fresh bytes. **A sign-then-edit-then-save flow will leave the saved file with signatures that fail validation.** If the file is signed and you only need to read it, do not save it. Cryptographic signing (and signature preservation) ship in Phase 4. The signature placeholder authored by the Phase 3 form designer is distinct — that's a `/Sig` field with `/V` intentionally absent (sign-ready), which round-trips cleanly. |
 
 The banner is informational, not blocking. Save still works. The flags are pure-data outputs of `forms:detect` — no value judgement, no hidden behavior. If you read the warning and proceed, the named outcome is what lands on disk.
 
 ### What else the Forms sidebar shows in various states
 
-| Document content | Forms sidebar shows |
-|---|---|
-| No AcroForm fields | "No fillable form fields detected. Switch to Form Designer (Ctrl+Shift+F) to add some, or load a saved template." |
-| XFA-only (LiveCycle Designer) PDF | Read-only banner row (see status banner above) plus the empty-form state. |
-| Mixed AcroForm + XFA | Status banner shows the XFA warning; the AcroForm fields appear in the field list and remain fillable. |
-| AcroForm with JavaScript actions | Status banner shows the JS-strip warning; fields fill normally. A second toast fires on save: "JavaScript actions stripped from document (Phase 3 limitation)." |
-| Signed `/Sig` field with existing `/V` | Status banner shows the signature-invalidation warning; you can still fill / edit / save, but be aware the saved file's signatures will fail validation. |
+| Document content                       | Forms sidebar shows                                                                                                                                             |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No AcroForm fields                     | "No fillable form fields detected. Switch to Form Designer (Ctrl+Shift+F) to add some, or load a saved template."                                               |
+| XFA-only (LiveCycle Designer) PDF      | Read-only banner row (see status banner above) plus the empty-form state.                                                                                       |
+| Mixed AcroForm + XFA                   | Status banner shows the XFA warning; the AcroForm fields appear in the field list and remain fillable.                                                          |
+| AcroForm with JavaScript actions       | Status banner shows the JS-strip warning; fields fill normally. A second toast fires on save: "JavaScript actions stripped from document (Phase 3 limitation)." |
+| Signed `/Sig` field with existing `/V` | Status banner shows the signature-invalidation warning; you can still fill / edit / save, but be aware the saved file's signatures will fail validation.        |
 
 ---
 
@@ -900,14 +900,14 @@ The sidebar's **Annotations** tab includes a **Signature Audit** sub-tab. Or ope
 
 ### What each row shows
 
-| Column | What it is |
-|---|---|
-| Signed at | Timestamp from the engine (ms epoch, displayed in your system locale) |
-| Signed by | Subject CN from the cert (or "(visual signature)" for visual rows) |
+| Column           | What it is                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------------- |
+| Signed at        | Timestamp from the engine (ms epoch, displayed in your system locale)                           |
+| Signed by        | Subject CN from the cert (or "(visual signature)" for visual rows)                              |
 | Cert fingerprint | First 16 hex chars of the SHA-256 cert fingerprint; full fingerprint in the row's expanded view |
-| TSA | TSA URL + response status (`ok` / `failed` / null if no TSA was used) |
-| Doc hash | First 16 hex chars of the SHA-256 doc hash AT SIGN TIME |
-| Filename | The file's name at sign time (best-effort; the file may have been moved/renamed since) |
+| TSA              | TSA URL + response status (`ok` / `failed` / null if no TSA was used)                           |
+| Doc hash         | First 16 hex chars of the SHA-256 doc hash AT SIGN TIME                                         |
+| Filename         | The file's name at sign time (best-effort; the file may have been moved/renamed since)          |
 
 ### Filter the panel
 
@@ -1028,18 +1028,18 @@ PDF_Viewer_Editor ships English bundled. Nine additional language packs are list
 
 The modal lists every language in the shipped catalog (`src/main/pdf-ops/language-pack-catalog.json`):
 
-| Language | Status | Size | Action |
-|---|---|---|---|
-| English (eng) | **Installed (bundled)** | 10.4 MB | (cannot remove) |
-| Spanish (spa) | Not installed | 8.9 MB | Download |
-| French (fra) | Not installed | 9.5 MB | Download |
-| German (deu) | Not installed | 11.7 MB | Download |
-| Portuguese (por) | Not installed | 9.0 MB | Download |
-| Italian (ita) | Not installed | 9.6 MB | Download |
-| Russian (rus) | Not installed | 9.9 MB | Download |
-| Chinese (Simplified) (chi_sim) | Not installed | 12.0 MB | Download |
-| Chinese (Traditional) (chi_tra) | Not installed | 11.5 MB | Download |
-| Japanese (jpn) | Not installed | 11.2 MB | Download |
+| Language                        | Status                  | Size    | Action          |
+| ------------------------------- | ----------------------- | ------- | --------------- |
+| English (eng)                   | **Installed (bundled)** | 10.4 MB | (cannot remove) |
+| Spanish (spa)                   | Not installed           | 8.9 MB  | Download        |
+| French (fra)                    | Not installed           | 9.5 MB  | Download        |
+| German (deu)                    | Not installed           | 11.7 MB | Download        |
+| Portuguese (por)                | Not installed           | 9.0 MB  | Download        |
+| Italian (ita)                   | Not installed           | 9.6 MB  | Download        |
+| Russian (rus)                   | Not installed           | 9.9 MB  | Download        |
+| Chinese (Simplified) (chi_sim)  | Not installed           | 12.0 MB | Download        |
+| Chinese (Traditional) (chi_tra) | Not installed           | 11.5 MB | Download        |
+| Japanese (jpn)                  | Not installed           | 11.2 MB | Download        |
 
 ### Download a pack
 
@@ -1106,6 +1106,7 @@ Switch the sidebar to the **OCR** tab. If the current document has no OCR runs, 
 ### What each section shows
 
 **Per-document summary (top)** — for the most recent OCR job on this document:
+
 - Total words recognized
 - Mean confidence (weighted across all words)
 - Low-confidence words count (below the threshold)
@@ -1114,6 +1115,7 @@ Switch the sidebar to the **OCR** tab. If the current document has no OCR runs, 
 - Job ID + completion timestamp
 
 **Per-page breakdown (middle)** — one row per OCR'd page:
+
 - Page number
 - Word count
 - Mean confidence (color-coded: green ≥80, amber 60–79, red <60)
@@ -1166,10 +1168,10 @@ This step has three columns: **Quality**, **Pages + options**, and the **per-for
 
 #### Choosing a quality tier
 
-| Tier | Best for | What it produces |
-|---|---|---|
-| **Layout-preserving (best-effort)** [recommended for Word + PowerPoint] | Documents where the visual layout matters (reports, brochures, magazines, slide decks). | Multi-column layouts (when detected), headings (font-size-MODE-bucketed classification), bordered tables (line-grid detection), embedded images (CTM-tracked extraction). |
-| **Text-only (fast)** [recommended for Excel] | Documents where you just want the text content, no styling. Also faster (~0.5 sec/page versus ~5-30 sec/page). | A flat sequence of paragraphs, in reading order (multi-column detection still applies for ordering; column structure is discarded). No images, no tables, no headings. |
+| Tier                                                                    | Best for                                                                                                       | What it produces                                                                                                                                                          |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Layout-preserving (best-effort)** [recommended for Word + PowerPoint] | Documents where the visual layout matters (reports, brochures, magazines, slide decks).                        | Multi-column layouts (when detected), headings (font-size-MODE-bucketed classification), bordered tables (line-grid detection), embedded images (CTM-tracked extraction). |
+| **Text-only (fast)** [recommended for Excel]                            | Documents where you just want the text content, no styling. Also faster (~0.5 sec/page versus ~5-30 sec/page). | A flat sequence of paragraphs, in reading order (multi-column detection still applies for ordering; column structure is discarded). No images, no tables, no headings.    |
 
 Image formats (PNG / JPEG / TIFF) do not have a quality tier — they are pixel rasters at the chosen DPI; the radio group is hidden when an image format is selected.
 
@@ -1179,14 +1181,14 @@ The `[recommended]` badge tracks the per-format default from the locked decision
 
 The options column depends on the chosen format:
 
-| Format | Options |
-|---|---|
-| Word | Page range (all / custom range); Include annotations checkbox; Page size dropdown (Letter / A4 / Auto — Auto uses source PDF's page size). |
-| Excel | Page range; Include annotations checkbox (default OFF for Excel — cells are data, not visual). |
-| PowerPoint | Page range; Include annotations checkbox. (PowerPoint always uses 16:9 widescreen with letterboxing — no slide-size picker in v0.6.0.) |
-| PNG | Page range; Include annotations checkbox; DPI dropdown (72 / 96 / 150 / 200 / 300 / 600). One PNG file per page (filename gets `-p001`, `-p002`, ... suffix). |
-| JPEG | Page range; Include annotations checkbox; DPI dropdown; JPEG quality slider (0.1 to 1.0; default 0.9). One JPEG file per page. |
-| TIFF | Page range; Include annotations checkbox; DPI dropdown; Multi-page TIFF checkbox (when ON, all pages bundle into ONE multi-page .tiff file; when OFF, one .tiff file per page). |
+| Format     | Options                                                                                                                                                                         |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Word       | Page range (all / custom range); Include annotations checkbox; Page size dropdown (Letter / A4 / Auto — Auto uses source PDF's page size).                                      |
+| Excel      | Page range; Include annotations checkbox (default OFF for Excel — cells are data, not visual).                                                                                  |
+| PowerPoint | Page range; Include annotations checkbox. (PowerPoint always uses 16:9 widescreen with letterboxing — no slide-size picker in v0.6.0.)                                          |
+| PNG        | Page range; Include annotations checkbox; DPI dropdown (72 / 96 / 150 / 200 / 300 / 600). One PNG file per page (filename gets `-p001`, `-p002`, ... suffix).                   |
+| JPEG       | Page range; Include annotations checkbox; DPI dropdown; JPEG quality slider (0.1 to 1.0; default 0.9). One JPEG file per page.                                                  |
+| TIFF       | Page range; Include annotations checkbox; DPI dropdown; Multi-page TIFF checkbox (when ON, all pages bundle into ONE multi-page .tiff file; when OFF, one .tiff file per page). |
 
 Page range options: **All pages (1-N)** (default) or **Page range** with `start` and `end` numeric inputs (validated against the source PDF's page count). Inclusive on both ends.
 
@@ -1198,12 +1200,12 @@ A read-only path field with a **Browse…** button to the right. Browse… opens
 
 Below the options, the modal renders a panel of 4-6 calibrated bullets sourced from `src/client/components/modals/export-modal/per-format-limitations.ts`. The bullets surface the [Export trust floor](#export-trust-floor--what-the-app-does-and-doesnt-promise) obligations relevant to the chosen format:
 
-| Format | Bullets visible |
-|---|---|
-| Word | best-effort layout; borderless tables not detected; XFA doesn't export; signed-source-stays-valid; ~5-30 sec/page; images embedded as raster on layout-preserving tier |
-| Excel | best for table-shaped PDFs; borderless tables won't appear; text-only tier dumps all text to one sheet; numeric coercion best-effort; signed-source-stays-valid; ~5-30 sec/page or ~0.5 sec/page on text-only |
-| PowerPoint | best-effort layout; one slide per page; 16:9 widescreen with letterboxing; borderless tables not detected; ~5-30 sec/page |
-| PNG / JPEG / TIFF | rasterized at chosen DPI; annotations rendered inline when ON; multi-page TIFF bundles into ONE file; large DPI = large output files |
+| Format            | Bullets visible                                                                                                                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Word              | best-effort layout; borderless tables not detected; XFA doesn't export; signed-source-stays-valid; ~5-30 sec/page; images embedded as raster on layout-preserving tier                                        |
+| Excel             | best for table-shaped PDFs; borderless tables won't appear; text-only tier dumps all text to one sheet; numeric coercion best-effort; signed-source-stays-valid; ~5-30 sec/page or ~0.5 sec/page on text-only |
+| PowerPoint        | best-effort layout; one slide per page; 16:9 widescreen with letterboxing; borderless tables not detected; ~5-30 sec/page                                                                                     |
+| PNG / JPEG / TIFF | rasterized at chosen DPI; annotations rendered inline when ON; multi-page TIFF bundles into ONE file; large DPI = large output files                                                                          |
 
 Plus a link at the bottom of the panel: **Full details → Export trust floor** (anchor jump to this guide's [Export trust floor](#export-trust-floor--what-the-app-does-and-doesnt-promise) section).
 
@@ -1406,6 +1408,7 @@ Pick how the merged PDFs should be written:
 A progress modal shows the current row, total rows, and percent complete. The progress bar updates via `mail-merge:progress` events streamed from main to renderer. The **Cancel** button is always enabled.
 
 If you cancel:
+
 - **Folder mode:** rows already written stay on disk; the partial result is reported.
 - **Concat mode:** no output file is written (atomic save discards partial work).
 
@@ -1510,10 +1513,10 @@ PDF_Viewer_Editor 0.2.0 exports the current document to a new PDF file via **Ctr
 
 ### The two engines
 
-| Engine | When it's picked | What it does |
-|---|---|---|
-| **pdf-lib (default)** | Documents without unauthorable annotations, fewer than ~10 overlay objects per page, no text-replace ops in the edit chain. | Replays the edit chain via the same engine that powers Save, then writes the result through pdf-lib. Byte-stable, fast, deterministic. |
-| **Chromium (fallback)** | Documents with unauthorable annotations, ≥10 overlay objects per page, or text-replace ops in the edit chain. | Renders the document through an offscreen BrowserWindow (security floor preserved, L-001 enforced) and uses `webContents.printToPDF()` to write the output. Slower; bytes are not deterministic across runs (Chromium's own bytes-build is non-reproducible). |
+| Engine                  | When it's picked                                                                                                            | What it does                                                                                                                                                                                                                                                  |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **pdf-lib (default)**   | Documents without unauthorable annotations, fewer than ~10 overlay objects per page, no text-replace ops in the edit chain. | Replays the edit chain via the same engine that powers Save, then writes the result through pdf-lib. Byte-stable, fast, deterministic.                                                                                                                        |
+| **Chromium (fallback)** | Documents with unauthorable annotations, ≥10 overlay objects per page, or text-replace ops in the edit chain.               | Renders the document through an offscreen BrowserWindow (security floor preserved, L-001 enforced) and uses `webContents.printToPDF()` to write the output. Slower; bytes are not deterministic across runs (Chromium's own bytes-build is non-reproducible). |
 
 You can force a specific engine via **Settings → Export → Default engine** (`pdf-lib` / `chromium` / `auto`). The default is `auto` (heuristic picks).
 
@@ -1542,10 +1545,10 @@ Save As does NOT get a flatten checkbox — Save is interactivity-preserving by 
 
 Two save commands:
 
-| Action | Shortcut | Behavior |
-|---|---|---|
-| **Save** | **Ctrl+S** | If the file was opened from disk, writes to the same path. Otherwise opens the Save As dialog. |
-| **Save As…** | **Ctrl+Shift+S** | Always opens the native save dialog; you choose the destination. |
+| Action       | Shortcut         | Behavior                                                                                       |
+| ------------ | ---------------- | ---------------------------------------------------------------------------------------------- |
+| **Save**     | **Ctrl+S**       | If the file was opened from disk, writes to the same path. Otherwise opens the Save As dialog. |
+| **Save As…** | **Ctrl+Shift+S** | Always opens the native save dialog; you choose the destination.                               |
 
 On success the status bar shows "Saved to `<filename>.pdf`" and the document's modified indicator clears.
 
@@ -1612,7 +1615,7 @@ Save As always opens the native save dialog and writes to the chosen destination
 2. The entire UI switches **immediately** — no restart. Menus, toolbar tooltips, modals, settings, and the empty-state text all re-render in the chosen language.
 3. Your choice persists across launches (stored under the `i18n.locale` setting).
 
-> **Honesty reminder — Spanish is a sample, not a complete translation** (Phase 7 trust-floor obligation #4; see [Phase 7 trust floor](#phase-7-trust-floor--what-the-app-does-and-doesnt-promise)). The locale picker labels it directly: *"translation sample, some strings may appear in English."* Roughly 70% of strings are translated — the high-traffic surfaces (menus, toolbar, sidebar, common modals, Settings, About, and **all the honesty/privacy copy**) are in Spanish, but some deep modal *step* prose (e.g. the multi-step OCR-invalidate confirm, signature-capture sub-steps) remains English. Any untranslated string falls back to English automatically — **you will never see a raw key like `toolbar:open` on screen.** Completing the deep modal-step translation is a Phase 7.1 item.
+> **Honesty reminder — Spanish is a sample, not a complete translation** (Phase 7 trust-floor obligation #4; see [Phase 7 trust floor](#phase-7-trust-floor--what-the-app-does-and-doesnt-promise)). The locale picker labels it directly: _"translation sample, some strings may appear in English."_ Roughly 70% of strings are translated — the high-traffic surfaces (menus, toolbar, sidebar, common modals, Settings, About, and **all the honesty/privacy copy**) are in Spanish, but some deep modal _step_ prose (e.g. the multi-step OCR-invalidate confirm, signature-capture sub-steps) remains English. Any untranslated string falls back to English automatically — **you will never see a raw key like `toolbar:open` on screen.** Completing the deep modal-step translation is a Phase 7.1 item.
 
 Adding more languages later (French, German, etc.) is purely additive — a new locale folder and a picker entry, no code change. The app does **not** auto-detect your OS language in 0.7.0 (the default is English; you opt into Spanish), because the proof locale is incomplete and a surprise mid-flow switch would be worse than a deliberate one.
 
@@ -1628,20 +1631,20 @@ PDF_Viewer_Editor can record **anonymous feature-usage counts** to help understa
 
 ### What it is
 
-- A small set of allowlisted **event names** (e.g. "a document was opened", "an export ran", "the locale changed") plus a **day bucket** (`YYYY-MM-DD`, never a precise timestamp). That is the *entire* payload — there is no field for a file name, a document title, a user identity, a field value, or any free text.
+- A small set of allowlisted **event names** (e.g. "a document was opened", "an export ran", "the locale changed") plus a **day bucket** (`YYYY-MM-DD`, never a precise timestamp). That is the _entire_ payload — there is no field for a file name, a document title, a user identity, a field value, or any free text.
 - A bounded **in-memory ring buffer** (default 500 entries). When it fills, the oldest entry is dropped.
 
 ### What it is NOT (Phase 7 trust-floor obligation #1 — see [Phase 7 trust floor](#phase-7-trust-floor--what-the-app-does-and-doesnt-promise))
 
 - **It does not send anything anywhere.** In 0.7.0 there is no network transport — nothing leaves your machine. No analytics endpoint, no third-party SDK (no Google Analytics, no Sentry, no PostHog/Mixpanel/Amplitude).
-- **It does not store personal data, document content, or file paths.** This is enforced *structurally*, not by discipline: the event shape physically cannot carry anything beyond an event name and a day bucket, so even a careless future change cannot leak personal data (see [developer guide → Telemetry framework](developer-guide.md#telemetry-framework-phase-7) for the `.strict()` schema guard).
-- **It does not persist across restarts.** There is no `telemetry_events` table in the database — the buffer is in-memory by design, so it cannot be forensically recovered from the `.sqlite` file. Only the opt-in *flag* persists.
+- **It does not store personal data, document content, or file paths.** This is enforced _structurally_, not by discipline: the event shape physically cannot carry anything beyond an event name and a day bucket, so even a careless future change cannot leak personal data (see [developer guide → Telemetry framework](developer-guide.md#telemetry-framework-phase-7) for the `.strict()` schema guard).
+- **It does not persist across restarts.** There is no `telemetry_events` table in the database — the buffer is in-memory by design, so it cannot be forensically recovered from the `.sqlite` file. Only the opt-in _flag_ persists.
 - **It does not log the events.** Nothing about a recorded event is written to the app's log files.
 
 ### Turning it on, off, and inspecting the buffer
 
 1. Tick **"Help improve the app with anonymous usage data"** in Settings → General → Privacy. The default state is **unchecked (OFF)**.
-2. The always-visible privacy copy beneath the toggle restates the obligations: *off by default, anonymous counts only, never document content or file paths, nothing leaves your computer.*
+2. The always-visible privacy copy beneath the toggle restates the obligations: _off by default, anonymous counts only, never document content or file paths, nothing leaves your computer._
 3. Click **"View collected data"** to open the debug panel — a plain table of event name + day bucket. This is what makes the opt-in **auditable**: you can see precisely what the framework has buffered.
 4. **Turning the toggle OFF clears the buffer immediately** — no orphaned events survive an opt-out.
 
@@ -1701,9 +1704,9 @@ The About content is also reachable as the **About tab** inside the Settings mod
 
 ### Honest gaps (Phase 7 trust-floor obligation #5 — see [Phase 7 trust floor](#phase-7-trust-floor--what-the-app-does-and-doesnt-promise))
 
-- **Freehand annotation drawing has no keyboard equivalent** — drawing an arbitrary stroke is pointer-only. The highlight, strikethrough, text box, sticky note, and shape tools *are* keyboard-accessible, so you have a complete keyboard annotation workflow without freehand.
+- **Freehand annotation drawing has no keyboard equivalent** — drawing an arbitrary stroke is pointer-only. The highlight, strikethrough, text box, sticky note, and shape tools _are_ keyboard-accessible, so you have a complete keyboard annotation workflow without freehand.
 - **Drawn signatures require a pointer** — the typed and image-based signature methods are fully keyboard-accessible.
-- **The rendered page raster is not narrated** — a screen reader cannot read the visual content of a page image. If you run [OCR](#running-ocr) on an image-only page, the recognized text *is* exposed to the accessibility tree; un-OCR'd image pages are opaque to the reader.
+- **The rendered page raster is not narrated** — a screen reader cannot read the visual content of a page image. If you run [OCR](#running-ocr) on an image-only page, the recognized text _is_ exposed to the accessibility tree; un-OCR'd image pages are opaque to the reader.
 - **Only Windows Narrator is tested.** NVDA, JAWS, macOS VoiceOver, and Linux Orca are unverified in 0.7.0.
 
 ---
@@ -1712,66 +1715,66 @@ The About content is also reachable as the **About tab** inside the Settings mod
 
 Open with **Ctrl+,** or **File → Settings**.
 
-| Setting | Default | Notes |
-|---|---|---|
-| Default zoom | Fit width | Applied when a new document opens. |
-| Theme | System | Honors system colors. Light / dark theme toggles ship in a later phase. |
-| Recents — maximum items | 20 | How many entries the recents menu remembers. |
-| Open — maximum file size (MB) | 500 | Files larger than this surface a "Too large" toast. |
-| Make PDF_Viewer_Editor the default PDF handler | Off | The installer's checkbox during install is the working path. The in-app runtime toggle reads the current OS state. |
-| Export — default engine | Auto | Print-to-PDF engine choice: `auto` (heuristic), `pdf-lib`, or `chromium`. See [Print to PDF](#print-to-pdf). |
-| Export — show warnings toast | On | Toggles the Chromium-engine warning ("forms/signatures flattened") and the multi-page-TIFF first-page-only warning. |
-| Annotation — author default | (empty) | Shows in the `T` (`/Title`) field of new annotations. |
-| Undo — maximum history depth | 100 | Maximum number of undo entries kept per document. |
-| Forms — date locale | System | Controls the date picker's input parsing: `System`, `en-US`, `en-GB`, or `ISO`. Storage in the PDF is always ISO-8601. |
-| Forms — flatten on export by default | Off | Sets the default state of the "Flatten forms in output" checkbox in the Export-to-PDF dialog and the Mail Merge wizard. |
-| Mail merge — last output folder | (auto) | Auto-populates the folder picker in wizard step 4. |
-| Mail merge — default output mode | Folder | Pre-selects "Folder of N PDFs" or "Single concatenated PDF" in step 4. |
-| **Signing — TSA URL** (Phase 4) | (empty) | RFC 3161 Time-Stamp Authority URL. HTTPS only. See [PAdES trust floor](#pades-trust-floor--what-the-app-does-and-doesnt-promise) obligation #3 — the app ships no default TSA. |
-| **Signing — Enable TSA** (Phase 4) | Off | When ON, the PAdES wizard's step 2 "Use TSA" checkbox is available. Off-by-default per locked decision P4-L-2. |
-| **Signing — TSA timeout (ms)** (Phase 4) | 30000 | Max round-trip time for the TSA HTTP request. After timeout, the sign fails loudly. |
-| **Signing — Placeholder size (hex chars)** (Phase 4) | 16384 | Size of the `/Contents` placeholder slot the engine reserves for the CMS envelope. Long cert chains may need 32768. Advanced. |
-| **Signing — Default Show Date** (Phase 4) | On | Default state of the "Show date" checkbox in the Signature Capture + PAdES Sign modals. |
-| **Signing — Default Show Subject CN** (Phase 4) | On | Default state of the "Show Subject CN" checkbox in PAdES Sign (visual signatures never show Subject CN). |
-| **Signing — PAdES engine** (Phase 4.1 toggle) | `signpdf` | `'signpdf'` uses `node-signpdf` (default); `'manual'` uses the `node-forge` + `pkijs` fallback engine. Advanced — see [user-guide → PAdES](#pades-cryptographic-signing). |
-| **Annotations — Default border width (pt)** (Phase 4) | 1 | Default border width for new rectangle / ellipse / polygon shape annotations. |
-| **Annotations — Default border style** (Phase 4) | Solid | `'solid'`, `'dashed'`, `'dotted'`. |
-| **Annotations — Default fill enabled** (Phase 4) | Off | Whether new shape annotations have a fill by default. |
-| **Annotations — Default line-end style** (Phase 4) | OpenArrow | Default arrowhead style for the Arrow tool. `'None'`, `'OpenArrow'`, `'ClosedArrow'`. |
-| **OCR — Default language** (Phase 5) | `eng` | The Tesseract language code pre-selected in the OCR wizard's language picker. Must be one of the installed packs in the [language manager](#manage-language-packs). |
-| **OCR — Low-confidence threshold** (Phase 5) | 60 | Per-word confidence cutoff for the [confidence overlay](#ocr-confidence-overlay). Words below this value get the orange box. Range 0–100; applied at render time, not at recognition (raw values preserved). |
-| **OCR — Raster DPI** (Phase 5) | 300 | Resolution for the per-page raster the OCR engine consumes. Higher = better recognition + more memory + slower. Range 72–600; 300 is the recommended default. |
-| **OCR — Max concurrent languages** (Phase 5) | 4 | Maximum number of language workers alive simultaneously in the worker pool. LRU-evicts when exceeded. Range 1–8. |
-| **OCR — Worker watchdog (sec)** (Phase 5) | 60 | Per-page recognition timeout. If a single page takes longer, the worker is terminated and the page records `worker_watchdog_timeout`. Range 10–600. |
-| **OCR — Preprocess: deskew** (Phase 5) | On | Default state of the Deskew checkbox in the OCR wizard step 1. Corrects rotations under ~10°. |
-| **OCR — Preprocess: denoise** (Phase 5) | Off | Default state of the Denoise checkbox. Bilateral filter; useful for grainy scans. |
-| **OCR — Preprocess: contrast boost** (Phase 5) | Off | Default state of the Contrast boost checkbox. Histogram equalization; useful for faded scans. |
-| **OCR — Denoise kernel** (Phase 5) | 3 | Bilateral filter kernel size. Odd integers 3..9. |
-| **OCR — Show confidence overlay by default** (Phase 5) | Off | Whether the [confidence overlay](#ocr-confidence-overlay) starts ON when a document with OCR data is opened. |
-| **OCR — Confirm-invalidate-signatures once** (Phase 5) | Off | The "Don't ask me again" toggle on the OCR-invalidates-PAdES-signatures confirm prompt. In v0.5.0 / 0.6.0 this toggle is shown but is per-session only — the confirm re-appears on app restart regardless. (M-21.4 carry-over; permanent persistence is intentionally NOT supported per conventions §16.5.) |
-| **Export — Word: default quality tier** (Phase 6) | Layout-preserving | Default tier pre-selected in the Export modal Step 2 for Word. Per locked decision Q-D. |
-| **Export — Word: default page size** (Phase 6) | Auto (source) | Default page size dropdown for docx output. `Letter` / `A4` / `Auto` (Auto uses the source PDF's page size). |
-| **Export — Word: include annotations by default** (Phase 6) | On | Default state of the include-annotations checkbox in the Export modal for Word. |
-| **Export — Excel: default quality tier** (Phase 6) | Text-only | Default tier pre-selected in the Export modal Step 2 for Excel. Per locked decision Q-D (Excel is inherently tabular). |
-| **Export — Excel: include annotations by default** (Phase 6) | Off | Default state of the include-annotations checkbox for Excel (cells are data, not visual). |
-| **Export — PowerPoint: default quality tier** (Phase 6) | Layout-preserving | Default tier pre-selected for PowerPoint. Per locked decision Q-D. |
-| **Export — PowerPoint: include annotations by default** (Phase 6) | On | Default state of the include-annotations checkbox for PowerPoint. |
-| **Export — Default image format** (Phase 6) | PNG | Pre-selected variant in the image-format sub-picker. `PNG` / `JPEG` / `TIFF`. |
-| **Export — Default DPI** (Phase 6) | 150 | Default DPI for image export. Range 72-600. Higher = better quality, larger files. |
-| **Export — Default JPEG quality** (Phase 6) | 0.9 | Default JPEG quality (only honored when format='jpeg'). Range 0.1-1.0. |
-| **Export — Default multi-page TIFF bundling** (Phase 6) | Off | Default state of the multi-page-TIFF checkbox (only visible when format='tiff'). |
-| **Export — Default include annotations in image export** (Phase 6) | On | Default state for the image-format include-annotations checkbox. |
-| **Export — Layout: line clustering ε (pt)** (Phase 6, advanced) | 2 | Y-coordinate clustering epsilon for paragraph detection. Tune only if your PDFs have unusually tight or loose line spacing. Range 0.5-10. |
-| **Export — Layout: paragraph break ratio** (Phase 6, advanced) | 1.5 | Line-gap / median-line-height threshold for paragraph break. Range 1.0-5.0. |
-| **Export — Layout: heading ratio** (Phase 6, advanced) | 1.3 | Font-size / median-body-font ratio for heading classification. Range 1.1-3.0. |
-| **Export — Layout: column gap (pt)** (Phase 6, advanced) | 40 | Minimum X-gap for column boundary detection. Increase for tight multi-column layouts. Range 10-200. |
-| **Export — Max queue size** (Phase 6, advanced) | 50 | Maximum queued + 1 running. New requests beyond the cap return `queue_full`. Phase 6.1 ExportQueue uses the same cap. |
-| **Telemetry — opt-in** (Phase 7) | **Off** | Anonymous feature-usage counts only; in-memory only, nothing leaves your machine. See [Telemetry and privacy](#telemetry-and-privacy). Stored as `telemetry.optIn`. |
-| **Interface language** (Phase 7) | `en-US` (English (US)) | `en-US` or `es-ES` (Spanish — a translation sample). Switches the UI live. See [Changing the interface language](#changing-the-interface-language). Stored as `i18n.locale`. |
-| **Update — channel** (Phase 7) | **Manual** | `Manual` (check only on button click) or `Automatically on launch`. Default Manual because the publish target is a placeholder. See [Checking for updates](#checking-for-updates). Stored as `update.channel`. |
-| **Update — last checked at** (Phase 7) | (never) | Read-only; the timestamp of the last update check. Stored as `update.lastCheckedAt` (JSON `null` until the first real check — never a sentinel `0`/epoch date). |
+| Setting                                                            | Default                | Notes                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------ | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Default zoom                                                       | Fit width              | Applied when a new document opens.                                                                                                                                                                                                                                                                          |
+| Theme                                                              | System                 | Honors system colors. Light / dark theme toggles ship in a later phase.                                                                                                                                                                                                                                     |
+| Recents — maximum items                                            | 20                     | How many entries the recents menu remembers.                                                                                                                                                                                                                                                                |
+| Open — maximum file size (MB)                                      | 500                    | Files larger than this surface a "Too large" toast.                                                                                                                                                                                                                                                         |
+| Make PDF_Viewer_Editor the default PDF handler                     | Off                    | The installer's checkbox during install is the working path. The in-app runtime toggle reads the current OS state.                                                                                                                                                                                          |
+| Export — default engine                                            | Auto                   | Print-to-PDF engine choice: `auto` (heuristic), `pdf-lib`, or `chromium`. See [Print to PDF](#print-to-pdf).                                                                                                                                                                                                |
+| Export — show warnings toast                                       | On                     | Toggles the Chromium-engine warning ("forms/signatures flattened") and the multi-page-TIFF first-page-only warning.                                                                                                                                                                                         |
+| Annotation — author default                                        | (empty)                | Shows in the `T` (`/Title`) field of new annotations.                                                                                                                                                                                                                                                       |
+| Undo — maximum history depth                                       | 100                    | Maximum number of undo entries kept per document.                                                                                                                                                                                                                                                           |
+| Forms — date locale                                                | System                 | Controls the date picker's input parsing: `System`, `en-US`, `en-GB`, or `ISO`. Storage in the PDF is always ISO-8601.                                                                                                                                                                                      |
+| Forms — flatten on export by default                               | Off                    | Sets the default state of the "Flatten forms in output" checkbox in the Export-to-PDF dialog and the Mail Merge wizard.                                                                                                                                                                                     |
+| Mail merge — last output folder                                    | (auto)                 | Auto-populates the folder picker in wizard step 4.                                                                                                                                                                                                                                                          |
+| Mail merge — default output mode                                   | Folder                 | Pre-selects "Folder of N PDFs" or "Single concatenated PDF" in step 4.                                                                                                                                                                                                                                      |
+| **Signing — TSA URL** (Phase 4)                                    | (empty)                | RFC 3161 Time-Stamp Authority URL. HTTPS only. See [PAdES trust floor](#pades-trust-floor--what-the-app-does-and-doesnt-promise) obligation #3 — the app ships no default TSA.                                                                                                                              |
+| **Signing — Enable TSA** (Phase 4)                                 | Off                    | When ON, the PAdES wizard's step 2 "Use TSA" checkbox is available. Off-by-default per locked decision P4-L-2.                                                                                                                                                                                              |
+| **Signing — TSA timeout (ms)** (Phase 4)                           | 30000                  | Max round-trip time for the TSA HTTP request. After timeout, the sign fails loudly.                                                                                                                                                                                                                         |
+| **Signing — Placeholder size (hex chars)** (Phase 4)               | 16384                  | Size of the `/Contents` placeholder slot the engine reserves for the CMS envelope. Long cert chains may need 32768. Advanced.                                                                                                                                                                               |
+| **Signing — Default Show Date** (Phase 4)                          | On                     | Default state of the "Show date" checkbox in the Signature Capture + PAdES Sign modals.                                                                                                                                                                                                                     |
+| **Signing — Default Show Subject CN** (Phase 4)                    | On                     | Default state of the "Show Subject CN" checkbox in PAdES Sign (visual signatures never show Subject CN).                                                                                                                                                                                                    |
+| **Signing — PAdES engine** (Phase 4.1 toggle)                      | `signpdf`              | `'signpdf'` uses `node-signpdf` (default); `'manual'` uses the `node-forge` + `pkijs` fallback engine. Advanced — see [user-guide → PAdES](#pades-cryptographic-signing).                                                                                                                                   |
+| **Annotations — Default border width (pt)** (Phase 4)              | 1                      | Default border width for new rectangle / ellipse / polygon shape annotations.                                                                                                                                                                                                                               |
+| **Annotations — Default border style** (Phase 4)                   | Solid                  | `'solid'`, `'dashed'`, `'dotted'`.                                                                                                                                                                                                                                                                          |
+| **Annotations — Default fill enabled** (Phase 4)                   | Off                    | Whether new shape annotations have a fill by default.                                                                                                                                                                                                                                                       |
+| **Annotations — Default line-end style** (Phase 4)                 | OpenArrow              | Default arrowhead style for the Arrow tool. `'None'`, `'OpenArrow'`, `'ClosedArrow'`.                                                                                                                                                                                                                       |
+| **OCR — Default language** (Phase 5)                               | `eng`                  | The Tesseract language code pre-selected in the OCR wizard's language picker. Must be one of the installed packs in the [language manager](#manage-language-packs).                                                                                                                                         |
+| **OCR — Low-confidence threshold** (Phase 5)                       | 60                     | Per-word confidence cutoff for the [confidence overlay](#ocr-confidence-overlay). Words below this value get the orange box. Range 0–100; applied at render time, not at recognition (raw values preserved).                                                                                                |
+| **OCR — Raster DPI** (Phase 5)                                     | 300                    | Resolution for the per-page raster the OCR engine consumes. Higher = better recognition + more memory + slower. Range 72–600; 300 is the recommended default.                                                                                                                                               |
+| **OCR — Max concurrent languages** (Phase 5)                       | 4                      | Maximum number of language workers alive simultaneously in the worker pool. LRU-evicts when exceeded. Range 1–8.                                                                                                                                                                                            |
+| **OCR — Worker watchdog (sec)** (Phase 5)                          | 60                     | Per-page recognition timeout. If a single page takes longer, the worker is terminated and the page records `worker_watchdog_timeout`. Range 10–600.                                                                                                                                                         |
+| **OCR — Preprocess: deskew** (Phase 5)                             | On                     | Default state of the Deskew checkbox in the OCR wizard step 1. Corrects rotations under ~10°.                                                                                                                                                                                                               |
+| **OCR — Preprocess: denoise** (Phase 5)                            | Off                    | Default state of the Denoise checkbox. Bilateral filter; useful for grainy scans.                                                                                                                                                                                                                           |
+| **OCR — Preprocess: contrast boost** (Phase 5)                     | Off                    | Default state of the Contrast boost checkbox. Histogram equalization; useful for faded scans.                                                                                                                                                                                                               |
+| **OCR — Denoise kernel** (Phase 5)                                 | 3                      | Bilateral filter kernel size. Odd integers 3..9.                                                                                                                                                                                                                                                            |
+| **OCR — Show confidence overlay by default** (Phase 5)             | Off                    | Whether the [confidence overlay](#ocr-confidence-overlay) starts ON when a document with OCR data is opened.                                                                                                                                                                                                |
+| **OCR — Confirm-invalidate-signatures once** (Phase 5)             | Off                    | The "Don't ask me again" toggle on the OCR-invalidates-PAdES-signatures confirm prompt. In v0.5.0 / 0.6.0 this toggle is shown but is per-session only — the confirm re-appears on app restart regardless. (M-21.4 carry-over; permanent persistence is intentionally NOT supported per conventions §16.5.) |
+| **Export — Word: default quality tier** (Phase 6)                  | Layout-preserving      | Default tier pre-selected in the Export modal Step 2 for Word. Per locked decision Q-D.                                                                                                                                                                                                                     |
+| **Export — Word: default page size** (Phase 6)                     | Auto (source)          | Default page size dropdown for docx output. `Letter` / `A4` / `Auto` (Auto uses the source PDF's page size).                                                                                                                                                                                                |
+| **Export — Word: include annotations by default** (Phase 6)        | On                     | Default state of the include-annotations checkbox in the Export modal for Word.                                                                                                                                                                                                                             |
+| **Export — Excel: default quality tier** (Phase 6)                 | Text-only              | Default tier pre-selected in the Export modal Step 2 for Excel. Per locked decision Q-D (Excel is inherently tabular).                                                                                                                                                                                      |
+| **Export — Excel: include annotations by default** (Phase 6)       | Off                    | Default state of the include-annotations checkbox for Excel (cells are data, not visual).                                                                                                                                                                                                                   |
+| **Export — PowerPoint: default quality tier** (Phase 6)            | Layout-preserving      | Default tier pre-selected for PowerPoint. Per locked decision Q-D.                                                                                                                                                                                                                                          |
+| **Export — PowerPoint: include annotations by default** (Phase 6)  | On                     | Default state of the include-annotations checkbox for PowerPoint.                                                                                                                                                                                                                                           |
+| **Export — Default image format** (Phase 6)                        | PNG                    | Pre-selected variant in the image-format sub-picker. `PNG` / `JPEG` / `TIFF`.                                                                                                                                                                                                                               |
+| **Export — Default DPI** (Phase 6)                                 | 150                    | Default DPI for image export. Range 72-600. Higher = better quality, larger files.                                                                                                                                                                                                                          |
+| **Export — Default JPEG quality** (Phase 6)                        | 0.9                    | Default JPEG quality (only honored when format='jpeg'). Range 0.1-1.0.                                                                                                                                                                                                                                      |
+| **Export — Default multi-page TIFF bundling** (Phase 6)            | Off                    | Default state of the multi-page-TIFF checkbox (only visible when format='tiff').                                                                                                                                                                                                                            |
+| **Export — Default include annotations in image export** (Phase 6) | On                     | Default state for the image-format include-annotations checkbox.                                                                                                                                                                                                                                            |
+| **Export — Layout: line clustering ε (pt)** (Phase 6, advanced)    | 2                      | Y-coordinate clustering epsilon for paragraph detection. Tune only if your PDFs have unusually tight or loose line spacing. Range 0.5-10.                                                                                                                                                                   |
+| **Export — Layout: paragraph break ratio** (Phase 6, advanced)     | 1.5                    | Line-gap / median-line-height threshold for paragraph break. Range 1.0-5.0.                                                                                                                                                                                                                                 |
+| **Export — Layout: heading ratio** (Phase 6, advanced)             | 1.3                    | Font-size / median-body-font ratio for heading classification. Range 1.1-3.0.                                                                                                                                                                                                                               |
+| **Export — Layout: column gap (pt)** (Phase 6, advanced)           | 40                     | Minimum X-gap for column boundary detection. Increase for tight multi-column layouts. Range 10-200.                                                                                                                                                                                                         |
+| **Export — Max queue size** (Phase 6, advanced)                    | 50                     | Maximum queued + 1 running. New requests beyond the cap return `queue_full`. Phase 6.1 ExportQueue uses the same cap.                                                                                                                                                                                       |
+| **Telemetry — opt-in** (Phase 7)                                   | **Off**                | Anonymous feature-usage counts only; in-memory only, nothing leaves your machine. See [Telemetry and privacy](#telemetry-and-privacy). Stored as `telemetry.optIn`.                                                                                                                                         |
+| **Interface language** (Phase 7)                                   | `en-US` (English (US)) | `en-US` or `es-ES` (Spanish — a translation sample). Switches the UI live. See [Changing the interface language](#changing-the-interface-language). Stored as `i18n.locale`.                                                                                                                                |
+| **Update — channel** (Phase 7)                                     | **Manual**             | `Manual` (check only on button click) or `Automatically on launch`. Default Manual because the publish target is a placeholder. See [Checking for updates](#checking-for-updates). Stored as `update.channel`.                                                                                              |
+| **Update — last checked at** (Phase 7)                             | (never)                | Read-only; the timestamp of the last update check. Stored as `update.lastCheckedAt` (JSON `null` until the first real check — never a sentinel `0`/epoch date).                                                                                                                                             |
 
-Settings persist in SQLite (`%APPDATA%/PDF Viewer & Editor/db.sqlite`). The four Phase 7 keys are the *only* new persistent state — there is no `telemetry_events` table (the buffer is in-memory by design).
+Settings persist in SQLite (`%APPDATA%/PDF Viewer & Editor/db.sqlite`). The four Phase 7 keys are the _only_ new persistent state — there is no `telemetry_events` table (the buffer is in-memory by design).
 
 **Honesty reminder for the Signing settings.** The TSA URL is stored as a plain string; it is visited only at sign time (see [Timestamping](#timestamping-rfc-3161)). No cert / password is stored — those are loaded fresh per signing operation via the PAdES wizard and zeroed on release (see [PAdES trust floor](#pades-trust-floor--what-the-app-does-and-doesnt-promise) obligation #2).
 
@@ -1787,60 +1790,60 @@ Settings persist in SQLite (`%APPDATA%/PDF Viewer & Editor/db.sqlite`). The four
 
 Verified against `src/client/hooks/use-app-shortcuts.ts` and `src/client/shortcuts.ts`.
 
-| Category | Action | Shortcut | Enabled in Phase 3 |
-|---|---|---|---|
-| File | Open PDF | **Ctrl+O** | yes |
-| File | Save | **Ctrl+S** | yes |
-| File | Save As | **Ctrl+Shift+S** | yes |
-| File | Close document | **Ctrl+W** | yes |
-| File | Quit | **Ctrl+Q** | yes |
-| File | Print | **Ctrl+P** | yes |
-| File | Print to PDF (Export) | **Ctrl+Shift+P** | yes |
-| File | Settings | **Ctrl+,** | yes |
-| Edit | Undo | **Ctrl+Z** | yes |
-| Edit | Redo | **Ctrl+Y** or **Ctrl+Shift+Z** | yes |
-| Edit | Find | **Ctrl+F** | Phase 4+ (shows "coming soon" toast) |
-| Edit | Select all pages | **Ctrl+A** | yes |
-| Edit | Delete selection | **Delete** or **Backspace** | yes |
-| View | Zoom in | **Ctrl++** | yes |
-| View | Zoom out | **Ctrl+-** | yes |
-| View | Zoom 100% | **Ctrl+0** | yes |
-| View | Fit width | **Ctrl+1** | (no-op in current build; viewport fit modes wire in a follow-up) |
-| View | Fit page | **Ctrl+2** | (no-op in current build) |
-| View | Toggle sidebar | **Ctrl+B** | yes |
-| View | Toggle inspector | **Ctrl+Alt+I** | yes |
-| View | Toggle fullscreen | **F11** | yes |
-| Pages | Rotate clockwise | **Ctrl+R** | yes |
-| Pages | Rotate counter-clockwise | **Ctrl+Shift+Alt+R** | yes (Phase 5 rebind — Ctrl+Shift+R is now Run OCR per L-21.3) |
-| Pages | Insert image | **Ctrl+I** | yes |
-| Pages | Previous page | **Page Up** | yes |
-| Pages | Next page | **Page Down** | yes |
-| Pages | First page | **Home** | yes |
-| Pages | Last page | **End** | yes |
-| Tools | Highlight | **H** | yes |
-| Tools | Sticky note | **S** | yes |
-| Tools | Text box | **T** | yes |
-| Tools | Underline | **Ctrl+U** | yes |
-| Tools | Strikethrough | **Ctrl+K** | yes |
-| Tools | Freehand (ink) | **Shift+F** | yes |
-| Tools | Text edit mode | **Ctrl+E** | yes |
-| Tools | Cursor / select | **V** or **Esc** | yes |
-| **Tools** | **Capture signature** | **Ctrl+Shift+G** | **yes (Phase 4 NEW)** |
-| **Tools** | **Sign with PAdES** | **Ctrl+Alt+G** | **yes (Phase 4 NEW)** |
-| **Tools** | **Calibrate measurement** | **Ctrl+Alt+M** | **yes (Phase 4 NEW)** |
-| **Tools** | **Run OCR…** | **Ctrl+Shift+R** | **yes (Phase 5 NEW)** |
-| **Tools** | **Manage language packs…** | (no shortcut; menu only) | **yes (Phase 5 NEW)** |
-| **Tools / File** | **Export…** | **Ctrl+Shift+E** | **yes (Phase 6 NEW)** |
-| **Tools** | **Scan from device…** | (no shortcut; menu only; DISABLED in v0.6.0) | **stub — Phase 5.1** |
-| **View** | **Toggle OCR confidence overlay** | **Ctrl+Shift+H** | **yes (Phase 5 NEW)** |
-| Forms | Toggle Form Designer mode | **Ctrl+Shift+F** | yes (Phase 3) |
-| Forms | Open Mail Merge wizard | **Ctrl+M** | yes (Phase 3) |
-| Designer | Cycle field-type in toolbar | **F** (designer-mode only) | yes (mode-scoped) |
-| Designer | Deselect / exit designer | **Esc** (first deselects, second exits) | yes |
-| Designer | Remove selected field | **Delete** (designer-mode only) | yes |
-| Help | Help | **F1** | yes |
-| Sidebar | Cycle sidebar tab | **Tab** (when sidebar focused) | yes |
-| Sidebar | Rename focused bookmark | **F2** (when bookmark focused) | yes |
+| Category         | Action                            | Shortcut                                     | Enabled in Phase 3                                               |
+| ---------------- | --------------------------------- | -------------------------------------------- | ---------------------------------------------------------------- |
+| File             | Open PDF                          | **Ctrl+O**                                   | yes                                                              |
+| File             | Save                              | **Ctrl+S**                                   | yes                                                              |
+| File             | Save As                           | **Ctrl+Shift+S**                             | yes                                                              |
+| File             | Close document                    | **Ctrl+W**                                   | yes                                                              |
+| File             | Quit                              | **Ctrl+Q**                                   | yes                                                              |
+| File             | Print                             | **Ctrl+P**                                   | yes                                                              |
+| File             | Print to PDF (Export)             | **Ctrl+Shift+P**                             | yes                                                              |
+| File             | Settings                          | **Ctrl+,**                                   | yes                                                              |
+| Edit             | Undo                              | **Ctrl+Z**                                   | yes                                                              |
+| Edit             | Redo                              | **Ctrl+Y** or **Ctrl+Shift+Z**               | yes                                                              |
+| Edit             | Find                              | **Ctrl+F**                                   | Phase 4+ (shows "coming soon" toast)                             |
+| Edit             | Select all pages                  | **Ctrl+A**                                   | yes                                                              |
+| Edit             | Delete selection                  | **Delete** or **Backspace**                  | yes                                                              |
+| View             | Zoom in                           | **Ctrl++**                                   | yes                                                              |
+| View             | Zoom out                          | **Ctrl+-**                                   | yes                                                              |
+| View             | Zoom 100%                         | **Ctrl+0**                                   | yes                                                              |
+| View             | Fit width                         | **Ctrl+1**                                   | (no-op in current build; viewport fit modes wire in a follow-up) |
+| View             | Fit page                          | **Ctrl+2**                                   | (no-op in current build)                                         |
+| View             | Toggle sidebar                    | **Ctrl+B**                                   | yes                                                              |
+| View             | Toggle inspector                  | **Ctrl+Alt+I**                               | yes                                                              |
+| View             | Toggle fullscreen                 | **F11**                                      | yes                                                              |
+| Pages            | Rotate clockwise                  | **Ctrl+R**                                   | yes                                                              |
+| Pages            | Rotate counter-clockwise          | **Ctrl+Shift+Alt+R**                         | yes (Phase 5 rebind — Ctrl+Shift+R is now Run OCR per L-21.3)    |
+| Pages            | Insert image                      | **Ctrl+I**                                   | yes                                                              |
+| Pages            | Previous page                     | **Page Up**                                  | yes                                                              |
+| Pages            | Next page                         | **Page Down**                                | yes                                                              |
+| Pages            | First page                        | **Home**                                     | yes                                                              |
+| Pages            | Last page                         | **End**                                      | yes                                                              |
+| Tools            | Highlight                         | **H**                                        | yes                                                              |
+| Tools            | Sticky note                       | **S**                                        | yes                                                              |
+| Tools            | Text box                          | **T**                                        | yes                                                              |
+| Tools            | Underline                         | **Ctrl+U**                                   | yes                                                              |
+| Tools            | Strikethrough                     | **Ctrl+K**                                   | yes                                                              |
+| Tools            | Freehand (ink)                    | **Shift+F**                                  | yes                                                              |
+| Tools            | Text edit mode                    | **Ctrl+E**                                   | yes                                                              |
+| Tools            | Cursor / select                   | **V** or **Esc**                             | yes                                                              |
+| **Tools**        | **Capture signature**             | **Ctrl+Shift+G**                             | **yes (Phase 4 NEW)**                                            |
+| **Tools**        | **Sign with PAdES**               | **Ctrl+Alt+G**                               | **yes (Phase 4 NEW)**                                            |
+| **Tools**        | **Calibrate measurement**         | **Ctrl+Alt+M**                               | **yes (Phase 4 NEW)**                                            |
+| **Tools**        | **Run OCR…**                      | **Ctrl+Shift+R**                             | **yes (Phase 5 NEW)**                                            |
+| **Tools**        | **Manage language packs…**        | (no shortcut; menu only)                     | **yes (Phase 5 NEW)**                                            |
+| **Tools / File** | **Export…**                       | **Ctrl+Shift+E**                             | **yes (Phase 6 NEW)**                                            |
+| **Tools**        | **Scan from device…**             | (no shortcut; menu only; DISABLED in v0.6.0) | **stub — Phase 5.1**                                             |
+| **View**         | **Toggle OCR confidence overlay** | **Ctrl+Shift+H**                             | **yes (Phase 5 NEW)**                                            |
+| Forms            | Toggle Form Designer mode         | **Ctrl+Shift+F**                             | yes (Phase 3)                                                    |
+| Forms            | Open Mail Merge wizard            | **Ctrl+M**                                   | yes (Phase 3)                                                    |
+| Designer         | Cycle field-type in toolbar       | **F** (designer-mode only)                   | yes (mode-scoped)                                                |
+| Designer         | Deselect / exit designer          | **Esc** (first deselects, second exits)      | yes                                                              |
+| Designer         | Remove selected field             | **Delete** (designer-mode only)              | yes                                                              |
+| Help             | Help                              | **F1**                                       | yes                                                              |
+| Sidebar          | Cycle sidebar tab                 | **Tab** (when sidebar focused)               | yes                                                              |
+| Sidebar          | Rename focused bookmark           | **F2** (when bookmark focused)               | yes                                                              |
 
 Phase 4 shortcuts are hard-coded. User-configurable shortcuts ship in a later phase.
 
@@ -2027,7 +2030,7 @@ Expected in 0.7.0. The auto-update client is wired and ready, but the project ha
 
 ### Some of the UI is still in English after switching to Spanish (Phase 7)
 
-Expected. Spanish (es-ES) is a **translation sample** covering roughly 70% of strings — the high-traffic surfaces are translated, but some deep modal *step* prose stays English. Any untranslated string falls back to English automatically; you should never see a raw key (e.g. `toolbar:open`). Completing the deep modal-step translation is a Phase 7.1 item. See [Changing the interface language](#changing-the-interface-language).
+Expected. Spanish (es-ES) is a **translation sample** covering roughly 70% of strings — the high-traffic surfaces are translated, but some deep modal _step_ prose stays English. Any untranslated string falls back to English automatically; you should never see a raw key (e.g. `toolbar:open`). Completing the deep modal-step translation is a Phase 7.1 item. See [Changing the interface language](#changing-the-interface-language).
 
 ### The telemetry debug panel is empty (Phase 7)
 

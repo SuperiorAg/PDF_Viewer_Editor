@@ -33,18 +33,18 @@ Each section below describes the architectural delta. Phase 1 / 2 / 3 / 4 / 5 ch
 
 ## 1. Locked decisions encoded (Wave 23 self-check)
 
-| ID | Decision | Encoded where in this doc | Cross-ref |
-|---|---|---|---|
-| **P6-L-1** | Quality tier: **layout-preserving best-effort** (locked roadmap decision 2026-05-22). Algorithm: pdf.js `getTextContent` → bounding-box clustering for paragraphs/headings → line-grid analysis for tables → image extraction via operator stream. `text-only` fast tier ships alongside as opt-in toggle. | §4.1 (single-funnel), §4.2 (tier selector), §4.3 (layout algorithm) | `export-engine.md §2` |
-| **P6-L-2** | **DOCX library: `docx` (MIT) v9.7+.** Scope in v1: `Paragraph`, `TextRun`, `HeadingLevel`, `Table` / `TableRow` / `TableCell`, `ImageRun`. Deferred to Phase 6.1: `Footnote`, `Comment`, revision tracking, custom styles beyond `Heading1..6`. Per Q-A. | §3.1 (libs), §4.4.1 (docx writer scope) | `export-engine.md §4` |
-| **P6-L-3** | **XLSX library: `exceljs` (MIT, already in deps from Phase 3 mail merge).** Phase 6 use is read-compatible-with mail-merge use (both author workbooks; no shared state). The line-grid table detector feeds `worksheet.addRow(...)`; cell text alignment + numeric coercion happens at the writer boundary. | §3.1 (libs), §4.4.2 (xlsx writer scope) | `export-engine.md §5` |
-| **P6-L-4** | **PPTX library: `pptxgenjs` (MIT) v4+.** One slide per source PDF page; text positioned by EMU-converted bounding box; images embedded at their PDF coords; slide size = source page size scaled to 16:9 if no source aspect match (with letterboxing). | §3.1 (libs), §4.4.3 (pptx writer scope) | `export-engine.md §6` |
-| **P6-L-5** | **Image rasterization: reuse the existing pdfjs-in-main render pipeline** (Phase 4.1.1 metadata loader + Phase 5 OCR rasterizer already established the pattern). PNG = browser-native canvas `toBuffer('image/png')`; JPEG = `toBuffer('image/jpeg', { quality })` with default 0.9; TIFF = `utif.encodeImage(...)` over the same canvas RGBA, single-page or multi-page bundled. NO new rasterization library. | §3.1 (libs), §4.4.4 (image writer scope) | `export-engine.md §7` |
-| **P6-L-6** | **Export-job scheduling: background queue with progress UI** (Q-E). Per-format job picked from a queue; concurrency cap = 1 (single export at a time; multi-format batch enqueues sequentially). Modal-driven entry; progress surfaces in a non-blocking status-bar widget + an "Export jobs" sidebar tab. Job persistence across restarts deferred to Phase 7+. | §4.5 (lifecycle), §4.6 (queue) | `export-engine.md §8` |
-| **P6-L-7** | **Trust-floor honesty obligations (fifth instance after H-3 + Phase 3 forms + Phase 4 PAdES + Phase 5 OCR — strong pattern).** Five Phase-6 obligations enumerated §8 — surface at three locations per the four-times-proven Nathan Wave 18 pattern. | §8 (trust-floor) | `ui-spec.md` Phase-6 amendment §15.13 |
-| **P6-L-8** | **Annotations export interaction: include by default; user toggle in modal.** Per `ui-spec.md §13` annotation summary export expectations, Phase 6 default INCLUDES rendered annotations in the rasterized output (PNG/JPEG/TIFF render the visible page including annots) AND surfaces text annotations (sticky notes, text boxes) as inline text in docx/pptx. Highlight + strikethrough are preserved visually via the rasterized image embedding for layout-preserving tier. Excel: annotations are excluded (cells are data, not visual). | §4.7 (annotation interaction) | `data-models.md` Phase-6 amendment §11.4 |
-| **P6-L-9** | **Signed PDFs: export is READ-only on the source.** The export engine reads pdf.js text + operator stream + page raster from the source; it never mutates the source bytes. PAdES signatures on the source remain valid. The exported docx/xlsx/etc. is a NEW file with no signature semantics — trust-floor obligation #4 makes this explicit. | §6 (Phase-1-to-Phase-5 interaction), §8 obligation #4 | `architecture-phase-4.md §10.3` |
-| **P6-L-10** | **Schema delta: ONE new table (`export_jobs`) for in-progress + historical tracking.** No new per-format defaults table — per-format defaults fold into the existing `settings` key-value store (keys `export.docx.*`, `export.xlsx.*`, `export.pptx.*`, `export.image.*`). Forward-only migration v6. No Phase 1-5 table touched. | §5 (schema v6), data-models.md §11 | `data-models.md §11` |
+| ID          | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Encoded where in this doc                                           | Cross-ref                                |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------- |
+| **P6-L-1**  | Quality tier: **layout-preserving best-effort** (locked roadmap decision 2026-05-22). Algorithm: pdf.js `getTextContent` → bounding-box clustering for paragraphs/headings → line-grid analysis for tables → image extraction via operator stream. `text-only` fast tier ships alongside as opt-in toggle.                                                                                                                                                                                                                                     | §4.1 (single-funnel), §4.2 (tier selector), §4.3 (layout algorithm) | `export-engine.md §2`                    |
+| **P6-L-2**  | **DOCX library: `docx` (MIT) v9.7+.** Scope in v1: `Paragraph`, `TextRun`, `HeadingLevel`, `Table` / `TableRow` / `TableCell`, `ImageRun`. Deferred to Phase 6.1: `Footnote`, `Comment`, revision tracking, custom styles beyond `Heading1..6`. Per Q-A.                                                                                                                                                                                                                                                                                       | §3.1 (libs), §4.4.1 (docx writer scope)                             | `export-engine.md §4`                    |
+| **P6-L-3**  | **XLSX library: `exceljs` (MIT, already in deps from Phase 3 mail merge).** Phase 6 use is read-compatible-with mail-merge use (both author workbooks; no shared state). The line-grid table detector feeds `worksheet.addRow(...)`; cell text alignment + numeric coercion happens at the writer boundary.                                                                                                                                                                                                                                    | §3.1 (libs), §4.4.2 (xlsx writer scope)                             | `export-engine.md §5`                    |
+| **P6-L-4**  | **PPTX library: `pptxgenjs` (MIT) v4+.** One slide per source PDF page; text positioned by EMU-converted bounding box; images embedded at their PDF coords; slide size = source page size scaled to 16:9 if no source aspect match (with letterboxing).                                                                                                                                                                                                                                                                                        | §3.1 (libs), §4.4.3 (pptx writer scope)                             | `export-engine.md §6`                    |
+| **P6-L-5**  | **Image rasterization: reuse the existing pdfjs-in-main render pipeline** (Phase 4.1.1 metadata loader + Phase 5 OCR rasterizer already established the pattern). PNG = browser-native canvas `toBuffer('image/png')`; JPEG = `toBuffer('image/jpeg', { quality })` with default 0.9; TIFF = `utif.encodeImage(...)` over the same canvas RGBA, single-page or multi-page bundled. NO new rasterization library.                                                                                                                               | §3.1 (libs), §4.4.4 (image writer scope)                            | `export-engine.md §7`                    |
+| **P6-L-6**  | **Export-job scheduling: background queue with progress UI** (Q-E). Per-format job picked from a queue; concurrency cap = 1 (single export at a time; multi-format batch enqueues sequentially). Modal-driven entry; progress surfaces in a non-blocking status-bar widget + an "Export jobs" sidebar tab. Job persistence across restarts deferred to Phase 7+.                                                                                                                                                                               | §4.5 (lifecycle), §4.6 (queue)                                      | `export-engine.md §8`                    |
+| **P6-L-7**  | **Trust-floor honesty obligations (fifth instance after H-3 + Phase 3 forms + Phase 4 PAdES + Phase 5 OCR — strong pattern).** Five Phase-6 obligations enumerated §8 — surface at three locations per the four-times-proven Nathan Wave 18 pattern.                                                                                                                                                                                                                                                                                           | §8 (trust-floor)                                                    | `ui-spec.md` Phase-6 amendment §15.13    |
+| **P6-L-8**  | **Annotations export interaction: include by default; user toggle in modal.** Per `ui-spec.md §13` annotation summary export expectations, Phase 6 default INCLUDES rendered annotations in the rasterized output (PNG/JPEG/TIFF render the visible page including annots) AND surfaces text annotations (sticky notes, text boxes) as inline text in docx/pptx. Highlight + strikethrough are preserved visually via the rasterized image embedding for layout-preserving tier. Excel: annotations are excluded (cells are data, not visual). | §4.7 (annotation interaction)                                       | `data-models.md` Phase-6 amendment §11.4 |
+| **P6-L-9**  | **Signed PDFs: export is READ-only on the source.** The export engine reads pdf.js text + operator stream + page raster from the source; it never mutates the source bytes. PAdES signatures on the source remain valid. The exported docx/xlsx/etc. is a NEW file with no signature semantics — trust-floor obligation #4 makes this explicit.                                                                                                                                                                                                | §6 (Phase-1-to-Phase-5 interaction), §8 obligation #4               | `architecture-phase-4.md §10.3`          |
+| **P6-L-10** | **Schema delta: ONE new table (`export_jobs`) for in-progress + historical tracking.** No new per-format defaults table — per-format defaults fold into the existing `settings` key-value store (keys `export.docx.*`, `export.xlsx.*`, `export.pptx.*`, `export.image.*`). Forward-only migration v6. No Phase 1-5 table touched.                                                                                                                                                                                                             | §5 (schema v6), data-models.md §11                                  | `data-models.md §11`                     |
 
 **Cross-check against Phase 4.1 sentinel-default lesson (global JSONL 2026-05-26 + Wave 19 P5-L-7 callout):** Phase 6 design uses **nullable + late-init** for `ExportJobSummary.perPageProgress` (initially `null`, hydrated as pages export). Bounding-box rectangles in the layout extractor use `LayoutRect: { x: number; y: number; w: number; h: number } | null` for empty / unmeasured pages — never the sentinel `{0,0,0,0}` that has bitten this project three times in prior phases. See §4.3.3.
 
@@ -152,16 +152,16 @@ These corollaries are NOT as risky as Phase 4's cert-bytes discipline (no secret
 
 8 new channels (full spec in `api-contracts.md §17`):
 
-| Channel | Purpose | Stream events? |
-|---|---|---|
-| `export:toDocx` | Run a PDF→Word export job. Long-running; emits `export:progress` events. Returns `{ jobId, summary: ExportJobSummary }` on completion. | yes (`export:progress`) |
-| `export:toXlsx` | Run a PDF→Excel export job. Long-running. | yes |
-| `export:toPptx` | Run a PDF→PowerPoint export job. Long-running. | yes |
-| `export:toImages` | Run a PDF→image export job. Multi-page emits per-page progress; supports `format: 'png' \| 'jpeg' \| 'tiff'`. | yes |
-| `export:cancelJob` | Cancel an in-flight job. Idempotent. Worker / pdf.js context not torn down (reusable for next job). | no |
-| `export:listJobs` | List rows from `export_jobs` (for the Exports sidebar). | no |
-| `export:listFormats` | Returns `{ formats: ExportFormatDescriptor[] }` — per-format default quality tier + per-format setting keys. Renderer-cached. | no |
-| `dialog:pickExportOutputPath` | Main-process file SAVE-AS dialog. Returns `{ outputPath: string \| null }`. | no |
+| Channel                       | Purpose                                                                                                                                | Stream events?          |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `export:toDocx`               | Run a PDF→Word export job. Long-running; emits `export:progress` events. Returns `{ jobId, summary: ExportJobSummary }` on completion. | yes (`export:progress`) |
+| `export:toXlsx`               | Run a PDF→Excel export job. Long-running.                                                                                              | yes                     |
+| `export:toPptx`               | Run a PDF→PowerPoint export job. Long-running.                                                                                         | yes                     |
+| `export:toImages`             | Run a PDF→image export job. Multi-page emits per-page progress; supports `format: 'png' \| 'jpeg' \| 'tiff'`.                          | yes                     |
+| `export:cancelJob`            | Cancel an in-flight job. Idempotent. Worker / pdf.js context not torn down (reusable for next job).                                    | no                      |
+| `export:listJobs`             | List rows from `export_jobs` (for the Exports sidebar).                                                                                | no                      |
+| `export:listFormats`          | Returns `{ formats: ExportFormatDescriptor[] }` — per-format default quality tier + per-format setting keys. Renderer-cached.          | no                      |
+| `dialog:pickExportOutputPath` | Main-process file SAVE-AS dialog. Returns `{ outputPath: string \| null }`.                                                            | no                      |
 
 Plus ONE new event stream (`export:progress`) following the same `mail-merge:progress` (Phase 3) / `ocr:progress` (Phase 5) pattern. The Phase 1-5 surface (api-contracts §1-§16) remains FROZEN. No existing channel's contract changes.
 
@@ -185,10 +185,10 @@ The `zod` dependency is already in the project; no new dep.
 
 ### 3.1 New runtime dependencies
 
-| Library | Version | License | Process | Purpose |
-|---|---|---|---|---|
-| `docx` | 9.7.x (current at Wave 23 dispatch; v9.7.1 published 2026-04-22 per npm) | MIT | Main | DOCX authoring. Pure-JS; tree-shake-friendly (export only the surface we use — `Document`, `Packer`, `Paragraph`, `TextRun`, `HeadingLevel`, `Table`, `TableRow`, `TableCell`, `ImageRun`, `AlignmentType`). No native deps, no wasm. Bundle impact: ~250 KB raw / ~80 KB gzipped after tree-shake. License verified live `npm view docx license` → `MIT`. |
-| `pptxgenjs` | 4.0.x (current at Wave 23 dispatch; v4.0.1 published 2026-03-15) | MIT | Main | PPTX authoring. Pure-JS. Bundle impact: ~600 KB raw / ~180 KB gzipped (larger than `docx` because pptx files are themselves more complex — chart helpers, slide masters; we don't use most). License verified live `npm view pptxgenjs license` → `MIT`. |
+| Library     | Version                                                                  | License | Process | Purpose                                                                                                                                                                                                                                                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------ | ------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docx`      | 9.7.x (current at Wave 23 dispatch; v9.7.1 published 2026-04-22 per npm) | MIT     | Main    | DOCX authoring. Pure-JS; tree-shake-friendly (export only the surface we use — `Document`, `Packer`, `Paragraph`, `TextRun`, `HeadingLevel`, `Table`, `TableRow`, `TableCell`, `ImageRun`, `AlignmentType`). No native deps, no wasm. Bundle impact: ~250 KB raw / ~80 KB gzipped after tree-shake. License verified live `npm view docx license` → `MIT`. |
+| `pptxgenjs` | 4.0.x (current at Wave 23 dispatch; v4.0.1 published 2026-03-15)         | MIT     | Main    | PPTX authoring. Pure-JS. Bundle impact: ~600 KB raw / ~180 KB gzipped (larger than `docx` because pptx files are themselves more complex — chart helpers, slide masters; we don't use most). License verified live `npm view pptxgenjs license` → `MIT`.                                                                                                   |
 
 **Bundle-size note:** Both libraries land in `dist/main/` via Vite's electron-main bundler (no renderer-side import of these — see boundary §2.4). Combined raw bundle adds ~850 KB / ~260 KB gzipped. NSIS installer growth estimate: ~1 MB. Acceptable for the feature set. Documented for Diego's Wave 25 packaging notes.
 
@@ -201,26 +201,26 @@ Both are PERMISSIVE. Neither is AGPL/GPL/LGPL or commercial. Compliant with proj
 
 **Native binding NOT added (Q-A / Q-B / Q-C decision):**
 
-| Library | License | Why NOT primary |
-|---|---|---|
-| Apache POI (Java) | Apache-2.0 | Java runtime requirement; contradicts "double-click install" goal. Same rejection class as `node-tesseract-ocr` requiring system Tesseract. |
-| `officegen` (npm) | MIT | Older library, less-maintained alternative for docx + xlsx + pptx in ONE package. Code quality and test coverage lag behind `docx` + `exceljs` + `pptxgenjs` (the modern dedicated triad). Wave-19 lesson "DEFER verdict beats one-line 'no good options'" applied here: officegen exists, is MIT, and is technically usable, but the three-library split is cleaner and better-tested. Documented in `export-engine.md §2.5` as the "single-package alternative we considered". Not a Phase 6 ship blocker. |
-| `xlsx` / `xlsx-js-style` (SheetJS) | Apache-2.0 (community ed.) / MIT (xlsx-js-style fork) | exceljs is already in deps from Phase 3 mail merge AND has better TypeScript types AND has a more idiomatic stream-to-disk API. No reason to add a parallel xlsx writer. Documented for the audit trail. |
-| `sharp` (libvips bindings) | Apache-2.0 | Native dep with prebuilt binaries (electron-rebuild complexity). The pdfjs render path already produces canvas → PNG/JPEG via browser-native APIs; reusing it is cheaper than introducing a native dep. `sharp` would only add value for advanced image processing (resize, color-space conversions) which Phase 6 doesn't need. Diego's risk register entry for sharp (`phase-6-plan.md` risk #2) is closed by the rejection — no native dep, no electron-rebuild expansion. |
-| PDFTron / Apryse / Aspose | commercial | Permissive-OSS-only policy. Same rejection class as Phase 4 / 5 commercial-PDF-SDK options. |
+| Library                            | License                                               | Why NOT primary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ---------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Apache POI (Java)                  | Apache-2.0                                            | Java runtime requirement; contradicts "double-click install" goal. Same rejection class as `node-tesseract-ocr` requiring system Tesseract.                                                                                                                                                                                                                                                                                                                                                                  |
+| `officegen` (npm)                  | MIT                                                   | Older library, less-maintained alternative for docx + xlsx + pptx in ONE package. Code quality and test coverage lag behind `docx` + `exceljs` + `pptxgenjs` (the modern dedicated triad). Wave-19 lesson "DEFER verdict beats one-line 'no good options'" applied here: officegen exists, is MIT, and is technically usable, but the three-library split is cleaner and better-tested. Documented in `export-engine.md §2.5` as the "single-package alternative we considered". Not a Phase 6 ship blocker. |
+| `xlsx` / `xlsx-js-style` (SheetJS) | Apache-2.0 (community ed.) / MIT (xlsx-js-style fork) | exceljs is already in deps from Phase 3 mail merge AND has better TypeScript types AND has a more idiomatic stream-to-disk API. No reason to add a parallel xlsx writer. Documented for the audit trail.                                                                                                                                                                                                                                                                                                     |
+| `sharp` (libvips bindings)         | Apache-2.0                                            | Native dep with prebuilt binaries (electron-rebuild complexity). The pdfjs render path already produces canvas → PNG/JPEG via browser-native APIs; reusing it is cheaper than introducing a native dep. `sharp` would only add value for advanced image processing (resize, color-space conversions) which Phase 6 doesn't need. Diego's risk register entry for sharp (`phase-6-plan.md` risk #2) is closed by the rejection — no native dep, no electron-rebuild expansion.                                |
+| PDFTron / Apryse / Aspose          | commercial                                            | Permissive-OSS-only policy. Same rejection class as Phase 4 / 5 commercial-PDF-SDK options.                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 ### 3.2 Existing libraries — extended use
 
-| Library | New Phase 6 use |
-|---|---|
-| `exceljs` | XLSX authoring. Phase 3 used it READ-side (parse CSV/XLSX rows for mail-merge data). Phase 6 uses it WRITE-side — same library, complementary surface, no shared state. The Phase 3 import path uses `Workbook.xlsx.readFile`; Phase 6 export path uses `Workbook.xlsx.writeFile`. No version bump needed. License + version unchanged from Phase 3 (MIT, 4.4.0). |
-| `pdfjs-dist` | Source-text extraction via `getTextContent()` per page (the load-bearing API for the layout-preserving tier). Operator-stream walk via `getOperatorList()` for table line-grid analysis and image extraction. Page rasterization for image export (reuses Phase 4.1.1 + Phase 5 OCR pattern). |
-| `pdf-lib` | Source metadata + page geometry queries. Reused for the "include annotations" path — pdf-lib's `getForm()` / `getAnnotations()` enumerate annots that the writer then emits as inline text (sticky notes / text boxes) or visual elements (highlights → rendered with the page raster). |
-| `utif` | TIFF encoding for the image-export path. Already in deps from Phase 5 (raster import for OCR). Phase 6 use is symmetric: where Phase 5 decodes TIFF for OCR input, Phase 6 encodes TIFF for image export output. Multi-page TIFF bundling uses `utif.encodeImage` per page + a wrapper that concatenates IFD entries. License + version unchanged (MIT, 3.1.0). |
-| `better-sqlite3` | Schema v6 migration `0006_phase6_export.sql` adds one table (`export_jobs`). See §5 + `data-models.md §11`. |
-| `zod` | New schemas for the 8 IPC channels in §2.5. |
-| `node:fs/promises` + `node:path` | Output-file writes + path canonicalization for the SAVE-AS dialog. No new deps. |
-| `node:canvas` (pdfjs-dist transitive — `@napi-rs/canvas` already pulled in by Phase 5) | Rasterization for image export. Already vetted in Phase 5 (LICENSES.md). |
+| Library                                                                                | New Phase 6 use                                                                                                                                                                                                                                                                                                                                                   |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `exceljs`                                                                              | XLSX authoring. Phase 3 used it READ-side (parse CSV/XLSX rows for mail-merge data). Phase 6 uses it WRITE-side — same library, complementary surface, no shared state. The Phase 3 import path uses `Workbook.xlsx.readFile`; Phase 6 export path uses `Workbook.xlsx.writeFile`. No version bump needed. License + version unchanged from Phase 3 (MIT, 4.4.0). |
+| `pdfjs-dist`                                                                           | Source-text extraction via `getTextContent()` per page (the load-bearing API for the layout-preserving tier). Operator-stream walk via `getOperatorList()` for table line-grid analysis and image extraction. Page rasterization for image export (reuses Phase 4.1.1 + Phase 5 OCR pattern).                                                                     |
+| `pdf-lib`                                                                              | Source metadata + page geometry queries. Reused for the "include annotations" path — pdf-lib's `getForm()` / `getAnnotations()` enumerate annots that the writer then emits as inline text (sticky notes / text boxes) or visual elements (highlights → rendered with the page raster).                                                                           |
+| `utif`                                                                                 | TIFF encoding for the image-export path. Already in deps from Phase 5 (raster import for OCR). Phase 6 use is symmetric: where Phase 5 decodes TIFF for OCR input, Phase 6 encodes TIFF for image export output. Multi-page TIFF bundling uses `utif.encodeImage` per page + a wrapper that concatenates IFD entries. License + version unchanged (MIT, 3.1.0).   |
+| `better-sqlite3`                                                                       | Schema v6 migration `0006_phase6_export.sql` adds one table (`export_jobs`). See §5 + `data-models.md §11`.                                                                                                                                                                                                                                                       |
+| `zod`                                                                                  | New schemas for the 8 IPC channels in §2.5.                                                                                                                                                                                                                                                                                                                       |
+| `node:fs/promises` + `node:path`                                                       | Output-file writes + path canonicalization for the SAVE-AS dialog. No new deps.                                                                                                                                                                                                                                                                                   |
+| `node:canvas` (pdfjs-dist transitive — `@napi-rs/canvas` already pulled in by Phase 5) | Rasterization for image export. Already vetted in Phase 5 (LICENSES.md).                                                                                                                                                                                                                                                                                          |
 
 ### 3.3 Build-time asset copy (Phase 4.1.1 + Phase 5 patterns reused)
 
@@ -233,12 +233,12 @@ Both are PERMISSIVE. Neither is AGPL/GPL/LGPL or commercial. Compliant with proj
 
 ### 3.4 Phase 6.1+ libraries (NOT added in Phase 6)
 
-| Library | Phase | Purpose |
-|---|---|---|
-| `sharp` | 6.1 (escape hatch) | If users report image-export performance issues vs canvas-native, `sharp` can be added as an optional native dep behind a setting toggle. Same escape-hatch pattern as `node-tesseract-ocr` in Phase 5. NOT a Phase 6 blocker. |
-| `docx` extension surfaces | 6.1+ | Footnotes, comments, revision tracking, custom styles beyond Heading1..6. Q-A defers these to 6.1. The `docx` library supports them; we just don't wire them yet to keep the v1 scope tight. |
-| `pptxgenjs` chart helpers | 6.1+ | The library supports charts (bar, line, pie) which could be auto-generated from detected tables. Defer until user demand. |
-| `mammoth` (DOCX → HTML round-trip) | 7+ | If we add a "preview the exported docx in-app" feature, mammoth (MIT) is the candidate. v1 has no preview. |
+| Library                            | Phase              | Purpose                                                                                                                                                                                                                        |
+| ---------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `sharp`                            | 6.1 (escape hatch) | If users report image-export performance issues vs canvas-native, `sharp` can be added as an optional native dep behind a setting toggle. Same escape-hatch pattern as `node-tesseract-ocr` in Phase 5. NOT a Phase 6 blocker. |
+| `docx` extension surfaces          | 6.1+               | Footnotes, comments, revision tracking, custom styles beyond Heading1..6. Q-A defers these to 6.1. The `docx` library supports them; we just don't wire them yet to keep the v1 scope tight.                                   |
+| `pptxgenjs` chart helpers          | 6.1+               | The library supports charts (bar, line, pie) which could be auto-generated from detected tables. Defer until user demand.                                                                                                      |
+| `mammoth` (DOCX → HTML round-trip) | 7+                 | If we add a "preview the exported docx in-app" feature, mammoth (MIT) is the candidate. v1 has no preview.                                                                                                                     |
 
 ---
 
@@ -343,7 +343,10 @@ The writer dispatcher selects ONE writer per job based on `request.format`. Each
 
 ```ts
 // docx-writer.ts surface
-export async function writeDocx(doc: ExtractedDocument, opts: DocxWriteOptions): Promise<Uint8Array>;
+export async function writeDocx(
+  doc: ExtractedDocument,
+  opts: DocxWriteOptions,
+): Promise<Uint8Array>;
 
 interface DocxWriteOptions {
   outputPath: string;
@@ -367,7 +370,10 @@ Deferred to Phase 6.1: footnotes, comments, revision tracking, custom styles bey
 #### 4.4.2 XLSX writer scope (P6-L-3)
 
 ```ts
-export async function writeXlsx(doc: ExtractedDocument, opts: XlsxWriteOptions): Promise<Uint8Array>;
+export async function writeXlsx(
+  doc: ExtractedDocument,
+  opts: XlsxWriteOptions,
+): Promise<Uint8Array>;
 ```
 
 Surface in v1:
@@ -382,7 +388,10 @@ Deferred: cell formatting (font/color/border), formulas, pivot tables, charts. e
 #### 4.4.3 PPTX writer scope (P6-L-4)
 
 ```ts
-export async function writePptx(doc: ExtractedDocument, opts: PptxWriteOptions): Promise<Uint8Array>;
+export async function writePptx(
+  doc: ExtractedDocument,
+  opts: PptxWriteOptions,
+): Promise<Uint8Array>;
 ```
 
 Surface in v1:
@@ -398,14 +407,17 @@ Deferred: slide masters, themes, animations, speaker notes (Phase 6.1 candidate 
 #### 4.4.4 Image writer scope (P6-L-5 + Q-F)
 
 ```ts
-export async function writeImages(doc: ExtractedDocument, opts: ImageWriteOptions): Promise<Uint8Array[]>;
+export async function writeImages(
+  doc: ExtractedDocument,
+  opts: ImageWriteOptions,
+): Promise<Uint8Array[]>;
 
 interface ImageWriteOptions {
   format: 'png' | 'jpeg' | 'tiff';
-  dpi: number;                            // 72-600
-  jpegQuality?: number;                   // 0.1-1.0; default 0.9; honored only for jpeg
-  multiPageTiff?: boolean;                // default false; if true and format='tiff', emits ONE multi-page TIFF; if false, emits one TIFF per page
-  outputPath: string;                     // for multi-page: the final file path; for single-page: a basename — engine appends `-page<N>.<ext>`
+  dpi: number; // 72-600
+  jpegQuality?: number; // 0.1-1.0; default 0.9; honored only for jpeg
+  multiPageTiff?: boolean; // default false; if true and format='tiff', emits ONE multi-page TIFF; if false, emits one TIFF per page
+  outputPath: string; // for multi-page: the final file path; for single-page: a basename — engine appends `-page<N>.<ext>`
 }
 ```
 
@@ -426,11 +438,11 @@ Rasterization path: pdfjs `getDocument().getPage(i).render({ canvasContext, view
 ```ts
 // ✓ Correct (Phase 6 pattern; required-on-interface)
 export interface RegisterExportOptions {
-  layoutExtractor: LayoutExtractor;       // REQUIRED — no default
+  layoutExtractor: LayoutExtractor; // REQUIRED — no default
   tableDetector: TableDetector;
   imageExtractor: ImageExtractor;
   writers: {
-    docx: DocxWriter;                     // all four REQUIRED
+    docx: DocxWriter; // all four REQUIRED
     xlsx: XlsxWriter;
     pptx: PptxWriter;
     image: ImageWriter;
@@ -465,11 +477,41 @@ The export modal is the entry point for `export:to*` channels. On click:
 ```ts
 type ExportProgressEvent =
   | { jobId: number; phase: 'starting'; totalPages: number; format: ExportFormat }
-  | { jobId: number; phase: 'extracting-text'; pageIndex: number; totalPages: number; format: ExportFormat }
-  | { jobId: number; phase: 'detecting-tables'; pageIndex: number; totalPages: number; format: ExportFormat }
-  | { jobId: number; phase: 'extracting-images'; pageIndex: number; totalPages: number; format: ExportFormat }
-  | { jobId: number; phase: 'rasterizing'; pageIndex: number; totalPages: number; format: ExportFormat }       // image format only
-  | { jobId: number; phase: 'writing-output'; bytesWritten: number; totalBytesEstimate: number | null; format: ExportFormat }
+  | {
+      jobId: number;
+      phase: 'extracting-text';
+      pageIndex: number;
+      totalPages: number;
+      format: ExportFormat;
+    }
+  | {
+      jobId: number;
+      phase: 'detecting-tables';
+      pageIndex: number;
+      totalPages: number;
+      format: ExportFormat;
+    }
+  | {
+      jobId: number;
+      phase: 'extracting-images';
+      pageIndex: number;
+      totalPages: number;
+      format: ExportFormat;
+    }
+  | {
+      jobId: number;
+      phase: 'rasterizing';
+      pageIndex: number;
+      totalPages: number;
+      format: ExportFormat;
+    } // image format only
+  | {
+      jobId: number;
+      phase: 'writing-output';
+      bytesWritten: number;
+      totalBytesEstimate: number | null;
+      format: ExportFormat;
+    }
   | { jobId: number; phase: 'completed'; summary: ExportJobSummary }
   | { jobId: number; phase: 'cancelled'; pagesCompleted: number; totalPages: number }
   | { jobId: number; phase: 'failed'; pagesCompleted: number; totalPages: number; error: string };
@@ -492,10 +534,10 @@ Mid-page cancellation is Phase 6.1+ (requires plumbing the abort signal through 
 
 ```ts
 export interface ExportQueue {
-  enqueue(job: ExportJobSpec): Promise<number>;       // returns jobId
+  enqueue(job: ExportJobSpec): Promise<number>; // returns jobId
   cancel(jobId: number): Promise<{ cancelled: boolean; pagesCompleted: number }>;
   status(): { running: number | null; queued: number[] };
-  releaseAll(): Promise<void>;                         // called from app.before-quit
+  releaseAll(): Promise<void>; // called from app.before-quit
 }
 ```
 
@@ -505,12 +547,12 @@ One job at a time. New requests enqueue (FIFO). The queue holds at most 50 queue
 
 Per the locked decision in the brief, annotations DEFAULT INCLUDE in the modal (toggle on). Per-format treatment:
 
-| Format | Default | Treatment |
-|---|---|---|
-| Word (docx) | include | Text annotations (sticky notes, text boxes) appended at the end of the relevant paragraph as `[Note: <text>]` inline runs. Highlights / strikethroughs preserved visually if any embedded page image carries them; otherwise dropped (we don't author run-level highlight in this version — Phase 6.1 candidate). |
-| Excel (xlsx) | **exclude** | Cells are data, not presentation. Override possible via modal toggle (rarely useful). |
-| PowerPoint (pptx) | include | Same as Word — text annotations append; visual annotations preserved if embedded in raster. |
-| Image (png/jpeg/tiff) | include | The rasterized page IS the export. Annotations are rendered into the canvas by pdfjs's existing annotation layer; the export captures the page with annotations visible. Toggle off = render without annotations (uses pdfjs's `renderInteractiveForms: false, annotationMode: AnnotationMode.DISABLE` path). |
+| Format                | Default     | Treatment                                                                                                                                                                                                                                                                                                         |
+| --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Word (docx)           | include     | Text annotations (sticky notes, text boxes) appended at the end of the relevant paragraph as `[Note: <text>]` inline runs. Highlights / strikethroughs preserved visually if any embedded page image carries them; otherwise dropped (we don't author run-level highlight in this version — Phase 6.1 candidate). |
+| Excel (xlsx)          | **exclude** | Cells are data, not presentation. Override possible via modal toggle (rarely useful).                                                                                                                                                                                                                             |
+| PowerPoint (pptx)     | include     | Same as Word — text annotations append; visual annotations preserved if embedded in raster.                                                                                                                                                                                                                       |
+| Image (png/jpeg/tiff) | include     | The rasterized page IS the export. Annotations are rendered into the canvas by pdfjs's existing annotation layer; the export captures the page with annotations visible. Toggle off = render without annotations (uses pdfjs's `renderInteractiveForms: false, annotationMode: AnnotationMode.DISABLE` path).     |
 
 Documented in `ui-spec.md` Phase-6 amendment §15.3 (per-format-options sub-component). The toggle is single-source-of-truth in the modal; per-format default at modal-open is computed from the modal's selected format.
 
@@ -587,25 +629,25 @@ INSERT INTO schema_migrations (version, applied_at) VALUES (6, strftime('%s', 'n
 
 Per-format defaults fold into the existing Phase-1 `settings` key-value store. Settings keys:
 
-| Key | Type | Default | Purpose |
-|---|---|---|---|
-| `export.docx.qualityTier` | `'text-only' \| 'layout-preserving'` | `'layout-preserving'` | Default tier for docx |
-| `export.docx.pageSize` | `'letter' \| 'a4' \| 'auto'` | `'auto'` | Default page size for docx output |
-| `export.docx.includeAnnotations` | `boolean` | `true` | Default for the docx-export include-annotations toggle |
-| `export.xlsx.qualityTier` | `'text-only' \| 'layout-preserving'` | `'text-only'` | Default tier for xlsx (Q-D: Excel inherently tabular) |
-| `export.xlsx.includeAnnotations` | `boolean` | `false` | Default false (cells are data, not visual) |
-| `export.pptx.qualityTier` | `'text-only' \| 'layout-preserving'` | `'layout-preserving'` | Default tier for pptx |
-| `export.pptx.includeAnnotations` | `boolean` | `true` | Default true |
-| `export.image.format` | `'png' \| 'jpeg' \| 'tiff'` | `'png'` | Default image format in the image-export sub-picker |
-| `export.image.dpi` | `number` | `150` | Default DPI for image export |
-| `export.image.jpegQuality` | `number` | `0.9` | Default JPEG quality |
-| `export.image.multiPageTiff` | `boolean` | `false` | Default multi-page-TIFF bundling |
-| `export.image.includeAnnotations` | `boolean` | `true` | Default for image-export include-annotations toggle |
-| `export.layout.lineEpsilonPt` | `number` | `2` | Y-coordinate clustering epsilon (paragraph detection) |
-| `export.layout.paragraphBreakRatio` | `number` | `1.5` | Line-gap / median-line-height threshold for paragraph break |
-| `export.layout.headingRatio` | `number` | `1.3` | Font-size / median-body-font ratio for heading classification |
-| `export.layout.columnGapPt` | `number` | `40` | Minimum X-gap for column boundary detection |
-| `export.maxQueueSize` | `number` | `50` | Max queued + 1 running |
+| Key                                 | Type                                 | Default               | Purpose                                                       |
+| ----------------------------------- | ------------------------------------ | --------------------- | ------------------------------------------------------------- |
+| `export.docx.qualityTier`           | `'text-only' \| 'layout-preserving'` | `'layout-preserving'` | Default tier for docx                                         |
+| `export.docx.pageSize`              | `'letter' \| 'a4' \| 'auto'`         | `'auto'`              | Default page size for docx output                             |
+| `export.docx.includeAnnotations`    | `boolean`                            | `true`                | Default for the docx-export include-annotations toggle        |
+| `export.xlsx.qualityTier`           | `'text-only' \| 'layout-preserving'` | `'text-only'`         | Default tier for xlsx (Q-D: Excel inherently tabular)         |
+| `export.xlsx.includeAnnotations`    | `boolean`                            | `false`               | Default false (cells are data, not visual)                    |
+| `export.pptx.qualityTier`           | `'text-only' \| 'layout-preserving'` | `'layout-preserving'` | Default tier for pptx                                         |
+| `export.pptx.includeAnnotations`    | `boolean`                            | `true`                | Default true                                                  |
+| `export.image.format`               | `'png' \| 'jpeg' \| 'tiff'`          | `'png'`               | Default image format in the image-export sub-picker           |
+| `export.image.dpi`                  | `number`                             | `150`                 | Default DPI for image export                                  |
+| `export.image.jpegQuality`          | `number`                             | `0.9`                 | Default JPEG quality                                          |
+| `export.image.multiPageTiff`        | `boolean`                            | `false`               | Default multi-page-TIFF bundling                              |
+| `export.image.includeAnnotations`   | `boolean`                            | `true`                | Default for image-export include-annotations toggle           |
+| `export.layout.lineEpsilonPt`       | `number`                             | `2`                   | Y-coordinate clustering epsilon (paragraph detection)         |
+| `export.layout.paragraphBreakRatio` | `number`                             | `1.5`                 | Line-gap / median-line-height threshold for paragraph break   |
+| `export.layout.headingRatio`        | `number`                             | `1.3`                 | Font-size / median-body-font ratio for heading classification |
+| `export.layout.columnGapPt`         | `number`                             | `40`                  | Minimum X-gap for column boundary detection                   |
+| `export.maxQueueSize`               | `number`                             | `50`                  | Max queued + 1 running                                        |
 
 Folding into `settings` (vs a new table) is cheaper — no new schema, no new repo, no new boundary translation. The settings table already supports typed reads via `db-bridge.ts` (Phase 1 / 2 / 3 / 4 / 5 pattern). Documented as the simpler-of-two-options choice.
 
@@ -623,8 +665,21 @@ Folding into `settings` (vs a new table) is cheaper — no new schema, no new re
 interface ExportJobsRepo {
   insert(row: Omit<ExportJobRow, 'id' | 'created_at'> & { created_at?: number }): number;
   get(id: number): ExportJobRow | null;
-  updateStatus(id: number, status: ExportJobStatus, completedAt?: number, durationMs?: number, errorMessage?: string): boolean;
-  updateProgress(id: number, pagesProcessed: number, paragraphsExtracted?: number, tablesDetected?: number, imagesEmbedded?: number, outputSizeBytes?: number): boolean;
+  updateStatus(
+    id: number,
+    status: ExportJobStatus,
+    completedAt?: number,
+    durationMs?: number,
+    errorMessage?: string,
+  ): boolean;
+  updateProgress(
+    id: number,
+    pagesProcessed: number,
+    paragraphsExtracted?: number,
+    tablesDetected?: number,
+    imagesEmbedded?: number,
+    outputSizeBytes?: number,
+  ): boolean;
   listByDocHash(docHash: string, limit?: number, offset?: number): ExportJobRow[];
   listByStatus(status: ExportJobStatus, limit?: number, offset?: number): ExportJobRow[];
   listRecent(limit?: number): ExportJobRow[];
@@ -698,13 +753,13 @@ Per the four-times-proven pattern (Nathan Wave 18 lesson + Phase 5 reaffirmation
 
 Per the four-location three-location-plus-README pattern (Phase 5 precedent + Wave 18 + Wave 22 reaffirmation):
 
-| Location | Wave 26 (Nathan) owner | What must be present |
-|---|---|---|
-| **Top-of-guide preamble** | `docs/user-guide.md` Phase-6 preamble | Enumerate all 5 obligations in 5-7 bullets at top of guide. User sees before scrolling. |
-| **Dedicated trust-floor section** | New section "Export to Office trust floor — what the app does and doesn't promise" in `docs/user-guide.md` | Full enumeration + "What the trust floor IS / IS NOT" sub-sections. |
-| **Inline at every export-touching subsection** | Each per-format export how-to subsection | "Honesty reminder" callout + direct anchor link back to the dedicated trust-floor section. |
-| **README front-door** | `README.md` Phase 6 Known Limitations | Headline bullets for the 5 obligations + the duration note. |
-| **Modal (UI)** | `ExportModal.PerFormatLimitationsPanel` (Riley Wave 24) | The honesty surface IN the modal, not just the docs. Per-format reminder block above the Run button. See `ui-spec.md` §15.3. |
+| Location                                       | Wave 26 (Nathan) owner                                                                                     | What must be present                                                                                                         |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Top-of-guide preamble**                      | `docs/user-guide.md` Phase-6 preamble                                                                      | Enumerate all 5 obligations in 5-7 bullets at top of guide. User sees before scrolling.                                      |
+| **Dedicated trust-floor section**              | New section "Export to Office trust floor — what the app does and doesn't promise" in `docs/user-guide.md` | Full enumeration + "What the trust floor IS / IS NOT" sub-sections.                                                          |
+| **Inline at every export-touching subsection** | Each per-format export how-to subsection                                                                   | "Honesty reminder" callout + direct anchor link back to the dedicated trust-floor section.                                   |
+| **README front-door**                          | `README.md` Phase 6 Known Limitations                                                                      | Headline bullets for the 5 obligations + the duration note.                                                                  |
+| **Modal (UI)**                                 | `ExportModal.PerFormatLimitationsPanel` (Riley Wave 24)                                                    | The honesty surface IN the modal, not just the docs. Per-format reminder block above the Run button. See `ui-spec.md` §15.3. |
 
 Documented in conventions.md §17.3 so Wave 24 implementation and Wave 26 docs surface them at the trust-floor — four-location ratchet (preamble + dedicated + inline + UI modal), not buried in an appendix.
 
@@ -720,6 +775,7 @@ For honesty parity with prior phases:
 - We do NOT preserve PDF metadata (author, subject, keywords) — the exported Office file uses generic defaults. Phase 6.1 candidate.
 
 What we DO promise:
+
 - The export reads from the source PDF without mutating it.
 - The output file is written atomically (write-temp → rename) so partial output is cleaned up on cancel.
 - All four output formats are valid per their respective specs (docx = OOXML; xlsx = OOXML; pptx = OOXML; png/jpeg/tiff = standard image formats).
@@ -732,12 +788,12 @@ What we DO promise:
 
 Each of the 4 risks from the phase plan, addressed in the design:
 
-| # | Risk | Severity | Mitigation in this design |
-|---|---|---|---|
-| 1 | **Layout extraction quality varies wildly** | HIGH | §4.3 algorithm honestly scoped; trust-floor obligation #1 (§8) makes "best-effort" user-facing; per-format limitations panel in the modal (§4.7); fast `text-only` tier as fallback for users with simple text-heavy docs. |
-| 2 | **`sharp` native dep** | MEDIUM | **CLOSED BY REJECTION** — we use the existing `@napi-rs/canvas` from Phase 5 instead. No new native dep. Diego's electron-rebuild matrix unchanged. (Original risk was speculative; Phase 6 Riley closes it via the library choice.) |
-| 3 | **Table detection on borderless tables** | MEDIUM | §4.3.2 honestly scoped; trust-floor obligation #2 (§8) makes this user-facing; line-grid detector fails-soft (returns ZERO TableRegion on diagonal-only / borderless inputs, NOT a wrong table). |
-| 4 | **Output file size for image-heavy exports** | LOW | Document expected size growth in the user-guide (Nathan Wave 26). Per-format settings allow DPI / JPEG-quality / multi-page-TIFF tuning. Layout-preserving tier embeds images at original resolution; text-only tier omits them entirely. |
+| #   | Risk                                         | Severity | Mitigation in this design                                                                                                                                                                                                                 |
+| --- | -------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Layout extraction quality varies wildly**  | HIGH     | §4.3 algorithm honestly scoped; trust-floor obligation #1 (§8) makes "best-effort" user-facing; per-format limitations panel in the modal (§4.7); fast `text-only` tier as fallback for users with simple text-heavy docs.                |
+| 2   | **`sharp` native dep**                       | MEDIUM   | **CLOSED BY REJECTION** — we use the existing `@napi-rs/canvas` from Phase 5 instead. No new native dep. Diego's electron-rebuild matrix unchanged. (Original risk was speculative; Phase 6 Riley closes it via the library choice.)      |
+| 3   | **Table detection on borderless tables**     | MEDIUM   | §4.3.2 honestly scoped; trust-floor obligation #2 (§8) makes this user-facing; line-grid detector fails-soft (returns ZERO TableRegion on diagonal-only / borderless inputs, NOT a wrong table).                                          |
+| 4   | **Output file size for image-heavy exports** | LOW      | Document expected size growth in the user-guide (Nathan Wave 26). Per-format settings allow DPI / JPEG-quality / multi-page-TIFF tuning. Layout-preserving tier embeds images at original resolution; text-only tier omits them entirely. |
 
 ### 9.1 Additional risks Riley uncovered during Wave 23 design
 
@@ -809,42 +865,42 @@ Per the H-3 lesson (fifth proven instance after Phase 4 / 5), documented loudly.
 
 ### 11.1 Boundaries Phase 6 closes
 
-| Prior limitation | Phase 6 reality | Doc update target |
-|---|---|---|
-| "Export to Office — Phase 6" (annotation summary export was only CSV/JSON in Phase 4) | Live; full PDF → docx / xlsx / pptx / image export | user-guide.md (Nathan Wave 26) — new Export section |
-| "Save modified PDF" was the only output path | Now also Word / Excel / PowerPoint / Image output | user-guide §Saving (additive Phase-6 amendment cross-reference) |
+| Prior limitation                                                                      | Phase 6 reality                                    | Doc update target                                               |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------- | --------------------------------------------------------------- |
+| "Export to Office — Phase 6" (annotation summary export was only CSV/JSON in Phase 4) | Live; full PDF → docx / xlsx / pptx / image export | user-guide.md (Nathan Wave 26) — new Export section             |
+| "Save modified PDF" was the only output path                                          | Now also Word / Excel / PowerPoint / Image output  | user-guide §Saving (additive Phase-6 amendment cross-reference) |
 
 ### 11.2 New Phase 6 boundaries
 
-| Boundary | Description | Where to surface |
-|---|---|---|
-| Layout-preserving is best-effort | Trust-floor obligation #1 | user-guide preamble + Export section + dedicated trust-floor section + modal limitations panel |
-| Borderless tables not detected | Trust-floor obligation #2 | user-guide §Export → tables; modal limitations panel for Word + Excel |
-| XFA forms do not export | Trust-floor obligation #3 | user-guide §Export → forms; modal limitations panel |
-| Signed-PDF source stays valid; exported file has no signature | Trust-floor obligation #4 | user-guide §Export → signed PDFs; modal limitations panel |
-| OCR status determines text fidelity | Trust-floor obligation #5 | user-guide §Export → OCR'd vs image-only sources; modal limitations panel |
-| Hyperlinks not preserved in v1 | Phase 6.1 deferral | user-guide §Export → known limitations |
-| Bookmark anchors not preserved in v1 | Phase 6.1 deferral | user-guide §Export → known limitations |
-| Per-page conversion may take 5-30s | Cross-cutting reminder | modal Step 2 estimated-time line |
-| Excel default tier is text-only (not layout-preserving) | Q-D departure from per-format defaults | modal Step 2 callout when Excel is selected |
-| Tamper-vulnerable export audit | `export_jobs` lives in the same SQLite DB as `signature_audit_log` / `ocr_jobs`; no tamper-evidence | user-guide §Export → "About the export audit log" |
+| Boundary                                                      | Description                                                                                         | Where to surface                                                                               |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Layout-preserving is best-effort                              | Trust-floor obligation #1                                                                           | user-guide preamble + Export section + dedicated trust-floor section + modal limitations panel |
+| Borderless tables not detected                                | Trust-floor obligation #2                                                                           | user-guide §Export → tables; modal limitations panel for Word + Excel                          |
+| XFA forms do not export                                       | Trust-floor obligation #3                                                                           | user-guide §Export → forms; modal limitations panel                                            |
+| Signed-PDF source stays valid; exported file has no signature | Trust-floor obligation #4                                                                           | user-guide §Export → signed PDFs; modal limitations panel                                      |
+| OCR status determines text fidelity                           | Trust-floor obligation #5                                                                           | user-guide §Export → OCR'd vs image-only sources; modal limitations panel                      |
+| Hyperlinks not preserved in v1                                | Phase 6.1 deferral                                                                                  | user-guide §Export → known limitations                                                         |
+| Bookmark anchors not preserved in v1                          | Phase 6.1 deferral                                                                                  | user-guide §Export → known limitations                                                         |
+| Per-page conversion may take 5-30s                            | Cross-cutting reminder                                                                              | modal Step 2 estimated-time line                                                               |
+| Excel default tier is text-only (not layout-preserving)       | Q-D departure from per-format defaults                                                              | modal Step 2 callout when Excel is selected                                                    |
+| Tamper-vulnerable export audit                                | `export_jobs` lives in the same SQLite DB as `signature_audit_log` / `ocr_jobs`; no tamper-evidence | user-guide §Export → "About the export audit log"                                              |
 
 ### 11.3 Round-trip fidelity matrix delta
 
 Extends Phase 5 §11.3 round-trip matrix:
 
-| PDF feature in source | Phase 5 behavior | Phase 6 export behavior |
-|---|---|---|
-| Native text content | Search works; selectable text returns words | Exports as paragraphs (layout-preserving) or one-paragraph-per-fragment (text-only) |
-| OCR'd text (Phase-5 text-behind-image) | Search works on EITHER layer (the original + our added invisible layer) | Exports as native text (the OCR'd render-mode-3 text is visible to `getTextContent`) |
-| Image-only page (no OCR) | Search returns nothing; selectable text is empty | Word/PowerPoint output is rasterized page image with NO selectable text; Excel output is empty for that page |
-| AcroForm field (flattened, Phase 3) | Value is in page text content | Exports as inline text |
-| AcroForm field (unflattened) | Value is in form-field dictionary | Exports as inline text via pdf.js `getFieldObjects()` fallback |
-| XFA form (Phase 3 read-only) | Static template visible; values not accessible | XFA values DO NOT export; static template text DOES export |
-| Highlight / strikethrough annotation | Visible in viewer | Image format: visible in raster; Word/PowerPoint: dropped in v1 (Phase 6.1 candidate) |
-| Sticky note / text-box annotation | Visible in viewer | Word/PowerPoint: appended inline as `[Note: <text>]`; Image format: visible in raster |
-| PAdES-signed PDF | Signature valid until content-mutating save | Export READS without mutating; source signature stays valid; exported file has no signature semantics |
-| Document-level JS | Phase 4 §4.8 strips on every save; Phase 5 inherits | Export does NOT save; JS is read-only-passed-by. The exported docx/xlsx/etc. cannot host PDF-level JS — no transfer surface. |
+| PDF feature in source                  | Phase 5 behavior                                                        | Phase 6 export behavior                                                                                                      |
+| -------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Native text content                    | Search works; selectable text returns words                             | Exports as paragraphs (layout-preserving) or one-paragraph-per-fragment (text-only)                                          |
+| OCR'd text (Phase-5 text-behind-image) | Search works on EITHER layer (the original + our added invisible layer) | Exports as native text (the OCR'd render-mode-3 text is visible to `getTextContent`)                                         |
+| Image-only page (no OCR)               | Search returns nothing; selectable text is empty                        | Word/PowerPoint output is rasterized page image with NO selectable text; Excel output is empty for that page                 |
+| AcroForm field (flattened, Phase 3)    | Value is in page text content                                           | Exports as inline text                                                                                                       |
+| AcroForm field (unflattened)           | Value is in form-field dictionary                                       | Exports as inline text via pdf.js `getFieldObjects()` fallback                                                               |
+| XFA form (Phase 3 read-only)           | Static template visible; values not accessible                          | XFA values DO NOT export; static template text DOES export                                                                   |
+| Highlight / strikethrough annotation   | Visible in viewer                                                       | Image format: visible in raster; Word/PowerPoint: dropped in v1 (Phase 6.1 candidate)                                        |
+| Sticky note / text-box annotation      | Visible in viewer                                                       | Word/PowerPoint: appended inline as `[Note: <text>]`; Image format: visible in raster                                        |
+| PAdES-signed PDF                       | Signature valid until content-mutating save                             | Export READS without mutating; source signature stays valid; exported file has no signature semantics                        |
+| Document-level JS                      | Phase 4 §4.8 strips on every save; Phase 5 inherits                     | Export does NOT save; JS is read-only-passed-by. The exported docx/xlsx/etc. cannot host PDF-level JS — no transfer surface. |
 
 ---
 

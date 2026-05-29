@@ -111,9 +111,7 @@ function DownloadablePackRow(props: DownloadablePackRowProps): JSX.Element {
         disabled={isInFlight}
         onClick={() => props.onDownload(entry.lang)}
       >
-        {isInFlight
-          ? t('modals:languagePack.downloadingShort')
-          : t('modals:languagePack.download')}
+        {isInFlight ? t('modals:languagePack.downloadingShort') : t('modals:languagePack.download')}
       </button>
       {isInFlight && (
         <>

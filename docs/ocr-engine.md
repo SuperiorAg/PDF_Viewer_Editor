@@ -27,15 +27,15 @@ Cross-reference: high-level architectural decisions and rationale live in `archi
 
 ### 2.1 Why `tesseract.js` (Apache-2.0)
 
-| Concern | `tesseract.js` (primary) | `node-tesseract-ocr` (escape hatch) |
-|---|---|---|
-| License | Apache-2.0 ✓ | MIT ✓ |
-| Install footprint | npm install adds ~25 MB (WASM core + JS); no system deps | npm install ~50 KB BUT requires user to install Tesseract binary separately via Chocolatey / winget / manual download |
-| Cross-platform (Phase 7 future) | Pure WASM + JS; works on Windows / macOS / Linux without rebuild | Calls system Tesseract; user installs it per-platform |
-| Electron packaging | Vite bundles WASM + JS into `dist/main/`; needs `app.asar.unpacked` for the worker script (R-W19-A) | System Tesseract binary not in our installer; users surprised when first run says "Tesseract not found" |
-| Performance | ~10-30s per page on a modern machine at 300 DPI | ~3-10s per page (native C++ vs WASM) |
-| Maintenance | Active GitHub (last release v7.0.0 Dec 2025); 35k+ stars | Active (v2.2.1, MIT); thin wrapper |
-| **Verdict** | **Primary** — zero-friction install + cross-platform readiness; perf is acceptable per Phase 5 risk register row 3 | Phase 5.1 escape hatch — only if perf testing shows tesseract.js is unacceptable |
+| Concern                         | `tesseract.js` (primary)                                                                                           | `node-tesseract-ocr` (escape hatch)                                                                                   |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| License                         | Apache-2.0 ✓                                                                                                       | MIT ✓                                                                                                                 |
+| Install footprint               | npm install adds ~25 MB (WASM core + JS); no system deps                                                           | npm install ~50 KB BUT requires user to install Tesseract binary separately via Chocolatey / winget / manual download |
+| Cross-platform (Phase 7 future) | Pure WASM + JS; works on Windows / macOS / Linux without rebuild                                                   | Calls system Tesseract; user installs it per-platform                                                                 |
+| Electron packaging              | Vite bundles WASM + JS into `dist/main/`; needs `app.asar.unpacked` for the worker script (R-W19-A)                | System Tesseract binary not in our installer; users surprised when first run says "Tesseract not found"               |
+| Performance                     | ~10-30s per page on a modern machine at 300 DPI                                                                    | ~3-10s per page (native C++ vs WASM)                                                                                  |
+| Maintenance                     | Active GitHub (last release v7.0.0 Dec 2025); 35k+ stars                                                           | Active (v2.2.1, MIT); thin wrapper                                                                                    |
+| **Verdict**                     | **Primary** — zero-friction install + cross-platform readiness; perf is acceptable per Phase 5 risk register row 3 | Phase 5.1 escape hatch — only if perf testing shows tesseract.js is unacceptable                                      |
 
 ### 2.2 Why NOT system Tesseract for v1
 
@@ -121,7 +121,7 @@ The engine processes pages sequentially:
 ```ts
 for (let p = pageRange.start; p <= pageRange.end; p++) {
   if (signal.aborted) break;
-  const raster = await rasterizePage(doc, p, rasterDpi);   // ~25 MB
+  const raster = await rasterizePage(doc, p, rasterDpi); // ~25 MB
   const preprocessed = await preprocessImage(raster, opts); // ~25 MB (in-place modify or replace)
   const pageResult = await runOcrOnPage(pool, lang, preprocessed, opts);
   // raster + preprocessed are now eligible for GC
@@ -148,11 +148,11 @@ Per-page recognition runs under a watchdog timer (`ocr.workerWatchdogSec`, defau
 
 ### 4.1 Three states
 
-| State | Where it lives | How it got there |
-|---|---|---|
+| State                          | Where it lives                                                  | How it got there                              |
+| ------------------------------ | --------------------------------------------------------------- | --------------------------------------------- |
 | **Bundled** (`eng` only in v1) | `process.resourcesPath/tessdata/eng.traineddata.gz` (read-only) | Diego's `electron-builder.yml extraResources` |
-| **Downloaded** | `app.getPath('userData')/tessdata/<lang>.traineddata.gz` | `ocr:languagePackDownload` handler |
-| **Missing** | n/a | UI prompts to download |
+| **Downloaded**                 | `app.getPath('userData')/tessdata/<lang>.traineddata.gz`        | `ocr:languagePackDownload` handler            |
+| **Missing**                    | n/a                                                             | UI prompts to download                        |
 
 ### 4.2 Resolution algorithm
 
@@ -222,7 +222,7 @@ async function download(
   signal: AbortSignal,
 ): Promise<LanguagePack> {
   // 1. Look up catalog entry
-  const entry = catalog.packs.find(p => p.lang === lang);
+  const entry = catalog.packs.find((p) => p.lang === lang);
   if (!entry) throw new Error('lang_not_in_catalog');
 
   // 2. Compute destination
@@ -314,7 +314,7 @@ export function imageToPdfRect(
     x: imgRect.x0 * sx,
     // flip Y: imgY is top-down; pdfY is bottom-up; word's *top* in PDF user-space = pageH - (imgY * sy)
     // word's *bottom* in PDF user-space = pageH - (imgBottom * sy) = pageH - (imgRect.y1 * sy)
-    y: pageDimsPts.heightPts - (imgRect.y1 * sy),
+    y: pageDimsPts.heightPts - imgRect.y1 * sy,
     width: (imgRect.x1 - imgRect.x0) * sx,
     height: (imgRect.y1 - imgRect.y0) * sy,
   };
@@ -324,6 +324,7 @@ export function imageToPdfRect(
 **The `pageDimsPts` input MUST come from the canonical pdf-lib metadata path in main** (Phase 4.1 `loadPdfMetadata` already exposes this; OCR engine reads it via `documentStore.getMeta(handle)`). Sentinel 612x792 defaults would silently produce wrong word positions on non-Letter PDFs — exactly the defect class the 2026-05-26 global JSONL entry warns against.
 
 Golden-bytes-tested at Wave 20 with three corpus PDFs:
+
 - `tests/fixtures/ocr-corpus/letter-portrait.pdf` (US Letter, 612×792 pts)
 - `tests/fixtures/ocr-corpus/legal-portrait.pdf` (US Legal, 612×1008 pts)
 - `tests/fixtures/ocr-corpus/a4-portrait.pdf` (A4, 595×842 pts)
@@ -344,6 +345,7 @@ ET
 ```
 
 Where:
+
 - `fontSize` = `imgRect.height * sy` — the recognized word height in points. Tesseract's bounding box height correlates well with cap-height of the rendered glyph; this approximation makes the invisible text occupy the same vertical space as the visible image. Good enough for selection — when users drag-select over the visible image, the invisible text is selected at approximately the right vertical position.
 - `x`, `y` = the PDF user-space position from `imageToPdfRect`.
 - `escaped-text` = PDF string escaping: `(` → `\(`, `)` → `\)`, `\` → `\\`. For non-Latin-1 chars, use hex string `<...>` with a `/ToUnicode` CMap (v1 ships a minimal helper for BMP-only Unicode; full CMap support is Phase 5.1+).
@@ -408,9 +410,9 @@ export interface OcrJobSummary {
   langs: string[];
   status: 'completed' | 'cancelled' | 'failed';
   totalWords: number;
-  meanConfidence: number;        // weighted mean across all words across all pages
+  meanConfidence: number; // weighted mean across all words across all pages
   totalDurationMs: number;
-  pageResults: OcrPageResult[] | null;   // null while job is in-flight; populated on completion
+  pageResults: OcrPageResult[] | null; // null while job is in-flight; populated on completion
   error?: string;
 }
 ```
@@ -435,7 +437,12 @@ Implemented as pure functions in `image-preprocess.ts`:
 
 ```ts
 export function deskew(bytes: Uint8Array, width: number, height: number): Uint8Array;
-export function denoise(bytes: Uint8Array, width: number, height: number, kernel: number): Uint8Array;
+export function denoise(
+  bytes: Uint8Array,
+  width: number,
+  height: number,
+  kernel: number,
+): Uint8Array;
 export function contrastBoost(bytes: Uint8Array, width: number, height: number): Uint8Array;
 ```
 
@@ -489,7 +496,13 @@ type OcrProgressEvent =
   | { jobId: number; phase: 'starting'; totalPages: number }
   | { jobId: number; phase: 'rasterizing'; pageIndex: number; totalPages: number }
   | { jobId: number; phase: 'preprocessing'; pageIndex: number; totalPages: number }
-  | { jobId: number; phase: 'recognizing'; pageIndex: number; totalPages: number; confidenceSoFar: number | null }
+  | {
+      jobId: number;
+      phase: 'recognizing';
+      pageIndex: number;
+      totalPages: number;
+      confidenceSoFar: number | null;
+    }
   | { jobId: number; phase: 'composing-text-behind-image'; pageIndex: number; totalPages: number }
   | { jobId: number; phase: 'writing-output'; pageIndex: number; totalPages: number }
   | { jobId: number; phase: 'completed'; summary: OcrJobSummary }
@@ -537,14 +550,14 @@ export function detectPriorPadesSignatures(doc: PDFDocument): string[] {
   const form = doc.getForm();
   return form
     .getFields()
-    .filter(f => f.acroField.getType() === 'Sig')
-    .filter(f => {
+    .filter((f) => f.acroField.getType() === 'Sig')
+    .filter((f) => {
       const v = f.acroField.dict.get(PDFName.of('V'));
       if (!v) return false;
       const contents = v.dict?.get(PDFName.of('Contents'));
       return contents != null && contents.toString().length > 0;
     })
-    .map(f => f.getName());
+    .map((f) => f.getName());
 }
 ```
 

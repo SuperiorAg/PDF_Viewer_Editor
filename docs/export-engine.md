@@ -10,7 +10,7 @@
 
 ## 1. Document scope
 
-This doc is the **engineering-detail-level** companion to `architecture-phase-6.md`. The architecture doc says *what* Phase 6 adds at the system level; this doc says *how* the export engine is built — module shapes, function signatures, algorithm pseudocode, error-handling shape, test coverage targets, per-format-writer specifics.
+This doc is the **engineering-detail-level** companion to `architecture-phase-6.md`. The architecture doc says _what_ Phase 6 adds at the system level; this doc says _how_ the export engine is built — module shapes, function signatures, algorithm pseudocode, error-handling shape, test coverage targets, per-format-writer specifics.
 
 Wave 24 (David + Ravi + Riley) is the implementation wave. This doc is the binding spec — David must follow the function signatures here; Ravi must follow the schema shape here; Riley must follow the renderer thunk shape here. Wave 25 Julian audits against this doc.
 
@@ -96,14 +96,18 @@ Same escape-hatch pattern as Phase 5's `node-tesseract-ocr` for OCR perf. NOT a 
 ```ts
 // src/main/export/export-engine.ts
 export interface ExportEngine {
-  runJob(spec: ExportJobSpec, signal: AbortSignal, onProgress: (event: ExportProgressEvent) => void): Promise<ExportJobSummary>;
+  runJob(
+    spec: ExportJobSpec,
+    signal: AbortSignal,
+    onProgress: (event: ExportProgressEvent) => void,
+  ): Promise<ExportJobSummary>;
 }
 
 export interface ExportJobSpec {
   jobId: number;
-  doc: SourceDocumentHandle;             // already-loaded pdf.js + pdf-lib doc + meta (Phase 4.1.1 metadata loader output)
+  doc: SourceDocumentHandle; // already-loaded pdf.js + pdf-lib doc + meta (Phase 4.1.1 metadata loader output)
   format: 'docx' | 'xlsx' | 'pptx' | 'png' | 'jpeg' | 'tiff';
-  qualityTier: 'text-only' | 'layout-preserving' | 'n/a';   // n/a only for image formats
+  qualityTier: 'text-only' | 'layout-preserving' | 'n/a'; // n/a only for image formats
   pageRange: { start: number; end: number };
   includeAnnotations: boolean;
   outputPath: string;
@@ -112,7 +116,7 @@ export interface ExportJobSpec {
     | { format: 'docx'; pageSize: 'letter' | 'a4' | 'auto' }
     | { format: 'xlsx' }
     | { format: 'pptx' }
-    | { format: 'png';  dpi: number }
+    | { format: 'png'; dpi: number }
     | { format: 'jpeg'; dpi: number; quality: number }
     | { format: 'tiff'; dpi: number; multiPage: boolean };
 }
@@ -126,12 +130,12 @@ The intermediate that the writer consumes:
 export interface ExtractedDocument {
   pageCount: number;
   pageRange: { start: number; end: number };
-  pages: ExtractedPage[];                   // one per page in pageRange
+  pages: ExtractedPage[]; // one per page in pageRange
 }
 
 export interface ExtractedPage {
   pageIndex: number;
-  pageSize: { widthPt: number; heightPt: number };   // from pdf-lib doc.getPage(i).getSize()
+  pageSize: { widthPt: number; heightPt: number }; // from pdf-lib doc.getPage(i).getSize()
   /** Null if pdf.js getTextContent returned zero fragments (image-only page). */
   text: ExtractedText | null;
   /** Empty array if no tables detected on this page. */
@@ -143,13 +147,13 @@ export interface ExtractedPage {
 }
 
 export interface ExtractedText {
-  paragraphs: ExtractedParagraph[];         // sorted reading-order
-  columnsDetected: number;                  // 1 or 2+
+  paragraphs: ExtractedParagraph[]; // sorted reading-order
+  columnsDetected: number; // 1 or 2+
 }
 
 export interface ExtractedParagraph {
   text: string;
-  rect: LayoutRect;                         // {x,y,w,h} | null per anti-sentinel discipline
+  rect: LayoutRect; // {x,y,w,h} | null per anti-sentinel discipline
   heading: 'H1' | 'H2' | 'H3' | null;
   alignment: 'left' | 'center' | 'right';
   fontHints: { bold?: boolean; italic?: boolean; sizePt?: number };
@@ -159,7 +163,7 @@ export interface TableRegion {
   rect: LayoutRect;
   rows: number;
   columns: number;
-  cells: TableCell[][];                     // [row][col]
+  cells: TableCell[][]; // [row][col]
 }
 
 export interface TableCell {
@@ -168,15 +172,15 @@ export interface TableCell {
 }
 
 export interface ExtractedImage {
-  rect: LayoutRect;                         // position on the page
-  bytes: Uint8Array;                        // PNG-encoded; always converted from PDF native format
+  rect: LayoutRect; // position on the page
+  bytes: Uint8Array; // PNG-encoded; always converted from PDF native format
   widthPx: number;
   heightPx: number;
 }
 
 export interface ExtractedAnnotation {
   kind: 'sticky-note' | 'text-box' | 'highlight' | 'strikethrough' | 'shape';
-  text: string | null;                      // null for visual-only annots
+  text: string | null; // null for visual-only annots
   rect: LayoutRect;
   /** Visually rendered into the page raster (for image format) by default; engine just records metadata. */
 }
@@ -191,7 +195,11 @@ export type LayoutRect = { x: number; y: number; w: number; h: number } | null;
 pdf.js's operator-list per page can be large (~50K ops on complex pages). The engine streams pages — extract one page's content, dispatch to the writer's per-page handler, release intermediates, move to next page.
 
 ```ts
-async function* extractPagesStream(doc: SourceDocumentHandle, spec: ExportJobSpec, signal: AbortSignal): AsyncGenerator<ExtractedPage> {
+async function* extractPagesStream(
+  doc: SourceDocumentHandle,
+  spec: ExportJobSpec,
+  signal: AbortSignal,
+): AsyncGenerator<ExtractedPage> {
   for (let i = spec.pageRange.start; i <= spec.pageRange.end; i++) {
     if (signal.aborted) return;
     const page = await extractPage(doc, i, spec);
@@ -210,14 +218,18 @@ The bounding-box clustering algorithm in pseudocode:
 ```ts
 // src/main/export/layout-extractor.ts
 export interface LayoutExtractor {
-  extract(textContent: pdfjs.TextContent, pageSize: PageSize, settings: LayoutSettings): ExtractedText | null;
+  extract(
+    textContent: pdfjs.TextContent,
+    pageSize: PageSize,
+    settings: LayoutSettings,
+  ): ExtractedText | null;
 }
 
 export interface LayoutSettings {
-  lineEpsilonPt: number;            // default 2
-  paragraphBreakRatio: number;      // default 1.5
-  headingRatio: number;             // default 1.3
-  columnGapPt: number;              // default 40
+  lineEpsilonPt: number; // default 2
+  paragraphBreakRatio: number; // default 1.5
+  headingRatio: number; // default 1.3
+  columnGapPt: number; // default 40
 }
 ```
 
@@ -228,10 +240,10 @@ pdf.js returns `textContent.items: TextItem[]` where each item has `str`, `trans
 ```ts
 interface Atom {
   text: string;
-  x: number;          // bottom-left x in PDF points
-  y: number;          // bottom-left y in PDF points
+  x: number; // bottom-left x in PDF points
+  y: number; // bottom-left y in PDF points
   w: number;
-  h: number;          // = item.height (font's ascender-to-baseline; use as line-height proxy)
+  h: number; // = item.height (font's ascender-to-baseline; use as line-height proxy)
   fontName: string;
   fontSizePt: number; // approx from item.height / 0.7 (PDF convention)
 }
@@ -284,7 +296,7 @@ For each paragraph:
 For each paragraph, the alignment classification:
 
 - `paragraph.rect.x ≈ 0.1 * pageWidth` (within margin tolerance) AND `paragraph.rect.x + paragraph.rect.w ≈ 0.9 * pageWidth`: justified (treated as `left` for v1).
-- `paragraph.rect.x + paragraph.rect.w / 2 ≈ 0.5 * pageWidth` AND paragraph width < 0.7 * pageWidth: `center`.
+- `paragraph.rect.x + paragraph.rect.w / 2 ≈ 0.5 * pageWidth` AND paragraph width < 0.7 \* pageWidth: `center`.
 - `paragraph.rect.x + paragraph.rect.w ≈ 0.9 * pageWidth` AND `paragraph.rect.x > 0.5 * pageWidth`: `right`.
 - Else: `left` (default).
 
@@ -306,7 +318,11 @@ If `textContent.items.length === 0` after extraction, return `null` (NOT an `Ext
 ```ts
 // src/main/export/table-detector.ts
 export interface TableDetector {
-  detect(opList: pdfjs.OperatorList, textContent: pdfjs.TextContent, pageSize: PageSize): TableRegion[];
+  detect(
+    opList: pdfjs.OperatorList,
+    textContent: pdfjs.TextContent,
+    pageSize: PageSize,
+  ): TableRegion[];
 }
 ```
 
@@ -357,7 +373,11 @@ For each cell (intersection of horizontal-cluster pair × vertical-cluster pair)
 ```ts
 // src/main/export/image-extractor.ts
 export interface ImageExtractor {
-  extract(opList: pdfjs.OperatorList, objs: pdfjs.PDFObjects, pageSize: PageSize): Promise<ExtractedImage[]>;
+  extract(
+    opList: pdfjs.OperatorList,
+    objs: pdfjs.PDFObjects,
+    pageSize: PageSize,
+  ): Promise<ExtractedImage[]>;
 }
 ```
 
@@ -399,18 +419,22 @@ Images smaller than 8×8 pixels OR with bounding rect area < 16 pt² are skipped
 The layout extractor's pdf.js `getTextContent` already sees Phase-3-flattened form values as native text. For unflattened AcroForms, the engine falls back to `pdfjs.PDFDocumentProxy.getFieldObjects()`:
 
 ```ts
-async function getFlattenedFieldValues(doc: pdfjs.PDFDocumentProxy, pageIndex: number): Promise<Array<{ name: string; value: string; rect: LayoutRect }>> {
+async function getFlattenedFieldValues(
+  doc: pdfjs.PDFDocumentProxy,
+  pageIndex: number,
+): Promise<Array<{ name: string; value: string; rect: LayoutRect }>> {
   const fields = await doc.getFieldObjects();
   if (!fields) return [];
   // Filter to the requested page
-  return Object.entries(fields)
-    .flatMap(([name, fieldList]) => fieldList
-      .filter(f => f.page === pageIndex)
-      .map(f => ({
+  return Object.entries(fields).flatMap(([name, fieldList]) =>
+    fieldList
+      .filter((f) => f.page === pageIndex)
+      .map((f) => ({
         name,
         value: String(f.value ?? ''),
         rect: { x: f.rect[0], y: f.rect[1], w: f.rect[2] - f.rect[0], h: f.rect[3] - f.rect[1] },
-      })));
+      })),
+  );
 }
 ```
 
@@ -426,14 +450,27 @@ The engine integrates field values as additional paragraphs in the `ExtractedTex
 
 ```ts
 // src/main/export/writers/docx-writer.ts
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, ImageRun, AlignmentType, WidthType, BorderStyle } from 'docx';
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+  Table,
+  TableRow,
+  TableCell,
+  ImageRun,
+  AlignmentType,
+  WidthType,
+  BorderStyle,
+} from 'docx';
 
 export interface DocxWriter {
   write(doc: ExtractedDocument, opts: DocxWriteOptions): Promise<Uint8Array>;
 }
 
 export interface DocxWriteOptions {
-  pageSize: 'letter' | 'a4' | 'auto';      // 'auto' = use source page size
+  pageSize: 'letter' | 'a4' | 'auto'; // 'auto' = use source page size
   includeAnnotations: boolean;
   qualityTier: 'text-only' | 'layout-preserving';
 }
@@ -442,7 +479,10 @@ export interface DocxWriteOptions {
 ### 4.2 Per-page handling (streaming)
 
 ```ts
-async function writeDocxStream(stream: AsyncGenerator<ExtractedPage>, opts: DocxWriteOptions): Promise<Uint8Array> {
+async function writeDocxStream(
+  stream: AsyncGenerator<ExtractedPage>,
+  opts: DocxWriteOptions,
+): Promise<Uint8Array> {
   const children: (Paragraph | Table)[] = [];
 
   // Optional TOC at the start (Phase 6 ships a flat list; bookmark-anchored TOC is Phase 6.1)
@@ -456,11 +496,11 @@ async function writeDocxStream(stream: AsyncGenerator<ExtractedPage>, opts: Docx
       }
     } else {
       // layout-preserving: emit paragraphs + tables + images in reading order
-      const ordered = mergeByReadingOrder(page);  // sorts by rect.y descending
+      const ordered = mergeByReadingOrder(page); // sorts by rect.y descending
       for (const item of ordered) {
         if (item.kind === 'paragraph') children.push(buildParagraph(item));
-        else if (item.kind === 'table')  children.push(buildTable(item));
-        else if (item.kind === 'image')  children.push(buildImageParagraph(item));
+        else if (item.kind === 'table') children.push(buildTable(item));
+        else if (item.kind === 'image') children.push(buildImageParagraph(item));
       }
     }
 
@@ -468,19 +508,25 @@ async function writeDocxStream(stream: AsyncGenerator<ExtractedPage>, opts: Docx
     if (opts.includeAnnotations && page.annotations.length > 0) {
       for (const ann of page.annotations) {
         if (ann.text) {
-          children.push(new Paragraph({
-            children: [new TextRun({ text: `[Note: ${ann.text}]`, italics: true, color: '666666' })],
-          }));
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({ text: `[Note: ${ann.text}]`, italics: true, color: '666666' }),
+              ],
+            }),
+          );
         }
       }
     }
   }
 
   const doc = new Document({
-    sections: [{
-      properties: { page: { size: resolvePageSize(opts.pageSize) } },
-      children,
-    }],
+    sections: [
+      {
+        properties: { page: { size: resolvePageSize(opts.pageSize) } },
+        children,
+      },
+    ],
   });
 
   return Packer.toBuffer(doc);
@@ -491,14 +537,21 @@ async function writeDocxStream(stream: AsyncGenerator<ExtractedPage>, opts: Docx
 
 ```ts
 function buildParagraph(p: ExtractedParagraph): Paragraph {
-  const headingLevel = p.heading === 'H1' ? HeadingLevel.HEADING_1
-                     : p.heading === 'H2' ? HeadingLevel.HEADING_2
-                     : p.heading === 'H3' ? HeadingLevel.HEADING_3
-                     : undefined;
+  const headingLevel =
+    p.heading === 'H1'
+      ? HeadingLevel.HEADING_1
+      : p.heading === 'H2'
+        ? HeadingLevel.HEADING_2
+        : p.heading === 'H3'
+          ? HeadingLevel.HEADING_3
+          : undefined;
 
-  const alignment = p.alignment === 'center' ? AlignmentType.CENTER
-                  : p.alignment === 'right'  ? AlignmentType.RIGHT
-                  : AlignmentType.LEFT;
+  const alignment =
+    p.alignment === 'center'
+      ? AlignmentType.CENTER
+      : p.alignment === 'right'
+        ? AlignmentType.RIGHT
+        : AlignmentType.LEFT;
 
   return new Paragraph({
     ...(headingLevel !== undefined ? { heading: headingLevel } : {}),
@@ -508,7 +561,7 @@ function buildParagraph(p: ExtractedParagraph): Paragraph {
         text: p.text,
         bold: p.fontHints.bold ?? false,
         italics: p.fontHints.italic ?? false,
-        ...(p.fontHints.sizePt !== undefined ? { size: Math.round(p.fontHints.sizePt * 2) } : {}),  // docx size is half-points
+        ...(p.fontHints.sizePt !== undefined ? { size: Math.round(p.fontHints.sizePt * 2) } : {}), // docx size is half-points
       }),
     ],
   });
@@ -521,20 +574,24 @@ function buildParagraph(p: ExtractedParagraph): Paragraph {
 
 ```ts
 function buildTable(t: TableRegion): Table {
-  const rows = t.cells.map(row =>
-    new TableRow({
-      children: row.map(cell =>
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun(cell.text)] })],
-          width: { size: 100 / t.columns, type: WidthType.PERCENTAGE },
-        })
-      ),
-    })
+  const rows = t.cells.map(
+    (row) =>
+      new TableRow({
+        children: row.map(
+          (cell) =>
+            new TableCell({
+              children: [new Paragraph({ children: [new TextRun(cell.text)] })],
+              width: { size: 100 / t.columns, type: WidthType.PERCENTAGE },
+            }),
+        ),
+      }),
   );
   return new Table({
     rows,
     width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: { top: { style: BorderStyle.SINGLE, size: 4, color: '000000' }, /* ...other 5 borders */ },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 4, color: '000000' } /* ...other 5 borders */,
+    },
   });
 }
 ```
@@ -543,13 +600,13 @@ function buildTable(t: TableRegion): Table {
 
 ```ts
 function buildImageParagraph(img: ExtractedImage): Paragraph {
-  const widthEmu = Math.round((img.rect?.w ?? 100) * 9525);   // 1 pt = 12700 EMU; but docx ImageRun uses pixels at 96 DPI → 9525 EMU/pt approximation
+  const widthEmu = Math.round((img.rect?.w ?? 100) * 9525); // 1 pt = 12700 EMU; but docx ImageRun uses pixels at 96 DPI → 9525 EMU/pt approximation
   const heightEmu = Math.round((img.rect?.h ?? 100) * 9525);
   return new Paragraph({
     children: [
       new ImageRun({
         data: img.bytes,
-        transformation: { width: widthEmu / 9525, height: heightEmu / 9525 },   // docx expects pixels here
+        transformation: { width: widthEmu / 9525, height: heightEmu / 9525 }, // docx expects pixels here
       }),
     ],
   });
@@ -561,7 +618,7 @@ function buildImageParagraph(img: ExtractedImage): Paragraph {
 ### 4.6 Test coverage targets
 
 - Layout-extractor unit tests: 4 fixture PDFs (simple-text / multi-column / table-with-borders / image-heavy) — corpus per conventions §13.6.
-- docx-writer golden-bytes tests: 3 fixtures (text-only round-trip / table round-trip / image round-trip). The "golden bytes" pattern from Phase 5 searchable-pdf-builder applies — capture the docx zip's content.xml + media/* and assert via canonical-XML compare (whitespace-insensitive).
+- docx-writer golden-bytes tests: 3 fixtures (text-only round-trip / table round-trip / image round-trip). The "golden bytes" pattern from Phase 5 searchable-pdf-builder applies — capture the docx zip's content.xml + media/\* and assert via canonical-XML compare (whitespace-insensitive).
 - Targeting 16+ unit tests for docx-writer (mirror of Phase 5's ocr-text-layer test count).
 
 ---
@@ -587,7 +644,10 @@ export interface XlsxWriteOptions {
 ### 5.2 Per-page handling
 
 ```ts
-async function writeXlsxStream(stream: AsyncGenerator<ExtractedPage>, opts: XlsxWriteOptions): Promise<Uint8Array> {
+async function writeXlsxStream(
+  stream: AsyncGenerator<ExtractedPage>,
+  opts: XlsxWriteOptions,
+): Promise<Uint8Array> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'PDF Viewer & Editor (Phase 6 export)';
   workbook.created = new Date();
@@ -598,39 +658,43 @@ async function writeXlsxStream(stream: AsyncGenerator<ExtractedPage>, opts: Xlsx
 
     // Table sheets (one per detected TableRegion on this page)
     page.tables.forEach((table, tableIndex) => {
-      const sheetName = `Page${pageNum}_Table${tableIndex + 1}`.slice(0, 31);   // Excel sheet name limit
+      const sheetName = `Page${pageNum}_Table${tableIndex + 1}`.slice(0, 31); // Excel sheet name limit
       const ws = workbook.addWorksheet(sheetName);
       for (const row of table.cells) {
-        ws.addRow(row.map(cell => coerceCellValue(cell.text)));
+        ws.addRow(row.map((cell) => coerceCellValue(cell.text)));
       }
       // Simple alignment per cell type
-      ws.eachRow(r => r.eachCell(c => {
-        c.alignment = { horizontal: typeof c.value === 'number' ? 'right' : 'left' };
-      }));
+      ws.eachRow((r) =>
+        r.eachCell((c) => {
+          c.alignment = { horizontal: typeof c.value === 'number' ? 'right' : 'left' };
+        }),
+      );
     });
 
     // Text sheet for non-table paragraphs (only in layout-preserving tier; text-only tier skips tables, emits ALL text into a single sheet per page)
     if (opts.qualityTier === 'layout-preserving' && page.text) {
       const ws = workbook.addWorksheet(`Text_Page${pageNum}`.slice(0, 31));
-      page.text.paragraphs.forEach(p => {
+      page.text.paragraphs.forEach((p) => {
         if (!isInsideAnyTable(p.rect, page.tables)) {
           ws.addRow([p.text]);
         }
       });
     } else if (opts.qualityTier === 'text-only' && page.text) {
       const ws = workbook.addWorksheet(`Page${pageNum}`.slice(0, 31));
-      page.text.paragraphs.forEach(p => ws.addRow([p.text]));
+      page.text.paragraphs.forEach((p) => ws.addRow([p.text]));
     }
   }
 
   // Streaming write to buffer for memory efficiency on large workbooks
-  return new Uint8Array(await workbook.xlsx.writeBuffer({ useSharedStrings: true, useStyles: true }));
+  return new Uint8Array(
+    await workbook.xlsx.writeBuffer({ useSharedStrings: true, useStyles: true }),
+  );
 }
 
 function coerceCellValue(text: string): string | number {
   const trimmed = text.trim();
   if (trimmed === '') return '';
-  const asNumber = Number(trimmed.replace(/,/g, ''));    // tolerate thousands separators
+  const asNumber = Number(trimmed.replace(/,/g, '')); // tolerate thousands separators
   if (!Number.isNaN(asNumber) && /^-?\d+(\.\d+)?$/.test(trimmed.replace(/,/g, ''))) {
     return asNumber;
   }
@@ -675,9 +739,12 @@ export interface PptxWriteOptions {
 ### 6.2 Per-page handling (one slide per page)
 
 ```ts
-async function writePptxStream(stream: AsyncGenerator<ExtractedPage>, opts: PptxWriteOptions): Promise<Uint8Array> {
+async function writePptxStream(
+  stream: AsyncGenerator<ExtractedPage>,
+  opts: PptxWriteOptions,
+): Promise<Uint8Array> {
   const pres = new PptxGenJS();
-  pres.layout = 'LAYOUT_WIDE';                         // 13.333in × 7.5in (16:9 widescreen)
+  pres.layout = 'LAYOUT_WIDE'; // 13.333in × 7.5in (16:9 widescreen)
   pres.title = 'Exported from PDF';
 
   const slideW = 13.333;
@@ -692,7 +759,7 @@ async function writePptxStream(stream: AsyncGenerator<ExtractedPage>, opts: Pptx
 
     if (opts.qualityTier === 'text-only') {
       // Single text box per slide with all text concatenated
-      const text = (page.text?.paragraphs ?? []).map(p => p.text).join('\n\n');
+      const text = (page.text?.paragraphs ?? []).map((p) => p.text).join('\n\n');
       slide.addText(text, { x: 0.5, y: 0.5, w: slideW - 1, h: slideH - 1, fontSize: 12 });
     } else {
       // layout-preserving: position each paragraph + image + table by rect (scaled)
@@ -700,7 +767,7 @@ async function writePptxStream(stream: AsyncGenerator<ExtractedPage>, opts: Pptx
         if (p.rect === null) continue;
         slide.addText(p.text, {
           x: ptToIn(p.rect.x) * sx,
-          y: ptToIn(page.pageSize.heightPt - (p.rect.y + p.rect.h)) * sy,    // PDF Y is bottom-up; PPTX Y is top-down
+          y: ptToIn(page.pageSize.heightPt - (p.rect.y + p.rect.h)) * sy, // PDF Y is bottom-up; PPTX Y is top-down
           w: ptToIn(p.rect.w) * sx,
           h: ptToIn(p.rect.h) * sy,
           fontSize: p.fontHints.sizePt ?? 12,
@@ -721,31 +788,41 @@ async function writePptxStream(stream: AsyncGenerator<ExtractedPage>, opts: Pptx
       }
       for (const t of page.tables) {
         if (t.rect === null) continue;
-        slide.addTable(t.cells.map(row => row.map(cell => ({ text: cell.text }))), {
-          x: ptToIn(t.rect.x) * sx,
-          y: ptToIn(page.pageSize.heightPt - (t.rect.y + t.rect.h)) * sy,
-          w: ptToIn(t.rect.w) * sx,
-          h: ptToIn(t.rect.h) * sy,
-        });
+        slide.addTable(
+          t.cells.map((row) => row.map((cell) => ({ text: cell.text }))),
+          {
+            x: ptToIn(t.rect.x) * sx,
+            y: ptToIn(page.pageSize.heightPt - (t.rect.y + t.rect.h)) * sy,
+            w: ptToIn(t.rect.w) * sx,
+            h: ptToIn(t.rect.h) * sy,
+          },
+        );
       }
     }
 
     if (opts.includeAnnotations) {
       // Annotations as a footer text box; speaker notes are Phase 6.1
-      const annLines = page.annotations.filter(a => a.text).map(a => `[${a.kind}] ${a.text}`);
+      const annLines = page.annotations.filter((a) => a.text).map((a) => `[${a.kind}] ${a.text}`);
       if (annLines.length > 0) {
         slide.addText(annLines.join('\n'), {
-          x: 0.3, y: slideH - 1, w: slideW - 0.6, h: 0.9,
-          fontSize: 9, color: '666666', italic: true,
+          x: 0.3,
+          y: slideH - 1,
+          w: slideW - 0.6,
+          h: 0.9,
+          fontSize: 9,
+          color: '666666',
+          italic: true,
         });
       }
     }
   }
 
-  return new Uint8Array(await pres.write({ outputType: 'nodebuffer' }) as Buffer);
+  return new Uint8Array((await pres.write({ outputType: 'nodebuffer' })) as Buffer);
 }
 
-function ptToIn(pt: number): number { return pt / 72; }
+function ptToIn(pt: number): number {
+  return pt / 72;
+}
 ```
 
 ### 6.3 Async wrap (R-W23-D)
@@ -771,22 +848,31 @@ import * as UTIF from 'utif';
 
 export interface ImageWriter {
   /** Returns ONE buffer per page for single-page formats; ONE buffer total for multi-page TIFF. */
-  write(doc: ExtractedDocument, source: SourceDocumentHandle, opts: ImageWriteOptions): Promise<Uint8Array[]>;
+  write(
+    doc: ExtractedDocument,
+    source: SourceDocumentHandle,
+    opts: ImageWriteOptions,
+  ): Promise<Uint8Array[]>;
 }
 
 export interface ImageWriteOptions {
   format: 'png' | 'jpeg' | 'tiff';
-  dpi: number;                          // 72-600
-  jpegQuality?: number;                 // 0.1-1.0; default 0.9
-  multiPageTiff?: boolean;              // for tiff only
-  includeAnnotations: boolean;          // controls pdfjs annotationMode
+  dpi: number; // 72-600
+  jpegQuality?: number; // 0.1-1.0; default 0.9
+  multiPageTiff?: boolean; // for tiff only
+  includeAnnotations: boolean; // controls pdfjs annotationMode
 }
 ```
 
 ### 7.2 Rasterization (reuses Phase 4.1 + Phase 5 path)
 
 ```ts
-async function rasterizePage(source: SourceDocumentHandle, pageIndex: number, dpi: number, includeAnnotations: boolean): Promise<{ rgba: Uint8Array; width: number; height: number }> {
+async function rasterizePage(
+  source: SourceDocumentHandle,
+  pageIndex: number,
+  dpi: number,
+  includeAnnotations: boolean,
+): Promise<{ rgba: Uint8Array; width: number; height: number }> {
   const page = await source.pdfjsDoc.getPage(pageIndex + 1);
   const scale = dpi / 72;
   const viewport = page.getViewport({ scale });
@@ -808,10 +894,16 @@ async function rasterizePage(source: SourceDocumentHandle, pageIndex: number, dp
 ### 7.3 Encoding
 
 ```ts
-async function encodePage(rgba: Uint8Array, width: number, height: number, format: ImageWriteOptions['format'], jpegQuality?: number): Promise<Uint8Array> {
+async function encodePage(
+  rgba: Uint8Array,
+  width: number,
+  height: number,
+  format: ImageWriteOptions['format'],
+  jpegQuality?: number,
+): Promise<Uint8Array> {
   if (format === 'tiff') {
     // utif expects RGBA input
-    const ifd = { width, height, data: rgba, t258: [8, 8, 8, 8] };   // bits per sample
+    const ifd = { width, height, data: rgba, t258: [8, 8, 8, 8] }; // bits per sample
     return new Uint8Array(UTIF.encodeImage(rgba, width, height));
   }
   // PNG / JPEG via canvas
@@ -831,11 +923,13 @@ async function encodePage(rgba: Uint8Array, width: number, height: number, forma
 ### 7.4 Multi-page TIFF bundling
 
 ```ts
-async function encodeMultiPageTiff(pages: Array<{ rgba: Uint8Array; width: number; height: number }>): Promise<Uint8Array> {
+async function encodeMultiPageTiff(
+  pages: Array<{ rgba: Uint8Array; width: number; height: number }>,
+): Promise<Uint8Array> {
   // utif.encode([{...IFD1}, {...IFD2}, ...]) returns a multi-page TIFF buffer
-  const ifds = pages.map(p => {
+  const ifds = pages.map((p) => {
     const ifd: any = { width: p.width, height: p.height, data: p.rgba, t258: [8, 8, 8, 8] };
-    UTIF.encodeImage(p.rgba, p.width, p.height);    // utif populates the IFD internally
+    UTIF.encodeImage(p.rgba, p.width, p.height); // utif populates the IFD internally
     return ifd;
   });
   return new Uint8Array(UTIF.encode(ifds));
@@ -925,7 +1019,7 @@ Output is written via the `.export-temp` → `rename` pattern:
 async function writeAtomic(outputPath: string, bytes: Uint8Array): Promise<void> {
   const tmpPath = `${outputPath}.export-temp`;
   await fs.writeFile(tmpPath, bytes);
-  await fs.rename(tmpPath, outputPath);   // atomic on same-volume; fallback to copy+unlink on cross-volume
+  await fs.rename(tmpPath, outputPath); // atomic on same-volume; fallback to copy+unlink on cross-volume
 }
 ```
 
@@ -937,20 +1031,20 @@ async function writeAtomic(outputPath: string, bytes: Uint8Array): Promise<void>
 
 Per the conventions §17.8 mechanical-grep pattern from Phase 5, Wave 25 Julian runs these checks. False positives are acceptable; false negatives are not.
 
-| Check | Grep | Expected |
-|---|---|---|
-| No `as any` in writers | `grep -rn 'as any' src/main/export/writers/` | ZERO matches; any match is a code-comment-contradiction candidate per Julian Wave 21 H-21.1 |
-| No `@ts-ignore` in writers | `grep -rn '@ts-ignore' src/main/export/writers/` | ZERO matches |
-| `LayoutRect` is nullable everywhere it appears | `grep -rn 'LayoutRect' src/main/export/` followed by manual scan | every consumer pattern-matches on null |
-| No sentinel `{x: 0, y: 0, w: 0, h: 0}` returned from extractors | `grep -n 'x: 0, y: 0, w: 0, h: 0' src/main/export/` | ZERO matches |
-| Required-on-interface writer deps | `grep -A 5 'interface RegisterExportOptions' src/main/export/export-engine.ts` | all four writers REQUIRED (no `?`) |
-| Single-funnel — only export-engine.ts imports the format libs | `grep -rn "from 'docx'" src/` | ONE file: `src/main/export/writers/docx-writer.ts` |
-|   | `grep -rn "from 'pptxgenjs'" src/` | ONE file: `src/main/export/writers/pptx-writer.ts` |
-| exceljs WRITE side does not contaminate Phase 3 mail-merge READ side | `grep -rn "from 'exceljs'" src/` | TWO files: `src/main/forms/mail-merge.ts` (Phase 3 read) + `src/main/export/writers/xlsx-writer.ts` (Phase 6 write); no third location |
-| Atomic write pattern | `grep -rn '\.export-temp' src/main/export/` | one location: `export-engine.ts` writeAtomic helper |
-| Cancel signal checked at three points per §8.3 | `grep -n 'signal.aborted' src/main/export/export-engine.ts` | THREE matches per the spec |
-| Trust-floor obligations surface in conventions §17.3 | `grep -n 'trust.floor\|honesty' docs/conventions.md` | non-zero match count |
-| Required-on-modal limitations panel | `grep -rn 'PerFormatLimitationsPanel' src/client/components/modals/export-modal/` | one mount per format |
+| Check                                                                | Grep                                                                              | Expected                                                                                                                               |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| No `as any` in writers                                               | `grep -rn 'as any' src/main/export/writers/`                                      | ZERO matches; any match is a code-comment-contradiction candidate per Julian Wave 21 H-21.1                                            |
+| No `@ts-ignore` in writers                                           | `grep -rn '@ts-ignore' src/main/export/writers/`                                  | ZERO matches                                                                                                                           |
+| `LayoutRect` is nullable everywhere it appears                       | `grep -rn 'LayoutRect' src/main/export/` followed by manual scan                  | every consumer pattern-matches on null                                                                                                 |
+| No sentinel `{x: 0, y: 0, w: 0, h: 0}` returned from extractors      | `grep -n 'x: 0, y: 0, w: 0, h: 0' src/main/export/`                               | ZERO matches                                                                                                                           |
+| Required-on-interface writer deps                                    | `grep -A 5 'interface RegisterExportOptions' src/main/export/export-engine.ts`    | all four writers REQUIRED (no `?`)                                                                                                     |
+| Single-funnel — only export-engine.ts imports the format libs        | `grep -rn "from 'docx'" src/`                                                     | ONE file: `src/main/export/writers/docx-writer.ts`                                                                                     |
+|                                                                      | `grep -rn "from 'pptxgenjs'" src/`                                                | ONE file: `src/main/export/writers/pptx-writer.ts`                                                                                     |
+| exceljs WRITE side does not contaminate Phase 3 mail-merge READ side | `grep -rn "from 'exceljs'" src/`                                                  | TWO files: `src/main/forms/mail-merge.ts` (Phase 3 read) + `src/main/export/writers/xlsx-writer.ts` (Phase 6 write); no third location |
+| Atomic write pattern                                                 | `grep -rn '\.export-temp' src/main/export/`                                       | one location: `export-engine.ts` writeAtomic helper                                                                                    |
+| Cancel signal checked at three points per §8.3                       | `grep -n 'signal.aborted' src/main/export/export-engine.ts`                       | THREE matches per the spec                                                                                                             |
+| Trust-floor obligations surface in conventions §17.3                 | `grep -n 'trust.floor\|honesty' docs/conventions.md`                              | non-zero match count                                                                                                                   |
+| Required-on-modal limitations panel                                  | `grep -rn 'PerFormatLimitationsPanel' src/client/components/modals/export-modal/` | one mount per format                                                                                                                   |
 
 ---
 

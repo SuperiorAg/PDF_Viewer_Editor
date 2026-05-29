@@ -202,9 +202,7 @@ function bootstrap(): void {
         const ojMod: unknown = require('../db/repositories/ocr-jobs-repo.js');
         const factory = (ojMod as { createOcrJobsRepo?: unknown }).createOcrJobsRepo;
         if (typeof factory === 'function') {
-          ocrJobsRepo = adaptOcrJobsRepo(
-            (factory as (db: unknown) => RaviOcrJobsRepo)(db),
-          );
+          ocrJobsRepo = adaptOcrJobsRepo((factory as (db: unknown) => RaviOcrJobsRepo)(db));
         }
       } catch {
         // Memory fallback is fine until Ravi's Wave 20 repo lands.

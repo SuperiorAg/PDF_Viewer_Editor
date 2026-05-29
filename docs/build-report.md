@@ -13,6 +13,7 @@ This file is the running record of what each agent delivered, any failures encou
 **Mode:** Riley operated in-thread (the orchestration session's Task/subagent dispatch tool was not loaded; Marcus produced the deliverables against the Riley brief written to `.learnings/briefs/2026-05-21-wave1-riley.md` rather than as a separate process). All four locked decisions from `docs/project-plan.md` §5 are encoded.
 
 ### Inputs read
+
 - `CLAUDE.md` (project + project-root + repo)
 - `docs/project-roadmap.md`
 - `docs/project-plan.md` (post-approval, with the four locked decisions)
@@ -21,23 +22,23 @@ This file is the running record of what each agent delivered, any failures encou
 
 ### Deliverables
 
-| File | Path | Lines | Status |
-|---|---|---|---|
-| Architecture | `d:\Projects\PDF_Viewer_Editor\ARCHITECTURE.md` | 538 | Delivered |
-| API contracts | `d:\Projects\PDF_Viewer_Editor\docs\api-contracts.md` | 499 | Delivered |
-| Data models | `d:\Projects\PDF_Viewer_Editor\docs\data-models.md` | 329 | Delivered |
-| UI spec | `d:\Projects\PDF_Viewer_Editor\docs\ui-spec.md` | 482 | Delivered |
-| Conventions | `d:\Projects\PDF_Viewer_Editor\docs\conventions.md` | 601 | Delivered |
-| **Total** | | **2449** | |
+| File          | Path                                                  | Lines    | Status    |
+| ------------- | ----------------------------------------------------- | -------- | --------- |
+| Architecture  | `d:\Projects\PDF_Viewer_Editor\ARCHITECTURE.md`       | 538      | Delivered |
+| API contracts | `d:\Projects\PDF_Viewer_Editor\docs\api-contracts.md` | 499      | Delivered |
+| Data models   | `d:\Projects\PDF_Viewer_Editor\docs\data-models.md`   | 329      | Delivered |
+| UI spec       | `d:\Projects\PDF_Viewer_Editor\docs\ui-spec.md`       | 482      | Delivered |
+| Conventions   | `d:\Projects\PDF_Viewer_Editor\docs\conventions.md`   | 601      | Delivered |
+| **Total**     |                                                       | **2449** |           |
 
 ### Locked-decision encoding check
 
-| Decision | Encoded in | Evidence |
-|---|---|---|
-| 1. Hybrid Print-to-PDF (pdf-lib default + Chromium fallback, heuristic + manual override) | ARCHITECTURE §6, api-contracts §7.2, ui-spec §9.4 | ExportEngineSelector module spec'd; `pdf:export` channel returns `{engine, reason, forcedBy, warnings, outputBytes}`; ExportEngineDialog UI shows engine preview |
-| 2. PDF-native annotations, no sidecar | ARCHITECTURE §7, data-models §3.4 | Subtype mapping table to ISO 32000; pdf-lib support matrix; explicit "no sidecar" note + fallback path through Chromium engine |
-| 3. Redux Toolkit (NOT Zustand) | ARCHITECTURE §5, conventions §6, ui-spec §2 | Slice inventory; history middleware spec; slice file pattern; typed hooks; command-pattern undo design |
-| 4. Windows file-association: installer checkbox, default ON | api-contracts §8.3 & §8.4, data-models §2.3, ui-spec §9.2 (Settings → Files), project-plan §5 | `app:setDefaultPdfHandler` + `app:getDefaultPdfHandlerStatus` channels; `file_association.pdf.requested` settings key; SettingsModal "Files" section with toggle + status |
+| Decision                                                                                  | Encoded in                                                                                    | Evidence                                                                                                                                                                  |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Hybrid Print-to-PDF (pdf-lib default + Chromium fallback, heuristic + manual override) | ARCHITECTURE §6, api-contracts §7.2, ui-spec §9.4                                             | ExportEngineSelector module spec'd; `pdf:export` channel returns `{engine, reason, forcedBy, warnings, outputBytes}`; ExportEngineDialog UI shows engine preview          |
+| 2. PDF-native annotations, no sidecar                                                     | ARCHITECTURE §7, data-models §3.4                                                             | Subtype mapping table to ISO 32000; pdf-lib support matrix; explicit "no sidecar" note + fallback path through Chromium engine                                            |
+| 3. Redux Toolkit (NOT Zustand)                                                            | ARCHITECTURE §5, conventions §6, ui-spec §2                                                   | Slice inventory; history middleware spec; slice file pattern; typed hooks; command-pattern undo design                                                                    |
+| 4. Windows file-association: installer checkbox, default ON                               | api-contracts §8.3 & §8.4, data-models §2.3, ui-spec §9.2 (Settings → Files), project-plan §5 | `app:setDefaultPdfHandler` + `app:getDefaultPdfHandlerStatus` channels; `file_association.pdf.requested` settings key; SettingsModal "Files" section with toggle + status |
 
 ### Acceptance-criteria check (project-plan §1)
 
@@ -70,17 +71,17 @@ See `.learnings/learnings.jsonl` — entry timestamped 2026-05-21.
 
 ### Ravi — Wave 2 database
 
-| Field | Value |
-|---|---|
-| Files created | 11 |
-| Schema version | 1 (single migration `0001_init.sql`) |
-| Tables | `schema_migrations`, `recent_files`, `app_settings`, `user_bookmarks` |
-| Indexes | `idx_recent_files_last_opened_at`, `idx_recent_files_file_hash`, `idx_user_bookmarks_file_hash` |
-| Repositories | 3 (`recent-files-repo`, `settings-repo`, `bookmarks-repo`) |
-| Test files | 3 (one Vitest spec per repo); ~32 test cases total against in-memory SQLite |
-| Required deps (Diego adds to package.json in Wave 3) | `better-sqlite3@^11.x` (MIT), `@types/better-sqlite3` (dev), `vitest@^1.6.x` (dev) |
-| Deviations from `docs/data-models.md` | None. Schema matches §2 verbatim. Repo interfaces match §4 verbatim. |
-| Deviations from Marcus brief | Brief asked for `pinRecent`/`unpinRecent` and `reorderBookmarks`; not implemented because data-models §2 schema has no `pin_order` column and no bookmark `parent_id` for nesting. Trusted the doc per instruction. Phase 2 can add columns + methods together. |
+| Field                                                | Value                                                                                                                                                                                                                                                           |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Files created                                        | 11                                                                                                                                                                                                                                                              |
+| Schema version                                       | 1 (single migration `0001_init.sql`)                                                                                                                                                                                                                            |
+| Tables                                               | `schema_migrations`, `recent_files`, `app_settings`, `user_bookmarks`                                                                                                                                                                                           |
+| Indexes                                              | `idx_recent_files_last_opened_at`, `idx_recent_files_file_hash`, `idx_user_bookmarks_file_hash`                                                                                                                                                                 |
+| Repositories                                         | 3 (`recent-files-repo`, `settings-repo`, `bookmarks-repo`)                                                                                                                                                                                                      |
+| Test files                                           | 3 (one Vitest spec per repo); ~32 test cases total against in-memory SQLite                                                                                                                                                                                     |
+| Required deps (Diego adds to package.json in Wave 3) | `better-sqlite3@^11.x` (MIT), `@types/better-sqlite3` (dev), `vitest@^1.6.x` (dev)                                                                                                                                                                              |
+| Deviations from `docs/data-models.md`                | None. Schema matches §2 verbatim. Repo interfaces match §4 verbatim.                                                                                                                                                                                            |
+| Deviations from Marcus brief                         | Brief asked for `pinRecent`/`unpinRecent` and `reorderBookmarks`; not implemented because data-models §2 schema has no `pin_order` column and no bookmark `parent_id` for nesting. Trusted the doc per instruction. Phase 2 can add columns + methods together. |
 
 **Files delivered (all absolute paths under `d:\Projects\PDF_Viewer_Editor\`):**
 
@@ -110,23 +111,23 @@ See `.learnings/learnings.jsonl` — entry timestamped 2026-05-21.
 - Tests are written but not yet executed — no `package.json` exists per Wave 2 file-ownership rules. Diego runs `npm test` in Wave 3 once `better-sqlite3` and `vitest` are installed.
 - `src/db/test-support.ts` resolves the migrations directory by probing `process.cwd()` and two parents. If Vitest is run from a non-standard cwd (unlikely), Diego may need to pass an explicit `--root`.
 
-
 ### David — Wave 2 backend
 
-| Field | Value |
-|---|---|
-| Files created | 42 (39 under src/ + 3 root: .env.example, package.json stub, tsconfig.main.json stub) |
-| IPC channels typed | 23 (every Phase 1 channel from `docs/api-contracts.md` + window controls) |
-| Channels live | 17 (74%) |
-| Channels stubbed (typed handler returns contract-shaped `not_implemented`) | 6 — `pdf:combine`, `pdf:export`, `pdf:getOutline`, `app:setDefaultPdfHandler`, `app:getDefaultPdfHandlerStatus`, `fs:writePdf` ops branch |
-| Test files | 15 (Vitest, no Electron boot — all deps injected) |
-| Test cases | 84 across handlers + utilities |
-| Required deps (Diego adds in Wave 3) | `electron@^30`, `vitest@^1.6` (dev), `@types/node@^20` (dev) |
-| Deviations from `docs/api-contracts.md` | None on channel surface. Added `not_implemented` as an explicit error variant on stub channels (preserves type discipline; renderer can pattern-match the stub state). Added the 4 `window:*` channels per CLAUDE.md Wave 2 brief which were not in api-contracts.md §1-§9 — the registry has them registered next to the existing channels with a contract-grade typed surface so Riley's renderer can rely on them and Julian can audit them in Wave 3. |
+| Field                                                                      | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Files created                                                              | 42 (39 under src/ + 3 root: .env.example, package.json stub, tsconfig.main.json stub)                                                                                                                                                                                                                                                                                                                                                                     |
+| IPC channels typed                                                         | 23 (every Phase 1 channel from `docs/api-contracts.md` + window controls)                                                                                                                                                                                                                                                                                                                                                                                 |
+| Channels live                                                              | 17 (74%)                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Channels stubbed (typed handler returns contract-shaped `not_implemented`) | 6 — `pdf:combine`, `pdf:export`, `pdf:getOutline`, `app:setDefaultPdfHandler`, `app:getDefaultPdfHandlerStatus`, `fs:writePdf` ops branch                                                                                                                                                                                                                                                                                                                 |
+| Test files                                                                 | 15 (Vitest, no Electron boot — all deps injected)                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Test cases                                                                 | 84 across handlers + utilities                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Required deps (Diego adds in Wave 3)                                       | `electron@^30`, `vitest@^1.6` (dev), `@types/node@^20` (dev)                                                                                                                                                                                                                                                                                                                                                                                              |
+| Deviations from `docs/api-contracts.md`                                    | None on channel surface. Added `not_implemented` as an explicit error variant on stub channels (preserves type discipline; renderer can pattern-match the stub state). Added the 4 `window:*` channels per CLAUDE.md Wave 2 brief which were not in api-contracts.md §1-§9 — the registry has them registered next to the existing channels with a contract-grade typed surface so Riley's renderer can rely on them and Julian can audit them in Wave 3. |
 
 **Files delivered (all absolute paths under `d:\Projects\PDF_Viewer_Editor\`):**
 
 Main process (5):
+
 - `src/main/index.ts`
 - `src/main/window-manager.ts`
 - `src/main/security/csp.ts`
@@ -134,15 +135,18 @@ Main process (5):
 - `src/main/db-bridge.ts`
 
 pdf-ops utilities (2):
+
 - `src/main/pdf-ops/file-hash.ts`
 - `src/main/pdf-ops/document-store.ts`
 
 IPC contracts + register + preload (3):
+
 - `src/ipc/contracts.ts`
 - `src/ipc/register.ts`
 - `src/preload/index.ts`
 
 IPC handlers (13):
+
 - `src/ipc/handlers/dialog-open-pdf.ts`
 - `src/ipc/handlers/dialog-save-as.ts`
 - `src/ipc/handlers/fs-read-pdf.ts`
@@ -158,6 +162,7 @@ IPC handlers (13):
 - `src/ipc/handlers/pdf-ops.ts`
 
 Tests (15):
+
 - `src/main/security/path-sanitizer.test.ts`
 - `src/main/pdf-ops/file-hash.test.ts`
 - `src/main/pdf-ops/document-store.test.ts`
@@ -165,6 +170,7 @@ Tests (15):
 - one `.test.ts` next to every handler file above (11 handler test files; `recents-list.ts`+`recents-add.ts`+`recents-clear.ts` share `recents.test.ts`)
 
 Shared + root:
+
 - `src/shared/result.ts`
 - `.env.example`
 - `package.json` (Phase-1 stub; Diego owns final)
@@ -194,47 +200,51 @@ Shared + root:
 4. `fs:writePdf` ops-payload replay engine — Phase 2 (uses pdf-lib in main)
 5. `loadPdfMetadata` default impl sniffs only the `%PDF-` magic header; Diego adds pdf-lib as a dep, then `registerIpcHandlers({ loadPdfMetadata: realPdfLibLoader })` from `index.ts`
 
-
 ### Riley — Wave 2 frontend
 
-| Field | Value |
-|---|---|
-| Files created | 67 TS/TSX + 21 CSS Modules + 1 HTML + 1 vite.config + 1 vitest.setup = 91 total under `src/client/` |
-| React components | 23 (incl. modals, error-boundary, empty-state, selection-overlay stub) |
-| Redux slices | 9 (`document`, `viewport`, `annotations`, `selection`, `ui`, `recents`, `bookmarks`, `export`, `history` — last one Phase-2-skeleton per ARCHITECTURE §5.3) |
-| Selectors files | 8 co-located `*-selectors.ts` |
-| Thunks | 9 (`openDocument`, `openDroppedPath`, `saveDocument`, `closeDocument`, `combinePdfs`, `refreshRecents`, `clearRecents`, `exportPdf`, plus internal `setDocument` flow) |
-| Reducer test files | 5 (`document-slice`, `document-selectors`, `viewport-slice`, `selection-slice`, `shortcuts`) |
-| Component test files | 2 (`empty-state`, `toolbar` smoke) |
-| Service test files | 1 (`pdf-coords` — 8 cases covering y-flip, scaling, quad-points) |
-| Total Vitest test cases | ~50 across 9 spec files |
-| Playwright e2e | 1 placeholder spec (`tests/e2e/smoke.spec.ts`, both tests `test.skip` per the brief — Diego enables in Wave 3) |
-| Files >200 LoC | 5 — all justified inline at top of file per conventions §3.4 |
-| `any` count | 7 — all with single-line justification comment per conventions §1.2 |
-| Required deps (Diego adds in Wave 3) | `react@^18.3`, `react-dom@^18.3`, `react-redux@^9`, `@reduxjs/toolkit@^2.2`, `pdfjs-dist@^4.4`, `pdf-lib@^1.17`, `@dnd-kit/core@^6`, `@dnd-kit/sortable@^8` (Phase-2 reorder UX), `vite@^5`, `@vitejs/plugin-react@^4`, `vitest@^1.6` (dev), `@testing-library/react@^15` (dev), `@testing-library/jest-dom@^6` (dev), `jsdom@^24` (dev) |
-| Deviations from `docs/ui-spec.md` | None on shape. Phase-2-only items (Underline / Strikethrough / Freehand / Shapes annotation tools; Undo / Redo; Find; Print; Export to PDF menu item) ship as DISABLED buttons with tooltips per spec §3 instructions. SelectionOverlay is a no-op stub (Phase 4 scope per spec §6.1). |
-| Deviations from `docs/api-contracts.md` | None. Renderer imports types from David's `src/ipc/contracts.ts` via the gatekeeper module `src/client/types/ipc-contract.ts` (a pure re-export with one renderer-only derived alias: `PdfCombineSource = PdfCombineRequest['sources'][number]`, since David's contract has that union inline). |
+| Field                                   | Value                                                                                                                                                                                                                                                                                                                                    |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Files created                           | 67 TS/TSX + 21 CSS Modules + 1 HTML + 1 vite.config + 1 vitest.setup = 91 total under `src/client/`                                                                                                                                                                                                                                      |
+| React components                        | 23 (incl. modals, error-boundary, empty-state, selection-overlay stub)                                                                                                                                                                                                                                                                   |
+| Redux slices                            | 9 (`document`, `viewport`, `annotations`, `selection`, `ui`, `recents`, `bookmarks`, `export`, `history` — last one Phase-2-skeleton per ARCHITECTURE §5.3)                                                                                                                                                                              |
+| Selectors files                         | 8 co-located `*-selectors.ts`                                                                                                                                                                                                                                                                                                            |
+| Thunks                                  | 9 (`openDocument`, `openDroppedPath`, `saveDocument`, `closeDocument`, `combinePdfs`, `refreshRecents`, `clearRecents`, `exportPdf`, plus internal `setDocument` flow)                                                                                                                                                                   |
+| Reducer test files                      | 5 (`document-slice`, `document-selectors`, `viewport-slice`, `selection-slice`, `shortcuts`)                                                                                                                                                                                                                                             |
+| Component test files                    | 2 (`empty-state`, `toolbar` smoke)                                                                                                                                                                                                                                                                                                       |
+| Service test files                      | 1 (`pdf-coords` — 8 cases covering y-flip, scaling, quad-points)                                                                                                                                                                                                                                                                         |
+| Total Vitest test cases                 | ~50 across 9 spec files                                                                                                                                                                                                                                                                                                                  |
+| Playwright e2e                          | 1 placeholder spec (`tests/e2e/smoke.spec.ts`, both tests `test.skip` per the brief — Diego enables in Wave 3)                                                                                                                                                                                                                           |
+| Files >200 LoC                          | 5 — all justified inline at top of file per conventions §3.4                                                                                                                                                                                                                                                                             |
+| `any` count                             | 7 — all with single-line justification comment per conventions §1.2                                                                                                                                                                                                                                                                      |
+| Required deps (Diego adds in Wave 3)    | `react@^18.3`, `react-dom@^18.3`, `react-redux@^9`, `@reduxjs/toolkit@^2.2`, `pdfjs-dist@^4.4`, `pdf-lib@^1.17`, `@dnd-kit/core@^6`, `@dnd-kit/sortable@^8` (Phase-2 reorder UX), `vite@^5`, `@vitejs/plugin-react@^4`, `vitest@^1.6` (dev), `@testing-library/react@^15` (dev), `@testing-library/jest-dom@^6` (dev), `jsdom@^24` (dev) |
+| Deviations from `docs/ui-spec.md`       | None on shape. Phase-2-only items (Underline / Strikethrough / Freehand / Shapes annotation tools; Undo / Redo; Find; Print; Export to PDF menu item) ship as DISABLED buttons with tooltips per spec §3 instructions. SelectionOverlay is a no-op stub (Phase 4 scope per spec §6.1).                                                   |
+| Deviations from `docs/api-contracts.md` | None. Renderer imports types from David's `src/ipc/contracts.ts` via the gatekeeper module `src/client/types/ipc-contract.ts` (a pure re-export with one renderer-only derived alias: `PdfCombineSource = PdfCombineRequest['sources'][number]`, since David's contract has that union inline).                                          |
 
 **Files delivered (all absolute paths under `d:\Projects\PDF_Viewer_Editor\src\client\`):**
 
 Entry + shell:
+
 - `main.tsx`, `app.tsx`, `app.module.css`, `index.html`, `vite.config.ts`, `vitest.setup.ts`, `shortcuts.ts`, `shortcuts.test.ts`
 
 State (`src/client/state/`):
+
 - `store.ts`, `hooks.ts`, `thunks.ts`
 - `middleware/history-middleware.ts`
 - `slices/`: 9 slice files + 8 selector files + `document-slice-apply.ts` + `document-inverses.ts` + 4 test files
 
 Services (`src/client/services/`):
+
 - `api.ts` (typed wrapper over `window.pdfApi` with `bridge_unavailable` fallback for tests / pre-bridge state)
 - `pdf-coords.ts` (single source of truth for PDF↔screen coord conversion; ARCHITECTURE §7.3) + `pdf-coords.test.ts`
 - `pdf-render.ts` (pdf.js wrapper — typed surface, stub implementation; Diego wires real `pdfjs-dist` in Wave 3)
 - `pdf-edit.ts` (pdf-lib wrapper — typed surface, stub implementation)
 
 Hooks (`src/client/hooks/`):
+
 - `use-document.ts`, `use-keyboard-shortcut.ts`, `use-app-shortcuts.ts` (maps every shortcut ID to the right dispatch)
 
 Components (`src/client/components/`):
+
 - `menu-bar/` — File / Edit / View / Tools / Help menus with all Phase 2+ items as disabled placeholders
 - `toolbar/` — 18 buttons; Phase-1 enabled subset matches `ui-spec.md` §3; hand-built SVG icon set in `toolbar-icon.tsx`
 - `sidebar/`, `thumbnail-strip/`, `bookmarks-panel/`
@@ -245,18 +255,19 @@ Components (`src/client/components/`):
 - `error-boundary/`, `empty-state/`
 
 Types + styles:
+
 - `types/ipc-contract.ts` (pure re-export from David's module, see Cross-wave handoffs below)
 - `styles/tokens.css` (CSS custom properties — colors / spacing / type / z-index)
 - `styles/global.css`
 
 **Locked-decision encoding check (Phase 1 deliveries):**
 
-| Decision | Encoded by | Evidence |
-|---|---|---|
-| 1. Hybrid Print-to-PDF | `state/slices/export-slice.ts` + `components/modals/export-engine-dialog/` + Settings → Export tab + `StatusBar` engine indicator | Engine preference persists via `settings.set('export.defaultEngine', 'auto' \| 'pdf-lib' \| 'chromium')`; `exportPdfThunk` calls `window.pdfApi.pdf.export({ handle, preference })` and surfaces `{ engine, reason, warnings }` |
-| 2. PDF-native annotations, no sidecar | `state/slices/document-slice-apply.ts` + `components/annotation-layer/` | Annotations are `AnnotationModel[]` keyed to PDF subtypes (`Highlight` → /Highlight, `Text` → /Text, `FreeText` → /FreeText); on save they pass through `fs:writePdf` as the `payload.ops + annotations` variant. No sidecar storage. |
-| 3. Redux Toolkit + command-pattern undo | `state/store.ts` (9 slices + 1 middleware) + `state/slices/history-slice.ts` (Phase-2-active skeleton) + `state/slices/document-inverses.ts` + `state/middleware/history-middleware.ts` | All page+annotation ops dispatched via `applyEdit(EditOperation)` with `meta.undoable: true`. Inverse computation per data-models §3.2 verified by Vitest round-trip tests in `document-slice.test.ts`. |
-| 4. Windows file-association | `components/modals/settings-modal/` Files tab + `services/api.ts` calls `app.setDefaultPdfHandler` / `app.getDefaultPdfHandlerStatus` | Settings tab shows current default state and a Make/Relinquish button; toast surfaces OS-reported result. |
+| Decision                                | Encoded by                                                                                                                                                                              | Evidence                                                                                                                                                                                                                              |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Hybrid Print-to-PDF                  | `state/slices/export-slice.ts` + `components/modals/export-engine-dialog/` + Settings → Export tab + `StatusBar` engine indicator                                                       | Engine preference persists via `settings.set('export.defaultEngine', 'auto' \| 'pdf-lib' \| 'chromium')`; `exportPdfThunk` calls `window.pdfApi.pdf.export({ handle, preference })` and surfaces `{ engine, reason, warnings }`       |
+| 2. PDF-native annotations, no sidecar   | `state/slices/document-slice-apply.ts` + `components/annotation-layer/`                                                                                                                 | Annotations are `AnnotationModel[]` keyed to PDF subtypes (`Highlight` → /Highlight, `Text` → /Text, `FreeText` → /FreeText); on save they pass through `fs:writePdf` as the `payload.ops + annotations` variant. No sidecar storage. |
+| 3. Redux Toolkit + command-pattern undo | `state/store.ts` (9 slices + 1 middleware) + `state/slices/history-slice.ts` (Phase-2-active skeleton) + `state/slices/document-inverses.ts` + `state/middleware/history-middleware.ts` | All page+annotation ops dispatched via `applyEdit(EditOperation)` with `meta.undoable: true`. Inverse computation per data-models §3.2 verified by Vitest round-trip tests in `document-slice.test.ts`.                               |
+| 4. Windows file-association             | `components/modals/settings-modal/` Files tab + `services/api.ts` calls `app.setDefaultPdfHandler` / `app.getDefaultPdfHandlerStatus`                                                   | Settings tab shows current default state and a Make/Relinquish button; toast surfaces OS-reported result.                                                                                                                             |
 
 **Cross-wave handoffs (Riley's side):**
 
@@ -267,13 +278,13 @@ Types + styles:
 
 **Phase 2 placeholder inventory (deliberate per project-plan §8):**
 
-| Surface | Disabled affordance |
-|---|---|
-| Menu bar | File → Print / Export to PDF; Edit → Undo / Redo / Find; Tools → Form Designer / Mail Merge / Fill & Sign / Scan / Run OCR / Export as Word/Excel/PowerPoint |
-| Toolbar | Undo, Redo, Underline, Strikethrough, Freehand, Shapes; Insert from file (toast: "coming soon"); Settings → theme dropdown is Phase 2 |
-| Sidebar Bookmarks tab | Drag-reorder of user bookmarks (Phase 2 per ui-spec §5.2) |
-| Viewer | Marquee selection / text selection (SelectionOverlay component is a stub) |
-| Settings | Annotation author default + undo history depth (Phase 2 UI per ui-spec §9.2) |
+| Surface               | Disabled affordance                                                                                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Menu bar              | File → Print / Export to PDF; Edit → Undo / Redo / Find; Tools → Form Designer / Mail Merge / Fill & Sign / Scan / Run OCR / Export as Word/Excel/PowerPoint |
+| Toolbar               | Undo, Redo, Underline, Strikethrough, Freehand, Shapes; Insert from file (toast: "coming soon"); Settings → theme dropdown is Phase 2                        |
+| Sidebar Bookmarks tab | Drag-reorder of user bookmarks (Phase 2 per ui-spec §5.2)                                                                                                    |
+| Viewer                | Marquee selection / text selection (SelectionOverlay component is a stub)                                                                                    |
+| Settings              | Annotation author default + undo history depth (Phase 2 UI per ui-spec §9.2)                                                                                 |
 
 Every Phase-2 affordance has a `title="Coming in Phase N"` tooltip OR a toast message when clicked, never a silent no-op.
 
@@ -295,34 +306,34 @@ No blockers. Integration on disk is clean: `src/main/db-bridge.ts` adapter shape
 
 ### Spot-check results
 
-| Check | Result |
-|---|---|
-| `src/main/db-bridge.ts` adapts Ravi's repo types into David's contract shape | PASS — `adaptRecentsRepo` + `adaptBookmarksRepo` map `last_opened_at`/`file_hash`/`page_index` → camelCase 1:1; `SettingsRepo` needs no adapter (key-based) |
-| `src/client/types/ipc-contract.ts` is a re-export, not hand-copied | PASS — `export type { … } from '../../ipc/contracts'`, single derived alias `PdfCombineSource` |
-| `src/ipc/contracts.ts` channel set vs `docs/api-contracts.md` | PASS for §1–§9 (dialog:openPdf, fs:readPdf, settings:get all match shape + error variants); `window:*` namespace is present in contract module but absent from doc (see item 2) |
-| `migrations/0001_init.sql` vs `data-models.md` §2 | PASS — schema_migrations, recent_files, app_settings, user_bookmarks all match (the only delta is `IF NOT EXISTS` clauses for idempotency, safe) |
-| File ownership — no duplicate ownership | PASS — 143 files, every path falls under exactly one owner |
+| Check                                                                        | Result                                                                                                                                                                          |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/main/db-bridge.ts` adapts Ravi's repo types into David's contract shape | PASS — `adaptRecentsRepo` + `adaptBookmarksRepo` map `last_opened_at`/`file_hash`/`page_index` → camelCase 1:1; `SettingsRepo` needs no adapter (key-based)                     |
+| `src/client/types/ipc-contract.ts` is a re-export, not hand-copied           | PASS — `export type { … } from '../../ipc/contracts'`, single derived alias `PdfCombineSource`                                                                                  |
+| `src/ipc/contracts.ts` channel set vs `docs/api-contracts.md`                | PASS for §1–§9 (dialog:openPdf, fs:readPdf, settings:get all match shape + error variants); `window:*` namespace is present in contract module but absent from doc (see item 2) |
+| `migrations/0001_init.sql` vs `data-models.md` §2                            | PASS — schema_migrations, recent_files, app_settings, user_bookmarks all match (the only delta is `IF NOT EXISTS` clauses for idempotency, safe)                                |
+| File ownership — no duplicate ownership                                      | PASS — 143 files, every path falls under exactly one owner                                                                                                                      |
 
 ### Open-item triage
 
-| # | Item | Verdict | Notes |
-|---|---|---|---|
-| 1 | Ravi: `pinRecent`/`unpinRecent`/`reorderBookmarks` + `parent_id` schema | **PHASE-2** — defer. Schema bloat from speculative columns is the wrong tax to pay now; data-models §2 is the contract Ravi correctly followed. Backlog in project-roadmap for Phase 2 amendment (data-models §2 + migration 0002 + Ravi repo methods + David channels + Riley UI, all together). |
-| 2 | David: `window:*` namespace not in `api-contracts.md` | **ACCEPT — amend contract.** Renderer tolerates and won't consume in Phase 1, but the contract doc must reflect shipped reality so Julian audits against the real surface and Phase 2 custom-chrome work has spec coverage. Marcus updates `api-contracts.md` §10 (new section) in this turn. |
-| 3 | David: `'not_implemented'` error variant on stub channels | **ACCEPT — amend contract.** Type-correct, renderer-tolerant, surfaces stub state explicitly to the renderer. Doc §0.x conventions get a one-paragraph note + the stub channels (`pdf:combine`, `pdf:export`, `pdf:getOutline`, `app:setDefaultPdfHandler`, `app:getDefaultPdfHandlerStatus`, `fs:writePdf` ops branch) get the variant in their error unions. Marcus updates `api-contracts.md` in this turn. |
-| 4 | `PdfCombineRequest.sources` inline union — no exported alias | **FIX-NOW (David delta in Wave 3).** Diego will need David to make a tiny edit to `src/ipc/contracts.ts` exporting `PdfCombineSource = PdfCombineRequest['sources'][number]` so the renderer's gatekeeper no longer needs the derived alias. Trivial, no contract change, removes drift risk. Diego coordinates. |
-| 5 | jsx-a11y `aria-proptypes` rejecting dynamic boolean ARIA | **FIX-NOW (Diego configures rule).** Diego sets `'jsx-a11y/aria-proptypes': ['warn', { allowedDynamic: true }]` in ESLint config (or equivalent — the rule signature varies by plugin version; if no `allowedDynamic` exists in shipped version, downgrade to `warn` and add an exception comment to ToolbarButton). Sidebar/Settings tab semantics get a follow-up `tabIndex`+`role="tab"`+ proper ARIA pass in Phase 7 a11y audit (already logged). Don't lock the workarounds in permanently — ARIA tab semantics matter for screen readers. |
-| 6 | `pdf-render.ts` stub awaiting `pdfjs-dist` dep | **FIX-NOW (Diego adds dep).** Standard Wave 3 work — add `pdfjs-dist@^4.4` to `package.json`, wire worker per the pattern documented at the top of `src/client/services/pdf-render.ts`. Julian's review notes pdf.js memory hygiene will land only after this wires up (Julian's review of `pdf-render.ts` is necessarily provisional until then; he calls that out in `code-review.md`). |
-| 7 | Playwright e2e `test.skip` placeholder | **FIX-NOW (Diego enables in CI).** Wave 3 standard — Diego flips `test.skip` → `test`, adds the Electron launch fixture, wires `playwright test` into `.github/workflows/ci.yml`. |
-| 8 | `webPreferences.enableDragDropFiles` must stay true | **FIX-NOW — lock in code, not just doc.** Diego adds a vitest unit test asserting `webPreferences.enableDragDropFiles !== false` in the constructed `BrowserWindow` options object (David's `window-manager.ts` exports the options factory; Diego writes the test). Also: Marcus adds an entry to `.learnings/locked-instructions.md` (or equivalent project lock) so a future agent can't silently flip it. Doc-only lock is insufficient — agents will skim past it. |
-| 9 | Combine modal "Add file…" stub → needs `app:pickPdfPath` channel | **PHASE-2** — defer. Backlog in project-roadmap. Phase 1 ship: combine modal accepts already-open documents via handle and dropped paths; the "+ Add file…" placeholder shows a "coming in Phase 2" toast (already in Riley's spec). |
+| #   | Item                                                                    | Verdict                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Notes |
+| --- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| 1   | Ravi: `pinRecent`/`unpinRecent`/`reorderBookmarks` + `parent_id` schema | **PHASE-2** — defer. Schema bloat from speculative columns is the wrong tax to pay now; data-models §2 is the contract Ravi correctly followed. Backlog in project-roadmap for Phase 2 amendment (data-models §2 + migration 0002 + Ravi repo methods + David channels + Riley UI, all together).                                                                                                                                                                                                                                               |
+| 2   | David: `window:*` namespace not in `api-contracts.md`                   | **ACCEPT — amend contract.** Renderer tolerates and won't consume in Phase 1, but the contract doc must reflect shipped reality so Julian audits against the real surface and Phase 2 custom-chrome work has spec coverage. Marcus updates `api-contracts.md` §10 (new section) in this turn.                                                                                                                                                                                                                                                   |
+| 3   | David: `'not_implemented'` error variant on stub channels               | **ACCEPT — amend contract.** Type-correct, renderer-tolerant, surfaces stub state explicitly to the renderer. Doc §0.x conventions get a one-paragraph note + the stub channels (`pdf:combine`, `pdf:export`, `pdf:getOutline`, `app:setDefaultPdfHandler`, `app:getDefaultPdfHandlerStatus`, `fs:writePdf` ops branch) get the variant in their error unions. Marcus updates `api-contracts.md` in this turn.                                                                                                                                  |
+| 4   | `PdfCombineRequest.sources` inline union — no exported alias            | **FIX-NOW (David delta in Wave 3).** Diego will need David to make a tiny edit to `src/ipc/contracts.ts` exporting `PdfCombineSource = PdfCombineRequest['sources'][number]` so the renderer's gatekeeper no longer needs the derived alias. Trivial, no contract change, removes drift risk. Diego coordinates.                                                                                                                                                                                                                                |
+| 5   | jsx-a11y `aria-proptypes` rejecting dynamic boolean ARIA                | **FIX-NOW (Diego configures rule).** Diego sets `'jsx-a11y/aria-proptypes': ['warn', { allowedDynamic: true }]` in ESLint config (or equivalent — the rule signature varies by plugin version; if no `allowedDynamic` exists in shipped version, downgrade to `warn` and add an exception comment to ToolbarButton). Sidebar/Settings tab semantics get a follow-up `tabIndex`+`role="tab"`+ proper ARIA pass in Phase 7 a11y audit (already logged). Don't lock the workarounds in permanently — ARIA tab semantics matter for screen readers. |
+| 6   | `pdf-render.ts` stub awaiting `pdfjs-dist` dep                          | **FIX-NOW (Diego adds dep).** Standard Wave 3 work — add `pdfjs-dist@^4.4` to `package.json`, wire worker per the pattern documented at the top of `src/client/services/pdf-render.ts`. Julian's review notes pdf.js memory hygiene will land only after this wires up (Julian's review of `pdf-render.ts` is necessarily provisional until then; he calls that out in `code-review.md`).                                                                                                                                                       |
+| 7   | Playwright e2e `test.skip` placeholder                                  | **FIX-NOW (Diego enables in CI).** Wave 3 standard — Diego flips `test.skip` → `test`, adds the Electron launch fixture, wires `playwright test` into `.github/workflows/ci.yml`.                                                                                                                                                                                                                                                                                                                                                               |
+| 8   | `webPreferences.enableDragDropFiles` must stay true                     | **FIX-NOW — lock in code, not just doc.** Diego adds a vitest unit test asserting `webPreferences.enableDragDropFiles !== false` in the constructed `BrowserWindow` options object (David's `window-manager.ts` exports the options factory; Diego writes the test). Also: Marcus adds an entry to `.learnings/locked-instructions.md` (or equivalent project lock) so a future agent can't silently flip it. Doc-only lock is insufficient — agents will skim past it.                                                                         |
+| 9   | Combine modal "Add file…" stub → needs `app:pickPdfPath` channel        | **PHASE-2** — defer. Backlog in project-roadmap. Phase 1 ship: combine modal accepts already-open documents via handle and dropped paths; the "+ Add file…" placeholder shows a "coming in Phase 2" toast (already in Riley's spec).                                                                                                                                                                                                                                                                                                            |
 
 ### Wave 3 delta tasks (consolidated for Diego)
 
 1. ESLint config includes `aria-proptypes` decision per item 5.
 2. Webpreferences drag-drop assertion test per item 8.
 3. Project lock entry for `enableDragDropFiles: true` (Marcus owns; see below).
-4. Real `package.json` with all deps from the three Wave-2 agent wishlists (verify each against agents' status rows: Ravi wants better-sqlite3 + @types + vitest; David wants electron + vitest + @types/node; Riley wants react, react-dom, redux toolkit, react-redux, pdfjs-dist, pdf-lib, @dnd-kit/core, @dnd-kit/sortable, vite, @vitejs/plugin-react, vitest, @testing-library/react, @testing-library/jest-dom, jsdom). Diego adds tooling: electron-builder, playwright, @playwright/test, typescript, prettier, @typescript-eslint/*, eslint-plugin-react, eslint-plugin-jsx-a11y, eslint-plugin-import, electron-vite.
+4. Real `package.json` with all deps from the three Wave-2 agent wishlists (verify each against agents' status rows: Ravi wants better-sqlite3 + @types + vitest; David wants electron + vitest + @types/node; Riley wants react, react-dom, redux toolkit, react-redux, pdfjs-dist, pdf-lib, @dnd-kit/core, @dnd-kit/sortable, vite, @vitejs/plugin-react, vitest, @testing-library/react, @testing-library/jest-dom, jsdom). Diego adds tooling: electron-builder, playwright, @playwright/test, typescript, prettier, @typescript-eslint/\*, eslint-plugin-react, eslint-plugin-jsx-a11y, eslint-plugin-import, electron-vite.
 5. Make the tiny David delta in item 4 (PdfCombineSource export) — Diego coordinates with David at start of Wave 3.
 
 ### Wave 2 follow-up — Marcus actions this turn
@@ -344,11 +355,12 @@ No blockers. Integration on disk is clean: `src/main/db-bridge.ts` adapter shape
 **Findings:** 0 BLOCKER, 4 HIGH, 14 MEDIUM, 13 LOW, 5 NIT.
 **L-001 enforcement:** PASS — `src/main/window-manager.ts` does not set `enableDragDropFiles`; relies on Electron's `true` default. Diego's Wave-3 test will pass against current source as written.
 **Top 3 issues (must close before Phase-1 ship; do not block Wave 4):**
+
 1. **H-1** — `setDbBridge()` is never called from `src/main/index.ts:bootstrap()`. Production silently uses the in-memory fallback; recents/settings/bookmarks do not persist. One-line wiring fix.
 2. **H-2** — `selectAnnotationsForPage(pageIndex)` and `selectPage(pageIndex)` are factory selectors that rebuild `createSelector` on every call from `PdfCanvas`, defeating memoisation. Convention §6.3 endorses the broken pattern; both code and doc need a fix.
 3. **H-3** — `saveDocumentThunk` always sends `payload.kind: 'ops'`, which Phase-1 `handleFsWritePdf` rejects as `invalid_payload`. Walking-skeleton goal #8 ("Save the modified PDF") is non-functional today.
-**Provisional (re-audit after Diego's deliverables land):** pdf.js memory hygiene, Playwright e2e CI signal, export-engine real selector behaviour, NSIS file-association registry writes, better-sqlite3 native-ABI rebuild.
-**What's good:** discriminated `Result<T,E>` everywhere, single-audit-surface discipline (db-bridge, pdf-coords, applyEdit), prepared statements with an explicit SQLi resistance test, defense-in-depth `..`-rejection in path-sanitizer, opaque `randomUUID()` destination tokens with 60s TTL.
+   **Provisional (re-audit after Diego's deliverables land):** pdf.js memory hygiene, Playwright e2e CI signal, export-engine real selector behaviour, NSIS file-association registry writes, better-sqlite3 native-ABI rebuild.
+   **What's good:** discriminated `Result<T,E>` everywhere, single-audit-surface discipline (db-bridge, pdf-coords, applyEdit), prepared statements with an explicit SQLi resistance test, defense-in-depth `..`-rejection in path-sanitizer, opaque `randomUUID()` destination tokens with 60s TTL.
 
 Full review: `docs/code-review.md`.
 
@@ -358,19 +370,19 @@ Full review: `docs/code-review.md`.
 
 **Status:** COMPLETE. Build pipeline runs end-to-end on Windows; both a Windows NSIS installer (`PDF Viewer & Editor-0.1.0-x64.exe`, 95 MB) and a portable `.exe` (95 MB) were produced locally.
 
-| Result | Value |
-|---|---|
-| Configs written | `package.json`, `tsconfig.json`, `tsconfig.main.json`, `tsconfig.preload.json`, `tsconfig.renderer.json`, `tsconfig.test.json`, `electron.vite.config.ts`, `vitest.config.ts`, `vitest.setup.ts`, `playwright.config.ts`, `.eslintrc.cjs`, `.prettierrc`, `.prettierignore`, `.editorconfig`, `.npmrc`, `.nvmrc`, `electron-builder.yml`, `build/installer.nsh`, `.github/workflows/ci.yml`, `scripts/rebuild-native.cjs` |
-| `npm install` | PASS with `--ignore-scripts` (842 packages; better-sqlite3 native build skipped intentionally — see Issue D-1 below). The `postinstall` hook then runs `electron-builder install-app-deps` to fetch the Electron-ABI prebuild. |
-| `npm run typecheck:main` | FAIL — 5 errors in David's code under `src/ipc/handlers/bookmarks.ts`, `src/main/db-bridge.ts`, `src/main/index.ts`. All are `exactOptionalPropertyTypes` (TS2379) issues around `number \| undefined` assignments. Forwarded to follow-up; Diego does not touch David's files. |
-| `npm run typecheck:preload` | PASS |
-| `npm run typecheck:renderer` | FAIL — 1 error in Riley's `src/client/components/error-boundary/index.tsx` (TS4114, missing `override` modifier). Forwarded to follow-up. |
-| `npm run lint` | 10 errors + 28 warnings — `no-control-regex` in `path-sanitizer.ts` (intentional, David's code), `jsx-a11y/no-noninteractive-*` in `thumbnail-strip` + `thumbnail-item` (Riley's code), import-order warnings. None in Diego-owned files. Forwarded; not blockers. |
-| `npm test` (Vitest) | **172 tests collected** (David ~84 + Ravi ~32 + Riley ~50 + Diego's new L-001 test ×2 = ~168 expected; the surplus comes from each Ravi spec running twice under the file-discovery glob — explained below). **136 pass, 36 fail.** 35 of the 36 failures are the better-sqlite3 NODE_MODULE_VERSION ABI mismatch (see D-1); the 36th is Riley's `selection-slice.test.ts` mutating a frozen RTK reducer result (`Cannot assign to read only property '0' of object '[object Array]'`). |
-| L-001 enforcement test | PASS — added `src/main/window-manager.test.ts` with 2 assertions: (a) `webPreferences.enableDragDropFiles !== false`, (b) full security-floor invariants (`contextIsolation`, `nodeIntegration`, `sandbox`, `webSecurity`, `allowRunningInsecureContent`). The test mocks the `electron` module so it does not boot Electron. |
-| `npm run build` (electron-vite) | PASS — `dist/main/index.js` 31.48 kB, `dist/preload/index.cjs` 3.74 kB, `dist/renderer/index.html` + 28.17 kB CSS + 412.93 kB JS. 154 ms + 17 ms + 783 ms. |
-| `npm run dist:win` (electron-builder) | PASS — produced `release/PDF Viewer & Editor-0.1.0-x64.exe` (NSIS installer) + `release/PDF Viewer & Editor-0.1.0-x64-portable.exe` (portable) + `win-unpacked/` directory with `PDF Viewer & Editor.exe`. Initial run failed on missing `build/icon.ico` — fixed by commenting out the icon paths in `electron-builder.yml` until a 256x256 icon is added (flagged for Nathan/follow-up). |
-| Playwright e2e | Wired and enabled. `tests/e2e/smoke.spec.ts` no longer `test.skip` — the active test launches Electron via `_electron.launch({ args: ['.'] })`, screenshots, asserts on "Open a PDF to get started" empty-state text, closes. Not executed locally (requires the rebuilt-for-Electron native module + a clean boot environment); CI will run it on `windows-latest`. |
+| Result                                | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Configs written                       | `package.json`, `tsconfig.json`, `tsconfig.main.json`, `tsconfig.preload.json`, `tsconfig.renderer.json`, `tsconfig.test.json`, `electron.vite.config.ts`, `vitest.config.ts`, `vitest.setup.ts`, `playwright.config.ts`, `.eslintrc.cjs`, `.prettierrc`, `.prettierignore`, `.editorconfig`, `.npmrc`, `.nvmrc`, `electron-builder.yml`, `build/installer.nsh`, `.github/workflows/ci.yml`, `scripts/rebuild-native.cjs`                                                               |
+| `npm install`                         | PASS with `--ignore-scripts` (842 packages; better-sqlite3 native build skipped intentionally — see Issue D-1 below). The `postinstall` hook then runs `electron-builder install-app-deps` to fetch the Electron-ABI prebuild.                                                                                                                                                                                                                                                          |
+| `npm run typecheck:main`              | FAIL — 5 errors in David's code under `src/ipc/handlers/bookmarks.ts`, `src/main/db-bridge.ts`, `src/main/index.ts`. All are `exactOptionalPropertyTypes` (TS2379) issues around `number \| undefined` assignments. Forwarded to follow-up; Diego does not touch David's files.                                                                                                                                                                                                         |
+| `npm run typecheck:preload`           | PASS                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `npm run typecheck:renderer`          | FAIL — 1 error in Riley's `src/client/components/error-boundary/index.tsx` (TS4114, missing `override` modifier). Forwarded to follow-up.                                                                                                                                                                                                                                                                                                                                               |
+| `npm run lint`                        | 10 errors + 28 warnings — `no-control-regex` in `path-sanitizer.ts` (intentional, David's code), `jsx-a11y/no-noninteractive-*` in `thumbnail-strip` + `thumbnail-item` (Riley's code), import-order warnings. None in Diego-owned files. Forwarded; not blockers.                                                                                                                                                                                                                      |
+| `npm test` (Vitest)                   | **172 tests collected** (David ~84 + Ravi ~32 + Riley ~50 + Diego's new L-001 test ×2 = ~168 expected; the surplus comes from each Ravi spec running twice under the file-discovery glob — explained below). **136 pass, 36 fail.** 35 of the 36 failures are the better-sqlite3 NODE_MODULE_VERSION ABI mismatch (see D-1); the 36th is Riley's `selection-slice.test.ts` mutating a frozen RTK reducer result (`Cannot assign to read only property '0' of object '[object Array]'`). |
+| L-001 enforcement test                | PASS — added `src/main/window-manager.test.ts` with 2 assertions: (a) `webPreferences.enableDragDropFiles !== false`, (b) full security-floor invariants (`contextIsolation`, `nodeIntegration`, `sandbox`, `webSecurity`, `allowRunningInsecureContent`). The test mocks the `electron` module so it does not boot Electron.                                                                                                                                                           |
+| `npm run build` (electron-vite)       | PASS — `dist/main/index.js` 31.48 kB, `dist/preload/index.cjs` 3.74 kB, `dist/renderer/index.html` + 28.17 kB CSS + 412.93 kB JS. 154 ms + 17 ms + 783 ms.                                                                                                                                                                                                                                                                                                                              |
+| `npm run dist:win` (electron-builder) | PASS — produced `release/PDF Viewer & Editor-0.1.0-x64.exe` (NSIS installer) + `release/PDF Viewer & Editor-0.1.0-x64-portable.exe` (portable) + `win-unpacked/` directory with `PDF Viewer & Editor.exe`. Initial run failed on missing `build/icon.ico` — fixed by commenting out the icon paths in `electron-builder.yml` until a 256x256 icon is added (flagged for Nathan/follow-up).                                                                                              |
+| Playwright e2e                        | Wired and enabled. `tests/e2e/smoke.spec.ts` no longer `test.skip` — the active test launches Electron via `_electron.launch({ args: ['.'] })`, screenshots, asserts on "Open a PDF to get started" empty-state text, closes. Not executed locally (requires the rebuilt-for-Electron native module + a clean boot environment); CI will run it on `windows-latest`.                                                                                                                    |
 
 **Wave-2 deltas absorbed (item-by-item per `docs/wave-3-brief.md` §1.4):**
 
@@ -386,6 +398,7 @@ Full review: `docs/code-review.md`.
 NSIS installer was chosen (matches `docs/wave-3-brief.md` §1.5 spec; portable `.exe` ships alongside for non-installer users). The file-association registry writes are emitted by electron-builder's `fileAssociations[]` array. The opt-in checkbox is implemented via a custom NSIS Components-page section in `build/installer.nsh` — the `SecAssocPdf` section is selected by default (no `/o` flag means selected); the user can uncheck on the Components page to skip the registry writes. The uninstall macro additionally cleans `HKCU\Software\Classes\PdfViewerEditor.Document` and the `.pdf\OpenWithProgids` entry, so a clean uninstall returns the system to its pre-install handler state.
 
 The full registry-write path electron-builder emits when the checkbox is left ON:
+
 - `HKCU\Software\Classes\.pdf\OpenWithProgids` — value `PdfViewerEditor.Document = ""`
 - `HKCU\Software\Classes\PdfViewerEditor.Document\shell\open\command` — value `"<install-dir>\PDF Viewer & Editor.exe" "%1"`
 - `HKCU\Software\Classes\Applications\<exe-name>\SupportedTypes\.pdf`
@@ -450,11 +463,11 @@ Functional honesty: in Phase 1, "Save" produces a placeholder document with the 
 
 Conditional spread at the assignment site at every call site (5 of 5), NOT widening the contract types. This keeps the optional-property contract honest (caller absence ⇒ field absence ⇒ repo defaults apply). Sites fixed:
 
-| File | Site(s) | Fix |
-|---|---|---|
-| `src/main/index.ts` | `:97` (`rendererUrl`), `:111` (`rendererFile`) — both `bootstrap()` and the `activate` lifecycle | `...(url !== undefined ? { rendererUrl: url } : {})` |
-| `src/main/db-bridge.ts` | `:226` (`last_opened_at` in `adaptRecentsRepo`), `:251` (`id` + `created_at` in `adaptBookmarksRepo`) | conditional spread for each optional |
-| `src/ipc/handlers/bookmarks.ts` | `:~80` (`id` in `BookmarksUpsert`) | conditional spread |
+| File                            | Site(s)                                                                                               | Fix                                                  |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `src/main/index.ts`             | `:97` (`rendererUrl`), `:111` (`rendererFile`) — both `bootstrap()` and the `activate` lifecycle      | `...(url !== undefined ? { rendererUrl: url } : {})` |
+| `src/main/db-bridge.ts`         | `:226` (`last_opened_at` in `adaptRecentsRepo`), `:251` (`id` + `created_at` in `adaptBookmarksRepo`) | conditional spread for each optional                 |
+| `src/ipc/handlers/bookmarks.ts` | `:~80` (`id` in `BookmarksUpsert`)                                                                    | conditional spread                                   |
 
 All five sites documented with a one-line `// D-2 / TS2379 fix:` comment.
 
@@ -464,11 +477,11 @@ H-1 requires `src/main/index.ts` to import from `src/db/connection.ts` + `src/db
 
 **Verification results:**
 
-| Step | Result |
-|---|---|
-| `npm run typecheck:main` | **PASS** — 0 errors (was: 5 TS2379 errors). |
-| `npm run typecheck:preload` | **PASS** — unchanged. |
-| `npm run typecheck:renderer` | Errors present, all in Riley's territory (`src/client/state/slices/document-selectors.ts`, `src/client/state/store.ts` — TS4023 in-flight from H-2 work happening in parallel). `thunks.ts` (David's edited renderer file) emits **0** typecheck errors — confirmed by `npm run typecheck:renderer 2>&1 \| grep thunks.ts` returning empty. |
+| Step                              | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck:main`          | **PASS** — 0 errors (was: 5 TS2379 errors).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `npm run typecheck:preload`       | **PASS** — unchanged.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `npm run typecheck:renderer`      | Errors present, all in Riley's territory (`src/client/state/slices/document-selectors.ts`, `src/client/state/store.ts` — TS4023 in-flight from H-2 work happening in parallel). `thunks.ts` (David's edited renderer file) emits **0** typecheck errors — confirmed by `npm run typecheck:renderer 2>&1 \| grep thunks.ts` returning empty.                                                                                                                                                                                                 |
 | `npx vitest run src/main src/ipc` | **PASS** — 16/16 test files, **86/86 tests**. Includes L-001 enforcement (`src/main/window-manager.test.ts` 2/2), `db-bridge.test.ts` 4/4, `bookmarks.test.ts` 6/6, `fs-write-pdf.test.ts` 6/6 (the `'ops' rejected when deps.applyOpsToBytes undefined` path still asserts — production deps in `register.ts` likewise do not inject the shim, so the renderer's switch to `kind: 'bytes'` is now the only sanctioned Phase-1 path). No environmental ABI skips were required because the David-owned tests do not touch `better-sqlite3`. |
 
 **L-001 compliance:** `src/main/window-manager.ts` not touched; `enableDragDropFiles` not touched; `webPreferences` not touched. Diego's enforcement test passes.
@@ -519,23 +532,23 @@ H-1 requires `src/main/index.ts` to import from `src/db/connection.ts` + `src/db
 
 Grep across `src/client/` returned 2 source-code call sites + 1 test call site:
 
-| File | Line | Update |
-|---|---|---|
-| `src/client/components/pdf-canvas/index.tsx` | 31 (orig) → 34 (post-fix) | Import path swapped to `document-parameterized-selectors`; call shape `(s) => selectAnnotationsForPage(s, props.index)` |
-| `src/client/state/slices/document-selectors.test.ts` | 91 (orig) | Import path swapped; call shape `selectAnnotationsForPage(state, 1)` |
-| (`selectPage` was previously unused outside its own definition — no consumer-call sweep needed; the parameterized form is in place for future use) | | |
+| File                                                                                                                                               | Line                      | Update                                                                                                                  |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `src/client/components/pdf-canvas/index.tsx`                                                                                                       | 31 (orig) → 34 (post-fix) | Import path swapped to `document-parameterized-selectors`; call shape `(s) => selectAnnotationsForPage(s, props.index)` |
+| `src/client/state/slices/document-selectors.test.ts`                                                                                               | 91 (orig)                 | Import path swapped; call shape `selectAnnotationsForPage(state, 1)`                                                    |
+| (`selectPage` was previously unused outside its own definition — no consumer-call sweep needed; the parameterized form is in place for future use) |                           |                                                                                                                         |
 
 No other Riley-owned consumer touched `selectAnnotationsForPage` or `selectPage` (verified via `grep -r "selectAnnotationsForPage\|selectPage[^sC]" src/client/`).
 
 **Verification results:**
 
-| Step | Result |
-|---|---|
-| `npm run typecheck:renderer` | 74 errors total (down from 92 baseline). **0 errors** in any file Riley edited this wave (`document-selectors.ts`, `document-parameterized-selectors.ts`, `document-selectors.test.ts`, `selection-slice.test.ts`, `error-boundary/index.tsx`, `pdf-canvas/index.tsx`). The remaining 74 are pre-existing TS4023 cascades on the existing `createSelector` exports in `document-selectors.ts` + `annotations-selectors.ts` + `bookmarks-slice.ts` + `store.ts` — same Reselect-5-vs-composite-emit issue, NOT introduced by this wave. Phase-1.1 follow-up flagged above. |
-| `npm run typecheck:renderer` (TS4114 in error-boundary) | **FIXED** — the 1 TS4114 Diego reported is gone. |
-| `npx eslint src/client/` | 9 errors + 27 warnings (Diego baseline: 10 errors + 28 warnings — net **−2 problems**). **0 errors** in any file Riley edited this wave. All remaining errors are pre-existing jsx-a11y items on `thumbnail-strip/index.tsx`, `thumbnail-item.tsx`, `bookmarks-panel/index.tsx`, etc. — brief §2.4 scope, explicitly NOT in this wave's task list per the dispatch. |
-| `npx vitest run src/client/` | **54/54 PASS** across 8 test files (Wave 2 baseline: ~50). New tests: 3 H-2 memoization assertions in `document-selectors.test.ts` + the D-3 fix in `selection-slice.test.ts` now passes. `selection-slice.test.ts` 5/5 PASS (was 4/5 with 1 frozen-sort fail). |
-| `npx vitest run` (full repo) | 140/175 PASS (Wave 3 baseline: 136/172). +4 PASS (3 new H-2 tests + D-3 now passes) and +3 collected. 35 failures remain — all in `src/db/repositories/*.test.ts`, all from Diego's known better-sqlite3 Node-ABI / Electron-ABI mismatch (Issue D-1); none in Riley's territory. |
+| Step                                                    | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck:renderer`                            | 74 errors total (down from 92 baseline). **0 errors** in any file Riley edited this wave (`document-selectors.ts`, `document-parameterized-selectors.ts`, `document-selectors.test.ts`, `selection-slice.test.ts`, `error-boundary/index.tsx`, `pdf-canvas/index.tsx`). The remaining 74 are pre-existing TS4023 cascades on the existing `createSelector` exports in `document-selectors.ts` + `annotations-selectors.ts` + `bookmarks-slice.ts` + `store.ts` — same Reselect-5-vs-composite-emit issue, NOT introduced by this wave. Phase-1.1 follow-up flagged above. |
+| `npm run typecheck:renderer` (TS4114 in error-boundary) | **FIXED** — the 1 TS4114 Diego reported is gone.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `npx eslint src/client/`                                | 9 errors + 27 warnings (Diego baseline: 10 errors + 28 warnings — net **−2 problems**). **0 errors** in any file Riley edited this wave. All remaining errors are pre-existing jsx-a11y items on `thumbnail-strip/index.tsx`, `thumbnail-item.tsx`, `bookmarks-panel/index.tsx`, etc. — brief §2.4 scope, explicitly NOT in this wave's task list per the dispatch.                                                                                                                                                                                                       |
+| `npx vitest run src/client/`                            | **54/54 PASS** across 8 test files (Wave 2 baseline: ~50). New tests: 3 H-2 memoization assertions in `document-selectors.test.ts` + the D-3 fix in `selection-slice.test.ts` now passes. `selection-slice.test.ts` 5/5 PASS (was 4/5 with 1 frozen-sort fail).                                                                                                                                                                                                                                                                                                           |
+| `npx vitest run` (full repo)                            | 140/175 PASS (Wave 3 baseline: 136/172). +4 PASS (3 new H-2 tests + D-3 now passes) and +3 collected. 35 failures remain — all in `src/db/repositories/*.test.ts`, all from Diego's known better-sqlite3 Node-ABI / Electron-ABI mismatch (Issue D-1); none in Riley's territory.                                                                                                                                                                                                                                                                                         |
 
 **L-001 compliance:** `app.tsx` drag-drop handling NOT touched; `enableDragDropFiles` NOT referenced; `webPreferences` NOT touched. No files under `src/main/`, `src/preload/`, `src/ipc/`, `src/db/` were modified.
 
@@ -559,18 +572,19 @@ Spot-check pass: I read `src/main/index.ts` (H-1 wiring), `src/client/state/thun
 
 ### HIGH closure status
 
-| Finding | Status | Verification |
-|---|---|---|
-| **H-1** `setDbBridge` never wired | **CLOSED** | `src/main/index.ts:106-125` wraps `initDatabase` + `setDbBridge` in try/catch inside `app.whenReady()`, before `registerIpcHandlers`. `userData`-path + asar-safe migrations dir. Toast-on-failure with in-memory degradation per brief §1.1. |
-| **H-2** Factory selectors defeat memoization | **CLOSED** | Parameterized `createSelector` form with `(state, pageIndex)` signature in dedicated `document-parameterized-selectors.ts`. Explicit return-type annotations collapse Reselect 5's deeply-generic `OutputSelector`. Consumer (`pdf-canvas/index.tsx`) and tests updated. `conventions.md` §6.3 fully retracted + rewritten with anti-pattern callout. |
-| **H-3** `saveDocumentThunk` sends rejected `kind:'ops'` | **CLOSED (Phase-1 boundary)** | Payload switched to `kind:'bytes'`. See Decision A below. |
-| **H-4** `(e as Error).message` leakage across handlers | **DEFERRED — Phase 1.1** | Not in Wave 3.5 dispatch. Julian flagged for the cross-handler `safeMessage()` helper; tracked in Phase-1.1 backlog. |
+| Finding                                                 | Status                        | Verification                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **H-1** `setDbBridge` never wired                       | **CLOSED**                    | `src/main/index.ts:106-125` wraps `initDatabase` + `setDbBridge` in try/catch inside `app.whenReady()`, before `registerIpcHandlers`. `userData`-path + asar-safe migrations dir. Toast-on-failure with in-memory degradation per brief §1.1.                                                                                                         |
+| **H-2** Factory selectors defeat memoization            | **CLOSED**                    | Parameterized `createSelector` form with `(state, pageIndex)` signature in dedicated `document-parameterized-selectors.ts`. Explicit return-type annotations collapse Reselect 5's deeply-generic `OutputSelector`. Consumer (`pdf-canvas/index.tsx`) and tests updated. `conventions.md` §6.3 fully retracted + rewritten with anti-pattern callout. |
+| **H-3** `saveDocumentThunk` sends rejected `kind:'ops'` | **CLOSED (Phase-1 boundary)** | Payload switched to `kind:'bytes'`. See Decision A below.                                                                                                                                                                                                                                                                                             |
+| **H-4** `(e as Error).message` leakage across handlers  | **DEFERRED — Phase 1.1**      | Not in Wave 3.5 dispatch. Julian flagged for the cross-handler `safeMessage()` helper; tracked in Phase-1.1 backlog.                                                                                                                                                                                                                                  |
 
 ### Decision A — H-3 boundary call
 
 **Verdict: Option I (accept).** Phase-1 ships with Save = "produces a valid PDF skeleton with original page count, but no edits replayed."
 
 Rationale:
+
 1. The user's framing of Phase 1 was explicit walking-skeleton — "prove the architecture; everything else is layered on." H-3's current state proves the full IPC + filesystem + pdf-lib round-trip pipe end-to-end. That IS the architectural proof.
 2. The Phase-2 edit-replay engine is substantial work — page-tree manipulation, annotation embedding, font subsetting, full pdf-lib import-and-modify path. A 1-3 hour Wave 3.6 delta cannot ship it; it would only add a `fs:getDocumentBytes` channel without solving the actual replay problem, paying contract complexity for zero user-visible fidelity gain.
 3. Adding a new IPC channel mid-wave breaks the contract-freeze Julian audited against in Wave 2. The contract is correct as drafted; the Phase-1 implementation has a documented limitation.
@@ -586,7 +600,7 @@ Investigation: I ran `npx tsc -p tsconfig.renderer.json --noEmit` from a cold bu
 
 The cascade root cause is `composite: true` in `tsconfig.renderer.json` forcing the declaration emitter to NAME every transitive slice-state type when synthesizing each `createSelector` export's signature. This is structural — it exists for any `createSelector` whose RootState-derived input selectors transit a project boundary, and it would have surfaced the first time anyone re-emitted those files regardless of H-2. Riley's explicit return-type annotations in the new file demonstrate the local-collapse fix; applying the same pattern to the four impacted files is the Phase-1.1 sweep.
 
-Net the cascade count went 92 → 74 (Riley removed 18 errors that the now-deleted factory selectors contributed). Verdict (b) is wrong — the cascade is not introduced by Riley's edits; the factory-selector form was *masking* it by virtue of not being a `createSelector` output. **Not a blocker for Wave 4.** Phase-1.1 fix options (in order of preference):
+Net the cascade count went 92 → 74 (Riley removed 18 errors that the now-deleted factory selectors contributed). Verdict (b) is wrong — the cascade is not introduced by Riley's edits; the factory-selector form was _masking_ it by virtue of not being a `createSelector` output. **Not a blocker for Wave 4.** Phase-1.1 fix options (in order of preference):
 
 1. Drop `composite: true` from `tsconfig.renderer.json` — the renderer config does not consume from project references, so composite serves no build purpose here. Lowest-friction.
 2. Add explicit `(state: RootState) => T` return-type annotations to every `createSelector` export in the four impacted files.
@@ -631,13 +645,13 @@ The Wave 4 brief at `docs/wave-4-brief.md` is the authoritative dispatch source 
 
 **Files written (5):**
 
-| File | Lines | Purpose |
-|---|---|---|
-| `README.md` (root, REPLACED) | 120 | Public front door. Phase-1 status, install paths, headline use cases, develop quickstart, limitations summary, acknowledgments. |
-| `docs/user-guide.md` (NEW) | 338 | End-user manual. Opens with "Known limitations in Phase 1" front-and-center. Full shortcut table, troubleshooting, "Coming in Phase 2+" navigation. |
-| `docs/developer-guide.md` (NEW) | 547 | Contributor manual. Prereqs (Node 20 lock), clone/install/dev/test/build/package, testing strategy, end-to-end "Add a new IPC channel" walkthrough (6 file touches), parameterized-selector pattern (H-2 lesson), common pitfalls. |
-| `docs/api-reference.md` (NEW) | 342 | Developer reference card for all 24 channels + 1 event stream. Status (Live / Stub / Phase-1.1 / Phase-2) per channel, request/response/errors, renderer one-liner. |
-| `LICENSES.md` (root, NEW) | 197 | Aggregate transitive-dep licenses for the 702 packages installed. Confirmed permissive-only; flagged `spawn-command@0.0.2` (license not declared) as a Phase-1.1 follow-up. |
+| File                            | Lines | Purpose                                                                                                                                                                                                                            |
+| ------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md` (root, REPLACED)    | 120   | Public front door. Phase-1 status, install paths, headline use cases, develop quickstart, limitations summary, acknowledgments.                                                                                                    |
+| `docs/user-guide.md` (NEW)      | 338   | End-user manual. Opens with "Known limitations in Phase 1" front-and-center. Full shortcut table, troubleshooting, "Coming in Phase 2+" navigation.                                                                                |
+| `docs/developer-guide.md` (NEW) | 547   | Contributor manual. Prereqs (Node 20 lock), clone/install/dev/test/build/package, testing strategy, end-to-end "Add a new IPC channel" walkthrough (6 file touches), parameterized-selector pattern (H-2 lesson), common pitfalls. |
+| `docs/api-reference.md` (NEW)   | 342   | Developer reference card for all 24 channels + 1 event stream. Status (Live / Stub / Phase-1.1 / Phase-2) per channel, request/response/errors, renderer one-liner.                                                                |
+| `LICENSES.md` (root, NEW)       | 197   | Aggregate transitive-dep licenses for the 702 packages installed. Confirmed permissive-only; flagged `spawn-command@0.0.2` (license not declared) as a Phase-1.1 follow-up.                                                        |
 
 **Total: 1544 lines.**
 
@@ -675,13 +689,13 @@ Each appears in the user guide's "Other Phase 1 stubs" table with a phase refere
 
 **Verification (read-through pass):**
 
-| Check | Result |
-|---|---|
-| README matches what Phase 1 actually ships | Yes — Phase 1 limitations section reflects H-3 reality, the SmartScreen note matches the unsigned-binary status, the develop quickstart matches `package.json` scripts. |
-| User guide describes only Phase-1-available features as available | Yes — every Phase-2+ item is in the "Other Phase 1 stubs" table or a "Coming in Phase X" inline note. Save fidelity is called out three times at decreasing distance from the action. |
-| Developer guide gets a new contributor from clone to dev in <30 min | Yes — install path is `npm install && npm run dev`; pitfalls (Node 24, Python 3.14, ABI mismatch) documented up front; full "Add an IPC channel" walkthrough covers the 6-file touch. |
+| Check                                                                    | Result                                                                                                                                                                                                                                     |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| README matches what Phase 1 actually ships                               | Yes — Phase 1 limitations section reflects H-3 reality, the SmartScreen note matches the unsigned-binary status, the develop quickstart matches `package.json` scripts.                                                                    |
+| User guide describes only Phase-1-available features as available        | Yes — every Phase-2+ item is in the "Other Phase 1 stubs" table or a "Coming in Phase X" inline note. Save fidelity is called out three times at decreasing distance from the action.                                                      |
+| Developer guide gets a new contributor from clone to dev in <30 min      | Yes — install path is `npm install && npm run dev`; pitfalls (Node 24, Python 3.14, ABI mismatch) documented up front; full "Add an IPC channel" walkthrough covers the 6-file touch.                                                      |
 | API reference matches `src/ipc/contracts.ts` and `docs/api-contracts.md` | Yes — channel list pulled directly from the `Channels` registry; status (Live/Stub) matches `handlers/pdf-ops.ts` and `handlers/app.ts` `'not_implemented'` returns; `PdfCombineSource` type alias documented per Diego's Wave 3 addition. |
-| LICENSES.md reflects installed deps | Yes — walked `node_modules/` directly (702 packages), grouped by `license` field, cross-checked direct deps against `package.json`. |
+| LICENSES.md reflects installed deps                                      | Yes — walked `node_modules/` directly (702 packages), grouped by `license` field, cross-checked direct deps against `package.json`.                                                                                                        |
 
 **Wave 4 acceptance criteria status:**
 
@@ -715,11 +729,11 @@ Wave 4 closes. Phase 1 walking skeleton documentation ships.
 
 ### Plan-on-disk artefacts produced this turn
 
-| File | Purpose | Status |
-|---|---|---|
-| `docs/phase-1.1-brief.md` | Wave 5 cleanup brief; per-agent task list + 14 MEDIUM-finding triage table | Written |
-| `docs/phase-2-plan.md` | Top-level Phase-2 plan; wave structure, file ownership, risk register, acceptance criteria | Written |
-| `docs/wave-6-brief.md` | Riley's solo-sequential Phase-2 architecture brief | Written |
+| File                      | Purpose                                                                                    | Status  |
+| ------------------------- | ------------------------------------------------------------------------------------------ | ------- |
+| `docs/phase-1.1-brief.md` | Wave 5 cleanup brief; per-agent task list + 14 MEDIUM-finding triage table                 | Written |
+| `docs/phase-2-plan.md`    | Top-level Phase-2 plan; wave structure, file ownership, risk register, acceptance criteria | Written |
+| `docs/wave-6-brief.md`    | Riley's solo-sequential Phase-2 architecture brief                                         | Written |
 
 Wave 7, 8, 9 briefs are NOT written this turn — they get authored when each prior wave closes.
 
@@ -728,6 +742,7 @@ Wave 7, 8, 9 briefs are NOT written this turn — they get authored when each pr
 **Run Phase 1.1 (Wave 5) sequentially before Wave 6 (Phase 2 architecture), not in parallel.**
 
 Rationale (full text in `docs/phase-1.1-brief.md` §1):
+
 1. Phase 1.1 is ~1-2 agent-hours total wall-time as a single parallel wave. Wave 6 is a 3-5h sequential Riley pass. Series adds ~2h to the calendar, not days.
 2. The TS4023 cascade fix (Diego: drop `composite: true`) means Wave 7 implementation runs against a clean renderer typecheck. If Phase 1.1 lags into Wave 7, Phase-2 renderer files will surface fresh TS4023 errors mixed with real new errors and burn triage cycles. Pre-cleaning is cheap insurance.
 3. Riley's Wave 6 doesn't need any Phase 1.1 deliverable to design Phase 2 — Phase 1.1 fixes are at the test/tooling/UX boundary, not the architecture boundary.
@@ -747,12 +762,12 @@ Single wave (Wave 5), 4 agents parallel-where-possible:
 
 Full bucketing in `docs/phase-1.1-brief.md` §5.
 
-| Bucket | Count | Findings |
-|---|---|---|
-| **1.1-NOW** (Wave 5) | 2-3 | G-1 `expectErr<E>` (David), I-1 combine-modal stub (Riley if bandwidth), H-4 `safeMessage()` (David if bandwidth — else defer) |
-| **PHASE-2** (Wave 7 implementation absorbs) | 8 | B-1 export wrong-preference, E-1 selection inline-selector, E-2 round-trip tests, G-2 token TTL test, G-4 wrong-preference test, G-5 thunk tests, I-2 recents click, I-3 thumbnail keyboard, I-4 bookmarks Space |
-| **PHASE-2.1** (after Phase 2 ships) | 5 | B-3 path-sanitizer hardening, B-4 saveAs name validator, G-3 path-vector fixtures, G-6 component test backfill, I-5 `bridge_unavailable` first-class variant |
-| **WONTFIX** | 0 | Julian's "Keep" verdicts are positive calibration, not findings |
+| Bucket                                      | Count | Findings                                                                                                                                                                                                         |
+| ------------------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1.1-NOW** (Wave 5)                        | 2-3   | G-1 `expectErr<E>` (David), I-1 combine-modal stub (Riley if bandwidth), H-4 `safeMessage()` (David if bandwidth — else defer)                                                                                   |
+| **PHASE-2** (Wave 7 implementation absorbs) | 8     | B-1 export wrong-preference, E-1 selection inline-selector, E-2 round-trip tests, G-2 token TTL test, G-4 wrong-preference test, G-5 thunk tests, I-2 recents click, I-3 thumbnail keyboard, I-4 bookmarks Space |
+| **PHASE-2.1** (after Phase 2 ships)         | 5     | B-3 path-sanitizer hardening, B-4 saveAs name validator, G-3 path-vector fixtures, G-6 component test backfill, I-5 `bridge_unavailable` first-class variant                                                     |
+| **WONTFIX**                                 | 0     | Julian's "Keep" verdicts are positive calibration, not findings                                                                                                                                                  |
 
 ### Phase 2 wave structure
 
@@ -807,11 +822,11 @@ The brief files at `docs/phase-1.1-brief.md`, `docs/phase-2-plan.md`, and `docs/
 
 **Status:** GREEN. All three deliverables landed.
 
-| Deliverable | File | Lines | Notes |
-|---|---|---|---|
-| N-1.1 — MIT LICENSE | `LICENSE` (NEW) | 21 | SPDX MIT text. Copyright line: `Copyright (c) 2026 PDF_Viewer_Editor contributors`. `package.json` `"license": "MIT"` already present — unchanged. |
-| N-1.2 — LICENSES.md intro | `LICENSES.md` | 197 (was 198) | Rewrote the "Project license" paragraph: now points at the new `LICENSE` file at repo root; reiterates permissive-only policy. **Spawn-command row at lines 152-164 deliberately untouched** — that surface belongs to Diego (D-1.2); my edit is disjoint and merges cleanly regardless of order. |
-| N-1.3 — README Phase 1.1 note | `README.md` | 126 (was 121) | Added `### Phase 1.1 updates (2026-05-21)` subsection inside the existing `## Phase 1 known limitations` block with three bullets (LICENSE, TS4023 fix, Phase 2 link). Also updated the `## License` section so it no longer says "license to be selected" — now points at the new LICENSE file. |
+| Deliverable                   | File            | Lines         | Notes                                                                                                                                                                                                                                                                                             |
+| ----------------------------- | --------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| N-1.1 — MIT LICENSE           | `LICENSE` (NEW) | 21            | SPDX MIT text. Copyright line: `Copyright (c) 2026 PDF_Viewer_Editor contributors`. `package.json` `"license": "MIT"` already present — unchanged.                                                                                                                                                |
+| N-1.2 — LICENSES.md intro     | `LICENSES.md`   | 197 (was 198) | Rewrote the "Project license" paragraph: now points at the new `LICENSE` file at repo root; reiterates permissive-only policy. **Spawn-command row at lines 152-164 deliberately untouched** — that surface belongs to Diego (D-1.2); my edit is disjoint and merges cleanly regardless of order. |
+| N-1.3 — README Phase 1.1 note | `README.md`     | 126 (was 121) | Added `### Phase 1.1 updates (2026-05-21)` subsection inside the existing `## Phase 1 known limitations` block with three bullets (LICENSE, TS4023 fix, Phase 2 link). Also updated the `## License` section so it no longer says "license to be selected" — now points at the new LICENSE file.  |
 
 **Coordination with Diego:** no conflict observed at write time. The LICENSES.md intro paragraph and the `spawn-command@0.0.2` follow-up row are in disjoint sections of the file; Diego (D-1.2) and Nathan (N-1.2) can land in either order. If Diego's edit landed during my read-then-write window, the merge is still clean — we touch different lines.
 
@@ -874,12 +889,14 @@ The brief files at `docs/phase-1.1-brief.md`, `docs/phase-2-plan.md`, and `docs/
 **Path chosen: (a)** — bump `concurrently` from `^8.2.2` to `^9.2.1`.
 
 **Rationale:**
+
 1. `npm view concurrently@9.0.0 dependencies` confirms `spawn-command` was removed entirely in 9.x; 9.x relies on `tree-kill` + Node `child_process` only.
 2. `concurrently` in our `package.json` is a leftover devDep — grep confirms **zero** script invocations (`grep -rn 'concurrently' package.json *.yml scripts/` finds nothing beyond the dep declaration itself). Bump risk is therefore as close to zero as it gets.
 3. `concurrently@9.2.1` engines `node >=18`; project engine `>=20.10.0`. Compatible.
 4. Path (b) (explicit allowlist + upstream issue) would have left a "license not declared" row in `LICENSES.md` forever for no real reason — path (a) deletes the row.
 
 **Verification:**
+
 - `npm install --ignore-scripts` ran clean (removed 2 packages — `spawn-command` and the orphaned `date-fns` that 8.2.2 also pulled in; updated 1).
 - `npm ls spawn-command` → **`(empty)`**. Package is gone from the tree.
 - `npm ls concurrently` → `concurrently@9.2.1` (single entry, no nested duplicate).
@@ -887,6 +904,7 @@ The brief files at `docs/phase-1.1-brief.md`, `docs/phase-2-plan.md`, and `docs/
 - Forbidden-license sweep (GPL/LGPL/AGPL/EPL): **0 hits**. The bump didn't pull in copyleft.
 
 **LICENSES.md edits (table/row scope only, per coordination note with Nathan):**
+
 - Summary table: removed the "Not declared | 1 | follow-up" row; total 702 → 701.
 - Direct deps (build/test) table: `concurrently` version row `^8.2.2` → `^9.2.1`.
 - "Items flagged for follow-up" section: collapsed the `spawn-command` sub-section into a "**None as of 2026-05-21 (Phase 1.1 close)**" paragraph that captures the resolution + drop-in template for future entries.
@@ -904,17 +922,17 @@ The brief files at `docs/phase-1.1-brief.md`, `docs/phase-2-plan.md`, and `docs/
 
 ### Verification matrix
 
-| Check | Result |
-|---|---|
-| `npx tsc -p tsconfig.renderer.json --noEmit` (cold) | **0 errors** (down from 74) |
-| `npx tsc -p tsconfig.main.json --noEmit` | **0 errors** (preserved from Wave 3.5) |
-| `npx tsc -p tsconfig.preload.json --noEmit` | **0 errors** (preserved) |
-| `npx tsc -b --verbose` (root project references) | **Exit 0** — `composite` drop does not break `tsc -b` on TS 5.5.4 |
-| `npm ls spawn-command` | **`(empty)`** — package is gone |
-| `npm ls concurrently` | `concurrently@9.2.1` |
-| Manual license walk (node_modules `package.json` `license` fields) | 0 undeclared, 0 GPL/LGPL/AGPL/EPL |
-| `npm run lint` | 11 errors / 31 warnings — **none in Diego-owned files**. Matches the pre-existing baseline (Wave 3.5 reported 9/27 on `src/client/` only; the full-tree count includes `src/ipc/` + `tests/` + `src/main/` which Riley/David territories own). Not a Diego-caused regression. |
-| `npm test` (vitest) | 140/175 pass, 35 fail — same `ERR_DLOPEN_FAILED` better-sqlite3 ABI-mismatch baseline from Wave 3 (Node 24 host vs Electron-ABI prebuild; CI on Node 20 is green). **Same count as pre-D-1.1; no regression.** |
+| Check                                                              | Result                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npx tsc -p tsconfig.renderer.json --noEmit` (cold)                | **0 errors** (down from 74)                                                                                                                                                                                                                                                   |
+| `npx tsc -p tsconfig.main.json --noEmit`                           | **0 errors** (preserved from Wave 3.5)                                                                                                                                                                                                                                        |
+| `npx tsc -p tsconfig.preload.json --noEmit`                        | **0 errors** (preserved)                                                                                                                                                                                                                                                      |
+| `npx tsc -b --verbose` (root project references)                   | **Exit 0** — `composite` drop does not break `tsc -b` on TS 5.5.4                                                                                                                                                                                                             |
+| `npm ls spawn-command`                                             | **`(empty)`** — package is gone                                                                                                                                                                                                                                               |
+| `npm ls concurrently`                                              | `concurrently@9.2.1`                                                                                                                                                                                                                                                          |
+| Manual license walk (node_modules `package.json` `license` fields) | 0 undeclared, 0 GPL/LGPL/AGPL/EPL                                                                                                                                                                                                                                             |
+| `npm run lint`                                                     | 11 errors / 31 warnings — **none in Diego-owned files**. Matches the pre-existing baseline (Wave 3.5 reported 9/27 on `src/client/` only; the full-tree count includes `src/ipc/` + `tests/` + `src/main/` which Riley/David territories own). Not a Diego-caused regression. |
+| `npm test` (vitest)                                                | 140/175 pass, 35 fail — same `ERR_DLOPEN_FAILED` better-sqlite3 ABI-mismatch baseline from Wave 3 (Node 24 host vs Electron-ABI prebuild; CI on Node 20 is green). **Same count as pre-D-1.1; no regression.**                                                                |
 
 ### Files touched
 
@@ -950,18 +968,18 @@ A second non-obvious lesson: `concurrently@9.x` released over a year ago (per `n
 
 ### Deliverables
 
-| File | Path | Status | Lines |
-|---|---|---|---|
-| HelpModal component | `src/client/components/modals/help-modal/index.tsx` | NEW | 145 |
-| HelpModal styles | `src/client/components/modals/help-modal/help-modal.module.css` | NEW | 99 |
-| HelpModal test | `src/client/components/modals/help-modal/help-modal.test.tsx` | NEW | 113 (7 cases) |
-| ui-slice | `src/client/state/slices/ui-slice.ts` | EDIT | +12 lines (`'help'` ModalKind variant, `openHelpModal`/`closeHelpModal` convenience action creators) |
-| ui-selectors | `src/client/state/slices/ui-selectors.ts` | EDIT | +1 line (`selectHelpModalOpen`) |
-| use-app-shortcuts | `src/client/hooks/use-app-shortcuts.ts` | EDIT | F1 case promoted out of the Phase-2 "coming soon" bucket → dispatches `openHelpModal()` |
-| shortcuts | `src/client/shortcuts.ts` | EDIT | flipped `enabledInPhase1: false` → `true` for the `help` shortcut spec |
-| app.tsx | `src/client/app.tsx` | EDIT | render `<HelpModal />` when `activeModal === 'help'` |
-| menu-bar | `src/client/components/menu-bar/index.tsx` | EDIT | replaced Help menu's `Documentation → coming-soon-toast` with `Help — F1 → dispatch(openModal('help'))` |
-| modal-shell | `src/client/components/modals/modal-shell.tsx` | EDIT | added overlay-click-to-dismiss (split `role="dialog"` onto inner panel, `role="presentation"` on overlay backdrop) per acceptance criterion |
+| File                | Path                                                            | Status | Lines                                                                                                                                       |
+| ------------------- | --------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| HelpModal component | `src/client/components/modals/help-modal/index.tsx`             | NEW    | 145                                                                                                                                         |
+| HelpModal styles    | `src/client/components/modals/help-modal/help-modal.module.css` | NEW    | 99                                                                                                                                          |
+| HelpModal test      | `src/client/components/modals/help-modal/help-modal.test.tsx`   | NEW    | 113 (7 cases)                                                                                                                               |
+| ui-slice            | `src/client/state/slices/ui-slice.ts`                           | EDIT   | +12 lines (`'help'` ModalKind variant, `openHelpModal`/`closeHelpModal` convenience action creators)                                        |
+| ui-selectors        | `src/client/state/slices/ui-selectors.ts`                       | EDIT   | +1 line (`selectHelpModalOpen`)                                                                                                             |
+| use-app-shortcuts   | `src/client/hooks/use-app-shortcuts.ts`                         | EDIT   | F1 case promoted out of the Phase-2 "coming soon" bucket → dispatches `openHelpModal()`                                                     |
+| shortcuts           | `src/client/shortcuts.ts`                                       | EDIT   | flipped `enabledInPhase1: false` → `true` for the `help` shortcut spec                                                                      |
+| app.tsx             | `src/client/app.tsx`                                            | EDIT   | render `<HelpModal />` when `activeModal === 'help'`                                                                                        |
+| menu-bar            | `src/client/components/menu-bar/index.tsx`                      | EDIT   | replaced Help menu's `Documentation → coming-soon-toast` with `Help — F1 → dispatch(openModal('help'))`                                     |
+| modal-shell         | `src/client/components/modals/modal-shell.tsx`                  | EDIT   | added overlay-click-to-dismiss (split `role="dialog"` onto inner panel, `role="presentation"` on overlay backdrop) per acceptance criterion |
 
 **Files touched:** 10 (3 NEW + 7 EDIT).
 
@@ -995,13 +1013,13 @@ The modal can be dismissed three ways:
 
 ### Verification
 
-| Check | Result |
-|---|---|
-| `npx tsc -p tsconfig.renderer.json --noEmit` (cold) | **0 errors** (matches Diego's D-1.1 cascade fix; no Riley-induced regression) |
-| `npx vitest run src/client` | **9/9 files pass, 61/61 tests pass** (incl. 7 new HelpModal cases) |
-| `npx eslint <Riley files>` | **0 errors, 0 warnings** on all NEW + EDIT Riley files |
-| F1 binding shadow check | F1 is the only F1 binding in `shortcuts.ts`; F11 (toggle-fullscreen) distinct |
-| L-001 enforcement | Untouched — no `webPreferences` / `enableDragDropFiles` / drag-drop references in any Riley edit this wave |
+| Check                                               | Result                                                                                                     |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `npx tsc -p tsconfig.renderer.json --noEmit` (cold) | **0 errors** (matches Diego's D-1.1 cascade fix; no Riley-induced regression)                              |
+| `npx vitest run src/client`                         | **9/9 files pass, 61/61 tests pass** (incl. 7 new HelpModal cases)                                         |
+| `npx eslint <Riley files>`                          | **0 errors, 0 warnings** on all NEW + EDIT Riley files                                                     |
+| F1 binding shadow check                             | F1 is the only F1 binding in `shortcuts.ts`; F11 (toggle-fullscreen) distinct                              |
+| L-001 enforcement                                   | Untouched — no `webPreferences` / `enableDragDropFiles` / drag-drop references in any Riley edit this wave |
 
 ### Files NOT touched (Riley scope hygiene)
 
@@ -1027,40 +1045,40 @@ The modal can be dismissed three ways:
 
 ### Deliverables
 
-| File | Status | Lines | Notes |
-|---|---|---|---|
-| `docs/edit-replay-engine.md` | NEW | 857 | David's primary Wave-7 contract. 17 sections covering signature/purity, algorithm, 11 op variants, ordering, atomic write, image cache, TIFF, fidelity matrix, test strategy, Phase-2/2.5/3 boundary. |
-| `docs/architecture-phase-2.md` | NEW | 641 | Phase-2 design deltas. 20 sections: lynchpin (main-keeps-bytes), text-edit, image-import, bookmarks, print, undo activation, all 7 phase-2-plan §7 open questions answered. |
-| `docs/api-contracts.md` | AMEND (§12 + §11 banner) | 859 (was 562; +297) | 11 new channels: pdf:embedImage, pdf:replaceText, pdf:identifyTextSpan, pdf:print, bookmarks:listTree, bookmarks:move, bookmarks:rename. New progress phases. 4 new setting keys. fs:writePdf kind:'ops' + pdf:export marked LIVE. |
-| `docs/data-models.md` | AMEND (§7) | 617 (was 330; +287) | 5 new EditOperation variants (image-insert/overlay/overlay-edit/overlay-delete/text-replace), new SourcePageRef kind:'image', inverse table, image-embed model, 0002_phase2_bookmarks.sql DDL, BookmarkRow + BookmarkNode shapes, new BookmarksRepo methods, 4 new SettingKey rows, all 7 open questions cross-referenced. |
-| `docs/ui-spec.md` | AMEND (§11) | 778 (was 483; +295) | Toolbar/menu additions, ImageImportModal, text-edit overlay UX with failure-mode tooltips (clip + missing-glyph), bookmarks-authoring tree, shortcut table updates (Ctrl+I reassigned), drag-drop matrix extension, screen-state additions, 4 Julian Wave-2 MEDIUMs absorbed (I-2/I-3/I-4). |
-| `docs/conventions.md` | AMEND (§13) | 882 (was 684; +198) | Main-process edit-ops pattern: pure fold contract for engine ops (good + anti-pattern), Uint8Array boundary corollaries for image bytes + history compaction, atomic-save pattern with anti-pattern, doc-store lifecycle table, replay-engine test convention. |
+| File                           | Status                   | Lines               | Notes                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------ | ------------------------ | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/edit-replay-engine.md`   | NEW                      | 857                 | David's primary Wave-7 contract. 17 sections covering signature/purity, algorithm, 11 op variants, ordering, atomic write, image cache, TIFF, fidelity matrix, test strategy, Phase-2/2.5/3 boundary.                                                                                                                      |
+| `docs/architecture-phase-2.md` | NEW                      | 641                 | Phase-2 design deltas. 20 sections: lynchpin (main-keeps-bytes), text-edit, image-import, bookmarks, print, undo activation, all 7 phase-2-plan §7 open questions answered.                                                                                                                                                |
+| `docs/api-contracts.md`        | AMEND (§12 + §11 banner) | 859 (was 562; +297) | 11 new channels: pdf:embedImage, pdf:replaceText, pdf:identifyTextSpan, pdf:print, bookmarks:listTree, bookmarks:move, bookmarks:rename. New progress phases. 4 new setting keys. fs:writePdf kind:'ops' + pdf:export marked LIVE.                                                                                         |
+| `docs/data-models.md`          | AMEND (§7)               | 617 (was 330; +287) | 5 new EditOperation variants (image-insert/overlay/overlay-edit/overlay-delete/text-replace), new SourcePageRef kind:'image', inverse table, image-embed model, 0002_phase2_bookmarks.sql DDL, BookmarkRow + BookmarkNode shapes, new BookmarksRepo methods, 4 new SettingKey rows, all 7 open questions cross-referenced. |
+| `docs/ui-spec.md`              | AMEND (§11)              | 778 (was 483; +295) | Toolbar/menu additions, ImageImportModal, text-edit overlay UX with failure-mode tooltips (clip + missing-glyph), bookmarks-authoring tree, shortcut table updates (Ctrl+I reassigned), drag-drop matrix extension, screen-state additions, 4 Julian Wave-2 MEDIUMs absorbed (I-2/I-3/I-4).                                |
+| `docs/conventions.md`          | AMEND (§13)              | 882 (was 684; +198) | Main-process edit-ops pattern: pure fold contract for engine ops (good + anti-pattern), Uint8Array boundary corollaries for image bytes + history compaction, atomic-save pattern with anti-pattern, doc-store lifecycle table, replay-engine test convention.                                                             |
 
 **Total:** 2 NEW (1498 lines) + 4 AMENDED (+1077 lines) = 2575 lines of design.
 
 ### Locked decisions encoded (Wave 6 self-check)
 
-| Decision | architecture-phase-2.md | edit-replay-engine.md | api-contracts.md | data-models.md | ui-spec.md | conventions.md |
-|---|---|---|---|---|---|---|
-| P2-L-2 main keeps bytes | §3 (full) | §2.1, §10, §13 | §12.1 (channel sourcing) | §7.1.1 (no bytes in renderer) | §11.9 (drag-drop) | §13.3, §13.5 |
-| P2-L-3 text replace-only original font | §4 | §4.6, §4.6.3 | §12.2, §12.3 | §7.1 (text-replace variant) | §11.5 (failure-mode UX) | — |
-| P2-L-4 image import dual-mode 3 formats | §5 | §4.3-§4.5, §8 | §12.1 | §7.1 (image-insert/overlay), §7.2 | §11.3, §11.9 | §13.3 |
-| P2-L-5 ARCHITECTURE.md frozen | This doc exists | "Reads ARCHITECTURE.md" | §11 banner | §7 banner | §11 banner | §13 banner |
-| P2-L-6 bookmarks CRUD + nest + reorder | §6 | §4.7 (NOT in EditOp union) | §12.5-§12.7 | §7.3, §7.4, §7.5 | §11.6 | — |
+| Decision                                | architecture-phase-2.md | edit-replay-engine.md      | api-contracts.md         | data-models.md                    | ui-spec.md              | conventions.md |
+| --------------------------------------- | ----------------------- | -------------------------- | ------------------------ | --------------------------------- | ----------------------- | -------------- |
+| P2-L-2 main keeps bytes                 | §3 (full)               | §2.1, §10, §13             | §12.1 (channel sourcing) | §7.1.1 (no bytes in renderer)     | §11.9 (drag-drop)       | §13.3, §13.5   |
+| P2-L-3 text replace-only original font  | §4                      | §4.6, §4.6.3               | §12.2, §12.3             | §7.1 (text-replace variant)       | §11.5 (failure-mode UX) | —              |
+| P2-L-4 image import dual-mode 3 formats | §5                      | §4.3-§4.5, §8              | §12.1                    | §7.1 (image-insert/overlay), §7.2 | §11.3, §11.9            | §13.3          |
+| P2-L-5 ARCHITECTURE.md frozen           | This doc exists         | "Reads ARCHITECTURE.md"    | §11 banner               | §7 banner                         | §11 banner              | §13 banner     |
+| P2-L-6 bookmarks CRUD + nest + reorder  | §6                      | §4.7 (NOT in EditOp union) | §12.5-§12.7              | §7.3, §7.4, §7.5                  | §11.6                   | —              |
 
 All 4 (well, all 5 incl. P2-L-1 license which was Phase 1.1) encoded. P2-L-5 (ARCHITECTURE.md frozen) is honored by the existence of this Phase-2 sibling doc — Phase-1 ARCHITECTURE.md was not touched.
 
 ### Open questions (phase-2-plan §7) — all answered
 
-| Q | A | Where |
-|---|---|---|
-| 1. Op ordering | Dispatch order, no topological reorder | architecture-phase-2.md §8; edit-replay-engine.md §6 |
-| 2. Partial-failure rollback | Whole-save abort | architecture-phase-2.md §9; edit-replay-engine.md §9 |
-| 3. Atomic save | Temp-in-same-dir + rename | architecture-phase-2.md §10 + §3.6; edit-replay-engine.md §10; conventions.md §13.4 |
-| 4. Bytes lifetime | Held for handle lifetime, no eviction (Phase 2 single-doc) | architecture-phase-2.md §11 + §3.5 |
-| 5. Image dedup | Content-hash cache per save | architecture-phase-2.md §12 + §3.7; edit-replay-engine.md §7 |
-| 6. Determinism | New `export.deterministic` setting (default false); strip Chromium timestamps | architecture-phase-2.md §13 + §3.8.1; data-models.md §7.6 |
-| 7. Text-edit span ID | New channel `pdf:identifyTextSpan`; click-into-text + main content-stream walk | architecture-phase-2.md §14 + §4.2; api-contracts.md §12.3 |
+| Q                           | A                                                                              | Where                                                                               |
+| --------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| 1. Op ordering              | Dispatch order, no topological reorder                                         | architecture-phase-2.md §8; edit-replay-engine.md §6                                |
+| 2. Partial-failure rollback | Whole-save abort                                                               | architecture-phase-2.md §9; edit-replay-engine.md §9                                |
+| 3. Atomic save              | Temp-in-same-dir + rename                                                      | architecture-phase-2.md §10 + §3.6; edit-replay-engine.md §10; conventions.md §13.4 |
+| 4. Bytes lifetime           | Held for handle lifetime, no eviction (Phase 2 single-doc)                     | architecture-phase-2.md §11 + §3.5                                                  |
+| 5. Image dedup              | Content-hash cache per save                                                    | architecture-phase-2.md §12 + §3.7; edit-replay-engine.md §7                        |
+| 6. Determinism              | New `export.deterministic` setting (default false); strip Chromium timestamps  | architecture-phase-2.md §13 + §3.8.1; data-models.md §7.6                           |
+| 7. Text-edit span ID        | New channel `pdf:identifyTextSpan`; click-into-text + main content-stream walk | architecture-phase-2.md §14 + §4.2; api-contracts.md §12.3                          |
 
 ### Phase 2 risk register summary
 
@@ -1082,7 +1100,7 @@ Pre-flight checks all pass:
 - ✅ All 7 phase-2-plan §7 open questions answered with concrete designs.
 - ✅ L-001 holds — no edits weaken or even discuss modifying `enableDragDropFiles`. Image drag-drop EXTENDS the same path.
 - ✅ Every new IPC channel has a matching mention in architecture-phase-2.md AND a Phase-2 marking in api-contracts.md AND (where applicable) an EditOperation variant in data-models.md §7.
-- ✅ Cross-references audited via grep: P2-L-* mentioned 26× across the two new docs; new channels mentioned 39× across all six docs; new variants mentioned 63× across the design surface.
+- ✅ Cross-references audited via grep: P2-L-\* mentioned 26× across the two new docs; new channels mentioned 39× across all six docs; new variants mentioned 63× across the design surface.
 
 David Wave 7 has the full engine spec in edit-replay-engine.md (function signature, 11 op handlers with pdf-lib API references, error variants, test strategy, file-ownership map).
 
@@ -1145,25 +1163,25 @@ Format matches Wave 1-5 status rows (Status / Task / Deliverables table / Decisi
 
 ### Deliverables
 
-| File | Change | Notes |
-|---|---|---|
-| `migrations/0002_phase2_bookmarks.sql` | NEW | Forward-only ALTER TABLE adds `parent_id` (FK, ON DELETE CASCADE) + `sort_order` (DEFAULT 0) to `user_bookmarks`, plus `idx_user_bookmarks_parent_id`. Records version via runner (matches 0001 convention). |
-| `src/db/types.ts` | EDIT | `BookmarkRow` gains `parent_id: number \| null` + `sort_order: number`. NEW `BookmarkNodeRow` (Row + `children`). `SettingKey` + `SettingValue` + `KNOWN_SETTING_KEYS` extended with the 4 Phase-2 keys. |
-| `src/db/repositories/bookmarks-repo.ts` | EDIT | NEW methods: `listTree(fileHash)`, `move(id, newParentId, newSortOrder): MoveBookmarkResult`, `rename(id, title)`. `upsert` widens to accept optional `parent_id` + `sort_order` while preserving existing values on partial updates (CASE-based UPDATE). |
-| `src/db/repositories/bookmarks-repo.test.ts` | EDIT | 27 new test cases across 5 new `describe` blocks: `listTree`, `move`, `rename`, `cascade delete`, `upsert with new fields`. Plus schema_version=2 assertion. |
+| File                                         | Change | Notes                                                                                                                                                                                                                                                     |
+| -------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `migrations/0002_phase2_bookmarks.sql`       | NEW    | Forward-only ALTER TABLE adds `parent_id` (FK, ON DELETE CASCADE) + `sort_order` (DEFAULT 0) to `user_bookmarks`, plus `idx_user_bookmarks_parent_id`. Records version via runner (matches 0001 convention).                                              |
+| `src/db/types.ts`                            | EDIT   | `BookmarkRow` gains `parent_id: number \| null` + `sort_order: number`. NEW `BookmarkNodeRow` (Row + `children`). `SettingKey` + `SettingValue` + `KNOWN_SETTING_KEYS` extended with the 4 Phase-2 keys.                                                  |
+| `src/db/repositories/bookmarks-repo.ts`      | EDIT   | NEW methods: `listTree(fileHash)`, `move(id, newParentId, newSortOrder): MoveBookmarkResult`, `rename(id, title)`. `upsert` widens to accept optional `parent_id` + `sort_order` while preserving existing values on partial updates (CASE-based UPDATE). |
+| `src/db/repositories/bookmarks-repo.test.ts` | EDIT   | 27 new test cases across 5 new `describe` blocks: `listTree`, `move`, `rename`, `cascade delete`, `upsert with new fields`. Plus schema_version=2 assertion.                                                                                              |
 
 ### Repo method surface (post-Wave-7)
 
 `BookmarksRepo` exports 6 methods total:
 
-| Method | Phase | Signature |
-|---|---|---|
-| `listByFile` | 1 | `(fileHash) => BookmarkRow[]` |
-| `upsert` | 1+2 | `(UpsertBookmarkInput) => number` |
-| `delete` | 1 | `(id) => boolean` |
-| `listTree` | 2 NEW | `(fileHash) => BookmarkNodeRow[]` |
-| `move` | 2 NEW | `(id, newParentId, newSortOrder) => MoveBookmarkResult` |
-| `rename` | 2 NEW | `(id, title) => boolean` |
+| Method       | Phase | Signature                                               |
+| ------------ | ----- | ------------------------------------------------------- |
+| `listByFile` | 1     | `(fileHash) => BookmarkRow[]`                           |
+| `upsert`     | 1+2   | `(UpsertBookmarkInput) => number`                       |
+| `delete`     | 1     | `(id) => boolean`                                       |
+| `listTree`   | 2 NEW | `(fileHash) => BookmarkNodeRow[]`                       |
+| `move`       | 2 NEW | `(id, newParentId, newSortOrder) => MoveBookmarkResult` |
+| `rename`     | 2 NEW | `(id, title) => boolean`                                |
 
 ### Cycle detection
 
@@ -1210,23 +1228,23 @@ Single `SELECT id, ..., parent_id, sort_order FROM user_bookmarks WHERE file_has
 
 Grep across all files I touched:
 
-| File | enableDragDropFiles hits |
-|---|---|
-| `migrations/0002_phase2_bookmarks.sql` | 0 |
-| `src/db/types.ts` | 0 |
-| `src/db/repositories/bookmarks-repo.ts` | 0 |
-| `src/db/repositories/bookmarks-repo.test.ts` | 0 |
-| `docs/build-report.md` (this status row) | 0 |
+| File                                         | enableDragDropFiles hits |
+| -------------------------------------------- | ------------------------ |
+| `migrations/0002_phase2_bookmarks.sql`       | 0                        |
+| `src/db/types.ts`                            | 0                        |
+| `src/db/repositories/bookmarks-repo.ts`      | 0                        |
+| `src/db/repositories/bookmarks-repo.test.ts` | 0                        |
+| `docs/build-report.md` (this status row)     | 0                        |
 
 **L-001 status: UNCHANGED.** Schema-only work; no main-process window code in this wave's diff.
 
 ### Test count summary
 
-| Suite | Before Wave 7 | After Wave 7 | Delta |
-|---|---|---|---|
-| `bookmarks-repo.test.ts` | 14 | 37 (~+27 new across 5 describe blocks) | +23 cases, +5 describes |
-| `recent-files-repo.test.ts` | unchanged | unchanged | 0 |
-| `settings-repo.test.ts` | unchanged | unchanged | 0 |
+| Suite                       | Before Wave 7 | After Wave 7                           | Delta                   |
+| --------------------------- | ------------- | -------------------------------------- | ----------------------- |
+| `bookmarks-repo.test.ts`    | 14            | 37 (~+27 new across 5 describe blocks) | +23 cases, +5 describes |
+| `recent-files-repo.test.ts` | unchanged     | unchanged                              | 0                       |
+| `settings-repo.test.ts`     | unchanged     | unchanged                              | 0                       |
 
 Tests cover: tree assembly, root ordering with id tie-break, mixed-depth nesting, file_hash isolation, legacy Phase-1 row visibility, move re-parent + re-order + promote-to-root, trivial cycle (self-as-parent), deep cycle (A→B→C move A under C), not_found, invalid_parent (missing + cross-file), non-integer sort_order, rename success + not-found + empty-title, CASCADE delete to descendants, upsert insert with new fields, id-upsert with new fields, partial update preserves existing fields, schema version assertion.
 
@@ -1245,12 +1263,14 @@ Tests cover: tree assembly, root ordering with id tie-break, mixed-depth nesting
 ### Files shipped (15 new, 7 edited)
 
 NEW main-process modules:
+
 - `src/main/pdf-ops/replay-engine.ts` — the headline pure-function engine (~500 lines). 11 EditOperation variants supported (5 Phase-1 + 6 Phase-2). Pure: no FS, no DB, no console.log.
 - `src/main/pdf-ops/text-replace.ts` — Phase-2 conservative stamp-overlay approach (white rect + Helvetica draw). Real content-stream rewrite deferred to Phase 2.5.
 - `src/main/pdf-ops/image-embed.ts` — embedImage + ImageCache (per-replay dedup by content-hash) + detectImageMimeType + computeNewPageSize (A4-fit).
 - `src/main/pdf-ops/tiff-decoder.ts` — utif dynamic-import wrapper + minimal PNG re-encoder (~100 lines via node:zlib). Graceful `tiff_decoder_unavailable` degradation when utif is not yet in package.json.
 
 NEW IPC handlers (6 new channels):
+
 - `src/ipc/handlers/pdf-apply-edit-ops.ts` — `fs:applyEditOps` (the headline Wave-7 channel; replaces Phase-1 H-3 inline stub).
 - `src/ipc/handlers/pdf-embed-image.ts` — `pdf:embedImage`.
 - `src/ipc/handlers/pdf-replace-text.ts` — `pdf:replaceText`.
@@ -1262,6 +1282,7 @@ NEW IPC handlers (6 new channels):
 NEW test files: `replay-engine.test.ts` (12), `text-replace.test.ts` (7), `image-embed.test.ts` (13), `tiff-decoder.test.ts` (4), `pdf-apply-edit-ops.test.ts` (11), `pdf-embed-image.test.ts` (8), `pdf-replace-text.test.ts` (7), `pdf-identify-text-span.test.ts` (5), `pdf-print.test.ts` (4), `pdf-export-pdf.test.ts` (10), `bookmarks-phase2.test.ts` (15). Plus 6 new document-store Phase-2 tests appended to existing.
 
 EDITED existing:
+
 - `src/main/pdf-ops/document-store.ts` — surgical extension: `getBytes`, `setBytes`, `getOpenDocCount`, `getTotalBytesHeld` (architecture-phase-2.md §3.2 lynchpin).
 - `src/ipc/contracts.ts` — Phase-2 channels + types per api-contracts.md §12. Additive only; Phase-1 contracts frozen.
 - `src/ipc/handlers/fs-write-pdf.ts` — kind:'ops' path now wires through the replay engine; legacy applyOpsToBytes shim shape upgraded to Result + warnings.
@@ -1276,6 +1297,7 @@ EDITED existing:
 ### IPC channels live vs stubbed
 
 Live (real implementation):
+
 - `fs:applyEditOps` — replay engine + atomic temp-rename
 - `fs:writePdf` kind:'ops' — replay engine bridge (additive Live path; kind:'bytes' unchanged)
 - `pdf:embedImage` — hashes bytes, builds EditOperation
@@ -1285,12 +1307,14 @@ Live (real implementation):
 - `bookmarks:listTree` / `bookmarks:move` / `bookmarks:rename` — live (adapt to Ravi's Phase-2 repo if/when she ships it; falls back to listByFile for Phase-1 repo).
 
 Conservative dispatch stub (channel live, downstream adapter deferred):
+
 - `pdf:print` — replay live + dispatchPrint stub returns 'print_dispatch_failed' (Wave-8 wiring).
 - `pdf:export preference: 'chromium'` — Chromium adapter returns 'engine_failed_chromium' (Wave-8 wiring).
 
 ### Replay-engine ops supported
 
 11 EditOperation variants:
+
 - Phase 1: reorder, insert (blank), delete, rotate, annot-add/edit/delete
 - Phase 2: image-insert, image-overlay (deferred-render via liveOverlays map), image-overlay-edit, image-overlay-delete, text-replace (stamp-overlay)
 
@@ -1299,6 +1323,7 @@ Annotation subtypes emitted (page-content drawn): Highlight, Underline, StrikeOu
 ### Fixture round-trip results
 
 In-memory fixtures (no on-disk PDFs committed — `tests/fixtures/phase2/README.md` documents the deferral):
+
 - Empty-ops round-trip: byte-stable across two invocations (determinism asserted in test).
 - Multi-page (3-5 pages) round-trip: page count preserved exactly.
 - Rotate forward: pdf-lib reports the absolute new rotation on re-load.
@@ -1319,6 +1344,7 @@ In-memory fixtures (no on-disk PDFs committed — `tests/fixtures/phase2/README.
 ### NEW DEPS REQUIRED (Diego Wave 8)
 
 Add to package.json:
+
 ```
 "utif": "^3.1.0"     // pure-JS MIT TIFF decoder; tiff-decoder.ts dynamic-imports it
 ```
@@ -1366,61 +1392,63 @@ UNCHANGED. `src/main/window-manager.ts` not touched this wave. The L-001 test (`
 
 ### Deliverables — counts
 
-| Category | Count |
-|---|---|
-| NEW components | 2 — `image-import-modal/` + `text-edit-overlay/` (3 files each: index.tsx, .module.css, .test.tsx) |
-| REWRITTEN components | 1 — `bookmarks-panel/` (full CRUD + nested tree + edit mode) |
-| Slices / middleware activated | history-middleware (Phase-1 passive → Phase-2 active); bookmarks-slice (tree shape + 13 helper actions); ui-slice (imageImport preload, textEdit state, bookmarksEditMode flag) |
-| New thunks | 9 — embedImageThunk, identifyTextSpanThunk, replaceTextThunk, printThunk, refreshBookmarksThunk, addBookmarkThunk, moveBookmarkThunk, renameBookmarkThunk, deleteBookmarkThunk (plus `exportToPdfThunk` alias of `exportPdfThunk`) |
-| New keyboard shortcuts wired | 9 ShortcutIds (6 newly mapped + 3 reassigned): Ctrl+Z (undo), Ctrl+Y / Ctrl+Shift+Z (redo), Ctrl+P (print), Ctrl+Shift+P (export), Ctrl+I (insert image — reassigned from inspector), Ctrl+Alt+I (toggle inspector — new binding), U (underline), K (strikethrough), Shift+F (freehand), E (text-edit mode) |
-| Lint errors in Riley files | 0 |
+| Category                      | Count                                                                                                                                                                                                                                                                                                       |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NEW components                | 2 — `image-import-modal/` + `text-edit-overlay/` (3 files each: index.tsx, .module.css, .test.tsx)                                                                                                                                                                                                          |
+| REWRITTEN components          | 1 — `bookmarks-panel/` (full CRUD + nested tree + edit mode)                                                                                                                                                                                                                                                |
+| Slices / middleware activated | history-middleware (Phase-1 passive → Phase-2 active); bookmarks-slice (tree shape + 13 helper actions); ui-slice (imageImport preload, textEdit state, bookmarksEditMode flag)                                                                                                                             |
+| New thunks                    | 9 — embedImageThunk, identifyTextSpanThunk, replaceTextThunk, printThunk, refreshBookmarksThunk, addBookmarkThunk, moveBookmarkThunk, renameBookmarkThunk, deleteBookmarkThunk (plus `exportToPdfThunk` alias of `exportPdfThunk`)                                                                          |
+| New keyboard shortcuts wired  | 9 ShortcutIds (6 newly mapped + 3 reassigned): Ctrl+Z (undo), Ctrl+Y / Ctrl+Shift+Z (redo), Ctrl+P (print), Ctrl+Shift+P (export), Ctrl+I (insert image — reassigned from inspector), Ctrl+Alt+I (toggle inspector — new binding), U (underline), K (strikethrough), Shift+F (freehand), E (text-edit mode) |
+| Lint errors in Riley files    | 0                                                                                                                                                                                                                                                                                                           |
 
 ### Deliverables — files
 
-| File | Change | Notes |
-|---|---|---|
-| `src/client/components/modals/image-import-modal/index.tsx` | NEW | Per ui-spec §11.3. File-picker, new-page (5 position options) vs overlay, intrinsic-dim probe via `<img>` for PNG/JPEG, TIFF defaults to 800×1000 (engine decodes), multi-page-TIFF warning. |
-| `src/client/components/modals/image-import-modal/image-import-modal.module.css` | NEW | tokens.css-based. |
-| `src/client/components/modals/image-import-modal/image-import-modal.test.tsx` | NEW | 4 tests. |
-| `src/client/components/text-edit-overlay/index.tsx` | NEW | Per ui-spec §11.5 + edit-replay-engine.md §4.6 + §12. Inline editor with renderer-side font-metrics shim; missing-glyph DISABLES Save with red alert tooltip; clip-on-save shows AMBER warning but Save stays enabled. Esc cancels, Enter commits. |
-| `src/client/components/text-edit-overlay/text-edit-overlay.module.css` | NEW | Editor + tooltip + banner. |
-| `src/client/components/text-edit-overlay/text-edit-overlay.test.tsx` | NEW | 5 tests including missing-glyph + clip failure-mode UX. |
-| `src/client/components/bookmarks-panel/index.tsx` | REWRITE | Tree CRUD per ui-spec §11.6. Edit-mode toggle, double-click rename, per-row +/↑/↓/× icon actions, optimistic move with server-side cycle-detection rollback, confirm-before-delete for nodes with children. Falls back to Phase-1 flat list when tree is empty. |
-| `src/client/components/bookmarks-panel/bookmarks-panel.module.css` | EDIT | Toolbar + rowJump button-row + actions cluster + renameInput + edit-mode active state. |
-| `src/client/state/middleware/history-middleware.ts` | REWRITE | Phase-1 passive shim → Phase-2 active. Computes `inverseOf(op, beforeState)`, compacts image bytes (conventions §13.3), dispatches `pushEntry`. `undo`/`redo` actions trigger re-entrant `applyEdit` flagged with `meta.__history: true` to prevent recursion. Exports `undoAction()` / `redoAction()`. |
-| `src/client/state/middleware/history-middleware.test.ts` | NEW | 3 tests: push on undoable; undo restores; redo re-applies. |
-| `src/client/state/slices/bookmarks-slice.ts` | REWRITE | Tree shape + 13 helper actions + cycle-detection (`findNodeById`, `wouldCreateCycle`, `flattenTree`). Phase-1 `setUserBookmarks` / `addUserBookmark` / `removeUserBookmark` retained for back-compat. |
-| `src/client/state/slices/bookmarks-slice.test.ts` | NEW | 13 tests: tree set, add (root + child), rename, delete (cascade), move (re-parent + cycle rejection), clear, plus helper unit tests. |
-| `src/client/state/slices/bookmarks-selectors.ts` | EDIT | + selectBookmarksTree, selectBookmarksExpandedIds, selectBookmarkExpanded. |
-| `src/client/state/slices/ui-slice.ts` | EDIT | New `image-import` modal kind; new `imageImport` transient preload slot; new `textEdit` state slot; new `bookmarksEditMode` flag. 9 new actions + `openImageImportModal` / `closeImageImportModal` convenience creators. |
-| `src/client/state/slices/ui-selectors.ts` | EDIT | + selectImageImportModalOpen, selectImageImportPreload, selectTextEditMode, selectTextEditState, selectBookmarksEditMode. |
-| `src/client/state/slices/document-slice-apply.ts` | EDIT | Exhaustive switch extended for the 5 new EditOperation variants (image-insert mutates pages + reindexes annotations; image-overlay / -edit / -delete + text-replace are presentational, only `dirtyOps.push`). |
-| `src/client/state/slices/document-inverses.ts` | EDIT | Inverses for all 5 Phase-2 variants per data-models §7.1.3. Re-exports `compactImageOpForHistory`. |
-| `src/client/state/slices/annotations-slice.ts` | EDIT | `AnnotationTool` union widened with `'underline'`, `'strikeout'`, `'ink'` (data-models §7.7 — Phase-2 subtypes activated). |
-| `src/client/state/thunks.ts` | EDIT | 9 new Phase-2 thunks + `exportToPdfThunk` alias. David's H-3 inline removal landed in parallel (`saveDocumentThunk` now uses `api.fs.applyEditOps`); his direct `../../ipc/contracts` import for `FsApplyEditOpsRequest` re-routed through the gatekeeper. |
-| `src/client/types/ipc-contract.ts` | EDIT | Phase-2 type re-exports (8 pdf channel types + BookmarkNode + ImageEmbedPayload / PdfImage / ImagePlacement / ImageMimeType + FsApplyEditOps types). `compactImageOpForHistory<T>(op)` renderer-only helper (conventions §13.3). |
-| `src/client/services/api.ts` | EDIT | Phase-2 fallback methods on bridge-unavailable fallback (pdf.embedImage/replaceText/identifyTextSpan/print + bookmarks.listTree/move/rename + fs.applyEditOps). Plain `PdfApi` re-export (David's contracts cover everything). |
-| `src/client/shortcuts.ts` | EDIT | + 4 ShortcutIds (`tool-underline`, `tool-strikethrough`, `tool-freehand`, `tool-text-edit`, `insert-image`). `enabledInPhases` field per ui-spec §11.8. Ctrl+I reassigned to insert-image; Ctrl+Alt+I for toggle-inspector. Matcher's shift-handling accommodates capital-letter single-key shortcuts. |
-| `src/client/hooks/use-app-shortcuts.ts` | EDIT | Phase-2 shortcuts wired to thunks / actions; Phase-1 "coming in a later phase" catch-all replaced. |
-| `src/client/components/toolbar/index.tsx` | EDIT | Phase-2 buttons enabled: Undo / Redo (history selectors), Underline / Strikethrough / Freehand annotation tools, Text Edit toggle, Insert Image, Print, Export to PDF, Bookmarks Edit Mode toggle. |
-| `src/client/components/toolbar/toolbar-icon.tsx` | EDIT | 5 new SVG icons: image-plus, type-cursor, printer, file-export, bookmark-edit. |
-| `src/client/components/menu-bar/index.tsx` | EDIT | Edit menu Undo/Redo + Replace text… enabled. File menu Print + Export to PDF wired. NEW Insert menu (Image… / Page from File / Blank Page). View menu: Toggle Inspector remapped to Ctrl+Alt+I, added Bookmarks-Edit-Mode entry. Tools menu Text Edit Mode entry. |
-| `src/client/app.tsx` | EDIT | Mounted `ImageImportModal` (gated on `activeModal === 'image-import'`) + `TextEditOverlay` (always — own internal active flag). Drag-drop handler extended for image files (PNG/JPEG/TIFF) → preload bytes into ui-slice + open import modal in overlay mode. **L-001 holds:** image-drop reuses the same `(file as any).path` Electron mechanism — `enableDragDropFiles: true` invariant unchanged. |
-| `src/client/components/page-metadata/index.tsx` | EDIT | `describeSource` extended for new `kind: 'image'` SourcePageRef variant (one-line exhaustiveness fix surfaced by typecheck). |
+| File                                                                            | Change  | Notes                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/client/components/modals/image-import-modal/index.tsx`                     | NEW     | Per ui-spec §11.3. File-picker, new-page (5 position options) vs overlay, intrinsic-dim probe via `<img>` for PNG/JPEG, TIFF defaults to 800×1000 (engine decodes), multi-page-TIFF warning.                                                                                                                                                                                                         |
+| `src/client/components/modals/image-import-modal/image-import-modal.module.css` | NEW     | tokens.css-based.                                                                                                                                                                                                                                                                                                                                                                                    |
+| `src/client/components/modals/image-import-modal/image-import-modal.test.tsx`   | NEW     | 4 tests.                                                                                                                                                                                                                                                                                                                                                                                             |
+| `src/client/components/text-edit-overlay/index.tsx`                             | NEW     | Per ui-spec §11.5 + edit-replay-engine.md §4.6 + §12. Inline editor with renderer-side font-metrics shim; missing-glyph DISABLES Save with red alert tooltip; clip-on-save shows AMBER warning but Save stays enabled. Esc cancels, Enter commits.                                                                                                                                                   |
+| `src/client/components/text-edit-overlay/text-edit-overlay.module.css`          | NEW     | Editor + tooltip + banner.                                                                                                                                                                                                                                                                                                                                                                           |
+| `src/client/components/text-edit-overlay/text-edit-overlay.test.tsx`            | NEW     | 5 tests including missing-glyph + clip failure-mode UX.                                                                                                                                                                                                                                                                                                                                              |
+| `src/client/components/bookmarks-panel/index.tsx`                               | REWRITE | Tree CRUD per ui-spec §11.6. Edit-mode toggle, double-click rename, per-row +/↑/↓/× icon actions, optimistic move with server-side cycle-detection rollback, confirm-before-delete for nodes with children. Falls back to Phase-1 flat list when tree is empty.                                                                                                                                      |
+| `src/client/components/bookmarks-panel/bookmarks-panel.module.css`              | EDIT    | Toolbar + rowJump button-row + actions cluster + renameInput + edit-mode active state.                                                                                                                                                                                                                                                                                                               |
+| `src/client/state/middleware/history-middleware.ts`                             | REWRITE | Phase-1 passive shim → Phase-2 active. Computes `inverseOf(op, beforeState)`, compacts image bytes (conventions §13.3), dispatches `pushEntry`. `undo`/`redo` actions trigger re-entrant `applyEdit` flagged with `meta.__history: true` to prevent recursion. Exports `undoAction()` / `redoAction()`.                                                                                              |
+| `src/client/state/middleware/history-middleware.test.ts`                        | NEW     | 3 tests: push on undoable; undo restores; redo re-applies.                                                                                                                                                                                                                                                                                                                                           |
+| `src/client/state/slices/bookmarks-slice.ts`                                    | REWRITE | Tree shape + 13 helper actions + cycle-detection (`findNodeById`, `wouldCreateCycle`, `flattenTree`). Phase-1 `setUserBookmarks` / `addUserBookmark` / `removeUserBookmark` retained for back-compat.                                                                                                                                                                                                |
+| `src/client/state/slices/bookmarks-slice.test.ts`                               | NEW     | 13 tests: tree set, add (root + child), rename, delete (cascade), move (re-parent + cycle rejection), clear, plus helper unit tests.                                                                                                                                                                                                                                                                 |
+| `src/client/state/slices/bookmarks-selectors.ts`                                | EDIT    | + selectBookmarksTree, selectBookmarksExpandedIds, selectBookmarkExpanded.                                                                                                                                                                                                                                                                                                                           |
+| `src/client/state/slices/ui-slice.ts`                                           | EDIT    | New `image-import` modal kind; new `imageImport` transient preload slot; new `textEdit` state slot; new `bookmarksEditMode` flag. 9 new actions + `openImageImportModal` / `closeImageImportModal` convenience creators.                                                                                                                                                                             |
+| `src/client/state/slices/ui-selectors.ts`                                       | EDIT    | + selectImageImportModalOpen, selectImageImportPreload, selectTextEditMode, selectTextEditState, selectBookmarksEditMode.                                                                                                                                                                                                                                                                            |
+| `src/client/state/slices/document-slice-apply.ts`                               | EDIT    | Exhaustive switch extended for the 5 new EditOperation variants (image-insert mutates pages + reindexes annotations; image-overlay / -edit / -delete + text-replace are presentational, only `dirtyOps.push`).                                                                                                                                                                                       |
+| `src/client/state/slices/document-inverses.ts`                                  | EDIT    | Inverses for all 5 Phase-2 variants per data-models §7.1.3. Re-exports `compactImageOpForHistory`.                                                                                                                                                                                                                                                                                                   |
+| `src/client/state/slices/annotations-slice.ts`                                  | EDIT    | `AnnotationTool` union widened with `'underline'`, `'strikeout'`, `'ink'` (data-models §7.7 — Phase-2 subtypes activated).                                                                                                                                                                                                                                                                           |
+| `src/client/state/thunks.ts`                                                    | EDIT    | 9 new Phase-2 thunks + `exportToPdfThunk` alias. David's H-3 inline removal landed in parallel (`saveDocumentThunk` now uses `api.fs.applyEditOps`); his direct `../../ipc/contracts` import for `FsApplyEditOpsRequest` re-routed through the gatekeeper.                                                                                                                                           |
+| `src/client/types/ipc-contract.ts`                                              | EDIT    | Phase-2 type re-exports (8 pdf channel types + BookmarkNode + ImageEmbedPayload / PdfImage / ImagePlacement / ImageMimeType + FsApplyEditOps types). `compactImageOpForHistory<T>(op)` renderer-only helper (conventions §13.3).                                                                                                                                                                     |
+| `src/client/services/api.ts`                                                    | EDIT    | Phase-2 fallback methods on bridge-unavailable fallback (pdf.embedImage/replaceText/identifyTextSpan/print + bookmarks.listTree/move/rename + fs.applyEditOps). Plain `PdfApi` re-export (David's contracts cover everything).                                                                                                                                                                       |
+| `src/client/shortcuts.ts`                                                       | EDIT    | + 4 ShortcutIds (`tool-underline`, `tool-strikethrough`, `tool-freehand`, `tool-text-edit`, `insert-image`). `enabledInPhases` field per ui-spec §11.8. Ctrl+I reassigned to insert-image; Ctrl+Alt+I for toggle-inspector. Matcher's shift-handling accommodates capital-letter single-key shortcuts.                                                                                               |
+| `src/client/hooks/use-app-shortcuts.ts`                                         | EDIT    | Phase-2 shortcuts wired to thunks / actions; Phase-1 "coming in a later phase" catch-all replaced.                                                                                                                                                                                                                                                                                                   |
+| `src/client/components/toolbar/index.tsx`                                       | EDIT    | Phase-2 buttons enabled: Undo / Redo (history selectors), Underline / Strikethrough / Freehand annotation tools, Text Edit toggle, Insert Image, Print, Export to PDF, Bookmarks Edit Mode toggle.                                                                                                                                                                                                   |
+| `src/client/components/toolbar/toolbar-icon.tsx`                                | EDIT    | 5 new SVG icons: image-plus, type-cursor, printer, file-export, bookmark-edit.                                                                                                                                                                                                                                                                                                                       |
+| `src/client/components/menu-bar/index.tsx`                                      | EDIT    | Edit menu Undo/Redo + Replace text… enabled. File menu Print + Export to PDF wired. NEW Insert menu (Image… / Page from File / Blank Page). View menu: Toggle Inspector remapped to Ctrl+Alt+I, added Bookmarks-Edit-Mode entry. Tools menu Text Edit Mode entry.                                                                                                                                    |
+| `src/client/app.tsx`                                                            | EDIT    | Mounted `ImageImportModal` (gated on `activeModal === 'image-import'`) + `TextEditOverlay` (always — own internal active flag). Drag-drop handler extended for image files (PNG/JPEG/TIFF) → preload bytes into ui-slice + open import modal in overlay mode. **L-001 holds:** image-drop reuses the same `(file as any).path` Electron mechanism — `enableDragDropFiles: true` invariant unchanged. |
+| `src/client/components/page-metadata/index.tsx`                                 | EDIT    | `describeSource` extended for new `kind: 'image'` SourcePageRef variant (one-line exhaustiveness fix surfaced by typecheck).                                                                                                                                                                                                                                                                         |
 
 ### Verification
 
-| Step | Result |
-|---|---|
-| `npx tsc -p tsconfig.renderer.json --noEmit` | **0 errors.** |
-| `npx vitest run src/client` | **86/86 pass** (61 pre-existing + 25 new). |
-| `npx eslint src/client/` (Riley-touched files only) | **0 errors.** 7 import/order warnings (cosmetic). |
-| Smoke check — Phase-2 op + undo + redo round-trip | Verified by `history-middleware.test.ts` (rotate op → undo restores rotation 0 → redo restores rotation 90). |
+| Step                                                | Result                                                                                                       |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `npx tsc -p tsconfig.renderer.json --noEmit`        | **0 errors.**                                                                                                |
+| `npx vitest run src/client`                         | **86/86 pass** (61 pre-existing + 25 new).                                                                   |
+| `npx eslint src/client/` (Riley-touched files only) | **0 errors.** 7 import/order warnings (cosmetic).                                                            |
+| Smoke check — Phase-2 op + undo + redo round-trip   | Verified by `history-middleware.test.ts` (rotate op → undo restores rotation 0 → redo restores rotation 90). |
 
 ### NEW DEPS REQUIRED
+
 **None.** Phase 2 renderer reuses existing deps. `@dnd-kit` integration (ui-spec §11.6 drag-to-reorder) deferred to Phase 2.5; functional surface preserved via per-row Move Up / Move Down buttons.
 
 ### Contract issues found with David's module
+
 **None of substance.** David landed Phase-2 channel types verbatim against api-contracts.md §12 + architecture-phase-2.md §2.5 (`PdfEmbedImage{Request,Error,Value,Response}`, `PdfReplaceText{...}`, `PdfIdentifyTextSpan{...}`, `PdfPrint{...}`, `Bookmarks{ListTree,Move,Rename}{...}`, `BookmarkNode`, `FsApplyEditOps{...}`). Renderer re-exports without drift.
 
 One minor observation for Marcus: David's H-3 inline removal of `saveDocumentThunk` directly imported `FsApplyEditOpsRequest` from `../../ipc/contracts`, bypassing the renderer gatekeeper module. I routed it through `src/client/types/ipc-contract.ts` to preserve the gatekeeper boundary (Wave 2 lesson #5 — single audit surface; ESLint no-restricted-imports rule from Diego's Wave 3 config enforces this).
@@ -1434,6 +1462,7 @@ One minor observation for Marcus: David's H-3 inline removal of `saveDocumentThu
 5. **Bookmarks slice exposes BOTH `setUserBookmarks` (Phase-1 flat) AND `setBookmarksTree` (Phase-2 canonical).** Phase-1 callers continue to work via the flat-to-tree reconstruction inside the reducer. New Phase-2 callers use the tree action. Single-slice, dual-input — audit-able boundary preserved.
 
 ### Files NOT touched (Riley scope hygiene)
+
 - `src/main/`, `src/preload/`, `src/ipc/handlers/`, `src/ipc/contracts.ts` (David's)
 - `src/db/`, `migrations/` (Ravi's)
 - `docs/**` (Wave 6 design FROZEN; this status row is the only allowed edit)
@@ -1443,11 +1472,13 @@ One minor observation for Marcus: David's H-3 inline removal of `saveDocumentThu
 - `src/main/window-manager.ts` — **L-001 LOCKED**
 
 ### L-001 cross-check (Wave 7 mandatory)
+
 - `src/client/app.tsx` image drag-drop uses the SAME `(file as any).path` Electron extension as PDF drag-drop. Both depend on `enableDragDropFiles: true` (Electron default, locked by L-001).
 - All other Riley files in this wave: zero hits of `enableDragDropFiles` / `webPreferences` / `window-manager`. Verified by grep.
 - **L-001 status: UNCHANGED, REINFORCED.**
 
 ### Noteworthy
+
 - The gatekeeper pattern from Wave 2 lesson #5 caught a real boundary violation: David's H-3 removal direct-imported a contract type bypassing `src/client/types/ipc-contract.ts`. Re-routed through the gatekeeper in this same wave so ESLint's `no-restricted-imports` rule (Diego's Wave 3 config) keeps its single audit surface. **Generalisable across projects:** when a contract owner edits a consumer file in parallel, the consumer's gatekeeper boundary should be re-asserted on every touch — gatekeepers degrade silently if not actively defended.
 - The history middleware's re-entrancy flag (`meta.__history: true`) is the load-bearing detail that prevents infinite undo loops. Dispatching `applyEdit(inverse)` from inside the middleware MUST be tagged so it doesn't re-enter the push-entry branch. Same pattern as Redux Toolkit's `createListenerMiddleware`.
 - Phase-2 absorbed Julian Wave-2 MEDIUM I-2 (bookmark Space-key activation) for free: `BookmarkTreeRow` uses native `<button>` elements that respond to both Enter and Space. The Phase-1 `<div role="button">` pattern's missing Space handler is gone by construction.
@@ -1465,19 +1496,19 @@ No blockers. Integration on disk is genuinely clean: 11 of the 11 spot-checks PA
 
 ### Spot-check results
 
-| Check | Result |
-|---|---|
-| `src/main/pdf-ops/replay-engine.ts` exports a pure `replay(input: ReplayInput): Promise<ReplayResult>` matching `docs/edit-replay-engine.md` §3 signature | **PASS** — line 122; `ReplayInput` (line 36) + `ReplayError` (line 72) + `ReplayResult = Result<ReplayOk, ReplayError>` (line 92). Grep confirms NO `node:fs`, `from 'fs'`, `better-sqlite3`, network, or `console.log` — only the convention header comment mentions those keywords. Engine is genuinely pure. |
-| `src/main/db-bridge.ts` adapter shape matches Ravi's actual repo signatures (listTree/move/rename) | **PARTIAL PASS — see Discovery 5 below.** `listTree` + `rename` adapt cleanly. `move` is collapsed to `boolean` in the bridge type, even though Ravi's repo returns `MoveBookmarkResult`. The handler then heuristically infers `cycle_detected` vs `not_found` from the request shape. Real misclassification risk for legitimate `not_found` with non-null parent. |
-| `src/ipc/contracts.ts` exports Phase-2 channels matching `docs/api-contracts.md` §12 (sampled 3 channels) | **PASS** — `pdf:embedImage` (line 873 + interface at 641), `bookmarks:move` with full 4-variant error union including `cycle_detected` (line 820-824), `fs:applyEditOps` (line 878 + interface at 763). All three match doc §12.1 / §12.6 / §12 verbatim. |
-| `src/client/types/ipc-contract.ts` re-exports the Phase-2 types (Riley's fix to David's direct-import drift) | **PASS** — gatekeeper imports `FsApplyEditOpsRequest/Error/Value/Response`, `PdfEmbedImageRequest`, `BookmarksMoveRequest` etc. `src/client/state/thunks.ts` line 19 imports `FsApplyEditOpsRequest` from `../types/ipc-contract` (NOT `../../ipc/contracts`). Riley's gatekeeper boundary defense held. |
-| `src/client/state/middleware/history-middleware.ts` is actually activated (not skeleton) | **PASS** — computes `inverseOf(op, before)`, compacts image bytes via `compactImageOpForHistory`, dispatches `pushEntry`. Re-entrancy guard `meta.__history === true` short-circuits at line 42. Undo (line 63) + redo (line 80) dispatch re-entrant `applyEdit` flagged with the same meta. |
-| `src/client/state/thunks.ts` calls `api.fs.applyEditOps` (no leftover H-3 inline) | **PASS — H-3 CLOSED.** Line 168 directly calls `api.fs.applyEditOps(applyReq)`. The Phase-1 inline synthesizing-a-PDF block is gone. Comment at lines 149-160 documents the closure ("Replaces the Wave-3.5 H-3 PHASE-1 INLINE placeholder"). The `import { PDFDocument } from 'pdf-lib'` is also gone — the renderer no longer reaches for pdf-lib in the save path. Walking-skeleton goal #8 is genuinely functional. |
-| `migrations/0002_phase2_bookmarks.sql` matches `docs/data-models.md` §7.3 DDL | **PASS** — `ALTER TABLE user_bookmarks ADD COLUMN parent_id INTEGER REFERENCES user_bookmarks(id) ON DELETE CASCADE` + `ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0` + `CREATE INDEX IF NOT EXISTS idx_user_bookmarks_parent_id ON user_bookmarks (parent_id)`. The `INSERT INTO schema_migrations` deliberately omitted (Ravi's documented deviation: runner records the row; 0001 follows same convention). |
-| File ownership — no duplicate ownership | **PASS** — 150 source files; cross-domain `from 'src/main/...'` imports from non-main files are documentation comments only (verified in `src/client/services/pdf-edit.ts`, `src/db/connection.ts`, `src/ipc/handlers/pdf-ops.ts`). Zero cross-domain code imports. |
-| Atomic-save pattern (`temp file → flush → rename`) in `pdf-apply-edit-ops.ts` | **PASS** — line 123-131: tempPath generated in SAME directory as destination (cross-volume rename hazard avoided), pattern `.{basename}.tmp-{pid}-{ts}`, `writeFile → rename` with `unlink(tempPath).catch(()=>{})` on error path. |
-| `src/db/types.ts` SettingKey extension vs `src/ipc/contracts.ts` SettingKey | **PASS** — both include `'export.deterministic'`, `'export.includeBookmarksInOutline'`, `'editing.confirmDelete'`, `'editing.commitTextOnBlur'` in identical order. Zero drift between Ravi's pre-emptive DB-side widening and David's IPC-side widening. |
-| `utif` license verified MIT for the Diego Wave-8 add | **PASS** — npm registry lookup confirms `utif@3.1.0` license `MIT`. On the project allow-list per ARCHITECTURE §3. |
+| Check                                                                                                                                                     | Result                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/main/pdf-ops/replay-engine.ts` exports a pure `replay(input: ReplayInput): Promise<ReplayResult>` matching `docs/edit-replay-engine.md` §3 signature | **PASS** — line 122; `ReplayInput` (line 36) + `ReplayError` (line 72) + `ReplayResult = Result<ReplayOk, ReplayError>` (line 92). Grep confirms NO `node:fs`, `from 'fs'`, `better-sqlite3`, network, or `console.log` — only the convention header comment mentions those keywords. Engine is genuinely pure.                                                                                                         |
+| `src/main/db-bridge.ts` adapter shape matches Ravi's actual repo signatures (listTree/move/rename)                                                        | **PARTIAL PASS — see Discovery 5 below.** `listTree` + `rename` adapt cleanly. `move` is collapsed to `boolean` in the bridge type, even though Ravi's repo returns `MoveBookmarkResult`. The handler then heuristically infers `cycle_detected` vs `not_found` from the request shape. Real misclassification risk for legitimate `not_found` with non-null parent.                                                    |
+| `src/ipc/contracts.ts` exports Phase-2 channels matching `docs/api-contracts.md` §12 (sampled 3 channels)                                                 | **PASS** — `pdf:embedImage` (line 873 + interface at 641), `bookmarks:move` with full 4-variant error union including `cycle_detected` (line 820-824), `fs:applyEditOps` (line 878 + interface at 763). All three match doc §12.1 / §12.6 / §12 verbatim.                                                                                                                                                               |
+| `src/client/types/ipc-contract.ts` re-exports the Phase-2 types (Riley's fix to David's direct-import drift)                                              | **PASS** — gatekeeper imports `FsApplyEditOpsRequest/Error/Value/Response`, `PdfEmbedImageRequest`, `BookmarksMoveRequest` etc. `src/client/state/thunks.ts` line 19 imports `FsApplyEditOpsRequest` from `../types/ipc-contract` (NOT `../../ipc/contracts`). Riley's gatekeeper boundary defense held.                                                                                                                |
+| `src/client/state/middleware/history-middleware.ts` is actually activated (not skeleton)                                                                  | **PASS** — computes `inverseOf(op, before)`, compacts image bytes via `compactImageOpForHistory`, dispatches `pushEntry`. Re-entrancy guard `meta.__history === true` short-circuits at line 42. Undo (line 63) + redo (line 80) dispatch re-entrant `applyEdit` flagged with the same meta.                                                                                                                            |
+| `src/client/state/thunks.ts` calls `api.fs.applyEditOps` (no leftover H-3 inline)                                                                         | **PASS — H-3 CLOSED.** Line 168 directly calls `api.fs.applyEditOps(applyReq)`. The Phase-1 inline synthesizing-a-PDF block is gone. Comment at lines 149-160 documents the closure ("Replaces the Wave-3.5 H-3 PHASE-1 INLINE placeholder"). The `import { PDFDocument } from 'pdf-lib'` is also gone — the renderer no longer reaches for pdf-lib in the save path. Walking-skeleton goal #8 is genuinely functional. |
+| `migrations/0002_phase2_bookmarks.sql` matches `docs/data-models.md` §7.3 DDL                                                                             | **PASS** — `ALTER TABLE user_bookmarks ADD COLUMN parent_id INTEGER REFERENCES user_bookmarks(id) ON DELETE CASCADE` + `ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0` + `CREATE INDEX IF NOT EXISTS idx_user_bookmarks_parent_id ON user_bookmarks (parent_id)`. The `INSERT INTO schema_migrations` deliberately omitted (Ravi's documented deviation: runner records the row; 0001 follows same convention).      |
+| File ownership — no duplicate ownership                                                                                                                   | **PASS** — 150 source files; cross-domain `from 'src/main/...'` imports from non-main files are documentation comments only (verified in `src/client/services/pdf-edit.ts`, `src/db/connection.ts`, `src/ipc/handlers/pdf-ops.ts`). Zero cross-domain code imports.                                                                                                                                                     |
+| Atomic-save pattern (`temp file → flush → rename`) in `pdf-apply-edit-ops.ts`                                                                             | **PASS** — line 123-131: tempPath generated in SAME directory as destination (cross-volume rename hazard avoided), pattern `.{basename}.tmp-{pid}-{ts}`, `writeFile → rename` with `unlink(tempPath).catch(()=>{})` on error path.                                                                                                                                                                                      |
+| `src/db/types.ts` SettingKey extension vs `src/ipc/contracts.ts` SettingKey                                                                               | **PASS** — both include `'export.deterministic'`, `'export.includeBookmarksInOutline'`, `'editing.confirmDelete'`, `'editing.commitTextOnBlur'` in identical order. Zero drift between Ravi's pre-emptive DB-side widening and David's IPC-side widening.                                                                                                                                                               |
+| `utif` license verified MIT for the Diego Wave-8 add                                                                                                      | **PASS** — npm registry lookup confirms `utif@3.1.0` license `MIT`. On the project allow-list per ARCHITECTURE §3.                                                                                                                                                                                                                                                                                                      |
 
 ### H-3 final closure confirmation
 
@@ -1491,24 +1522,24 @@ This is the "Phase-N fidelity boundary retired by Phase-N+1's real engine" prece
 
 ### Discovery triage
 
-| # | Discovery | Verdict | Owner |
-|---|---|---|---|
-| 1 | `utif` runtime dep needed; `tiff-decoder.ts` dynamic-imports via string variable | **FIX-NOW (Wave 8 Diego D-8.1).** MIT-licensed; on allow-list. Diego adds to `package.json` + LICENSES.md. | Diego |
-| 2 | Chromium export engine returns `engine_failed_chromium` stub | **FIX-NOW (Wave 8 Diego D-8.2).** Packaging-adjacent Electron lifecycle code. Diego creates `src/main/export/chromium-export.ts` with the offscreen-window security floor. **NOT a Wave 7.5 split** — Diego owns this boundary from Wave 3 (electron-builder, NSIS, security floor) so the natural home is Wave 8 rather than a David patch. | Diego |
-| 3 | `pdf:print` channel live; `dispatchPrint` returns `print_dispatch_failed` stub | **FIX-NOW (Wave 8 Diego D-8.3).** Same boundary as #2. Both new adapters land in `src/main/export/`. | Diego |
-| 4 | `pdf:identifyTextSpan` scanner returns `no_text_at_point` — content-stream walker deferred to Phase 2.5 | **ACCEPT for Phase 2 ship.** Renderer's pdf.js hit-test is the Phase-2 substitute per architecture-phase-2.md §4.3 (renderer-cached glyph widths verified working by `text-edit-overlay.test.tsx`). Channel surface is type-correct; real scanner is a Phase 2.5 ticket. **Do NOT block Wave 8 on this.** | (Phase 2.5 backlog) |
-| 5 | **NEW finding from Marcus spot-check:** Ravi's `MoveBookmarkResult` discriminated union (`'ok' \| 'cycle_detected' \| 'not_found' \| 'invalid_parent'`) collapsed to `boolean` in `src/main/db-bridge.ts` adapter. `bookmarks-phase2.ts` handler heuristically infers `cycle_detected` vs `not_found` from `newParentId === null`. A genuine `not_found` with non-null parent → MIS-CLASSIFIED as `cycle_detected`. `invalid_parent` also lost. | **YELLOW — three-way fix in Wave 8.5 after Julian's audit.** (a) Amend `docs/data-models.md` §7.5 to specify the `MoveBookmarkResult` union (Ravi's shipped reality is BETTER than the spec — Wave 2 lesson #5 reality-amendment > spec-retraction precedent). (b) Patch `src/main/db-bridge.ts` to preserve the union. (c) Patch `bookmarks-phase2.ts` to switch on the variant directly. Marcus dispatches David for the 30-min patch IF Julian rates this HIGH. | Julian flags; Marcus + David Wave 8.5 |
-| 6 | Ravi's 5 SettingKey additions to `src/db/types.ts` were pre-emptively shipped to unblock David's typecheck | **ACCEPT.** Zero drift with `src/ipc/contracts.ts` (verified — keys + order identical). The cross-wave coordination is exactly the parallel-build payoff Ravi documented in her learning. Note in build-report (done above) and move on. | (no action) |
+| #   | Discovery                                                                                                                                                                                                                                                                                                                                                                                                                                       | Verdict                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Owner                                 |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
+| 1   | `utif` runtime dep needed; `tiff-decoder.ts` dynamic-imports via string variable                                                                                                                                                                                                                                                                                                                                                                | **FIX-NOW (Wave 8 Diego D-8.1).** MIT-licensed; on allow-list. Diego adds to `package.json` + LICENSES.md.                                                                                                                                                                                                                                                                                                                                                         | Diego                                 |
+| 2   | Chromium export engine returns `engine_failed_chromium` stub                                                                                                                                                                                                                                                                                                                                                                                    | **FIX-NOW (Wave 8 Diego D-8.2).** Packaging-adjacent Electron lifecycle code. Diego creates `src/main/export/chromium-export.ts` with the offscreen-window security floor. **NOT a Wave 7.5 split** — Diego owns this boundary from Wave 3 (electron-builder, NSIS, security floor) so the natural home is Wave 8 rather than a David patch.                                                                                                                       | Diego                                 |
+| 3   | `pdf:print` channel live; `dispatchPrint` returns `print_dispatch_failed` stub                                                                                                                                                                                                                                                                                                                                                                  | **FIX-NOW (Wave 8 Diego D-8.3).** Same boundary as #2. Both new adapters land in `src/main/export/`.                                                                                                                                                                                                                                                                                                                                                               | Diego                                 |
+| 4   | `pdf:identifyTextSpan` scanner returns `no_text_at_point` — content-stream walker deferred to Phase 2.5                                                                                                                                                                                                                                                                                                                                         | **ACCEPT for Phase 2 ship.** Renderer's pdf.js hit-test is the Phase-2 substitute per architecture-phase-2.md §4.3 (renderer-cached glyph widths verified working by `text-edit-overlay.test.tsx`). Channel surface is type-correct; real scanner is a Phase 2.5 ticket. **Do NOT block Wave 8 on this.**                                                                                                                                                          | (Phase 2.5 backlog)                   |
+| 5   | **NEW finding from Marcus spot-check:** Ravi's `MoveBookmarkResult` discriminated union (`'ok' \| 'cycle_detected' \| 'not_found' \| 'invalid_parent'`) collapsed to `boolean` in `src/main/db-bridge.ts` adapter. `bookmarks-phase2.ts` handler heuristically infers `cycle_detected` vs `not_found` from `newParentId === null`. A genuine `not_found` with non-null parent → MIS-CLASSIFIED as `cycle_detected`. `invalid_parent` also lost. | **YELLOW — three-way fix in Wave 8.5 after Julian's audit.** (a) Amend `docs/data-models.md` §7.5 to specify the `MoveBookmarkResult` union (Ravi's shipped reality is BETTER than the spec — Wave 2 lesson #5 reality-amendment > spec-retraction precedent). (b) Patch `src/main/db-bridge.ts` to preserve the union. (c) Patch `bookmarks-phase2.ts` to switch on the variant directly. Marcus dispatches David for the 30-min patch IF Julian rates this HIGH. | Julian flags; Marcus + David Wave 8.5 |
+| 6   | Ravi's 5 SettingKey additions to `src/db/types.ts` were pre-emptively shipped to unblock David's typecheck                                                                                                                                                                                                                                                                                                                                      | **ACCEPT.** Zero drift with `src/ipc/contracts.ts` (verified — keys + order identical). The cross-wave coordination is exactly the parallel-build payoff Ravi documented in her learning. Note in build-report (done above) and move on.                                                                                                                                                                                                                           | (no action)                           |
 
 ### Locked-decision compliance check
 
-| Lock | Status |
-|---|---|
+| Lock                                                                                         | Status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **L-001** (`enableDragDropFiles` must remain default `true` on `src/main/window-manager.ts`) | **UNCHANGED, REINFORCED.** `src/main/window-manager.ts` not touched in Wave 7. The Vitest enforcement test passes (per David's row, line 1340). Riley's image drag-drop in `app.tsx` reuses the existing `(file as any).path` mechanism (line 1408) — same dependency, same lock holds. Diego's Wave 8 offscreen BrowserWindows (D-8.2, D-8.3) MUST also preserve the default — explicit reaffirmation in `wave-8-brief.md` §D-8.2 / §D-8.3 + a new test in `security-floor.test.ts`. |
-| **P2-L-2** (Main keeps original PDF bytes per handle; renderer holds zero bytes) | **HELD.** Renderer thunks.ts no longer imports pdf-lib (verified). `document-store.ts` extended with `getBytes`/`setBytes` per architecture-phase-2.md §3.2 (David row line 1265). Conventions §10 ban on renderer-side Uint8Array intact. |
-| **P2-L-3** (Replace-only text editing with original font; no reflow, no substitution) | **HELD.** `text-replace.ts` ships stamp-overlay (white rect + Helvetica draw) per David row line 1249; no automatic font substitution. Renderer's `text-edit-overlay` ships missing-glyph DISABLE-Save with red alert + clip-on-save AMBER warning per Riley row line 1385. Failure-mode UX in the renderer (font-metrics shim) not main — IPC chatfest avoided. |
-| **P2-L-4** (Image-import dual-mode: new-page or overlay; PNG/JPEG/TIFF) | **HELD.** `image-import-modal/` supports new-page (5 position options) + overlay per Riley row line 1382. `image-embed.ts` + `tiff-decoder.ts` handle PNG/JPEG/TIFF (TIFF gracefully degrades to `tiff_decoder_unavailable` until Diego adds utif in Wave 8). |
-| **P2-L-6** (PDF-native annotations, no sidecar files) | **HELD.** Replay engine writes annotations directly into PDF bytes (David row line 1297: Highlight, Underline, StrikeOut, Text, FreeText, Ink subtypes). No `.annotations.json` sidecar files. |
+| **P2-L-2** (Main keeps original PDF bytes per handle; renderer holds zero bytes)             | **HELD.** Renderer thunks.ts no longer imports pdf-lib (verified). `document-store.ts` extended with `getBytes`/`setBytes` per architecture-phase-2.md §3.2 (David row line 1265). Conventions §10 ban on renderer-side Uint8Array intact.                                                                                                                                                                                                                                            |
+| **P2-L-3** (Replace-only text editing with original font; no reflow, no substitution)        | **HELD.** `text-replace.ts` ships stamp-overlay (white rect + Helvetica draw) per David row line 1249; no automatic font substitution. Renderer's `text-edit-overlay` ships missing-glyph DISABLE-Save with red alert + clip-on-save AMBER warning per Riley row line 1385. Failure-mode UX in the renderer (font-metrics shim) not main — IPC chatfest avoided.                                                                                                                      |
+| **P2-L-4** (Image-import dual-mode: new-page or overlay; PNG/JPEG/TIFF)                      | **HELD.** `image-import-modal/` supports new-page (5 position options) + overlay per Riley row line 1382. `image-embed.ts` + `tiff-decoder.ts` handle PNG/JPEG/TIFF (TIFF gracefully degrades to `tiff_decoder_unavailable` until Diego adds utif in Wave 8).                                                                                                                                                                                                                         |
+| **P2-L-6** (PDF-native annotations, no sidecar files)                                        | **HELD.** Replay engine writes annotations directly into PDF bytes (David row line 1297: Highlight, Underline, StrikeOut, Text, FreeText, Ink subtypes). No `.annotations.json` sidecar files.                                                                                                                                                                                                                                                                                        |
 
 ### Wave 8 dispatch status
 
@@ -1517,6 +1548,7 @@ This is the "Phase-N fidelity boundary retired by Phase-N+1's real engine" prece
 **Dispatch path:** Marcus's Task tool not loaded (established pattern since Wave 1). Main session dispatches Diego (dev-ops-agent) + Julian (code-reviewer) in parallel by reading `wave-8-brief.md` + the Wave 7 status rows above.
 
 **Recommended Wave 8.5 split:**
+
 - IF Julian rates Discovery 5 (`MoveBookmarkResult` bridge collapse) as HIGH: dispatch David for a 30-minute three-file patch (`db-bridge.ts` + `bookmarks-phase2.ts` + `data-models.md` §7.5 amendment) AFTER Julian's audit lands.
 - IF Julian rates it MEDIUM: backlog to Phase 2.5 (`@dnd-kit` integration ticket).
 - Marcus owns the dispatch decision based on Julian's severity rating.
@@ -1540,12 +1572,14 @@ The Wave 1-7 trajectory has now produced the full Phase-2 source surface. Phase 
 ### Files shipped (4 new, 6 edited)
 
 NEW:
+
 - `src/main/print-window.ts` — offscreen `BrowserWindow` factory used by both Chromium export (D-8.2) and OS print dispatch (D-8.3). Inherits the main-window security floor (contextIsolation/sandbox/no nodeIntegration/webSecurity/no allowRunningInsecureContent/disableBlinkFeatures: Auxclick) and omits `enableDragDropFiles` so Electron's default `true` applies (L-001 reaffirmed). Exports `buildPrintWindowOptions`, `createPrintWindow`, `bytesToDataUrl`, `PDF_DATA_URL_MAX_BYTES`, `exportViaChromium`, `dispatchPrintViaElectron`, `buildPrintOptions`. ~310 lines.
 - `src/main/print-window.test.ts` — 15 tests covering: (a) L-001 invariant on `buildPrintWindowOptions`, (b) full security-floor inheritance, (c) hidden defaults (show:false, skipTaskbar, frameless), (d) `createPrintWindow` calls `new BrowserWindow` exactly once with the floor, (e) `bytesToDataUrl` encoding, (f) `buildPrintOptions` mapping for printerName/duplex/pageRange, (g) `exportViaChromium` round-trips small PDFs via data: URL and destroys the window on success AND on `printToPDF` failure (memory hygiene), (h) `dispatchPrintViaElectron` returns ok on success and maps "User cancelled" → `user_cancelled` error.
 - `src/main/pdf-ops/h3-retirement.test.ts` — **D-8.7 acceptance test**: synthesizes a 3-page PDF via pdf-lib, applies rotate-page-2 (0→90°) + delete-page-3 + highlight-annotation-on-page-1 through the real `handleFsApplyEditOps` + `replay()` + atomic temp-rename pipeline, re-loads the saved bytes via pdf-lib, asserts page count = 2 + page-2 rotation = 90°. Plus a deterministic-shape regression test (two replay invocations produce byte-identical output). 3 tests, all PASS.
 - `tests/fixtures/phase2/` retained for future on-disk fixtures (Wave 7.5 / Phase 2.5).
 
 EDITED:
+
 - `package.json` — added `"utif": "^3.1.0"` to runtime deps (D-8.1).
 - `package-lock.json` — npm install side-effect (utif 3.1.0).
 - `LICENSES.md` — added utif row to direct-runtime-deps table.
@@ -1556,9 +1590,11 @@ EDITED:
 - `tests/e2e/smoke.spec.ts` — extended with a Phase 2 H-3-closure e2e test that boots the app, asserts the Phase-2 IPC surface is mounted on `window.pdfApi` (fs.applyEditOps, pdf.{embedImage,replaceText,identifyTextSpan,print,export}, bookmarks.{listTree,move,rename}), and re-confirms the empty-state copy. The existing Phase-1 empty-state test is retained.
 
 NOT TOUCHED (per file-ownership rules):
+
 - `src/main/pdf-ops/*` source modules (David's Wave 7), `src/main/index.ts`, `src/main/db-bridge.ts`, `src/main/document-store.ts`, `src/main/window-manager.ts`, `src/db/`, `migrations/`, `src/client/`, any `docs/` doc except this status row, `LICENSE`, `README.md`, `.learnings/locked-instructions.md`. The `src/ipc/handlers/pdf-export-pdf.ts` and `pdf-print.ts` handler source files were NOT touched — the wiring lives entirely in `register.ts` via `print-window.ts`. The exception authorized in Marcus's brief (surgical edits to those two handlers for Chromium/Print wiring) turned out to be unnecessary because the handlers already take `chromiumExport` and `dispatchPrint` as pluggable deps.
 
 ### D-8.1 utif install
+
 - `npm view utif`: version 3.1.0, license MIT — on allow-list per ARCHITECTURE §3.
 - Pinned `"utif": "^3.1.0"` in `package.json` dependencies (not devDependencies).
 - `node -e "require('utif')"` loads cleanly; exports `{ JpegDecoder, encodeImage, encode, decode, decodeImage, ... }` — matches the type-shim David coded against in `tiff-decoder.ts`.
@@ -1566,6 +1602,7 @@ NOT TOUCHED (per file-ownership rules):
 - `LICENSES.md` direct-runtime-deps table: utif row added between react-redux and zod. Nathan's intro paragraph + the license-summary counts left unchanged (the summary recount is Nathan's job in Wave 9; the policy compliance is unaffected since utif is MIT).
 
 ### D-8.2 Chromium export engine wired
+
 - Real adapter: `exportViaChromium(input)` in `src/main/print-window.ts`. Opens a hidden BrowserWindow via `createPrintWindow()` (security floor inherited from `buildPrintWindowOptions`), loads the source bytes via `data:application/pdf;base64,...` URL (buffers ≤ 1 MB) OR a temp file under `app.getPath('temp')`-equivalent `os.tmpdir()` (buffers > 1 MB), calls `webContents.printToPDF({ printBackground: true, landscape: false })`, captures the buffer, returns `{ ok: true, value: { bytes, warnings } }`.
 - Memory hygiene: `try { ... } finally { win.destroy(); fsPromises.unlink(tempPath) }`. Window is destroyed even on `printToPDF` throw. Temp file is best-effort cleanup. Covered by unit test "destroys the BrowserWindow on printToPDF failure (memory hygiene)".
 - Wired into `src/ipc/register.ts` Channels.PdfExport: `chromiumExport: exportViaChromium`. The handler dep shape (`PdfExportDeps.chromiumExport`) is preserved exactly — no contract changes.
@@ -1573,6 +1610,7 @@ NOT TOUCHED (per file-ownership rules):
 - L-001 status on the new offscreen window: enforced by `print-window.test.ts` — `buildPrintWindowOptions().webPreferences.enableDragDropFiles !== false`. Test passes.
 
 ### D-8.3 Electron print dispatch wired
+
 - Real adapter: `dispatchPrintViaElectron(input)` in `src/main/print-window.ts`. Opens a hidden BrowserWindow with the same security floor, loads the replayed bytes (same data-URL-vs-temp-file path as Chromium export), calls `win.webContents.print(options, callback)` where `callback(success, failureReason)` is mapped:
   - `success === true` → `{ ok: true }`
   - `failureReason` matches `/cancel/i` → `'user_cancelled'`
@@ -1585,6 +1623,7 @@ NOT TOUCHED (per file-ownership rules):
 - Architecture note: the brief suggested the OS print dialog should use the EXISTING main window's webContents (so the user expects the active document to print). The shipped path uses a HIDDEN offscreen window loaded with the replayed bytes instead. Rationale: loading the replayed bytes into the visible main window would clobber the renderer UI (the renderer doesn't know how to render an arbitrary PDF buffer directly — it uses the pdf.js viewer with a managed handle). The hidden-window approach matches the pattern used by Chromium export and keeps the main UI untouched. The OS print dialog still spawns modally on the user's desktop; the hidden window is just the source of the print job.
 
 ### D-8.4 CI verification on Node 20
+
 - `.github/workflows/ci.yml` — no changes needed. Existing matrix locks `node-version: '20'` on `setup-node@v4`, runs `npm ci → npm run rebuild → npm run lint → npm run typecheck → npm test` on both Windows + Linux; e2e on windows-latest; dist:win on push-to-main.
 - Local verification on Node 24 (Diego's host):
   - `npm install` (with the utif add) — clean (`+1 packages` added).
@@ -1595,6 +1634,7 @@ NOT TOUCHED (per file-ownership rules):
 - CI on a fresh push will exercise the full pipeline; no expected red.
 
 ### D-8.5 electron-builder.yml updates for Phase 2
+
 - `files:` block — added `'!tests/**'` defense-in-depth negation. The existing inclusive list (`dist/**/*`, `migrations/**/*`, `package.json`) already excludes tests; the explicit negation makes the audit trail clearer.
 - `extraResources:` — unchanged; `migrations/` continues to be packaged outside asar so the migration runner can read it at install-time.
 - File-association installer (Decision 4) — unchanged; `build/installer.nsh` Components-page checkbox still defaults ON.
@@ -1602,10 +1642,12 @@ NOT TOUCHED (per file-ownership rules):
 - New main-process modules (replay-engine, text-replace, image-embed, tiff-decoder, print-window) and new IPC handlers (apply-edit-ops, embed-image, replace-text, identify-text-span, print, export-pdf, bookmarks-phase2) — all bundled into `dist/main/index.js` via electron-vite's main entry-point. `grep -c "exportViaChromium|dispatchPrintViaElectron" dist/main/index.js` = 6 (functions present in the bundle). `migrations/0002_phase2_bookmarks.sql` packaged in `release/win-unpacked/resources/migrations/` (verified by `asar list`).
 
 ### D-8.6 Native rebuild for schema v2
+
 - `npx electron-builder install-app-deps` — successful (`install prebuilt binary  name=better-sqlite3 version=11.10.0 platform=win32 arch=x64`). Electron-ABI binary now present at `node_modules/better-sqlite3/build/Release/better_sqlite3.node`. This is the binary the packaged app loads at runtime; the Node-ABI binary (which Node-24 local vitest requires) is NOT downloaded because no Node-v137 prebuild exists upstream — Issue D-1, unchanged from Wave 3.
 - Migration runner against schema v2: not verifiable locally without booting Electron (which requires DB tests to pass, which requires Node-ABI rebuild). On CI Node 20 with the rebuild + the 0001 + 0002 migrations packaged, the runner steps from version 0 → 1 → 2 on first install; from version 1 → 2 on upgrade (per Ravi's Wave 7 migration design + the `migrate.ts` runner's `currentVersion + 1` step loop). The `bookmarks-repo.test.ts` (37 tests) is the integration coverage on CI.
 
 ### D-8.7 H-3 retirement smoke — **VERDICT: PASS**
+
 - Test: `src/main/pdf-ops/h3-retirement.test.ts`. Synthesizes a 3-page PDF via `PDFDocument.create()` + pdf-lib font embed. Constructs a request with: rotate page 2 (fromRotation 0 → toRotation 90), delete page 3 (with preservedSource), and a Highlight annotation on page 1 (rect 100,700 200x30, yellow, opacity 0.5). Wires the real `handleFsApplyEditOps` to a Map-backed mock document-store, real `replay()`, real `computeBufferHash`, real `fsPromises.{writeFile,rename,unlink}` against a temp directory. Re-reads the saved file via `PDFDocument.load`.
 - **Assertions all PASS:**
   - Saved file has the PDF magic header (`%PDF-`).
@@ -1618,34 +1660,40 @@ NOT TOUCHED (per file-ownership rules):
 - Note about embedded-image overlay: the brief listed "Embed a small PNG as overlay on page 1" as part of the smoke. I omitted it from this test because the image-overlay flow requires a content-hash-keyed cache + PNG bytes synthesized at test time — the smoke test's purpose is to prove the H-3 closure, which the rotate + delete + annotation flow demonstrates fully. Image-overlay is independently covered by Riley's `image-import-modal.test.tsx` (renderer side) + David's `image-embed.test.ts` (engine side) + the full pipeline runs through the same `replay()` call already exercised here. If image-overlay is later required as an acceptance smoke, the test extension is one additional op in the same fixture call.
 
 ### D-8.8 Phase 2 e2e smoke
+
 - Extended `tests/e2e/smoke.spec.ts` with a Phase 2 H-3-closure test that boots Electron via `_electron.launch`, waits for `window.pdfApi` to attach (preload bridge ready), then asserts the 9 Phase-2 channels are mounted (fs.applyEditOps, pdf.{embedImage,replaceText,identifyTextSpan,print,export}, bookmarks.{listTree,move,rename}). Confirms the empty-state copy still renders (Phase-1 surface unbroken).
 - Local-run status: not executed against this host (Diego's local Node 24 environment is the unchanged Issue D-1 territory — Electron's bundled Node works, but the e2e harness uses Playwright + Electron which is sensitive to test-runner version pinning we don't have time to bisect this wave). CI on `windows-latest` is the authoritative surface; the test is enabled (no `test.skip`) so it WILL run.
 - The full open→edit→save→reopen flow (the brief's D-8.8 ideal) would need extensive dialog mocking (Electron's `dialog.showOpenDialog` and `dialog.showSaveDialog` are notoriously tricky to mock in Playwright Electron). The IPC-surface-presence assertion is a strong proxy: it proves the preload bridge exposed every Phase-2 channel, which is the H-3-closure signal at the IPC boundary. The replay round-trip is fully verified by D-8.7's unit-level integration test against the real engine + handler + filesystem.
 
 ### Build artefacts produced this wave
+
 - `release/PDF Viewer & Editor-0.1.0-x64.exe` (NSIS installer) — **95.79 MB** (was 95.68 MB after Wave 3; +0.11 MB for the replay engine + new handlers + utif).
 - `release/PDF Viewer & Editor-0.1.0-x64-portable.exe` — **95.56 MB**.
 - `release/win-unpacked/PDF Viewer & Editor.exe` — 177 MB (unpacked).
 - Build time: ~3 s electron-vite + ~30 s electron-builder.
 
 ### L-001 status
+
 - **PASS, REINFORCED in a new factory.** `src/main/window-manager.ts` not touched this wave. The existing L-001 test in `src/main/window-manager.test.ts` (2 tests) continues to PASS — `enableDragDropFiles !== false` invariant holds on the main window.
 - **NEW EXPOSURE SURFACE — also LOCKED:** the offscreen print/export BrowserWindow factory in `src/main/print-window.ts` was added this wave. It MUST also pass L-001 because uniform application of the lock is the audit-trail principle. `src/main/print-window.test.ts` exercises this with 4 dedicated assertions (the L-001 invariant + the 5 core security-floor flags + the new `disableBlinkFeatures: 'Auxclick'` + the construction-call-site reaffirmation). All PASS.
 - The full grep against my new code: `grep -nE "enableDragDropFiles\s*:\s*false" src/main/print-window.ts` returns **zero matches**. The factory's `webPreferences` block omits the property entirely so Electron's default `true` applies.
 
 ### Locked-decision compliance (P2-L-2/3/4/6)
+
 - **P2-L-2** (main keeps original bytes per handle): UNCHANGED. `document-store.ts` not touched; `print-window.ts` reads handle bytes via `deps.getBytes(handle)` for both export and print paths, never via a renderer-supplied buffer.
 - **P2-L-3** (text editing: replace-only with original font): UNCHANGED. `text-replace.ts` is David's code; not touched.
 - **P2-L-4** (image-import dual-mode + PNG/JPEG/TIFF): UNCHANGED. utif install (D-8.1) is the activation of the third format; `tiff-decoder.ts` dynamic-import is already wired.
 - **P2-L-6** (PDF-native annotations, no sidecar): UNCHANGED. The replay engine pipeline (Riley's renderer ops → David's main engine → pdf-lib output) writes annotations into PDF bytes directly; no sidecar files.
 
 ### Open items / non-blockers for Wave 9
+
 1. The `MoveBookmarkResult` bridge collapse (Discovery 5 in Marcus's Wave 7 verdict) is Julian's flag — Wave 8 task. Diego's surface does not interact with it.
 2. The Phase-2 e2e flow (open → edit → save → reopen via UI) needs Playwright dialog mocking — Phase 2.5 ticket.
 3. The Chromium engine's actual fidelity on real PDFs: my unit test exercises the wiring with a mocked Electron `printToPDF`. The real-app round-trip on a Windows host will tell us if Chromium's PDF viewer can render arbitrary source PDFs correctly. The brief's heuristic (`defaultPickEngine`) defaults to pdf-lib for ordinary docs, so Chromium is mostly a fallback for vector-fidelity Ink annotations — acceptable for Phase 2 ship.
 4. `--max-warnings 0` lint contract: 10 pre-existing errors (all in David's path-sanitizer + Riley's jsx-a11y from prior waves) keep `npm run lint` red. Not new; flagged in Wave 3 row. Phase 2.5 fix.
 
 ### Hard-Won Playbook entry candidate
+
 The "the brief said to wire into pdf-export-pdf.ts and pdf-print.ts, but the existing handlers already take pluggable deps" lesson: when a Wave-N agent ships a handler with proper dependency injection (David's `chromiumExport` and `dispatchPrint` deps in the handler dep object), the Wave-N+1 wiring agent should aim for surgical edits at the REGISTRATION site (register.ts) rather than the HANDLER site. The handler signature is already a contract; the registration is where impl swaps live. Saved ~40 lines of edits to David's files this wave. Generalizable to any orchestration pattern where two waves share a typed dependency interface.
 
 ---
@@ -1686,6 +1734,7 @@ The "the brief said to wire into pdf-export-pdf.ts and pdf-print.ts, but the exi
 **Wave 8.5 dispatch recommendation:** REQUIRED before Wave 9 (Nathan). Total budget ~150 lines source + 80 lines test + 5 lines doc + 3 lines ESLint = ~90 minutes paired David+Riley work plus Diego's lint patch. If skipped, Phase 2 user-guide (Wave 9) will publish flows that destroy user data (reorder → save → page gone; delete original page → undo → save → page gone) and broken contract documentation (bookmarks `invalid_parent` variant unreachable).
 
 **Files Julian touched this wave:**
+
 - `docs/code-review.md` (APPENDED new "Wave 8 Phase 2 Code Review — Julian" section; Phase 1 review preserved)
 - `docs/build-report.md` (this status row)
 - `.learnings/learnings.jsonl` (one entry pending after this commit)
@@ -1713,21 +1762,23 @@ Four glob variants chosen because renderer files import via `'../../ipc/contract
 
 ### Verification
 
-| Check | Result |
-|---|---|
-| Rule added? | **Yes** — `.eslintrc.cjs:152-159` (new third pattern group entry). |
-| `npx eslint "src/client/**/*.{ts,tsx}"` clean against current source | **Yes**. `grep "no-restricted-imports"` on the lint output returns zero matches. Riley's Wave 7 re-route held — only the gatekeeper at `src/client/types/ipc-contract.ts` imports from `src/ipc/contracts` (verified: 3 import sites at lines 182, 187, 194; file is in `excludedFiles`). |
+| Check                                                                                                               | Result                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Rule added?                                                                                                         | **Yes** — `.eslintrc.cjs:152-159` (new third pattern group entry).                                                                                                                                                                                                                                                                               |
+| `npx eslint "src/client/**/*.{ts,tsx}"` clean against current source                                                | **Yes**. `grep "no-restricted-imports"` on the lint output returns zero matches. Riley's Wave 7 re-route held — only the gatekeeper at `src/client/types/ipc-contract.ts` imports from `src/ipc/contracts` (verified: 3 import sites at lines 182, 187, 194; file is in `excludedFiles`).                                                        |
 | Negative test: temp file `src/client/__negative_test_h2.ts` with `import type { Channels } from '../ipc/contracts'` | **PASS** — ESLint fired with the exact custom message: `'../ipc/contracts' import is restricted from being used by a pattern. Renderer must route through src/client/types/ipc-contract.ts (the gatekeeper). Direct imports from src/ipc/contracts bypass the boundary documented in conventions.md §4.3`. Temp file deleted after verification. |
-| Gatekeeper `src/client/types/ipc-contract.ts` not flagged | **Yes** — the `excludedFiles` clause inherited from Wave 3 keeps the three legitimate re-export imports legal. Direct `npx eslint src/client/types/ipc-contract.ts` returns zero output. |
-| Full `npm run lint` regression check vs Wave 8 baseline | **Identical** — 10 errors / 83 warnings (Wave 8 row recorded 10 errors / 28 warnings on a different snapshot; error count is the load-bearing baseline since `--max-warnings 0`). Zero `no-restricted-imports` violations across the entire `src/` + `tests/` tree. |
-| L-001 touched? | **No.** ESLint config only; no `webPreferences` files touched. |
+| Gatekeeper `src/client/types/ipc-contract.ts` not flagged                                                           | **Yes** — the `excludedFiles` clause inherited from Wave 3 keeps the three legitimate re-export imports legal. Direct `npx eslint src/client/types/ipc-contract.ts` returns zero output.                                                                                                                                                         |
+| Full `npm run lint` regression check vs Wave 8 baseline                                                             | **Identical** — 10 errors / 83 warnings (Wave 8 row recorded 10 errors / 28 warnings on a different snapshot; error count is the load-bearing baseline since `--max-warnings 0`). Zero `no-restricted-imports` violations across the entire `src/` + `tests/` tree.                                                                              |
+| L-001 touched?                                                                                                      | **No.** ESLint config only; no `webPreferences` files touched.                                                                                                                                                                                                                                                                                   |
 
 ### Files Diego touched this wave
+
 - `.eslintrc.cjs` (added 9 lines to the existing renderer-boundary override: comment + new pattern group entry)
 - `docs/build-report.md` (this status row)
 - `.learnings/learnings.jsonl` (one entry appended after this commit)
 
 ### Files Diego did NOT touch (per brief scope)
+
 - Anything under `src/` (David's + Riley's Wave 8.5 territory)
 - `docs/code-review.md` (Julian-APPEND-only)
 - `docs/conventions.md`, `docs/project-plan.md`, any other docs (Riley/Nathan owned)
@@ -1748,18 +1799,18 @@ Four glob variants chosen because renderer files import via `'../../ipc/contract
 
 ### The bug (Julian B-2 in docs/code-review.md Phase 2)
 
-`inverseOf(delete-page)` emitted `{ kind: 'insert', source: preservedSource }` for every `SourcePageRef.kind`. When the deleted page's `preservedSource.kind === 'image'`, the inverse `insert` op routed through David's main-side `applyInsert` rather than `applyImageInsert`. Per data-models.md §7.1.3 the forward `image-insert` has `delete` as its inverse — so the inverse of *that* `delete` must round-trip back to `image-insert`, not generic `insert`. The pre-fix code was lossy: image-insert → delete → undo (`insert`) → save → main-process `applyInsert` no-op on `source.kind === 'image'` → page lost in saved bytes.
+`inverseOf(delete-page)` emitted `{ kind: 'insert', source: preservedSource }` for every `SourcePageRef.kind`. When the deleted page's `preservedSource.kind === 'image'`, the inverse `insert` op routed through David's main-side `applyInsert` rather than `applyImageInsert`. Per data-models.md §7.1.3 the forward `image-insert` has `delete` as its inverse — so the inverse of _that_ `delete` must round-trip back to `image-insert`, not generic `insert`. The pre-fix code was lossy: image-insert → delete → undo (`insert`) → save → main-process `applyInsert` no-op on `source.kind === 'image'` → page lost in saved bytes.
 
 ### Fix
 
 Split the `case 'delete'` branch on `op.preservedSource.kind` (the renderer already captures the deleted page's `sourcePageRef` as `preservedSource` — no new `PageModel.provenance` field needed; the source ref IS the provenance discriminator):
 
-| `preservedSource.kind` | Inverse emitted |
-|---|---|
-| `'image'` | `{ kind: 'image-insert', meta, atIndex: pageIndex, image: preservedSource.image }` |
-| `'original'` | `{ kind: 'insert', meta, atIndex: pageIndex, source: preservedSource }` (uniform §3.2) |
-| `'blank'` | `{ kind: 'insert', meta, atIndex: pageIndex, source: preservedSource }` (uniform §3.2) |
-| `'inserted'` | `{ kind: 'insert', meta, atIndex: pageIndex, source: preservedSource }` (uniform §3.2) |
+| `preservedSource.kind` | Inverse emitted                                                                        |
+| ---------------------- | -------------------------------------------------------------------------------------- |
+| `'image'`              | `{ kind: 'image-insert', meta, atIndex: pageIndex, image: preservedSource.image }`     |
+| `'original'`           | `{ kind: 'insert', meta, atIndex: pageIndex, source: preservedSource }` (uniform §3.2) |
+| `'blank'`              | `{ kind: 'insert', meta, atIndex: pageIndex, source: preservedSource }` (uniform §3.2) |
+| `'inserted'`           | `{ kind: 'insert', meta, atIndex: pageIndex, source: preservedSource }` (uniform §3.2) |
 
 ### Cross-op-chain (`inserted` source) — choice (a) vs (b) rationale
 
@@ -1771,21 +1822,21 @@ If a future contract update DOES require option (a)/(b), the history middleware 
 
 New file `src/client/state/slices/document-inverses.test.ts` — 8 tests across 3 describe blocks:
 
-| Block | Tests |
-|---|---|
-| **inverseOf(delete) — per SourcePageRef variant (B-2)** | 4 cases: original → `insert`, blank → `insert`, **image → `image-insert`** (B-2 root regression), inserted → `insert` (uniform §3.2) |
-| **inverseOf(delete) — round-trip identity (B-2)** | 3 cases: delete-original-page round-trip, **delete-image-page round-trip via `image-insert` inverse** (asserts page restored at correct index with matching `contentHash`), delete-blank round-trip |
-| **inverseOf(delete) — annotation behavior (regression pin)** | 1 case: pins the documented Phase 2 limitation that delete-inverse does NOT restore annotations on the deleted page |
+| Block                                                        | Tests                                                                                                                                                                                               |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **inverseOf(delete) — per SourcePageRef variant (B-2)**      | 4 cases: original → `insert`, blank → `insert`, **image → `image-insert`** (B-2 root regression), inserted → `insert` (uniform §3.2)                                                                |
+| **inverseOf(delete) — round-trip identity (B-2)**            | 3 cases: delete-original-page round-trip, **delete-image-page round-trip via `image-insert` inverse** (asserts page restored at correct index with matching `contentHash`), delete-blank round-trip |
+| **inverseOf(delete) — annotation behavior (regression pin)** | 1 case: pins the documented Phase 2 limitation that delete-inverse does NOT restore annotations on the deleted page                                                                                 |
 
 ### Verification
 
-| Check | Result |
-|---|---|
-| `npx tsc -p tsconfig.renderer.json --noEmit` | **0 errors** (clean exit). |
-| `npx vitest run src/client/state/slices/document-inverses.test src/client/state/slices/document-slice.test` | **21/21 passed** (8 new + 13 pre-existing slice tests). |
-| `npx vitest run src/client` (full renderer suite) | **94/94 passed** in 14 test files. Was 86/86 pre-fix → **+8 new tests, 0 regressions**. |
-| L-001 touched? | **No.** Edit confined to `document-inverses.ts` + new test file. `app.tsx` and `window-manager.*` untouched. |
-| Files outside Riley's scope touched? | **No.** No edits to `src/main/`, `src/preload/`, `src/ipc/`, `src/db/`, configs, or docs. |
+| Check                                                                                                       | Result                                                                                                       |
+| ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `npx tsc -p tsconfig.renderer.json --noEmit`                                                                | **0 errors** (clean exit).                                                                                   |
+| `npx vitest run src/client/state/slices/document-inverses.test src/client/state/slices/document-slice.test` | **21/21 passed** (8 new + 13 pre-existing slice tests).                                                      |
+| `npx vitest run src/client` (full renderer suite)                                                           | **94/94 passed** in 14 test files. Was 86/86 pre-fix → **+8 new tests, 0 regressions**.                      |
+| L-001 touched?                                                                                              | **No.** Edit confined to `document-inverses.ts` + new test file. `app.tsx` and `window-manager.*` untouched. |
+| Files outside Riley's scope touched?                                                                        | **No.** No edits to `src/main/`, `src/preload/`, `src/ipc/`, `src/db/`, configs, or docs.                    |
 
 ### Contract observations for David (data-models §7 spec)
 
@@ -1794,12 +1845,14 @@ New file `src/client/state/slices/document-inverses.test.ts` — 8 tests across 
 3. **`ImageEmbedPayload` round-trip via history compaction.** My image-insert inverse carries the full `image: preservedSource.image` payload — but the history middleware (line 102-103) calls `compactImageOpForHistory` on both fwd and inv, zeroing `bytes` to `Uint8Array(0)` and keeping only `contentHash`. Redo retrieves the bytes from main's per-handle image cache by hash. This means at the moment the inverse is computed (BEFORE compaction), `op.preservedSource.image.bytes` may already be the zero-length compacted form (since the renderer never re-fetches bytes for `dirtyOps`-staged image-insert ops). David's `applyImageInsert` MUST look up by `contentHash`, not consume `bytes` from the op payload. Verify this assumption holds in David's main-side fix; if not, the compaction order needs revisiting in a follow-up.
 
 ### Files Riley touched this wave
+
 - `src/client/state/slices/document-inverses.ts` (the `case 'delete'` branch — added provenance-aware switch, +22 lines, removed 6)
 - `src/client/state/slices/document-inverses.test.ts` (**new file**, 264 lines, 8 tests)
 - `docs/build-report.md` (this status row)
 - `.learnings/learnings.jsonl` (one entry appended after this commit)
 
 ### Files Riley did NOT touch (per brief scope)
+
 - `src/main/`, `src/preload/`, `src/ipc/` (David's territory)
 - `src/db/`, `migrations/` (Ravi's)
 - `.eslintrc.cjs`, `electron-builder.yml`, `.github/` (Diego's — H-2 already landed above)
@@ -1822,6 +1875,7 @@ Closing Julian's Phase 2 Wave-8 BLOCKERs B-1, B-2 + HIGH H-1. Runs in parallel w
 **Fix:** capture the `PDFPage` reference via `doc.getPage(fromIndex)` BEFORE `removePage(fromIndex)`, then `doc.insertPage(toIndex, captured)`. pdf-lib's `insertPage(index, page)` accepts a `PDFPage` whose `doc` is this document and re-wires its parent via `catalog.insertLeafNode(page.ref, index)` (verified against `node_modules/pdf-lib/cjs/api/PDFDocument.js:599-617`). The `pageMap` and pageCache invalidate-and-rebuild cleanly. Added an early-return `fromIndex === toIndex` no-op so the page-tree isn't churned for identity reorders.
 
 **Tests (5 new in `replay-engine.test.ts`):**
+
 - reorder 0→2 in a 3-page width-tagged PDF: output widths `[200,300,100]`
 - reorder 2→0 (reverse direction): output widths `[300,100,200]`
 - reorder 1→1 (no-op): output widths preserved
@@ -1835,6 +1889,7 @@ Width-tagged fixtures (each input page has a unique width) replace the original 
 **Bug:** Only `source.kind === 'blank'` produced a real page. `'image'` returned `ok` with zero work ("Handled by image-insert variant; this is the SourcePageRef bridge"). `'original'` and `'inserted'` pushed a warning and skipped. The renderer-side `document-inverses.ts:case 'delete'` (Riley's file, paired-fix) builds an `insert` op as the inverse of a `delete`, with `preservedSource` set to the deleted page's `sourcePageRef`. So undo-of-delete-original-page worked in the renderer (page reappears in model) but the save engine dropped it.
 
 **Fix:** every `source.kind` variant now produces a real page:
+
 - `'blank'` — already worked; insert a freshly-created blank page sized as requested.
 - `'image'` — re-create the image page via `embedImage(...)` + `insertPage` + `drawImage`, same code path as `applyImageInsert`. Honors the caller-provided `source.pageWidth`/`pageHeight`; falls back to the A4-fit default if either is non-positive. This branch is the safety net for any external caller (combine bridge, manual op) that produces a generic `insert{source.kind:'image'}` shape — Riley's renderer-side fix routes image undo-of-delete through `image-insert` directly (the canonical inverse per data-models §7.1.3), so the production path no longer hits this branch.
 - `'original'` — lazily load a SECOND `PDFDocument` off `ctx.originalBytes` (the original-bytes are already threaded into the engine per P2-L-2 + the existing `ReplayInput.originalBytes` field). Use `doc.copyPages(ctx.originalDoc, [origIdx])` to deep-clone the page back into the in-progress doc, then `insertPage(atIndex, copied)`. The originalDoc is memoized on `ReplayContext` so a multi-op chain with N original-page inserts incurs only ONE parse cost. Validates `originalIndex` is a non-negative integer and within the original's page count; out-of-range returns `op_apply_failed`.
@@ -1843,6 +1898,7 @@ Width-tagged fixtures (each input page has a unique width) replace the original 
 The `applyInsert` function went from sync to `async` because `copyPages` and the lazy `PDFDocument.load(originalBytes)` are both async. The `applyOp` dispatcher was already async, so the change is local. `ReplayContext` gained two new fields: `originalBytes` (the bytes), `originalDoc: PDFDocument | null` (the lazy-parsed copy).
 
 **Tests (6 new in `replay-engine.test.ts`):**
+
 - insert source.kind=original: delete page 1 of a 3-page width-tagged PDF, then insert original-page-1 back at position 1 → output widths `[100,200,300]` (the deleted page is restored byte-for-byte via copyPages)
 - insert source.kind=original with out-of-range originalIndex → `op_apply_failed`
 - insert source.kind=image: re-creates an image page sized per the source spec (`pageCount: 3`, injected page at index 1 sized 100x100)
@@ -1853,6 +1909,7 @@ The `applyInsert` function went from sync to `async` because `copyPages` and the
 ### H-1 — `MoveBookmarkResult` discriminated-union preserved end-to-end
 
 **Sites fixed:**
+
 1. **`src/main/db-bridge.ts`** — added local `MoveBookmarkResult` type definition; widened the `BookmarksRepo.move()` return type from `boolean` to `MoveBookmarkResult`; widened `RaviBookmarksRepoPhase2.move()` to match (mirrors Ravi's repo signature in `src/db/repositories/bookmarks-repo.ts:86`); widened the `MemoryBookmarksRepo.move()` implementation (the in-memory fallback used in handler tests) to return the union AND verify newParentId existence + same-`fileHash` invariant before checking cycles; widened the `adaptBookmarksRepo.move()` adapter to forward Ravi's union verbatim (with a fallback to `{ok:false, error:'not_found'}` when her Phase-2 method isn't yet present during parallel-wave skew).
 2. **`src/ipc/handlers/bookmarks-phase2.ts`** — widened the local `BookmarksRepoLikePhase2.move()` to return `MoveBookmarkResult`; replaced the heuristic in `handleBookmarksMove` (which mapped repo `false` to `'cycle_detected'` whenever `newParentId !== null` and to `'not_found'` otherwise) with a clean variant switch:
    - `repo: not_found` → IPC: `'not_found'`
@@ -1869,16 +1926,16 @@ The `applyInsert` function went from sync to `async` because `copyPages` and the
 
 ### Verification
 
-| Check | Result |
-|---|---|
-| `npx tsc -p tsconfig.main.json --noEmit` | **0 errors** (clean exit). |
-| `npx vitest run src/main src/ipc` | **224/224 passed** in 29 test files. Baseline pre-fix: 213 → **+11 new tests**, **0 regressions**. |
-| `replay-engine.test.ts` | **23/23 passed** (was 12). +5 for B-1, +6 for B-2. |
-| `bookmarks-phase2.test.ts` | **18/18 passed** (was 14). +4 for H-1 (3 explicit-variant + 1 throw → db_unavailable); 2 heuristic-encoding tests REPLACED. |
-| `h3-retirement.test.ts` (Wave 8 H-3 closure proof) | **3/3 passed** — H-3 retirement still holds. |
-| `window-manager.test.ts` (L-001 enforcement) | **2/2 passed** — L-001 untouched. |
-| Atomic-save invariant | Unchanged: `pdf-apply-edit-ops.ts:122-137` temp-rename pattern still wraps the entire replay; partial `applyInsert` failures still roll the whole save back via the engine's per-op `fail<ReplayError>` exits and the handler's `mapReplayError` mapping. |
-| Files outside David's scope touched? | **No.** Confined to `src/main/pdf-ops/replay-engine.{ts,test.ts}`, `src/main/db-bridge.ts`, `src/ipc/handlers/bookmarks-phase2.{ts,test.ts}`, and `docs/data-models.md` §7.5 (the one explicit Wave 8.5 doc amendment per brief). |
+| Check                                              | Result                                                                                                                                                                                                                                                    |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npx tsc -p tsconfig.main.json --noEmit`           | **0 errors** (clean exit).                                                                                                                                                                                                                                |
+| `npx vitest run src/main src/ipc`                  | **224/224 passed** in 29 test files. Baseline pre-fix: 213 → **+11 new tests**, **0 regressions**.                                                                                                                                                        |
+| `replay-engine.test.ts`                            | **23/23 passed** (was 12). +5 for B-1, +6 for B-2.                                                                                                                                                                                                        |
+| `bookmarks-phase2.test.ts`                         | **18/18 passed** (was 14). +4 for H-1 (3 explicit-variant + 1 throw → db_unavailable); 2 heuristic-encoding tests REPLACED.                                                                                                                               |
+| `h3-retirement.test.ts` (Wave 8 H-3 closure proof) | **3/3 passed** — H-3 retirement still holds.                                                                                                                                                                                                              |
+| `window-manager.test.ts` (L-001 enforcement)       | **2/2 passed** — L-001 untouched.                                                                                                                                                                                                                         |
+| Atomic-save invariant                              | Unchanged: `pdf-apply-edit-ops.ts:122-137` temp-rename pattern still wraps the entire replay; partial `applyInsert` failures still roll the whole save back via the engine's per-op `fail<ReplayError>` exits and the handler's `mapReplayError` mapping. |
+| Files outside David's scope touched?               | **No.** Confined to `src/main/pdf-ops/replay-engine.{ts,test.ts}`, `src/main/db-bridge.ts`, `src/ipc/handlers/bookmarks-phase2.{ts,test.ts}`, and `docs/data-models.md` §7.5 (the one explicit Wave 8.5 doc amendment per brief).                         |
 
 ### Notes for the orchestrator
 
@@ -1888,6 +1945,7 @@ The `applyInsert` function went from sync to `async` because `copyPages` and the
 4. **CSS module errors in `tsconfig.test.json` are pre-existing renderer-side**, unrelated to Wave 8.5. They surface when running `tsc -p tsconfig.test.json --noEmit` from the renderer files — that's Riley's tsconfig.renderer.json territory; my main + test files compile clean.
 
 ### Files David touched this wave
+
 - `src/main/pdf-ops/replay-engine.ts` (B-1 + B-2)
 - `src/main/pdf-ops/replay-engine.test.ts` (B-1 + B-2 round-trip tests, +11)
 - `src/main/db-bridge.ts` (H-1 — add `MoveBookmarkResult`, widen 3 sites)
@@ -1898,6 +1956,7 @@ The `applyInsert` function went from sync to `async` because `copyPages` and the
 - `.learnings/learnings.jsonl` (one entry appended after this commit)
 
 ### Files David did NOT touch (per brief scope)
+
 - `src/client/state/slices/document-inverses.ts` (Riley's B-2 paired fix)
 - Any other Riley file
 - Ravi's `src/db/` files (her `move` returns `MoveBookmarkResult` already — that's the type I preserve)
@@ -1915,12 +1974,12 @@ The `applyInsert` function went from sync to `async` because `copyPages` and the
 
 **Closure status:**
 
-| Finding | Pre-Wave-8.5 | Status now | Evidence |
-|---|---|---|---|
-| B-1 reorder silent delete | BLOCKER | **CLOSED** | `replay-engine.ts:368-409` captures `getPage` → `removePage` → `insertPage`; 5 tests including composition with rotate. |
-| B-2 applyInsert variant handling | BLOCKER | **CLOSED** (engine) | All 4 `source.kind` variants handled honestly; `ctx.originalDoc` lazy-load memoized; 6 engine tests + 8 renderer inverse-map tests. **Caveat: N-1 follow-on.** |
-| H-1 MoveBookmarkResult collapse | HIGH | **CLOSED** | 3 boolean sites widened to `MoveBookmarkResult`; handler switches on variant with exhaustiveness `never`-guard; 4 variant tests; `data-models.md §7.5` honestly amended. |
-| H-2 ESLint enforcement | HIGH | **CLOSED** | `.eslintrc.cjs:152-161` covers 4 glob variants; gatekeeper excluded; Diego's negative test confirmed. Grep-verified existing renderer is clean. |
+| Finding                          | Pre-Wave-8.5 | Status now          | Evidence                                                                                                                                                                 |
+| -------------------------------- | ------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| B-1 reorder silent delete        | BLOCKER      | **CLOSED**          | `replay-engine.ts:368-409` captures `getPage` → `removePage` → `insertPage`; 5 tests including composition with rotate.                                                  |
+| B-2 applyInsert variant handling | BLOCKER      | **CLOSED** (engine) | All 4 `source.kind` variants handled honestly; `ctx.originalDoc` lazy-load memoized; 6 engine tests + 8 renderer inverse-map tests. **Caveat: N-1 follow-on.**           |
+| H-1 MoveBookmarkResult collapse  | HIGH         | **CLOSED**          | 3 boolean sites widened to `MoveBookmarkResult`; handler switches on variant with exhaustiveness `never`-guard; 4 variant tests; `data-models.md §7.5` honestly amended. |
+| H-2 ESLint enforcement           | HIGH         | **CLOSED**          | `.eslintrc.cjs:152-161` covers 4 glob variants; gatekeeper excluded; Diego's negative test confirmed. Grep-verified existing renderer is clean.                          |
 
 **New findings:**
 
@@ -1937,11 +1996,13 @@ The `applyInsert` function went from sync to `async` because `copyPages` and the
 **Remaining Phase 2 backlog (not Wave 8.5 scope):** F+I test coverage gaps demoted from HIGH to MEDIUM (Riley's inverses tests partially close the gap); api-contracts §12.6 `invalid_parent` variant; legacy `fs:writePdf kind:'ops'` atomic-save bypass; TIFF pixel-bomb cap; replay-engine.ts modularization (now 700+ lines).
 
 **Files Julian touched this wave:**
+
 - `docs/code-review.md` (APPENDED new "Wave 8.5 Re-audit — Julian" section; preceding sections untouched)
 - `docs/build-report.md` (this status row)
 - `.learnings/learnings.jsonl` (one entry appended after this commit)
 
 **Files Julian did NOT touch (per brief scope):**
+
 - Any `src/` file (report-only)
 - `docs/data-models.md`, `docs/api-contracts.md`, `docs/conventions.md`, `ARCHITECTURE.md` (Wave 1 frozen)
 - `docs/edit-replay-engine.md`, `docs/architecture-phase-2.md` (Wave 6 frozen)
@@ -1964,14 +2025,14 @@ The `applyInsert` function went from sync to `async` because `copyPages` and the
 
 ### What Nathan delivers
 
-| # | File | Action | Acceptance hinge |
-|---|---|---|---|
-| 1 | `README.md` | UPDATE | Status banner 0.2.0; no "walking skeleton"; H-3 limitation language gone; Phase 2 limitations section honest |
-| 2 | `docs/user-guide.md` | UPDATE + add 5 new sections | Sections for Printing, Print to PDF, Importing images, Editing text, Working with bookmarks (CRUD rewrite); Saving rewritten; Known Limitations rewritten; shortcuts table matches `use-app-shortcuts.ts` |
-| 3 | `docs/developer-guide.md` | UPDATE | Edit-replay engine architecture + lynchpin documented; "How to add an EditOperation variant" walkthrough with concrete file paths; IPC reference card lists 8 Phase 2 channels; Common Pitfalls adds 5 new pitfalls; test counts match Wave 8.5 verification (224 / 94 / 37) |
-| 4 | `docs/api-reference.md` | APPEND Phase 2 section | All 8 Phase 2 channels with request/response/error variants/status; `MoveBookmarkResult` discriminated union + `invalid_parent` → `invalid_payload` IPC boundary translation note |
-| 5 | `LICENSES.md` | VERIFY-AND-AMEND | `utif@^3.1.0` row present + correctly attributed; Scan basis date current; no other undeclared Phase 2 deps |
-| 6 | `docs/phase-2-release-notes.md` | NEW | One-page user-facing changelog: What's new, Known limitations, Breaking changes (none — additive), Upgrade notes (schema-v2 migration, behavior change in Save) |
+| #   | File                            | Action                      | Acceptance hinge                                                                                                                                                                                                                                                             |
+| --- | ------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `README.md`                     | UPDATE                      | Status banner 0.2.0; no "walking skeleton"; H-3 limitation language gone; Phase 2 limitations section honest                                                                                                                                                                 |
+| 2   | `docs/user-guide.md`            | UPDATE + add 5 new sections | Sections for Printing, Print to PDF, Importing images, Editing text, Working with bookmarks (CRUD rewrite); Saving rewritten; Known Limitations rewritten; shortcuts table matches `use-app-shortcuts.ts`                                                                    |
+| 3   | `docs/developer-guide.md`       | UPDATE                      | Edit-replay engine architecture + lynchpin documented; "How to add an EditOperation variant" walkthrough with concrete file paths; IPC reference card lists 8 Phase 2 channels; Common Pitfalls adds 5 new pitfalls; test counts match Wave 8.5 verification (224 / 94 / 37) |
+| 4   | `docs/api-reference.md`         | APPEND Phase 2 section      | All 8 Phase 2 channels with request/response/error variants/status; `MoveBookmarkResult` discriminated union + `invalid_parent` → `invalid_payload` IPC boundary translation note                                                                                            |
+| 5   | `LICENSES.md`                   | VERIFY-AND-AMEND            | `utif@^3.1.0` row present + correctly attributed; Scan basis date current; no other undeclared Phase 2 deps                                                                                                                                                                  |
+| 6   | `docs/phase-2-release-notes.md` | NEW                         | One-page user-facing changelog: What's new, Known limitations, Breaking changes (none — additive), Upgrade notes (schema-v2 migration, behavior change in Save)                                                                                                              |
 
 ### Acceptance criteria summary
 
@@ -2002,21 +2063,21 @@ The `applyInsert` function went from sync to `async` because `copyPages` and the
 
 ### Approach — Julian's Path A (dispatch raw, store compacted)
 
-| Layer | Before (Wave 8.5) | After (Wave 8.6) |
-|---|---|---|
-| `HistoryEntry` shape | `{ fwd, inv }` — both compacted (image bytes zeroed) | `{ fwd, inv, rawFwd, rawInv }` — compacted PLUS raw |
-| Middleware push branch | Pushes only compacted forms | Pushes both compacted (for storage footprint) AND raw (for dispatch path) |
-| Middleware undo branch | Dispatches `entry.inv` (compacted → empty bytes in `dirtyOps`) | Dispatches `entry.rawInv` (full bytes in `dirtyOps`) |
-| Middleware redo branch | Dispatches `entry.fwd` (compacted) | Dispatches `entry.rawFwd` (full bytes) |
+| Layer                  | Before (Wave 8.5)                                              | After (Wave 8.6)                                                          |
+| ---------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `HistoryEntry` shape   | `{ fwd, inv }` — both compacted (image bytes zeroed)           | `{ fwd, inv, rawFwd, rawInv }` — compacted PLUS raw                       |
+| Middleware push branch | Pushes only compacted forms                                    | Pushes both compacted (for storage footprint) AND raw (for dispatch path) |
+| Middleware undo branch | Dispatches `entry.inv` (compacted → empty bytes in `dirtyOps`) | Dispatches `entry.rawInv` (full bytes in `dirtyOps`)                      |
+| Middleware redo branch | Dispatches `entry.fwd` (compacted)                             | Dispatches `entry.rawFwd` (full bytes)                                    |
 
 The two-state model — compacted in the history stack, raw on the dispatched payload — resolves the contradiction: history storage stays bounded (conventions §13.3), the on-the-wire path stays byte-bearing (so David's `embedImage()` succeeds without depending on a contract amendment to the main side).
 
 ### Files Riley touched this wave
 
-| File | Change |
-|---|---|
-| `src/client/state/slices/history-slice.ts` | Extended `HistoryEntry` interface with `rawFwd: EditOperation`, `rawInv: EditOperation`. Updated module header doc to call out the two-state model. +10 lines (header doc + 2 fields). |
-| `src/client/state/middleware/history-middleware.ts` | Module header rewritten to document why dispatched op is raw and stored op is compacted (Wave 8.6 N-1 rationale, with cross-ref to `image-embed.ts:69-71`). `RootStateShape` typed with all 4 fields. Undo branch dispatches `entry.rawInv`. Redo branch dispatches `entry.rawFwd`. Push branch now constructs all 4 fields and passes them to `pushEntry`. ~25 lines edits. |
+| File                                                     | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/client/state/slices/history-slice.ts`               | Extended `HistoryEntry` interface with `rawFwd: EditOperation`, `rawInv: EditOperation`. Updated module header doc to call out the two-state model. +10 lines (header doc + 2 fields).                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `src/client/state/middleware/history-middleware.ts`      | Module header rewritten to document why dispatched op is raw and stored op is compacted (Wave 8.6 N-1 rationale, with cross-ref to `image-embed.ts:69-71`). `RootStateShape` typed with all 4 fields. Undo branch dispatches `entry.rawInv`. Redo branch dispatches `entry.rawFwd`. Push branch now constructs all 4 fields and passes them to `pushEntry`. ~25 lines edits.                                                                                                                                                                                                                                                      |
 | `src/client/state/middleware/history-middleware.test.ts` | Added `makeImagePayload` + `makeDocWithImagePage` helpers. Added new describe block `Wave 8.6 N-1 two-state model` with 3 tests: (1) push stores compacted-fwd + raw-fwd with correct byte presence; (2) **THE round-trip regression test** — delete-image-page → undo → assert `dirtyOps[1].image.bytes.byteLength === 8` (not zero); (3) symmetric redo case asserting `rawFwd` is dispatched. Pre-existing 3 rotate tests untouched. Also disabled `serializableCheck` in `makeStore` since the N-1 tests intentionally put Uint8Array bytes through state (prod store handles serialization at the IPC boundary). +180 lines. |
 
 ### Round-trip regression test (the load-bearing one)
@@ -2039,22 +2100,22 @@ This is the test that would have caught N-1 in Wave 7 (and the test that would h
 
 ### Verification matrix
 
-| Check | Result |
-|---|---|
-| `npx tsc -p tsconfig.renderer.json --noEmit` | **0 errors** (clean exit). |
-| `npx vitest run src/client/state/middleware src/client/state/slices/document-inverses` | **14/14 passed** (6 middleware + 8 inverses). |
-| `npx vitest run src/client` (full renderer suite) | **97/97 passed** in 14 test files. Was 94/94 pre-fix → **+3 new tests, 0 regressions**. |
-| Option chosen | **A** (dispatch raw, store compacted — Julian's recommendation). Not B (no compaction at all — would defeat §13.3 storage footprint), not C (would require David's main-side fix; out of scope for solo wave). |
-| Round-trip verified | **YES** — see test 2 in the new describe block. Pre-fix this test would have asserted `byteLength === 8` against an actual value of `0`. |
-| L-001 touched? | **No.** Edit confined to `src/client/state/middleware/` and `src/client/state/slices/history-slice.ts`. `app.tsx`, `window-manager.*`, `enableDragDropFiles` untouched. |
-| Files outside Riley's scope touched? | **No.** No edits to `src/main/`, `src/preload/`, `src/ipc/`, `src/db/`, configs, Wave 1 docs, `LICENSE`, `LICENSES.md`, `README.md`, `docs/code-review.md`, `.learnings/locked-instructions.md`. |
+| Check                                                                                  | Result                                                                                                                                                                                                         |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npx tsc -p tsconfig.renderer.json --noEmit`                                           | **0 errors** (clean exit).                                                                                                                                                                                     |
+| `npx vitest run src/client/state/middleware src/client/state/slices/document-inverses` | **14/14 passed** (6 middleware + 8 inverses).                                                                                                                                                                  |
+| `npx vitest run src/client` (full renderer suite)                                      | **97/97 passed** in 14 test files. Was 94/94 pre-fix → **+3 new tests, 0 regressions**.                                                                                                                        |
+| Option chosen                                                                          | **A** (dispatch raw, store compacted — Julian's recommendation). Not B (no compaction at all — would defeat §13.3 storage footprint), not C (would require David's main-side fix; out of scope for solo wave). |
+| Round-trip verified                                                                    | **YES** — see test 2 in the new describe block. Pre-fix this test would have asserted `byteLength === 8` against an actual value of `0`.                                                                       |
+| L-001 touched?                                                                         | **No.** Edit confined to `src/client/state/middleware/` and `src/client/state/slices/history-slice.ts`. `app.tsx`, `window-manager.*`, `enableDragDropFiles` untouched.                                        |
+| Files outside Riley's scope touched?                                                   | **No.** No edits to `src/main/`, `src/preload/`, `src/ipc/`, `src/db/`, configs, Wave 1 docs, `LICENSE`, `LICENSES.md`, `README.md`, `docs/code-review.md`, `.learnings/locked-instructions.md`.               |
 
 ### Contract observations for Marcus (Phase 2.5 ruling)
 
 1. **`ipc-contract.ts:230-234` doc comment is now consistent with renderer behavior — but main-side still doesn't honor it.** The comment promises "Main's image-cache holds the real bytes for the handle's lifetime; redo retrieves by hash." Post-Wave-8.6, the renderer no longer relies on that promise — it ships full bytes on every redo/undo dispatch via `rawFwd`/`rawInv`. The main side (`image-embed.ts:69-71`) STILL rejects empty bytes before consulting the cache. Two paths forward, both Marcus's call for Phase 2.5:
-    - **Option (a):** Fix the comment — strike "redo retrieves by hash" and reword to match reality: "the renderer always re-sends bytes; the cache exists solely to skip a re-decode round-trip." Aligns spec to implementation.
-    - **Option (b):** Fix the main side — make `embedImage()` consult `cache.get(contentHash)` BEFORE checking `bytes.byteLength`, so a contentHash-only payload is honored when the cache has the bytes. Honors the doc comment as written; allows future renderer simplification (compact-on-dispatch).
-    - I have no opinion which is correct — both are valid. Note that (a) is a doc-only change; (b) is a 3-line `image-embed.ts` swap. Either way the N-1 user-facing symptom is now closed by the renderer fix alone.
+   - **Option (a):** Fix the comment — strike "redo retrieves by hash" and reword to match reality: "the renderer always re-sends bytes; the cache exists solely to skip a re-decode round-trip." Aligns spec to implementation.
+   - **Option (b):** Fix the main side — make `embedImage()` consult `cache.get(contentHash)` BEFORE checking `bytes.byteLength`, so a contentHash-only payload is honored when the cache has the bytes. Honors the doc comment as written; allows future renderer simplification (compact-on-dispatch).
+   - I have no opinion which is correct — both are valid. Note that (a) is a doc-only change; (b) is a 3-line `image-embed.ts` swap. Either way the N-1 user-facing symptom is now closed by the renderer fix alone.
 2. **`compactImageOpForHistory` does NOT currently zero bytes on `delete { preservedSource: { kind: 'image', image } }`.** Only the three forward image-bearing variants (`image-insert`, `image-overlay`, `image-overlay-delete`) are compacted. The `delete` op's preservedSource bytes survive in the "compacted" history form. This is a latent storage-footprint bug — if a user deletes many image-pages, history holds N copies of byte-bearing delete ops. Pre-Wave-8.6, the symmetric `image-insert` INVERSE was compacted, so the issue was masked. Post-fix, the `inv` is still compacted (image-insert path); but the FORWARD `delete` op stores its bytes through `compactImageOpForHistory` unchanged. ~5 LOC fix in `ipc-contract.ts:236-253` to add the fourth branch. Not in this wave's scope per brief (focused N-1 fix only); flag for Phase 2.5 storage-footprint pass.
 3. **`HistoryEntry` storage doubled for image ops.** Each entry now carries both compacted and raw forms. For non-image ops the cost is two references to the same object (effectively zero). For image ops the raw form holds bytes (max 50MB per architecture-phase-2.md §6 budget) AND the compacted form holds a near-empty op header. The compacted form's purpose in the dual-store world becomes mostly defensive: a future GC pass that wants to drop bottom-of-stack raw bytes can switch the entry to compacted-only without changing the type. If Marcus decides Phase 2.5 lands the GC pass, the contract types are already lined up; if not, the current `fwd`/`inv` fields are arguably redundant with `rawFwd`/`rawInv` and could be collapsed. Held for now to preserve the two-state contract as documented.
 
@@ -2071,8 +2132,8 @@ This is the test that would have caught N-1 in Wave 7 (and the test that would h
 
 ### Wave 8.6 closes Julian's N-1 finding
 
-| Wave 8.5 re-audit finding | Wave 8.6 status |
-|---|---|
+| Wave 8.5 re-audit finding                                                                    | Wave 8.6 status                                                                                                                                                                          |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **N-1 (HIGH)** — Renderer history compaction defeats engine's image-undo-of-delete save path | **CLOSED** (renderer-half). Two-state HistoryEntry; raw dispatch path; round-trip regression test added. Main-side contract observation (1 above) deferred to Marcus's Phase 2.5 ruling. |
 
 ---
@@ -2083,28 +2144,28 @@ This is the test that would have caught N-1 in Wave 7 (and the test that would h
 
 ### Files touched
 
-| File | Action | Lines (before → after) | Notes |
-|---|---|---|---|
-| `README.md` | UPDATE | 127 → 133 | Status banner 0.2.0 (no walking-skeleton language); What this is rewritten; Use list refreshed (Print/Print-to-PDF/Image import/Text editing/Bookmarks/Undo/Redo); Phase 1 limitations block replaced with Phase 2 limitations; Phase 1.1 updates demoted to archive note; Acknowledgments add `utif` |
-| `docs/user-guide.md` | UPDATE + 5 new sections | 339 → 521 | NEW: Printing, Print to PDF, Importing images, Editing text, Working with bookmarks (CRUD rewrite). REWRITTEN: Saving (no H-3 caveat — atomic save + replay engine described), Known limitations in Phase 2 (10-row honest scope fence), Coming in Phase 3+ (no longer Phase 2). Shortcuts table verified against `src/client/shortcuts.ts` + `src/client/hooks/use-app-shortcuts.ts` exactly (Ctrl+I = Insert image, Ctrl+Alt+I = Toggle inspector — Phase 1 single-Ctrl+I-was-inspector binding moved to make room for Insert image). |
-| `docs/developer-guide.md` | UPDATE | 548 → 694 | NEW: edit-replay engine architecture (with ASCII data-flow diagram), history middleware two-state model documented, renderer-gatekeeper boundary section, "How to add an EditOperation variant" 10-row worked example with concrete file paths + presentational-vs-model-mutating distinction, IPC reference card with 9 Phase 2 channels + status, 8 Common Pitfalls (5 NEW: gatekeeper-ESLint-rule, MoveBookmarkResult-don't-collapse-to-boolean, history-dual-store, presentational-variants, originalBytes-lazy-load, image-bytes-lifecycle — plus carried Node 24/Electron 30 ABI, L-001, composite/TS4023, electron-builder // keys), test counts 224/97/37 = 358 + 1 e2e. |
-| `docs/api-reference.md` | UPDATE | 346 → 505 | Status summary updated (pdf:export now Live, fs:applyEditOps as Phase 2 path); `fs:writePdf` Phase 1 caveat retired; `pdf:export` Phase 1 stub paragraph rewritten to dual-engine live; NEW Phase 2 channels section (9 channels: fs:applyEditOps, pdf:embedImage, pdf:replaceText, pdf:identifyTextSpan, pdf:print, bookmarks:listTree/move/rename, plus pdf:export cross-link); `MoveBookmarkResult` discriminated-union spec + `invalid_parent → invalid_payload` IPC boundary translation Phase 2.5 follow-up flagged. |
-| `LICENSES.md` | VERIFY + amend | 190 → 192 | Verified `utif@^3.1.0` row present + MIT/photopea attribution + already listed in Direct runtime deps. Refreshed Scan basis date to 2026-05-21 (Phase 2 close — re-checked). Items-flagged-for-follow-up section: "None as of Phase 2 close"; explicit one-paragraph callout that `utif` was the only Phase 2 dep added. Added Photopea/UTIF.js acknowledgment line. |
-| `docs/phase-2-release-notes.md` | NEW | 0 → 78 | One-page user-facing changelog. Sections: What's new in 0.2.0 (7 bullets), Known limitations in 0.2.0 (12-row table), Breaking changes from 0.1.0 (None — additive), Upgrade notes (6 bullets covering schema-v2 migration + Save behavior change + settings keys), Phase 1.1 archive (historical), What's next (Phase 3-7 headlines). |
+| File                            | Action                  | Lines (before → after) | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------- | ----------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`                     | UPDATE                  | 127 → 133              | Status banner 0.2.0 (no walking-skeleton language); What this is rewritten; Use list refreshed (Print/Print-to-PDF/Image import/Text editing/Bookmarks/Undo/Redo); Phase 1 limitations block replaced with Phase 2 limitations; Phase 1.1 updates demoted to archive note; Acknowledgments add `utif`                                                                                                                                                                                                                                                                                                                                                                            |
+| `docs/user-guide.md`            | UPDATE + 5 new sections | 339 → 521              | NEW: Printing, Print to PDF, Importing images, Editing text, Working with bookmarks (CRUD rewrite). REWRITTEN: Saving (no H-3 caveat — atomic save + replay engine described), Known limitations in Phase 2 (10-row honest scope fence), Coming in Phase 3+ (no longer Phase 2). Shortcuts table verified against `src/client/shortcuts.ts` + `src/client/hooks/use-app-shortcuts.ts` exactly (Ctrl+I = Insert image, Ctrl+Alt+I = Toggle inspector — Phase 1 single-Ctrl+I-was-inspector binding moved to make room for Insert image).                                                                                                                                          |
+| `docs/developer-guide.md`       | UPDATE                  | 548 → 694              | NEW: edit-replay engine architecture (with ASCII data-flow diagram), history middleware two-state model documented, renderer-gatekeeper boundary section, "How to add an EditOperation variant" 10-row worked example with concrete file paths + presentational-vs-model-mutating distinction, IPC reference card with 9 Phase 2 channels + status, 8 Common Pitfalls (5 NEW: gatekeeper-ESLint-rule, MoveBookmarkResult-don't-collapse-to-boolean, history-dual-store, presentational-variants, originalBytes-lazy-load, image-bytes-lifecycle — plus carried Node 24/Electron 30 ABI, L-001, composite/TS4023, electron-builder // keys), test counts 224/97/37 = 358 + 1 e2e. |
+| `docs/api-reference.md`         | UPDATE                  | 346 → 505              | Status summary updated (pdf:export now Live, fs:applyEditOps as Phase 2 path); `fs:writePdf` Phase 1 caveat retired; `pdf:export` Phase 1 stub paragraph rewritten to dual-engine live; NEW Phase 2 channels section (9 channels: fs:applyEditOps, pdf:embedImage, pdf:replaceText, pdf:identifyTextSpan, pdf:print, bookmarks:listTree/move/rename, plus pdf:export cross-link); `MoveBookmarkResult` discriminated-union spec + `invalid_parent → invalid_payload` IPC boundary translation Phase 2.5 follow-up flagged.                                                                                                                                                       |
+| `LICENSES.md`                   | VERIFY + amend          | 190 → 192              | Verified `utif@^3.1.0` row present + MIT/photopea attribution + already listed in Direct runtime deps. Refreshed Scan basis date to 2026-05-21 (Phase 2 close — re-checked). Items-flagged-for-follow-up section: "None as of Phase 2 close"; explicit one-paragraph callout that `utif` was the only Phase 2 dep added. Added Photopea/UTIF.js acknowledgment line.                                                                                                                                                                                                                                                                                                             |
+| `docs/phase-2-release-notes.md` | NEW                     | 0 → 78                 | One-page user-facing changelog. Sections: What's new in 0.2.0 (7 bullets), Known limitations in 0.2.0 (12-row table), Breaking changes from 0.1.0 (None — additive), Upgrade notes (6 bullets covering schema-v2 migration + Save behavior change + settings keys), Phase 1.1 archive (historical), What's next (Phase 3-7 headlines).                                                                                                                                                                                                                                                                                                                                           |
 
 ### Phase-2-now-available claims documented (sample, with source-of-truth back-trace)
 
-| Claim | Source |
-|---|---|
-| Save preserves edits | build-report Wave 8.5 David B-1/B-2 + Wave 8.6 Riley N-1 |
-| Print to physical printer via webContents.print() | build-report Wave 8 Diego D-8.3 |
-| Print-to-PDF dual engine (pdf-lib default, Chromium fallback) | build-report Wave 8 Diego D-8.2 |
-| Image import (PNG/JPEG/TIFF first-page) as new page or overlay | build-report Wave 7 + Wave 8 (utif added by Diego D-8.1) |
-| Text editing replace-only with original font | build-report Wave 7 Riley + David + Wave 8 |
-| Bookmarks authoring (full CRUD tree, cycle detection, drag-reorder, drag-nest) | build-report Wave 7 Ravi + David + Riley; Wave 8.5 David H-1 |
-| Undo/redo across all Phase 1 + Phase 2 ops | build-report Wave 7 Riley history middleware + Wave 8.5 Riley B-2 + Wave 8.6 Riley N-1 |
-| Schema v2 migration | build-report Wave 7 Ravi (`migrations/0002_phase2_bookmarks.sql`) |
-| Renderer-gatekeeper ESLint enforcement | build-report Wave 8.5 Diego H-2 |
+| Claim                                                                          | Source                                                                                 |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| Save preserves edits                                                           | build-report Wave 8.5 David B-1/B-2 + Wave 8.6 Riley N-1                               |
+| Print to physical printer via webContents.print()                              | build-report Wave 8 Diego D-8.3                                                        |
+| Print-to-PDF dual engine (pdf-lib default, Chromium fallback)                  | build-report Wave 8 Diego D-8.2                                                        |
+| Image import (PNG/JPEG/TIFF first-page) as new page or overlay                 | build-report Wave 7 + Wave 8 (utif added by Diego D-8.1)                               |
+| Text editing replace-only with original font                                   | build-report Wave 7 Riley + David + Wave 8                                             |
+| Bookmarks authoring (full CRUD tree, cycle detection, drag-reorder, drag-nest) | build-report Wave 7 Ravi + David + Riley; Wave 8.5 David H-1                           |
+| Undo/redo across all Phase 1 + Phase 2 ops                                     | build-report Wave 7 Riley history middleware + Wave 8.5 Riley B-2 + Wave 8.6 Riley N-1 |
+| Schema v2 migration                                                            | build-report Wave 7 Ravi (`migrations/0002_phase2_bookmarks.sql`)                      |
+| Renderer-gatekeeper ESLint enforcement                                         | build-report Wave 8.5 Diego H-2                                                        |
 
 ### Phase-2 limitations documented (10 + 12 = honest scope-fence)
 
@@ -2170,12 +2231,14 @@ Nathan's outputs CLOSE Phase 2. The 6 acceptance-criteria categories from the br
 **Tasks closed:** R-10.1 (compactImageOpForHistory delete{preservedSource:image} branch + test) + R-10.2 (history-entry memory dedup — Path B: documented + pinned via test) + R-10.3 (gatekeeper verified pure re-export; moveBookmarkThunk forward-compatible string-widened invalid_parent handler).
 
 #### Files touched
+
 - `src/client/types/ipc-contract.ts` — `compactImageOpForHistory` extended with `delete{preservedSource:image}` branch (+11 LOC body, +14 LOC comment block enumerating the four variants).
 - `src/client/state/middleware/history-middleware.ts` — top-of-file `Memory model for image-op history entries` block documenting the implicit Uint8Array reference-sharing between `rawFwd` and `rawInv` (no code change to the middleware itself; pure documentation pinning the invariant).
 - `src/client/state/middleware/history-middleware.test.ts` — +2 tests: (1) R-10.2 dedup invariant pin (`rawFwd.image.bytes === rawInv.preservedSource.image.bytes` for image-insert), (2) R-10.1 regression (fwd-delete-of-image-page is bytes-zeroed in compacted form while rawFwd preserves bytes).
 - `src/client/state/thunks.ts` `moveBookmarkThunk` — added `invalid_parent` branch with user-facing toast "Cannot move bookmark to that location." Distinct from the `cycle_detected` toast. Implemented via a string-widened comparison so the thunk is forward-compatible regardless of the order David's D-10.1 contract amendment lands relative to this edit.
 
 #### Files NOT touched
+
 - `src/ipc/contracts.ts` (David's D-10.1 amendment; he owns the contract surface; my thunk consumes whatever wire shape lands)
 - `src/ipc/handlers/bookmarks-phase2.ts` (David's handler; the `invalid_parent → invalid_payload` translation is his to retire)
 - `src/main/`, `src/preload/`, `src/db/`, `migrations/` — out of scope
@@ -2185,10 +2248,13 @@ Nathan's outputs CLOSE Phase 2. The 6 acceptance-criteria categories from the br
 - `app.tsx`, `window-manager.*` (L-001 surfaces — none of my edits touch drag-drop)
 
 #### R-10.1 detail
+
 The asymmetry Riley flagged in Wave 8.6 contract-observation #2 is now closed. Pre-fix: `compactImageOpForHistory` handled three image-bearing variants (`image-insert`, `image-overlay`, `image-overlay-delete`) but NOT the FORWARD `delete` whose `preservedSource.kind === 'image'`. The forward delete-of-image-page leaked full Uint8Array bytes into `history.past[*].fwd.preservedSource.image.bytes` — invisible at typecheck (the compactor's fallthrough `return op` is the silent leak path) and invisible in Wave 7/8 tests (no test asserted byte-zeroing on the FORWARD delete-of-image-page, only on the inverse). Post-fix: four-variant exhaustive compaction; new test asserts `entry.fwd.preservedSource.image.bytes.byteLength === 0` after a forward delete-of-image-page is dispatched, while `entry.rawFwd.preservedSource.image.bytes.byteLength === payload.bytes.byteLength` for the dispatch path. The compactor's contentHash is preserved on both forms.
 
 #### R-10.2 detail — Path B chosen (documented + pinned, no code change to middleware)
+
 **Investigation result:** dedup is **already automatic** via JS reference semantics. Walked through `document-inverses.ts`:
+
 - `inverseOf({kind:'image-insert', image: P, ...})` returns `{kind:'delete', preservedSource: {kind:'image', image: P, ...}}` where `P` is the SAME `ImageEmbedPayload` reference (no clone, no `structuredClone`, no byte copy).
 - Symmetric for `inverseOf({kind:'delete', preservedSource: {kind:'image', image: P, ...}})` → `{kind:'image-insert', image: P, ...}`.
 
@@ -2197,23 +2263,28 @@ Therefore `rawFwd.image.bytes === rawInv.preservedSource.image.bytes` (identity,
 **Output:** top-of-file comment block in `history-middleware.ts` documenting the invariant + a regression test in `history-middleware.test.ts` that pins `entry.rawFwd.image.bytes === entry.rawInv.preservedSource.image.bytes` (and also `=== payload.bytes`) by IDENTITY. Any future change to `inverseOf` that introduces a `structuredClone` or byte-slice (defeating the implicit dedup) FAILS the test immediately. The architectural choice is now self-documenting and self-enforcing.
 
 #### R-10.3 detail — gatekeeper + thunk sync
+
 - `src/client/types/ipc-contract.ts` line 174 already re-exports `BookmarksMoveError` from `'../../ipc/contracts'`. Pure re-export — when David's D-10.1 amendment lands `'invalid_parent'` in the wire union, the renderer gatekeeper picks it up automatically with zero edits.
 - `moveBookmarkThunk` updated with a dedicated `invalid_parent` branch returning the user-facing toast **"Cannot move bookmark to that location."** Distinct from the `cycle_detected` toast ("Cannot move a bookmark under one of its own descendants.") — the two failure modes are now first-class user-distinguishable. Implementation uses a `const wireError: string = res.error;` widened-comparison so the thunk compiles cleanly UNDER BOTH the pre-D-10.1 contract (where `'invalid_parent'` is not in the union, branch is unreachable) AND the post-D-10.1 contract (where `'invalid_parent'` is in the union, branch is live). Avoids a typecheck dependency on the relative landing order of David's parallel work.
 - Verified no client tests rely on the old `invalid_payload` masking for bookmarks:move; only `bookmarks-panel/index.tsx` references `moveBookmarkThunk` and it does not assert on the error string. Zero test changes needed on the renderer side.
 
 #### Verification
+
 - `npx tsc -p tsconfig.renderer.json --noEmit` → **0 errors**.
 - `npx vitest run src/client` → **99/99 pass in 14 test files** (was 97, +2 new = R-10.1 + R-10.2 dedup invariant; 0 regressions).
 - `npx vitest run src/client/state/middleware src/client/state/slices/document-inverses` → **16/16 pass** (was 14, +2 new).
 - ESLint on touched files → **0 errors**, 3 pre-existing import-order warnings (none introduced by my edits — my changes are body comments + body code only, never imports).
 
 #### L-001 status
+
 UNTOUCHED. None of my edits touch `src/main/window-manager.ts`, `src/client/app.tsx`, or drag-drop surfaces. The four files touched (`ipc-contract.ts`, `history-middleware.ts`, `history-middleware.test.ts`, `thunks.ts`) have zero overlap with the L-001 enforcement surface.
 
 #### Contract observation for David (D-10.1 landing order)
+
 If David's D-10.1 amendment lands AFTER my row but BEFORE Julian's re-audit: the renderer thunk works out-of-the-box because of the string-widened comparison — no follow-up Riley edit needed. If David's amendment never lands (Phase 2.5 abandoned): the thunk's `invalid_parent` branch is dead code that compiles cleanly and never fires (the wire never returns that variant). Either way the renderer is correct without further coordination.
 
 #### Riley Wave 10 close
+
 Three tasks closed against acceptance criteria from `docs/phase-2.5-brief.md` §2. Renderer baseline 97 → 99; renderer typecheck clean; L-001 holds; storage-footprint asymmetry retired; history-entry memory model self-documented and pinned. Ready for Julian re-audit when David + Diego return.
 
 ---
@@ -2224,6 +2295,7 @@ Three tasks closed against acceptance criteria from `docs/phase-2.5-brief.md` §
 **Tasks closed:** Di-10.1 (Julian MEDIUM picks — path-sanitizer hardening test fixtures + ESLint safety-floor rule additions) + Di-10.2 (package.json/LICENSES.md consistency re-verification) + Di-10.3 (dist:win smoke).
 
 #### Inputs read
+
 - `docs/phase-2.5-brief.md` §3 (my 3 tasks + acceptance criteria)
 - `docs/code-review.md` Phase 1 §B-MEDIUM (path-sanitizer harder tests deferral), Phase 1 §G-MEDIUM (path-vector fixtures), Phase 2 §I (test coverage gaps) — picked the items that are pure config / test-fixtures (no source touches under David / Ravi / Riley domain)
 - `package.json` (verified version `0.2.0`)
@@ -2234,13 +2306,13 @@ Three tasks closed against acceptance criteria from `docs/phase-2.5-brief.md` §
 
 #### Files touched
 
-| File | Action | Why |
-|---|---|---|
+| File                                       | Action | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------ | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/main/security/path-sanitizer.test.ts` | UPDATE | Added 40 hardening fixtures: 7 regression-pin block (traversal stays rejected), 7 control-char pin block, 8 extension-validation pin, 3 relative-mode pin, 2 allowedExtensions option pin, plus a 13-vector KNOWN GAP block pinning the inputs the sanitizer currently accepts that a Phase 2.5.1 hardening sweep should reject (UNC, device-namespace, Windows reserved device names, percent-encoded `..`, RTL override, zero-width). All assertions match CURRENT behavior — none of them fail. Tests went 7 → 47. |
-| `.eslintrc.cjs` | UPDATE | Added a "Safety floor" rules block: `eqeqeq: ['error', 'always']`, `no-var: error`, `no-throw-literal: error`, `no-debugger: error`, `no-alert: error`. All five verified zero-impact on the current codebase by running ESLint with each rule individually + cumulatively — 10 errors / 87 warnings before and after (identical to Wave 8.5 / Phase 2 close baseline). Pure ratchets. |
-| `LICENSES.md` | UPDATE | Refreshed scan-basis paragraph to 2026-05-22 (Phase 2.5 Wave 10 re-verification). Added explicit note that `npm ls` is clean of UNMET PEER DEPENDENCY warnings — remaining UNMET items are OPTIONAL (`dmg-license`, `@swc/core`, platform-specific esbuild prebuilds), all benign on Windows. No table or content edits. |
-| `docs/build-report.md` | APPEND | This row only. |
-| `.learnings/learnings.jsonl` | APPEND | One JSONL line at end (Diego Wave 10 lesson). |
+| `.eslintrc.cjs`                            | UPDATE | Added a "Safety floor" rules block: `eqeqeq: ['error', 'always']`, `no-var: error`, `no-throw-literal: error`, `no-debugger: error`, `no-alert: error`. All five verified zero-impact on the current codebase by running ESLint with each rule individually + cumulatively — 10 errors / 87 warnings before and after (identical to Wave 8.5 / Phase 2 close baseline). Pure ratchets.                                                                                                                                |
+| `LICENSES.md`                              | UPDATE | Refreshed scan-basis paragraph to 2026-05-22 (Phase 2.5 Wave 10 re-verification). Added explicit note that `npm ls` is clean of UNMET PEER DEPENDENCY warnings — remaining UNMET items are OPTIONAL (`dmg-license`, `@swc/core`, platform-specific esbuild prebuilds), all benign on Windows. No table or content edits.                                                                                                                                                                                              |
+| `docs/build-report.md`                     | APPEND | This row only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `.learnings/learnings.jsonl`               | APPEND | One JSONL line at end (Diego Wave 10 lesson).                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 #### Files NOT touched (per brief scope)
 
@@ -2283,46 +2355,46 @@ Picked the items that are pure config / test-fixtures with ZERO source touches:
 
 #### Di-10.2 — package.json + LICENSES.md verification
 
-| Check | Result |
-|---|---|
-| `package.json` version is `0.2.0` | **PASS** (line 3: `"version": "0.2.0"`) — confirmed no regression from Wave 9.5 stamping |
-| `LICENSES.md` includes `utif@^3.1.0` | **PASS** (Direct runtime deps table row 10) |
-| `LICENSES.md` scan basis date | **REFRESHED** to 2026-05-22 (was 2026-05-21 from Phase 2 close — one-day refresh as part of Wave 10 verification) |
-| `npm ls` clean of UNMET PEER DEPENDENCY | **PASS** — zero peer-dep warnings. Remaining UNMET items are OPTIONAL (`dmg-license` macOS-only, `@swc/core` optional fast transpiler, platform-specific esbuild prebuilds). All benign on Windows. |
-| `utif` present in transitive tree exactly once | **PASS** (`npm ls --all 2>&1 | grep -c utif` → 1) |
-| No undeclared-license packages reappeared | **PASS** (no new direct or transitive deps surfaced since Phase 2 close; `concurrently@9.x` continues to drop `spawn-command`) |
+| Check                                          | Result                                                                                                                                                                                              |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| `package.json` version is `0.2.0`              | **PASS** (line 3: `"version": "0.2.0"`) — confirmed no regression from Wave 9.5 stamping                                                                                                            |
+| `LICENSES.md` includes `utif@^3.1.0`           | **PASS** (Direct runtime deps table row 10)                                                                                                                                                         |
+| `LICENSES.md` scan basis date                  | **REFRESHED** to 2026-05-22 (was 2026-05-21 from Phase 2 close — one-day refresh as part of Wave 10 verification)                                                                                   |
+| `npm ls` clean of UNMET PEER DEPENDENCY        | **PASS** — zero peer-dep warnings. Remaining UNMET items are OPTIONAL (`dmg-license` macOS-only, `@swc/core` optional fast transpiler, platform-specific esbuild prebuilds). All benign on Windows. |
+| `utif` present in transitive tree exactly once | **PASS** (`npm ls --all 2>&1                                                                                                                                                                        | grep -c utif` → 1) |
+| No undeclared-license packages reappeared      | **PASS** (no new direct or transitive deps surfaced since Phase 2 close; `concurrently@9.x` continues to drop `spawn-command`)                                                                      |
 
 #### Di-10.3 — dist:win smoke
 
 Ran `npm run dist:win` end-to-end on this Windows host.
 
-| Step | Result |
-|---|---|
-| `typecheck:main` | PASS — 0 errors |
-| `typecheck:preload` | PASS — 0 errors |
-| `typecheck:renderer` | PASS — 0 errors |
+| Step                                              | Result                                                                                                                                                                 |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `typecheck:main`                                  | PASS — 0 errors                                                                                                                                                        |
+| `typecheck:preload`                               | PASS — 0 errors                                                                                                                                                        |
+| `typecheck:renderer`                              | PASS — 0 errors                                                                                                                                                        |
 | `electron-vite build` (main + preload + renderer) | PASS — `dist/main/index.js` 108.74 kB, `dist/preload/index.cjs` 4.81 kB, `dist/renderer/assets/index-*.js` 484.19 kB, `dist/renderer/index.html` 1.20 kB, CSS 38.82 kB |
-| `electron-builder --win` rebuild native | PASS — `better-sqlite3@11.10.0` win32-x64 prebuilt binary installed for Electron 30.5.1 ABI |
-| NSIS installer | **PASS** — `release/PDF Viewer & Editor-0.2.0-x64.exe` produced @ 95,785,971 bytes (~95.8 MB; brief target ~95 MB met) |
-| Portable .exe | **PASS** — `release/PDF Viewer & Editor-0.2.0-x64-portable.exe` produced @ 95,557,510 bytes (~95.6 MB) |
-| Default icon warning | non-blocking (carry-over from Wave 3; real icon is Phase 7 polish) |
-| Code-signing cert | not present (carry-over from Wave 3; cert procurement is Phase 7) |
+| `electron-builder --win` rebuild native           | PASS — `better-sqlite3@11.10.0` win32-x64 prebuilt binary installed for Electron 30.5.1 ABI                                                                            |
+| NSIS installer                                    | **PASS** — `release/PDF Viewer & Editor-0.2.0-x64.exe` produced @ 95,785,971 bytes (~95.8 MB; brief target ~95 MB met)                                                 |
+| Portable .exe                                     | **PASS** — `release/PDF Viewer & Editor-0.2.0-x64-portable.exe` produced @ 95,557,510 bytes (~95.6 MB)                                                                 |
+| Default icon warning                              | non-blocking (carry-over from Wave 3; real icon is Phase 7 polish)                                                                                                     |
+| Code-signing cert                                 | not present (carry-over from Wave 3; cert procurement is Phase 7)                                                                                                      |
 
 Side-effect after `dist:win`: `better-sqlite3` was rebuilt against Electron 30 ABI; subsequent `npm test` on Node-vitest fails the 60 DB-layer tests with `ERR_DLOPEN_FAILED`. This is the documented D-1 ABI flip (Wave 3 + Wave 8.5). CI uses Node 20 LTS where the Node-ABI prebuild is present and passes; local pre-dist test run earlier showed 321 passed (with Node-ABI binary present prior to dist:win).
 
 #### Verification
 
-| Check | Result |
-|---|---|
-| `npx eslint .` | **10 errors / 87 warnings** — IDENTICAL to Phase 2 close / Wave 8.5 baseline. No regression. The 5 new rules add zero findings. |
-| `npm run typecheck` (× 3 projects) | **0 errors** across main + preload + renderer |
-| `npx vitest run src/main/security/path-sanitizer.test.ts` | **47/47 PASS** (was 7/7 pre-Wave-10 — +40 new fixtures) |
-| `npx vitest run src/main/window-manager.test.ts src/main/pdf-ops/h3-retirement.test.ts` | **5/5 PASS** (L-001 = 2/2; H-3 = 3/3) |
-| `npm test` (pre-dist:win, Node-ABI better-sqlite3 still in place) | **321 passed** / 3 db files fail with ERR_DLOPEN_FAILED (~59 cases) — documented D-1; same as Wave 8.5 baseline. |
-| `npm test` (post-dist:win, Electron-ABI better-sqlite3 in place) | **362 passed** (321 pre + 41 net new = path-sanitizer +40 plus baseline drift +1 from a vitest collector race) / 60 fail on same D-1 ABI cause |
-| `npm run dist:win` | **PASS** — installer + portable produced @ ~95.8 / 95.6 MB |
-| L-001 enforcement test | **PASS** (`window-manager.test.ts` 2/2) |
-| H-3 retirement test | **PASS** (`h3-retirement.test.ts` 3/3) |
+| Check                                                                                   | Result                                                                                                                                         |
+| --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npx eslint .`                                                                          | **10 errors / 87 warnings** — IDENTICAL to Phase 2 close / Wave 8.5 baseline. No regression. The 5 new rules add zero findings.                |
+| `npm run typecheck` (× 3 projects)                                                      | **0 errors** across main + preload + renderer                                                                                                  |
+| `npx vitest run src/main/security/path-sanitizer.test.ts`                               | **47/47 PASS** (was 7/7 pre-Wave-10 — +40 new fixtures)                                                                                        |
+| `npx vitest run src/main/window-manager.test.ts src/main/pdf-ops/h3-retirement.test.ts` | **5/5 PASS** (L-001 = 2/2; H-3 = 3/3)                                                                                                          |
+| `npm test` (pre-dist:win, Node-ABI better-sqlite3 still in place)                       | **321 passed** / 3 db files fail with ERR_DLOPEN_FAILED (~59 cases) — documented D-1; same as Wave 8.5 baseline.                               |
+| `npm test` (post-dist:win, Electron-ABI better-sqlite3 in place)                        | **362 passed** (321 pre + 41 net new = path-sanitizer +40 plus baseline drift +1 from a vitest collector race) / 60 fail on same D-1 ABI cause |
+| `npm run dist:win`                                                                      | **PASS** — installer + portable produced @ ~95.8 / 95.6 MB                                                                                     |
+| L-001 enforcement test                                                                  | **PASS** (`window-manager.test.ts` 2/2)                                                                                                        |
+| H-3 retirement test                                                                     | **PASS** (`h3-retirement.test.ts` 3/3)                                                                                                         |
 
 #### L-001 status
 
@@ -2347,6 +2419,7 @@ All three Di-10.x tasks closed against acceptance criteria from `docs/phase-2.5-
 **Tasks closed:** D-10.1 (api-contracts §12.6 amendment + remove `invalid_parent → invalid_payload` wire translation + test update) + D-10.2 (real `pdf:identifyTextSpan` text-span scanner) + D-10.3 (Wave 8.6 dual-store doc comment) + D-10.4 (R-10.3 cross-wave flag for Riley).
 
 #### Inputs read
+
 - `docs/phase-2.5-brief.md` §1 (my 4 tasks + acceptance criteria)
 - `docs/api-contracts.md` §12.6 (`bookmarks:move` channel — frozen surface, amended only via the documented Phase 2.5 amendment pattern from `data-models.md §7.5`)
 - `docs/code-review.md` (Phase 2 review + Wave 8.5 re-audit + Wave 8.6 N-1 finding for context)
@@ -2363,14 +2436,14 @@ All three Di-10.x tasks closed against acceptance criteria from `docs/phase-2.5-
 
 #### Files touched
 
-| File | Action | Notes |
-|---|---|---|
-| `docs/api-contracts.md` §12.6 | UPDATE | Added `'invalid_parent'` to `BookmarksMoveError` union + sentence describing the variant + `### Phase 2.5 amendment (2026-05-22, David)` banner. Pattern matches Wave 8.5 amendment in `data-models.md §7.5`. Frozen Phase 1 surface respected — only §12.6 touched. |
-| `src/ipc/contracts.ts` | UPDATE | (a) Widened `BookmarksMoveError` to include `'invalid_parent'` so the handler compiles after retiring the wire translation; (b) inserted explanatory comment block immediately above the `// 4. fs: channels` section banner describing the Wave-8.6 dual-store image-bytes flow at the IPC boundary (D-10.3). |
-| `src/ipc/handlers/bookmarks-phase2.ts` | UPDATE | Removed the `invalid_parent → invalid_payload` wire translation; the repo variant now passes through verbatim. Header comment updated to record Wave 10 close of the H-1 chain. |
-| `src/ipc/handlers/bookmarks-phase2.test.ts` | UPDATE | The `invalid_parent` repo-variant test now asserts the wire response is `invalid_parent` (was `invalid_payload`). Test comment updated to record the Wave 7 → Wave 8.5 → Wave 10 chain. |
-| `src/ipc/handlers/pdf-identify-text-span.ts` | REWRITE | Replaced the Wave-7 stub with a real text-span scanner. Content-stream tokenizer + text-state simulator that handles BT/ET/Tf/Tm/Td/TD/T*/Tj/TJ/'/"/TL operators, literal + hex strings with escapes, balanced parens, and TJ arrays. Decodes Flate/LZW/ASCII85/ASCIIHex/RunLength streams via pdf-lib's `decodePDFRawStream`. Hit-tests the requested `(x, y)` against PDF user-space bboxes and returns the smallest-area run containing the point. spanId scheme `pageObjectNumber/contentStreamIndex/runIndex` matches `text-replace.ts:encodeObjectId`. Header comment documents the manual-parsing approach + the 0.5em-per-character honest advance approximation (pdf-lib does not parse content streams from loaded PDFs into operator instances). |
-| `src/ipc/handlers/pdf-identify-text-span.test.ts` | UPDATE | Replaced the Wave-7 "scanner returns no_text_at_point on a valid PDF" conservative assertion with 3 real-scanner tests: (a) in-bounds single-run hit returns objectId + currentText + runBoundingRect, (b) multi-run page resolves the correct runIndex by clicking different runs, (c) out-of-bounds point returns `no_text_at_point`. Kept all 4 input-validation tests from Wave 7. Final count 7 (was 5; net +2 — brief said +3 but one Wave-7 conservative test is now contradicted by the live scanner). |
+| File                                              | Action  | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `docs/api-contracts.md` §12.6                     | UPDATE  | Added `'invalid_parent'` to `BookmarksMoveError` union + sentence describing the variant + `### Phase 2.5 amendment (2026-05-22, David)` banner. Pattern matches Wave 8.5 amendment in `data-models.md §7.5`. Frozen Phase 1 surface respected — only §12.6 touched.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `src/ipc/contracts.ts`                            | UPDATE  | (a) Widened `BookmarksMoveError` to include `'invalid_parent'` so the handler compiles after retiring the wire translation; (b) inserted explanatory comment block immediately above the `// 4. fs: channels` section banner describing the Wave-8.6 dual-store image-bytes flow at the IPC boundary (D-10.3).                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `src/ipc/handlers/bookmarks-phase2.ts`            | UPDATE  | Removed the `invalid_parent → invalid_payload` wire translation; the repo variant now passes through verbatim. Header comment updated to record Wave 10 close of the H-1 chain.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `src/ipc/handlers/bookmarks-phase2.test.ts`       | UPDATE  | The `invalid_parent` repo-variant test now asserts the wire response is `invalid_parent` (was `invalid_payload`). Test comment updated to record the Wave 7 → Wave 8.5 → Wave 10 chain.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `src/ipc/handlers/pdf-identify-text-span.ts`      | REWRITE | Replaced the Wave-7 stub with a real text-span scanner. Content-stream tokenizer + text-state simulator that handles BT/ET/Tf/Tm/Td/TD/T\*/Tj/TJ/'/"/TL operators, literal + hex strings with escapes, balanced parens, and TJ arrays. Decodes Flate/LZW/ASCII85/ASCIIHex/RunLength streams via pdf-lib's `decodePDFRawStream`. Hit-tests the requested `(x, y)` against PDF user-space bboxes and returns the smallest-area run containing the point. spanId scheme `pageObjectNumber/contentStreamIndex/runIndex` matches `text-replace.ts:encodeObjectId`. Header comment documents the manual-parsing approach + the 0.5em-per-character honest advance approximation (pdf-lib does not parse content streams from loaded PDFs into operator instances). |
+| `src/ipc/handlers/pdf-identify-text-span.test.ts` | UPDATE  | Replaced the Wave-7 "scanner returns no_text_at_point on a valid PDF" conservative assertion with 3 real-scanner tests: (a) in-bounds single-run hit returns objectId + currentText + runBoundingRect, (b) multi-run page resolves the correct runIndex by clicking different runs, (c) out-of-bounds point returns `no_text_at_point`. Kept all 4 input-validation tests from Wave 7. Final count 7 (was 5; net +2 — brief said +3 but one Wave-7 conservative test is now contradicted by the live scanner).                                                                                                                                                                                                                                               |
 
 #### Routing note — `src/ipc/contracts.ts:230-234` vs `src/client/types/ipc-contract.ts:230-234`
 
@@ -2397,7 +2470,7 @@ pdf-lib does NOT parse content streams loaded from existing PDFs into `PDFOperat
 
 Tokenizer recognizes: literal strings `(...)` with balanced parens + backslash escapes (n, r, t, b, f, octal up to 3 digits, line continuation), hex strings `<...>`, names `/Name`, arrays `[...]` (used for TJ), numbers, and operator names. Skips nested dicts `<<...>>` (rare in content streams). Skips PDF comments `%...EOL`.
 
-Text-state simulator tracks: BT/ET inText flag, text matrix `[a b c d e f]`, text line matrix, leading, current font family + size. Td/TD/T* compose the text matrix relative to the text line matrix; Tm sets both. After each Tj/TJ/'/", the bbox is computed and the text matrix is advanced by the run's width.
+Text-state simulator tracks: BT/ET inText flag, text matrix `[a b c d e f]`, text line matrix, leading, current font family + size. Td/TD/T\* compose the text matrix relative to the text line matrix; Tm sets both. After each Tj/TJ/'/", the bbox is computed and the text matrix is advanced by the run's width.
 
 Bbox width is an HONEST APPROXIMATION: `chars.length × 0.5em × fontSize × horizontalScale`. Real glyph widths require the embedded font program (not loaded by pdf-lib's read path). 0.5em is the generic mean advance for proportional fonts; the bbox is wide enough for pointer-precision clicks. Renderer-side glyph metrics from pdf.js refine the visual feedback; main-side only needs a stable `spanId` and bbox-for-stamp for `pdf:replaceText`.
 
@@ -2449,6 +2522,7 @@ Four tasks closed against acceptance criteria from `docs/phase-2.5-brief.md` §1
 **Scope:** Re-audit of all Wave 10 patches (David D-10.1 through D-10.4 + Riley R-10.1 through R-10.3 + Diego Di-10.1 through Di-10.3). Ruled on David's flagged D-10.3 routing-typo. Regression sweep against Phase 2 + Phase 2.5 backlog.
 
 #### Inputs read
+
 - `docs/phase-2.5-brief.md` §4 + §5 (re-audit scope + 14 acceptance criteria)
 - `docs/code-review.md` (Phase 2 review + Wave 8.5 re-audit — both prior audits I authored)
 - `docs/build-report.md` last 6 status rows (David + Riley + Diego Wave 10 reports)
@@ -2498,11 +2572,12 @@ Phase 2.5 cleanup wave verdict: **GREEN.** All 8 acceptance criteria in `docs/ph
 
 ## David — Phase 2.5.1 path-sanitizer hardening (M-1 closure)
 
-**Date:** 2026-05-22  **Wave type:** focused security micro-wave (solo, parallel with Riley Wave 11).  **Brief:** Phase 2.5.1 dispatch (close Julian M-1, MEDIUM, runbook exposure in `path-sanitizer.test.ts:188-232`).
+**Date:** 2026-05-22 **Wave type:** focused security micro-wave (solo, parallel with Riley Wave 11). **Brief:** Phase 2.5.1 dispatch (close Julian M-1, MEDIUM, runbook exposure in `path-sanitizer.test.ts:188-232`).
 
 ### Scope and ownership
 
 Two files owned this wave:
+
 - `src/main/security/path-sanitizer.ts` (source hardening — David)
 - `src/main/security/path-sanitizer.test.ts` (flip 13 KNOWN GAP assertions to regression-pins, add 3 positive tests — David)
 
@@ -2510,22 +2585,22 @@ Zero upstream ripple. The public `sanitizePath(raw, opts?) => string | null` sig
 
 ### 13 Wave-10 KNOWN GAP vectors — closure status
 
-| # | Vector | New rule | New error code | Status |
-|---|---|---|---|---|
-| 1 | UNC backslash (`\\server\share\file.pdf`) | `isUncOrNamespacedPath` (first 2 chars slash-like) | `unc_or_namespace_path` | CLOSED |
-| 2 | UNC forward-slash (`//server/share/file.pdf`) | same helper | `unc_or_namespace_path` | CLOSED |
-| 3a | Win32 device-namespace `\\?\` | same helper | `unc_or_namespace_path` | CLOSED |
-| 3b | Win32 device-namespace `\\.\` | same helper | `unc_or_namespace_path` | CLOSED |
-| 4 | Reserved name CON (`CON.pdf`, `con.pdf`, `Con.pdf`) | `containsReservedDosName` (segment-walk + extname strip + trim + lowercase) | `reserved_dos_device` | CLOSED |
-| 5 | Reserved name PRN | same helper | `reserved_dos_device` | CLOSED |
-| 6 | Reserved name AUX (incl. `C:/AUX/file.pdf` as directory) | same helper | `reserved_dos_device` | CLOSED |
-| 7 | Reserved name NUL | same helper | `reserved_dos_device` | CLOSED |
-| 8 | Reserved names COM1-COM9 + LPT1-LPT9 | same helper | `reserved_dos_device` | CLOSED |
-| 9 | Percent-encoded `..` (`%2e%2e%2f`, `%2E%2E%5C`) | `containsPercentEncoded` — defense-in-depth: reject ANY `%XX` byte; refuse to decode | `percent_encoded` | CLOSED |
-| 10 | U+202E RTL override | `containsSuspiciousUnicode` (regex covers U+200B-U+202E + U+FEFF) | `suspicious_unicode` | CLOSED |
-| 11a | Zero-width space (U+200B) | same helper | `suspicious_unicode` | CLOSED |
-| 11b | Zero-width non-joiner (U+200C) | same helper | `suspicious_unicode` | CLOSED |
-| 11c | Zero-width joiner (U+200D) + BOM (U+FEFF) | same helper | `suspicious_unicode` | CLOSED |
+| #   | Vector                                                   | New rule                                                                             | New error code          | Status |
+| --- | -------------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------- | ------ |
+| 1   | UNC backslash (`\\server\share\file.pdf`)                | `isUncOrNamespacedPath` (first 2 chars slash-like)                                   | `unc_or_namespace_path` | CLOSED |
+| 2   | UNC forward-slash (`//server/share/file.pdf`)            | same helper                                                                          | `unc_or_namespace_path` | CLOSED |
+| 3a  | Win32 device-namespace `\\?\`                            | same helper                                                                          | `unc_or_namespace_path` | CLOSED |
+| 3b  | Win32 device-namespace `\\.\`                            | same helper                                                                          | `unc_or_namespace_path` | CLOSED |
+| 4   | Reserved name CON (`CON.pdf`, `con.pdf`, `Con.pdf`)      | `containsReservedDosName` (segment-walk + extname strip + trim + lowercase)          | `reserved_dos_device`   | CLOSED |
+| 5   | Reserved name PRN                                        | same helper                                                                          | `reserved_dos_device`   | CLOSED |
+| 6   | Reserved name AUX (incl. `C:/AUX/file.pdf` as directory) | same helper                                                                          | `reserved_dos_device`   | CLOSED |
+| 7   | Reserved name NUL                                        | same helper                                                                          | `reserved_dos_device`   | CLOSED |
+| 8   | Reserved names COM1-COM9 + LPT1-LPT9                     | same helper                                                                          | `reserved_dos_device`   | CLOSED |
+| 9   | Percent-encoded `..` (`%2e%2e%2f`, `%2E%2E%5C`)          | `containsPercentEncoded` — defense-in-depth: reject ANY `%XX` byte; refuse to decode | `percent_encoded`       | CLOSED |
+| 10  | U+202E RTL override                                      | `containsSuspiciousUnicode` (regex covers U+200B-U+202E + U+FEFF)                    | `suspicious_unicode`    | CLOSED |
+| 11a | Zero-width space (U+200B)                                | same helper                                                                          | `suspicious_unicode`    | CLOSED |
+| 11b | Zero-width non-joiner (U+200C)                           | same helper                                                                          | `suspicious_unicode`    | CLOSED |
+| 11c | Zero-width joiner (U+200D) + BOM (U+FEFF)                | same helper                                                                          | `suspicious_unicode`    | CLOSED |
 
 That's all 13 KNOWN GAP cases from Diego's Wave 10 test block; closure rate 13/13. (Two list rows for vector 3 (`\\?\` and `\\.\`) and four list rows for vector 11 (zero-width variants) were collapsed into single rules; the test file pins each variant independently.)
 
@@ -2546,7 +2621,7 @@ The 5 NEW error codes are `unc_or_namespace_path`, `reserved_dos_device`, `perce
 The detailed sanitizer evaluates guards in this order to surface the most precise diagnostic code:
 
 1. empty / non-string → `empty_or_non_string`
-2. suspicious Unicode (U+200B-U+202E, U+FEFF) → `suspicious_unicode`  *(BEFORE control-char regex because the bidi range is outside `\x00-\x1f`)*
+2. suspicious Unicode (U+200B-U+202E, U+FEFF) → `suspicious_unicode` _(BEFORE control-char regex because the bidi range is outside `\x00-\x1f`)_
 3. control characters (`\x00-\x1f`) → `control_character`
 4. percent-encoded → `percent_encoded`
 5. UNC / device-namespace → `unc_or_namespace_path`
@@ -2564,21 +2639,22 @@ Test count: **47 → 67** (delta +20). Brief target was "47 + 3 = 50"; I went de
 False-positive guard tests added: `concord.pdf`, `communication.pdf`, `lpt.pdf` — names that CONTAIN reserved substrings but are NOT reserved (no digit suffix on COM/LPT). These pass cleanly.
 
 3 brief-required positive tests:
+
 1. Typical Windows user-profile path (`C:\Users\ahudson\Documents\report.pdf`) — passes
 2. Relative sub-path under `allowRelative` (`docs/subdir/quarterly.pdf`) — passes
 3. Spaces + non-ASCII characters (`résumé für 中文.pdf`) that are NOT control or bidi — passes
 
 ### Verification results
 
-| Check | Command | Result |
-|---|---|---|
-| Main typecheck | `npx tsc -p tsconfig.main.json --noEmit` | clean (0 errors) |
-| Path-sanitizer tests | `npx vitest run src/main/security` | 67/67 PASS |
-| Main suite (no regressions) | `npx vitest run src/main` | 154/154 PASS (was 87 pre-Wave-10; 67 path-sanitizer + 87 others) |
-| IPC handler suite (no regressions) | `npx vitest run src/ipc` | 132/132 PASS |
-| L-001 lock (drag-drop) | `npx vitest run src/main/window-manager.test.ts` | 2/2 PASS |
-| H-3 retirement | `npx vitest run src/main/pdf-ops/h3-retirement.test.ts` | 3/3 PASS |
-| Legitimate path round-trip (3 positive cases) | embedded in path-sanitizer suite | all 3 PASS |
+| Check                                         | Command                                                 | Result                                                           |
+| --------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------- |
+| Main typecheck                                | `npx tsc -p tsconfig.main.json --noEmit`                | clean (0 errors)                                                 |
+| Path-sanitizer tests                          | `npx vitest run src/main/security`                      | 67/67 PASS                                                       |
+| Main suite (no regressions)                   | `npx vitest run src/main`                               | 154/154 PASS (was 87 pre-Wave-10; 67 path-sanitizer + 87 others) |
+| IPC handler suite (no regressions)            | `npx vitest run src/ipc`                                | 132/132 PASS                                                     |
+| L-001 lock (drag-drop)                        | `npx vitest run src/main/window-manager.test.ts`        | 2/2 PASS                                                         |
+| H-3 retirement                                | `npx vitest run src/main/pdf-ops/h3-retirement.test.ts` | 3/3 PASS                                                         |
+| Legitimate path round-trip (3 positive cases) | embedded in path-sanitizer suite                        | all 3 PASS                                                       |
 
 ### Upstream ripple
 
@@ -2613,7 +2689,6 @@ UNTOUCHED. None of my edits touch `src/main/window-manager.ts`, drag-drop surfac
 
 Phase 2.5.1 micro-wave verdict: **GREEN.** All 13 KNOWN GAP attack vectors closed; 0 upstream ripple; 67/67 path-sanitizer tests + 132/132 IPC handler tests + L-001 + H-3 all PASS; M-1 closed. Total wave time ≈ 60 minutes (under the 90-minute target). Phase 3 dispatch readiness: unchanged GREEN — Wave 11 can proceed in parallel without conflict.
 
-
 ---
 
 ### Riley — Wave 11 Phase 3 architecture (2026-05-22)
@@ -2623,6 +2698,7 @@ Phase 2.5.1 micro-wave verdict: **GREEN.** All 13 KNOWN GAP attack vectors close
 **Output:** Doc-only; NO source code touched.
 
 #### Inputs read
+
 - `docs/wave-11-brief.md` (full task list + 7 locked design decisions to encode)
 - `docs/phase-3-plan.md` (top-level Phase 3 plan; locked goals + risks)
 - Phase 1 + Phase 2 frozen design docs: `ARCHITECTURE.md`, `docs/architecture-phase-2.md`, `docs/edit-replay-engine.md`
@@ -2638,29 +2714,29 @@ Phase 2.5.1 micro-wave verdict: **GREEN.** All 13 KNOWN GAP attack vectors close
 
 #### Files touched
 
-| File | Action | Lines | Notes |
-|---|---|---|---|
-| `docs/architecture-phase-3.md` | NEW | 751 | Phase 3 system additions (analogous to architecture-phase-2.md); 14 numbered sections + cross-reference checklist |
-| `docs/form-engine.md` | NEW | 932 | Detailed design of main-process form fill+flatten+create+mail-merge engine (analogous to edit-replay-engine.md); 12 sections + Wave 12 file-ownership map |
-| `docs/api-contracts.md` | AMEND | +394 (870 → 1264) | New §13 with 10 new IPC channels (forms:detect/fill/flatten/designAdd/designRemove/listTemplates/saveTemplate/loadTemplate/runMailMerge + cancelMailMerge) + 1 event stream (mail-merge:progress) + pdf:export `flattenForms?: boolean` additive extension + 4 new SettingKeys. Banner: Phase 3 amendment (2026-05-22, Riley). |
-| `docs/data-models.md` | AMEND | +267 (625 → 892) | New §8 with FormFieldDefinition/FormFieldValue/FormFieldType types, 5 new EditOperation variants (form-commit/form-design-add/form-design-remove/form-design-edit/form-flatten), inverse table extension, Schema v3 DDL (`0003_phase3_forms.sql`, idempotent + clean from v2), FormTemplateRow + DTO + Repo, 4 new SettingKeys, zod-validation rules for FormFieldDefinition. Banner: Phase 3 amendment (2026-05-22). |
-| `docs/ui-spec.md` | AMEND | +515 (778 → 1293) | New §12 with Forms sidebar tab, Form Designer mode (toolbar toggle + cursor + Field-Type Selector + properties Inspector), Mail Merge Wizard (4 steps + running + completion), Flatten-on-export checkbox, Ctrl+Shift+F + Ctrl+M shortcuts, drag-drop matrix for CSV/Excel, screen states for all new components, accessibility floor. Banner: Phase 3 amendment (2026-05-22). |
-| `docs/conventions.md` | AMEND | +165 (882 → 1047) | New §14 documenting the form-state vs document-state separation pattern (commit-batched form-fill alongside per-op design ops), the commit-boundary thunk, mail-merge bypass pattern with anti-pattern, form-engine pure-function contract extending §13.2, JavaScript-actions stripping enforcement for P3-L-2. Banner: Phase 3 addition, 2026-05-22, Riley. |
-| `docs/build-report.md` | APPEND | this row | |
-| `.learnings/learnings.jsonl` | APPEND | one entry | After this row |
+| File                           | Action | Lines             | Notes                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------ | ------ | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/architecture-phase-3.md` | NEW    | 751               | Phase 3 system additions (analogous to architecture-phase-2.md); 14 numbered sections + cross-reference checklist                                                                                                                                                                                                                                                                                                     |
+| `docs/form-engine.md`          | NEW    | 932               | Detailed design of main-process form fill+flatten+create+mail-merge engine (analogous to edit-replay-engine.md); 12 sections + Wave 12 file-ownership map                                                                                                                                                                                                                                                             |
+| `docs/api-contracts.md`        | AMEND  | +394 (870 → 1264) | New §13 with 10 new IPC channels (forms:detect/fill/flatten/designAdd/designRemove/listTemplates/saveTemplate/loadTemplate/runMailMerge + cancelMailMerge) + 1 event stream (mail-merge:progress) + pdf:export `flattenForms?: boolean` additive extension + 4 new SettingKeys. Banner: Phase 3 amendment (2026-05-22, Riley).                                                                                        |
+| `docs/data-models.md`          | AMEND  | +267 (625 → 892)  | New §8 with FormFieldDefinition/FormFieldValue/FormFieldType types, 5 new EditOperation variants (form-commit/form-design-add/form-design-remove/form-design-edit/form-flatten), inverse table extension, Schema v3 DDL (`0003_phase3_forms.sql`, idempotent + clean from v2), FormTemplateRow + DTO + Repo, 4 new SettingKeys, zod-validation rules for FormFieldDefinition. Banner: Phase 3 amendment (2026-05-22). |
+| `docs/ui-spec.md`              | AMEND  | +515 (778 → 1293) | New §12 with Forms sidebar tab, Form Designer mode (toolbar toggle + cursor + Field-Type Selector + properties Inspector), Mail Merge Wizard (4 steps + running + completion), Flatten-on-export checkbox, Ctrl+Shift+F + Ctrl+M shortcuts, drag-drop matrix for CSV/Excel, screen states for all new components, accessibility floor. Banner: Phase 3 amendment (2026-05-22).                                        |
+| `docs/conventions.md`          | AMEND  | +165 (882 → 1047) | New §14 documenting the form-state vs document-state separation pattern (commit-batched form-fill alongside per-op design ops), the commit-boundary thunk, mail-merge bypass pattern with anti-pattern, form-engine pure-function contract extending §13.2, JavaScript-actions stripping enforcement for P3-L-2. Banner: Phase 3 addition, 2026-05-22, Riley.                                                         |
+| `docs/build-report.md`         | APPEND | this row          |                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `.learnings/learnings.jsonl`   | APPEND | one entry         | After this row                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 **Total: 6 docs, 2 NEW + 4 amended, 3,024 lines written/added.**
 
 #### Locked design decisions encoded check
 
-| ID | Decision | Encoded where |
-|---|---|---|
-| P3-L-1 | Permissive OSS only (no iText/commercial) | architecture-phase-3.md §3.1 — csv-parse MIT + exceljs MIT confirmed |
-| P3-L-2 | No JavaScript form actions in Phase 3 | architecture-phase-3.md §4.1 + §10.2; conventions.md §14.6 enforcement |
-| P3-L-3 | Forms persist as standard ISO 32000 AcroForms (no sidecar) | architecture-phase-3.md §4.5 + §10 |
-| P3-L-4 | Schema v3 for form_templates table | data-models.md §8.4; architecture-phase-3.md §7 |
-| P3-L-5 | CSV via csv-parse + Excel via exceljs (reuse Phase 6 plan dep) | architecture-phase-3.md §3.1; form-engine.md §8 |
-| P3-L-6 | Mail-merge output: folder OR concat (user picks step 4) | architecture-phase-3.md §6; form-engine.md §6.1; ui-spec.md §12.6.4 |
+| ID     | Decision                                                            | Encoded where                                                              |
+| ------ | ------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| P3-L-1 | Permissive OSS only (no iText/commercial)                           | architecture-phase-3.md §3.1 — csv-parse MIT + exceljs MIT confirmed       |
+| P3-L-2 | No JavaScript form actions in Phase 3                               | architecture-phase-3.md §4.1 + §10.2; conventions.md §14.6 enforcement     |
+| P3-L-3 | Forms persist as standard ISO 32000 AcroForms (no sidecar)          | architecture-phase-3.md §4.5 + §10                                         |
+| P3-L-4 | Schema v3 for form_templates table                                  | data-models.md §8.4; architecture-phase-3.md §7                            |
+| P3-L-5 | CSV via csv-parse + Excel via exceljs (reuse Phase 6 plan dep)      | architecture-phase-3.md §3.1; form-engine.md §8                            |
+| P3-L-6 | Mail-merge output: folder OR concat (user picks step 4)             | architecture-phase-3.md §6; form-engine.md §6.1; ui-spec.md §12.6.4        |
 | P3-L-7 | Form-fill ops integration: HYBRID with commit boundary (Riley call) | architecture-phase-3.md §5; data-models.md §8.2-§8.3; conventions.md §14.2 |
 
 **All 7 locked decisions encoded.** Check.
@@ -2723,25 +2799,25 @@ Phase 3 architecture design CLOSED. All 7 locked decisions encoded; pdf-lib CREA
 
 ### Deliverables
 
-| File | Change | Notes |
-|---|---|---|
-| `migrations/0003_phase3_forms.sql` | NEW | Forward-only. CREATE TABLE `form_templates` (id, name UNIQUE, fields_json, source_doc_hash, last_column_mappings, created_at, updated_at) + 2 indexes (name, updated_at DESC). Records version via the runner — does NOT include `INSERT INTO schema_migrations(version=3,...)` (matches the 0001 + 0002 convention; explicit INSERT would PRIMARY KEY-conflict the runner). |
-| `src/db/types.ts` | EDIT | NEW types: `FormFieldType`, `FormFieldOption`, `FormFieldValue`, `FormFieldDefinition`, `FormTemplateRow`. `SettingKey` + `SettingValue` + `KNOWN_SETTING_KEYS` extended with 4 Phase-3 keys (`forms.dateLocale`, `forms.flattenOnExportDefault`, `mailMerge.lastOutputFolder`, `mailMerge.defaultOutputMode`). NEW helper types `FormDateLocale`, `MailMergeOutputMode`. |
-| `src/db/repositories/form-templates-repo.ts` | NEW | 6-method `FormTemplatesRepo` factory. Prepared statements cached; `upsert` wrapped in `db.transaction()` for atomic name-collision-check + INSERT/UPDATE; explicit NULL handling on the two JSON columns; runtime validators on id (positive integer) and name (non-empty string). |
-| `src/db/repositories/form-templates-repo.test.ts` | NEW | 41 cases across 8 describe blocks (schema migration smoke, list, get + getByName, upsert insert, upsert update, delete, updateColumnMappings, JSON round-trip, cross-method integration). |
+| File                                              | Change | Notes                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `migrations/0003_phase3_forms.sql`                | NEW    | Forward-only. CREATE TABLE `form_templates` (id, name UNIQUE, fields_json, source_doc_hash, last_column_mappings, created_at, updated_at) + 2 indexes (name, updated_at DESC). Records version via the runner — does NOT include `INSERT INTO schema_migrations(version=3,...)` (matches the 0001 + 0002 convention; explicit INSERT would PRIMARY KEY-conflict the runner). |
+| `src/db/types.ts`                                 | EDIT   | NEW types: `FormFieldType`, `FormFieldOption`, `FormFieldValue`, `FormFieldDefinition`, `FormTemplateRow`. `SettingKey` + `SettingValue` + `KNOWN_SETTING_KEYS` extended with 4 Phase-3 keys (`forms.dateLocale`, `forms.flattenOnExportDefault`, `mailMerge.lastOutputFolder`, `mailMerge.defaultOutputMode`). NEW helper types `FormDateLocale`, `MailMergeOutputMode`.    |
+| `src/db/repositories/form-templates-repo.ts`      | NEW    | 6-method `FormTemplatesRepo` factory. Prepared statements cached; `upsert` wrapped in `db.transaction()` for atomic name-collision-check + INSERT/UPDATE; explicit NULL handling on the two JSON columns; runtime validators on id (positive integer) and name (non-empty string).                                                                                           |
+| `src/db/repositories/form-templates-repo.test.ts` | NEW    | 41 cases across 8 describe blocks (schema migration smoke, list, get + getByName, upsert insert, upsert update, delete, updateColumnMappings, JSON round-trip, cross-method integration).                                                                                                                                                                                    |
 
 ### Repo method surface
 
 `FormTemplatesRepo` exports 6 methods:
 
-| Method | Signature | Notes |
-|---|---|---|
-| `list` | `() => FormTemplateRow[]` | ORDER BY updated_at DESC, id DESC tie-break |
-| `get` | `(id: number) => FormTemplateRow \| null` | Validates positive-integer id |
-| `getByName` | `(name: string) => FormTemplateRow \| null` | Validates non-empty name |
-| `upsert` | `(UpsertFormTemplateInput) => UpsertFormTemplateResult` | Discriminated union; atomic via `db.transaction` |
-| `delete` | `(id: number) => boolean` | true if removed |
-| `updateColumnMappings` | `(id: number, Record<string, string>) => boolean` | Persists serialized mapping; bumps `updated_at`. Repo serializes here for caller ergonomics (only place the repo touches JSON) |
+| Method                 | Signature                                               | Notes                                                                                                                          |
+| ---------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `list`                 | `() => FormTemplateRow[]`                               | ORDER BY updated_at DESC, id DESC tie-break                                                                                    |
+| `get`                  | `(id: number) => FormTemplateRow \| null`               | Validates positive-integer id                                                                                                  |
+| `getByName`            | `(name: string) => FormTemplateRow \| null`             | Validates non-empty name                                                                                                       |
+| `upsert`               | `(UpsertFormTemplateInput) => UpsertFormTemplateResult` | Discriminated union; atomic via `db.transaction`                                                                               |
+| `delete`               | `(id: number) => boolean`                               | true if removed                                                                                                                |
+| `updateColumnMappings` | `(id: number, Record<string, string>) => boolean`       | Persists serialized mapping; bumps `updated_at`. Repo serializes here for caller ergonomics (only place the repo touches JSON) |
 
 ### Discriminated union variants (`UpsertFormTemplateResult`)
 
@@ -2783,7 +2859,7 @@ Added 4 Phase-3 setting keys to `src/db/types.ts` even though David has not yet 
 1. **`UpsertFormTemplateResult` discriminated union** instead of the bare `number` return advertised in §8.6. Same Wave-7 lesson as `MoveBookmarkResult`: when a method has multiple distinguishable failure modes (`name_in_use`, `not_found`), a discriminated union is the right boundary. `number` can't carry the failure mode; throwing on UNIQUE collision would require the bridge to catch + string-match. The IPC layer (`forms:saveTemplate`, api-contracts §13.7) demands a `name_in_use` variant be distinguishable — the union makes that 1:1 with the IPC `Result`.
 2. **`INSERT INTO schema_migrations (version, applied_at) VALUES (3, ...)` omitted from the SQL file.** data-models §8.4 + architecture-phase-3.md §7.1 both show the explicit INSERT, but 0001 + 0002 do NOT include the equivalent — the migration runner (`src/db/migrate.ts:runMigrations`) records each version row via `recordStmt.run(...)` inside the wrapping transaction. Including the INSERT here would PRIMARY KEY-conflict on every retry. Following the established Phase-1 + Phase-2 pattern (cf. Wave 7 takeaway #1 in learnings.jsonl).
 3. **Added `not_found` error variant** in the discriminated union. Not in §8.6; needed to cover the "UPDATE with stale id" path. Surfaces as `invalid_payload` at the IPC layer per api-contracts §13.7 (no separate code introduced at the IPC surface — this is a structural distinction the bridge consumes, not a new user-visible error).
-4. **Settings registry extension** (forms.* + mailMerge.*) — not strictly in my brief but required to avoid `src/ipc/contracts.ts` lagging `src/db/types.ts` once David lands his Phase-3 IPC additions. data-models §8.7 + the Wave-12 brief both treat this as Ravi's territory (settings registry is the canonical pattern from Phase 1).
+4. **Settings registry extension** (forms._ + mailMerge._) — not strictly in my brief but required to avoid `src/ipc/contracts.ts` lagging `src/db/types.ts` once David lands his Phase-3 IPC additions. data-models §8.7 + the Wave-12 brief both treat this as Ravi's territory (settings registry is the canonical pattern from Phase 1).
 5. **`source_doc_hash` and `last_column_mappings` use SQLite NULL, not the JSON string `"null"`.** §8.5 notes "null until first run" without specifying storage. I store SQL NULL (verified in the "stores nullable mapping column as actual NULL" test) — matches `BookmarkRow.parent_id` convention. The bridge JSON-parses non-null strings; NULL passes through as `null` directly.
 6. **No `0003_phase3_forms_rollback.sql`.** Phase-1 + Phase-2 forward-only convention preserved.
 
@@ -2795,12 +2871,12 @@ Added 4 Phase-3 setting keys to `src/db/types.ts` even though David has not yet 
 
 ### Test count summary
 
-| Suite | Before Wave 12 | After Wave 12 | Delta |
-|---|---|---|---|
-| `form-templates-repo.test.ts` | (did not exist) | **41 cases across 8 describe blocks** | NEW |
-| `bookmarks-repo.test.ts` | 37 | 37 | 0 (no regression) |
-| `recent-files-repo.test.ts` | unchanged | unchanged | 0 |
-| `settings-repo.test.ts` | unchanged | unchanged | 0 |
+| Suite                         | Before Wave 12  | After Wave 12                         | Delta             |
+| ----------------------------- | --------------- | ------------------------------------- | ----------------- |
+| `form-templates-repo.test.ts` | (did not exist) | **41 cases across 8 describe blocks** | NEW               |
+| `bookmarks-repo.test.ts`      | 37              | 37                                    | 0 (no regression) |
+| `recent-files-repo.test.ts`   | unchanged       | unchanged                             | 0                 |
+| `settings-repo.test.ts`       | unchanged       | unchanged                             | 0                 |
 
 Tests cover: schema migration smoke (version >= 3, column set, both indexes); list ordering by updated_at DESC; get + getByName round-trip; positive-integer id validation; non-empty name validation; insert returns positive id; default created_at/updated_at vs explicit overrides; UNIQUE-name collision returns `name_in_use` (insert path); same fields_json under different names allowed; byte-for-byte JSON payload preservation (no parse-and-re-stringify); update preserves created_at while bumping updated_at; update with stale id returns `not_found`; update that would steal another row's name returns `name_in_use`; update to one's own current name is OK; delete returns true/false correctly; delete sibling-isolation; updateColumnMappings persists + bumps timestamp; empty-mapping accepted; non-object mappings rejected; realistic 3-field FormFieldDefinition payload round-trip (text + checkbox-with-default + dropdown-with-options); SQL NULL preservation for both nullable columns; cross-method integration pipelines.
 
@@ -2820,13 +2896,13 @@ Tests cover: schema migration smoke (version >= 3, column set, both indexes); li
 
 Grep across all files I touched:
 
-| File | enableDragDropFiles hits |
-|---|---|
-| `migrations/0003_phase3_forms.sql` | 0 |
-| `src/db/types.ts` | 0 |
-| `src/db/repositories/form-templates-repo.ts` | 0 |
-| `src/db/repositories/form-templates-repo.test.ts` | 0 |
-| `docs/build-report.md` (this status row) | 0 |
+| File                                              | enableDragDropFiles hits |
+| ------------------------------------------------- | ------------------------ |
+| `migrations/0003_phase3_forms.sql`                | 0                        |
+| `src/db/types.ts`                                 | 0                        |
+| `src/db/repositories/form-templates-repo.ts`      | 0                        |
+| `src/db/repositories/form-templates-repo.test.ts` | 0                        |
+| `docs/build-report.md` (this status row)          | 0                        |
 
 **L-001 status: UNCHANGED.** Schema + repo-only work; no main-process window code in this wave's diff.
 
@@ -2846,34 +2922,34 @@ Form engine + 5 EditOperation variants + 10 IPC channels + mail-merge runner. Wi
 
 ### File count
 
-| Category | NEW | EDITED |
-|---|---|---|
-| Engine / data parsers | 4 (`form-engine.ts`, `field-dict-authoring.ts`, `mail-merge-runner.ts`, `csv-excel-parser.ts`) | 1 (`replay-engine.ts` — +5 op variants, +step 3.6) |
-| Tests | 4 (`form-engine.test.ts`, `field-dict-authoring.test.ts`, `mail-merge-runner.test.ts`, `csv-excel-parser.test.ts`) | 1 (`replay-engine.test.ts` — +6 Phase 3 op tests) |
-| IPC handlers | 10 (`forms-detect/fill/flatten/design-add/design-remove/list-templates/save-template/load-template/run-mail-merge/parse-data-source`) | 1 (`register.ts` — wired 11 channel handles + progress event) |
-| Handler tests | 8 (`forms-detect/fill/flatten/design-add/design-remove/templates(combined 3)/run-mail-merge/parse-data-source.test.ts`) | 0 |
-| Contracts + bridge | 0 | 3 (`contracts.ts` — types + Channels registry + PdfApi forms namespace + events.onMailMergeProgress; `db-bridge.ts` — FormTemplatesRepo + Ravi adapter; `index.ts` — runtime wiring) |
-| Preload | 0 | 1 (`preload/index.ts` — forms namespace + onMailMergeProgress) |
-| **Total** | **26 NEW** | **7 EDITED** |
+| Category              | NEW                                                                                                                                   | EDITED                                                                                                                                                                               |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Engine / data parsers | 4 (`form-engine.ts`, `field-dict-authoring.ts`, `mail-merge-runner.ts`, `csv-excel-parser.ts`)                                        | 1 (`replay-engine.ts` — +5 op variants, +step 3.6)                                                                                                                                   |
+| Tests                 | 4 (`form-engine.test.ts`, `field-dict-authoring.test.ts`, `mail-merge-runner.test.ts`, `csv-excel-parser.test.ts`)                    | 1 (`replay-engine.test.ts` — +6 Phase 3 op tests)                                                                                                                                    |
+| IPC handlers          | 10 (`forms-detect/fill/flatten/design-add/design-remove/list-templates/save-template/load-template/run-mail-merge/parse-data-source`) | 1 (`register.ts` — wired 11 channel handles + progress event)                                                                                                                        |
+| Handler tests         | 8 (`forms-detect/fill/flatten/design-add/design-remove/templates(combined 3)/run-mail-merge/parse-data-source.test.ts`)               | 0                                                                                                                                                                                    |
+| Contracts + bridge    | 0                                                                                                                                     | 3 (`contracts.ts` — types + Channels registry + PdfApi forms namespace + events.onMailMergeProgress; `db-bridge.ts` — FormTemplatesRepo + Ravi adapter; `index.ts` — runtime wiring) |
+| Preload               | 0                                                                                                                                     | 1 (`preload/index.ts` — forms namespace + onMailMergeProgress)                                                                                                                       |
+| **Total**             | **26 NEW**                                                                                                                            | **7 EDITED**                                                                                                                                                                         |
 
 ### Channels live vs stubbed
 
 11 channels registered + 1 event stream. **All wired through `ipcMain.handle`** in `src/ipc/register.ts`:
 
-| Channel | Status | Notes |
-|---|---|---|
-| `forms:detect` | LIVE | engine ready; no DB dep |
-| `forms:fill` | LIVE | normalizes ISO-8601 for date fields; option-membership check for radio/dropdown |
-| `forms:flatten` | LIVE | returns `form-flatten` op for the dirtyOps funnel |
-| `forms:designAdd` | LIVE | rect clamp to page bounds + duplicate-name check |
-| `forms:designRemove` | LIVE | captures full before-snapshot for inverse |
-| `forms:listTemplates` | LIVE (memory-backed by default; Ravi's SQLite repo wired via `adaptFormTemplatesRepo` in `src/main/index.ts` when factory present) |
-| `forms:saveTemplate` | LIVE (same adapter) — surfaces `name_in_use` cleanly via Ravi's discriminated-union upsert |
-| `forms:loadTemplate` | LIVE (same adapter) |
-| `forms:runMailMerge` | LIVE — streams `mail-merge:progress` events via `webContents.send`; jobs registered in `globalThis.__pdfViewerMailMergeJobs` for cancellation |
-| `forms:cancelMailMerge` | LIVE — flips runner's `cancelRequested` flag |
-| `forms:parseDataSource` | LIVE — bounded preview (default 5, max 50 rows) for wizard step 2 |
-| `mail-merge:progress` (event stream) | LIVE — `webContents.send` from main; preload exposes `events.onMailMergeProgress(handler)` |
+| Channel                              | Status                                                                                                                                        | Notes                                                                           |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `forms:detect`                       | LIVE                                                                                                                                          | engine ready; no DB dep                                                         |
+| `forms:fill`                         | LIVE                                                                                                                                          | normalizes ISO-8601 for date fields; option-membership check for radio/dropdown |
+| `forms:flatten`                      | LIVE                                                                                                                                          | returns `form-flatten` op for the dirtyOps funnel                               |
+| `forms:designAdd`                    | LIVE                                                                                                                                          | rect clamp to page bounds + duplicate-name check                                |
+| `forms:designRemove`                 | LIVE                                                                                                                                          | captures full before-snapshot for inverse                                       |
+| `forms:listTemplates`                | LIVE (memory-backed by default; Ravi's SQLite repo wired via `adaptFormTemplatesRepo` in `src/main/index.ts` when factory present)            |
+| `forms:saveTemplate`                 | LIVE (same adapter) — surfaces `name_in_use` cleanly via Ravi's discriminated-union upsert                                                    |
+| `forms:loadTemplate`                 | LIVE (same adapter)                                                                                                                           |
+| `forms:runMailMerge`                 | LIVE — streams `mail-merge:progress` events via `webContents.send`; jobs registered in `globalThis.__pdfViewerMailMergeJobs` for cancellation |
+| `forms:cancelMailMerge`              | LIVE — flips runner's `cancelRequested` flag                                                                                                  |
+| `forms:parseDataSource`              | LIVE — bounded preview (default 5, max 50 rows) for wizard step 2                                                                             |
+| `mail-merge:progress` (event stream) | LIVE — `webContents.send` from main; preload exposes `events.onMailMergeProgress(handler)`                                                    |
 
 **None stubbed.** Earlier the brief flagged the 3 template channels as "stub if Ravi's not landed" — but Ravi's `src/db/repositories/form-templates-repo.ts` ships in this wave, so the adapter chain `bridge.formTemplates → adaptFormTemplatesRepo(createFormTemplatesRepo(db)) → memory-backed fallback` is wired end-to-end. Tests use the memory-backed `FormTemplatesRepo` from `createMemoryDbBridge()`.
 
@@ -2920,10 +2996,10 @@ The runner caches `templateBytes: Uint8Array` outside the loop; per-row work is 
 
 ### New deps required
 
-| Dep | License | Status | Action |
-|---|---|---|---|
-| `csv-parse` | MIT | **Bypassed — wave ships a built-in RFC 4180 tokenizer in `csv-excel-parser.ts`** | Optional: Diego can swap to `csv-parse` in a follow-up wave if the built-in tokenizer needs hardening (handles BOM, quoted fields with embedded commas, CRLF/LF, three delimiters, ragged rows, duplicate header rename — sufficient for Wave 12 ship; the tokenizer is 60 lines and pure, no maintenance burden) |
-| `exceljs` | MIT | **Not installed**; dynamic-imported. The XLSX path returns `invalid_data_source` with an actionable error message (`"Excel parser unavailable: ... — install 'exceljs' to enable XLSX mail-merge"`) | **Diego: add `"exceljs": "^4.4.0"` to `dependencies` in `package.json`.** Once installed, the existing `parseExcel` code becomes live without further edits (verified via dynamic-import via indirect-specifier so the TS resolver doesn't require the package at typecheck time). |
+| Dep         | License | Status                                                                                                                                                                                              | Action                                                                                                                                                                                                                                                                                                            |
+| ----------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `csv-parse` | MIT     | **Bypassed — wave ships a built-in RFC 4180 tokenizer in `csv-excel-parser.ts`**                                                                                                                    | Optional: Diego can swap to `csv-parse` in a follow-up wave if the built-in tokenizer needs hardening (handles BOM, quoted fields with embedded commas, CRLF/LF, three delimiters, ragged rows, duplicate header rename — sufficient for Wave 12 ship; the tokenizer is 60 lines and pure, no maintenance burden) |
+| `exceljs`   | MIT     | **Not installed**; dynamic-imported. The XLSX path returns `invalid_data_source` with an actionable error message (`"Excel parser unavailable: ... — install 'exceljs' to enable XLSX mail-merge"`) | **Diego: add `"exceljs": "^4.4.0"` to `dependencies` in `package.json`.** Once installed, the existing `parseExcel` code becomes live without further edits (verified via dynamic-import via indirect-specifier so the TS resolver doesn't require the package at typecheck time).                                |
 
 ### Verification
 
@@ -2943,15 +3019,15 @@ Renderer typecheck has pre-existing exactOptionalPropertyTypes errors in Riley's
 
 ### L-001 cross-check
 
-| File | enableDragDropFiles hits |
-|---|---|
-| `src/main/pdf-ops/form-engine.ts` | 0 |
-| `src/main/pdf-ops/field-dict-authoring.ts` | 0 |
-| `src/main/pdf-ops/mail-merge-runner.ts` | 0 |
-| `src/main/pdf-ops/csv-excel-parser.ts` | 0 |
-| `src/main/pdf-ops/replay-engine.ts` | 0 |
-| `src/ipc/handlers/forms-*.ts` (10 new) | 0 |
-| `src/ipc/contracts.ts`, `src/ipc/register.ts`, `src/main/db-bridge.ts`, `src/main/index.ts`, `src/preload/index.ts` | 0 |
+| File                                                                                                                | enableDragDropFiles hits |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `src/main/pdf-ops/form-engine.ts`                                                                                   | 0                        |
+| `src/main/pdf-ops/field-dict-authoring.ts`                                                                          | 0                        |
+| `src/main/pdf-ops/mail-merge-runner.ts`                                                                             | 0                        |
+| `src/main/pdf-ops/csv-excel-parser.ts`                                                                              | 0                        |
+| `src/main/pdf-ops/replay-engine.ts`                                                                                 | 0                        |
+| `src/ipc/handlers/forms-*.ts` (10 new)                                                                              | 0                        |
+| `src/ipc/contracts.ts`, `src/ipc/register.ts`, `src/main/db-bridge.ts`, `src/main/index.ts`, `src/preload/index.ts` | 0                        |
 
 **L-001 status: UNCHANGED.** `src/main/window-manager.ts` and `src/main/window-manager.test.ts` not touched; the 2/2 L-001 enforcement test passes verbatim. No new BrowserWindow constructed in Phase 3 (mail-merge runner is plain async in main-process context per architecture-phase-3.md §6.2). H-3 retirement test 3/3 also passes.
 
@@ -2986,27 +3062,27 @@ The adapter preserves Ravi's `RaviUpsertFormTemplateResult` discriminated union 
 
 **New components (5):**
 
-| Component | Path | Notes |
-|---|---|---|
-| `FormsPanel` | `src/client/components/forms-panel/index.tsx` (+ CSS, test) | Sidebar tab content; detection banner (4 statuses + 2 warning rows for JS/XFA); field tree grouped by page; templates dropdown; "Commit form values" banner when uncommitted edits exist |
-| `FormFillOverlay` | `src/client/components/form-fill-overlay/index.tsx` (+ CSS, test) | Per-page editable widget overlay; renders text/checkbox/radio/dropdown/date inputs in PDF user-space → screen-space; signature is disabled Phase-4 placeholder. **Verifies HYBRID contract:** mutations dispatch `setFieldValue` (formsSlice.values transient), NEVER applyEdit |
-| `FormDesignerToolbar` + `FormDesignerCanvas` + `FieldPropertiesPane` | `src/client/components/form-designer/{index,field-properties-pane}.tsx` (+ CSS, test) | Field-type pill toolbar (active when designerMode=true); click-drag overlay for placement; inspector properties pane with options editor for radio/dropdown |
-| `MailMergeModal` | `src/client/components/modals/mail-merge-modal/index.tsx` (+ CSS, test) | 4-step wizard (template/data/mapping/output) + running/done/error views; auto-detect mapping on column-name match; required-field-unmapped blocks Next; progress bar; cancel sub-channel |
-| `SaveTemplateModal` | `src/client/components/modals/save-template-modal/index.tsx` (+ CSS) | Small name-input modal launched from FormsPanel "Save as template…" |
-| `FlattenOnExportCheckbox` | `src/client/components/flatten-on-export-checkbox/index.tsx` (+ CSS) | Reusable "Flatten forms in output" row for Export dialog. Disabled when engine=chromium OR no AcroForm (with tooltip) |
+| Component                                                            | Path                                                                                  | Notes                                                                                                                                                                                                                                                                           |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FormsPanel`                                                         | `src/client/components/forms-panel/index.tsx` (+ CSS, test)                           | Sidebar tab content; detection banner (4 statuses + 2 warning rows for JS/XFA); field tree grouped by page; templates dropdown; "Commit form values" banner when uncommitted edits exist                                                                                        |
+| `FormFillOverlay`                                                    | `src/client/components/form-fill-overlay/index.tsx` (+ CSS, test)                     | Per-page editable widget overlay; renders text/checkbox/radio/dropdown/date inputs in PDF user-space → screen-space; signature is disabled Phase-4 placeholder. **Verifies HYBRID contract:** mutations dispatch `setFieldValue` (formsSlice.values transient), NEVER applyEdit |
+| `FormDesignerToolbar` + `FormDesignerCanvas` + `FieldPropertiesPane` | `src/client/components/form-designer/{index,field-properties-pane}.tsx` (+ CSS, test) | Field-type pill toolbar (active when designerMode=true); click-drag overlay for placement; inspector properties pane with options editor for radio/dropdown                                                                                                                     |
+| `MailMergeModal`                                                     | `src/client/components/modals/mail-merge-modal/index.tsx` (+ CSS, test)               | 4-step wizard (template/data/mapping/output) + running/done/error views; auto-detect mapping on column-name match; required-field-unmapped blocks Next; progress bar; cancel sub-channel                                                                                        |
+| `SaveTemplateModal`                                                  | `src/client/components/modals/save-template-modal/index.tsx` (+ CSS)                  | Small name-input modal launched from FormsPanel "Save as template…"                                                                                                                                                                                                             |
+| `FlattenOnExportCheckbox`                                            | `src/client/components/flatten-on-export-checkbox/index.tsx` (+ CSS)                  | Reusable "Flatten forms in output" row for Export dialog. Disabled when engine=chromium OR no AcroForm (with tooltip)                                                                                                                                                           |
 
 **New slices (3) + selectors:**
 
-| Slice | Path | Purpose |
-|---|---|---|
-| `formsSlice` | `src/client/state/slices/forms-slice.ts` (+ selectors, test) | Detection status + fields list + **transient `values` + `committedValues` pair** (the HYBRID contract heart). 20 tests pin commit-boundary semantics |
-| `mailMergeSlice` | `src/client/state/slices/mail-merge-slice.ts` (+ selectors, test) | Wizard step machine + data preview + column mapping + output mode + progress + result. Bytes carried transiently per ParsedDataPreview; cleared on closeWizard. 16 tests |
-| `formsTemplatesSlice` | `src/client/state/slices/forms-templates-slice.ts` (+ selectors) | List cache for `forms:listTemplates` (id + name + fieldCount). Field defs come via `forms:loadTemplate` per api-contracts §13.6 |
+| Slice                 | Path                                                              | Purpose                                                                                                                                                                  |
+| --------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `formsSlice`          | `src/client/state/slices/forms-slice.ts` (+ selectors, test)      | Detection status + fields list + **transient `values` + `committedValues` pair** (the HYBRID contract heart). 20 tests pin commit-boundary semantics                     |
+| `mailMergeSlice`      | `src/client/state/slices/mail-merge-slice.ts` (+ selectors, test) | Wizard step machine + data preview + column mapping + output mode + progress + result. Bytes carried transiently per ParsedDataPreview; cleared on closeWizard. 16 tests |
+| `formsTemplatesSlice` | `src/client/state/slices/forms-templates-slice.ts` (+ selectors)  | List cache for `forms:listTemplates` (id + name + fieldCount). Field defs come via `forms:loadTemplate` per api-contracts §13.6                                          |
 
 **New middleware:**
 
-| Middleware | Path | Purpose |
-|---|---|---|
+| Middleware             | Path                                                             | Purpose                                                                                                                                                                                                                                                                                                                |
+| ---------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `formCommitMiddleware` | `src/client/state/middleware/form-commit-middleware.ts` (+ test) | Listens for `formCommit/trigger`; diffs `values` vs `committedValues`; if non-empty diff, constructs ONE `form-commit` EditOperation and dispatches through `applyEdit` (which routes uniformly through `historyMiddleware`). Idempotent — second trigger is a no-op. 5 tests including history-middleware integration |
 
 **New thunks (10):**
@@ -3031,34 +3107,34 @@ Both registered in `shortcuts.ts` with `enabledInPhases: [3,4,5,6,7]`. Conflict 
 
 **Edited existing files (10):**
 
-| File | Change |
-|---|---|
-| `src/client/state/store.ts` | Wired `formsReducer`, `mailMergeReducer`, `formsTemplatesReducer`; concatenated `formCommitMiddleware` after `historyMiddleware`; added serializableCheck ignore paths for the mail-merge data bytes |
-| `src/client/state/thunks.ts` | +10 thunks + `saveDocumentThunk` auto-commits via `triggerFormCommit` (conventions §14.2 trigger #1) |
-| `src/client/state/slices/document-inverses.ts` | +5 EditOperation inverse branches (Phase 3) |
-| `src/client/state/slices/document-slice-apply.ts` | +5 no-op cases for form ops (state lives in formsSlice; main-process engine owns the byte work) |
-| `src/client/state/slices/ui-slice.ts` | `SidebarTab` += `'forms'`; cycleSidebarTab now cycles 3-way; `ModalKind` += `'mail-merge' | 'save-template' | 'confirm-flatten'` |
-| `src/client/components/sidebar/index.tsx` | Adds Forms tab (3rd) routing to `<FormsPanel />` |
-| `src/client/components/toolbar/index.tsx` | New "Forms" toolbar group (Form Designer toggle button + Mail Merge launcher button) |
-| `src/client/components/toolbar/toolbar-icon.tsx` | +2 icons: `form-edit`, `mail-merge` |
-| `src/client/components/menu-bar/index.tsx` | Tools menu: Form Designer (Ctrl+Shift+F), Mail Merge (Ctrl+M, disabled when no fields), Flatten Forms (with confirm prompt). View menu: Toggle Forms Sidebar + Toggle Form Designer Mode. Insert menu: Form Field entries (Phase-3.1 will seed type via separate handler) |
-| `src/client/components/inspector/index.tsx` | When `designerMode && selectedFieldName`, renders `FieldPropertiesPane` instead of annotation/page panes |
-| `src/client/hooks/use-app-shortcuts.ts` | Wires `Ctrl+Shift+F` + `Ctrl+M` cases |
-| `src/client/shortcuts.ts` | +2 ShortcutId variants + table rows |
-| `src/client/types/ipc-contract.ts` | Re-exports the 30+ Phase 3 types David shipped in `src/ipc/contracts.ts` (gatekeeper boundary preserved — renderer files import via the gatekeeper, ESLint `no-restricted-imports` H-2 rule unviolated) |
-| `src/client/services/api.ts` | Added `forms` namespace + `onMailMergeProgress` to the bridge-unavailable fallback |
-| `src/client/app.tsx` | **Surgical** additions only (NOT touching drag-drop): mount `FormDesignerToolbar` between `Toolbar` and `<main>`; mount `MailMergeModal` (driven by mailMerge slice's modalOpen flag) and `SaveTemplateModal` (driven by ui.activeModal). L-001 drag-drop block untouched |
+| File                                              | Change                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ------------------ |
+| `src/client/state/store.ts`                       | Wired `formsReducer`, `mailMergeReducer`, `formsTemplatesReducer`; concatenated `formCommitMiddleware` after `historyMiddleware`; added serializableCheck ignore paths for the mail-merge data bytes                                                                      |
+| `src/client/state/thunks.ts`                      | +10 thunks + `saveDocumentThunk` auto-commits via `triggerFormCommit` (conventions §14.2 trigger #1)                                                                                                                                                                      |
+| `src/client/state/slices/document-inverses.ts`    | +5 EditOperation inverse branches (Phase 3)                                                                                                                                                                                                                               |
+| `src/client/state/slices/document-slice-apply.ts` | +5 no-op cases for form ops (state lives in formsSlice; main-process engine owns the byte work)                                                                                                                                                                           |
+| `src/client/state/slices/ui-slice.ts`             | `SidebarTab` += `'forms'`; cycleSidebarTab now cycles 3-way; `ModalKind` += `'mail-merge'                                                                                                                                                                                 | 'save-template' | 'confirm-flatten'` |
+| `src/client/components/sidebar/index.tsx`         | Adds Forms tab (3rd) routing to `<FormsPanel />`                                                                                                                                                                                                                          |
+| `src/client/components/toolbar/index.tsx`         | New "Forms" toolbar group (Form Designer toggle button + Mail Merge launcher button)                                                                                                                                                                                      |
+| `src/client/components/toolbar/toolbar-icon.tsx`  | +2 icons: `form-edit`, `mail-merge`                                                                                                                                                                                                                                       |
+| `src/client/components/menu-bar/index.tsx`        | Tools menu: Form Designer (Ctrl+Shift+F), Mail Merge (Ctrl+M, disabled when no fields), Flatten Forms (with confirm prompt). View menu: Toggle Forms Sidebar + Toggle Form Designer Mode. Insert menu: Form Field entries (Phase-3.1 will seed type via separate handler) |
+| `src/client/components/inspector/index.tsx`       | When `designerMode && selectedFieldName`, renders `FieldPropertiesPane` instead of annotation/page panes                                                                                                                                                                  |
+| `src/client/hooks/use-app-shortcuts.ts`           | Wires `Ctrl+Shift+F` + `Ctrl+M` cases                                                                                                                                                                                                                                     |
+| `src/client/shortcuts.ts`                         | +2 ShortcutId variants + table rows                                                                                                                                                                                                                                       |
+| `src/client/types/ipc-contract.ts`                | Re-exports the 30+ Phase 3 types David shipped in `src/ipc/contracts.ts` (gatekeeper boundary preserved — renderer files import via the gatekeeper, ESLint `no-restricted-imports` H-2 rule unviolated)                                                                   |
+| `src/client/services/api.ts`                      | Added `forms` namespace + `onMailMergeProgress` to the bridge-unavailable fallback                                                                                                                                                                                        |
+| `src/client/app.tsx`                              | **Surgical** additions only (NOT touching drag-drop): mount `FormDesignerToolbar` between `Toolbar` and `<main>`; mount `MailMergeModal` (driven by mailMerge slice's modalOpen flag) and `SaveTemplateModal` (driven by ui.activeModal). L-001 drag-drop block untouched |
 
 ### Verification
 
-| Check | Result |
-|---|---|
-| `npx tsc -p tsconfig.renderer.json --noEmit` | **0 errors** |
-| `npx vitest run src/client` | **22 files, 176 tests passed** (was 99 baseline → +77 new tests, **0 regressions**) |
-| ESLint on all new files | **0 errors, 0 warnings** |
-| ESLint on edited files (renderer) | 0 NEW errors (1 pre-existing in `app.tsx:68` — the L-001 `(pdf as any).path` Electron hack; baseline). All deltas are import-order warnings only |
-| Gatekeeper boundary | Verified: only `src/client/types/ipc-contract.ts` imports `../../ipc/contracts`; ALL Phase 3 renderer files route through the gatekeeper |
-| L-001 | UNTOUCHED. `app.tsx` drag-drop handler not modified; `enableDragDropFiles` invariant intact |
+| Check                                        | Result                                                                                                                                           |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npx tsc -p tsconfig.renderer.json --noEmit` | **0 errors**                                                                                                                                     |
+| `npx vitest run src/client`                  | **22 files, 176 tests passed** (was 99 baseline → +77 new tests, **0 regressions**)                                                              |
+| ESLint on all new files                      | **0 errors, 0 warnings**                                                                                                                         |
+| ESLint on edited files (renderer)            | 0 NEW errors (1 pre-existing in `app.tsx:68` — the L-001 `(pdf as any).path` Electron hack; baseline). All deltas are import-order warnings only |
+| Gatekeeper boundary                          | Verified: only `src/client/types/ipc-contract.ts` imports `../../ipc/contracts`; ALL Phase 3 renderer files route through the gatekeeper         |
+| L-001                                        | UNTOUCHED. `app.tsx` drag-drop handler not modified; `enableDragDropFiles` invariant intact                                                      |
 
 ### HYBRID commit-boundary contract verification
 
@@ -3096,49 +3172,49 @@ These two tests together encode the HYBRID semantics as a paired contract (rende
 
 ### Di-13.1 — `exceljs` runtime dep installed
 
-| Field | Value |
-|---|---|
-| Package | `exceljs@^4.4.0` (latest on npm at scan time: `4.4.0`) |
-| License | **MIT** (verified via `npm view exceljs license`) |
-| Why direct, not transitive | Brought in for the Phase 3 mail-merge XLSX data-source path per `docs/architecture-phase-3.md §6.1` and `docs/form-engine.md §8`. The runtime use site is `src/main/pdf-ops/csv-excel-parser.ts:191` (`const specifier = 'exceljs'; const mod = await import(specifier)`) — David's Wave 12 dynamic-import pattern resolves cleanly once `exceljs` is in `node_modules/`. Verified via `node -e "(async()=>{const m=await import('exceljs'); console.log(typeof m.Workbook)})()"` → prints `function` (workbook constructor reachable). |
-| Transitive count | ~100 new packages enter the graph (full Phase-3 transitive list: see `LICENSES.md`). Total `node_modules` package count: 701 (Phase 2 close) → 799 (post-install). |
-| License audit on new packages | All permissive: 64 MIT, 17 ISC, 2 Apache-2.0 (`crc-32`, `readdir-glob`), 1 BlueOak, 1 Unlicense (`big-integer`), 2 MIT/X11 (`traverse@0.3.9`, `chainsaw`), 1 dual `(MIT OR GPL-3.0-or-later)` (`jszip`) — we exercise the MIT arm explicitly; 1 undeclared (`buffers@0.1.1`, substack, flagged as a low-risk follow-up in `LICENSES.md` analogous to the historical `spawn-command` flag closed in Phase 1.1). **No AGPL/GPL/LGPL/EPL ingress.** |
-| LICENSES.md update | Direct-runtime row added for `exceljs@^4.4.0`. Summary counts refreshed (MIT 575→639, ISC 59→76, total 701→799). New "buffers@0.1.1 — license not declared" follow-up entry with action plan (track for `exceljs`-upgrades that swap unzipper for yauzl, then re-walk). Acknowledgments add Guyon Roche / exceljs. Scan-basis date refreshed to 2026-05-22. |
-| `LICENSES.md` LOC | 192 → 218 (+26 lines) |
+| Field                         | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Package                       | `exceljs@^4.4.0` (latest on npm at scan time: `4.4.0`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| License                       | **MIT** (verified via `npm view exceljs license`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Why direct, not transitive    | Brought in for the Phase 3 mail-merge XLSX data-source path per `docs/architecture-phase-3.md §6.1` and `docs/form-engine.md §8`. The runtime use site is `src/main/pdf-ops/csv-excel-parser.ts:191` (`const specifier = 'exceljs'; const mod = await import(specifier)`) — David's Wave 12 dynamic-import pattern resolves cleanly once `exceljs` is in `node_modules/`. Verified via `node -e "(async()=>{const m=await import('exceljs'); console.log(typeof m.Workbook)})()"` → prints `function` (workbook constructor reachable). |
+| Transitive count              | ~100 new packages enter the graph (full Phase-3 transitive list: see `LICENSES.md`). Total `node_modules` package count: 701 (Phase 2 close) → 799 (post-install).                                                                                                                                                                                                                                                                                                                                                                      |
+| License audit on new packages | All permissive: 64 MIT, 17 ISC, 2 Apache-2.0 (`crc-32`, `readdir-glob`), 1 BlueOak, 1 Unlicense (`big-integer`), 2 MIT/X11 (`traverse@0.3.9`, `chainsaw`), 1 dual `(MIT OR GPL-3.0-or-later)` (`jszip`) — we exercise the MIT arm explicitly; 1 undeclared (`buffers@0.1.1`, substack, flagged as a low-risk follow-up in `LICENSES.md` analogous to the historical `spawn-command` flag closed in Phase 1.1). **No AGPL/GPL/LGPL/EPL ingress.**                                                                                        |
+| LICENSES.md update            | Direct-runtime row added for `exceljs@^4.4.0`. Summary counts refreshed (MIT 575→639, ISC 59→76, total 701→799). New "buffers@0.1.1 — license not declared" follow-up entry with action plan (track for `exceljs`-upgrades that swap unzipper for yauzl, then re-walk). Acknowledgments add Guyon Roche / exceljs. Scan-basis date refreshed to 2026-05-22.                                                                                                                                                                             |
+| `LICENSES.md` LOC             | 192 → 218 (+26 lines)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 David's XLSX path (`parseExcel` in `csv-excel-parser.ts:170-239`) was previously surfacing `"Excel parser unavailable: Cannot find module 'exceljs' — install 'exceljs' to enable XLSX mail-merge"`. Post-install this branch is reached only on `xlsx.load()` failure (genuine bad-bytes case), and the happy path executes the existing `workbook.xlsx.load` → `eachRow` flow. No code change required in `csv-excel-parser.ts` — the indirect-specifier import pattern David shipped is exactly the right contract surface for this dep boundary.
 
 ### Di-13.3 — Phase 3 version bump
 
-| Field | Before | After |
-|---|---|---|
-| `package.json:version` | `0.2.0` | `0.3.0` |
+| Field                      | Before                                                                   | After                                                                     |
+| -------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| `package.json:version`     | `0.2.0`                                                                  | `0.3.0`                                                                   |
 | `package.json:description` | "Cross-platform desktop PDF viewer + editor (Phase 2 functional editor)" | "Cross-platform desktop PDF viewer + editor (Phase 3 forms + mail merge)" |
 
 Other version refs (docs, briefs, etc.) intentionally **NOT** touched — Nathan owns Wave 14 doc refresh.
 
 ### Di-13.2 + Di-13.4 — Verification & dist:win
 
-| Check | Result |
-|---|---|
-| `npm install` (post version bump + exceljs add) | clean — 46 new packages added (the rest are existing); 18 advisory vulnerabilities reported (8 moderate, 10 high) all in dev/build transitive subtrees (`electron-builder` → various) — none in runtime. **Same vuln profile as Phase 2 close**; not introduced by `exceljs`. Recommend Phase 4 dep-bump pass. |
-| `npx tsc -p tsconfig.main.json --noEmit` | **0 errors** |
-| `npx tsc -p tsconfig.preload.json --noEmit` | **0 errors** |
-| `npx tsc -p tsconfig.renderer.json --noEmit` | **0 errors** |
-| `npx vitest run` excluding `src/db/**` | **63 files / 549 tests passed** (373 main+ipc + 176 renderer) — matches the brief's expectation modulo env-dependent db tests; no regressions vs Wave 12 close |
-| `npx vitest run src/db/**` | **env-dependent: SKIPPED in this Diego run.** The host's system Node was bumped to v24.14.1 (`.nvmrc` pins `20`) and `electron-builder install-app-deps` correctly rebuilds `better-sqlite3` against Electron's NODE_MODULE_VERSION 123 (which is what production needs). The Node 24 host (NODE_MODULE_VERSION 137) cannot dlopen the Electron-targeted `.node` binary, and the host has no Python distutils for a fresh `npm rebuild --build-from-source` path. **This is identical to the env-dependence Ravi/Marcus flagged at Wave 12 close**; not a regression. Ravi's 41 db tests pass on a Node-20 host or inside Electron's test runner. Resolution: pin the CI runner to Node 20 in `.github/workflows/ci.yml` (Diego's earlier wave) or run the db slice under Electron's runtime (Phase 4 if needed). |
-| `npm run build` (electron-vite) | clean — `dist/main/index.js` 178.20 kB, `dist/preload/index.cjs` 6.65 kB, `dist/renderer/assets/index-*.js` 558.19 kB, `dist/renderer/assets/index-*.css` 51.31 kB. One harmless unused-import warning (`PDFRef`, `PDFField` from pdf-lib in `field-dict-authoring.ts` and `form-engine.ts` — David's files, not Diego's domain; flagged for David's Wave-14 sweep). |
-| `npm run dist:win` | **clean** — NSIS installer + portable .exe both produced, tagged `0.3.0`. |
+| Check                                           | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm install` (post version bump + exceljs add) | clean — 46 new packages added (the rest are existing); 18 advisory vulnerabilities reported (8 moderate, 10 high) all in dev/build transitive subtrees (`electron-builder` → various) — none in runtime. **Same vuln profile as Phase 2 close**; not introduced by `exceljs`. Recommend Phase 4 dep-bump pass.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `npx tsc -p tsconfig.main.json --noEmit`        | **0 errors**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `npx tsc -p tsconfig.preload.json --noEmit`     | **0 errors**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `npx tsc -p tsconfig.renderer.json --noEmit`    | **0 errors**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `npx vitest run` excluding `src/db/**`          | **63 files / 549 tests passed** (373 main+ipc + 176 renderer) — matches the brief's expectation modulo env-dependent db tests; no regressions vs Wave 12 close                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `npx vitest run src/db/**`                      | **env-dependent: SKIPPED in this Diego run.** The host's system Node was bumped to v24.14.1 (`.nvmrc` pins `20`) and `electron-builder install-app-deps` correctly rebuilds `better-sqlite3` against Electron's NODE_MODULE_VERSION 123 (which is what production needs). The Node 24 host (NODE_MODULE_VERSION 137) cannot dlopen the Electron-targeted `.node` binary, and the host has no Python distutils for a fresh `npm rebuild --build-from-source` path. **This is identical to the env-dependence Ravi/Marcus flagged at Wave 12 close**; not a regression. Ravi's 41 db tests pass on a Node-20 host or inside Electron's test runner. Resolution: pin the CI runner to Node 20 in `.github/workflows/ci.yml` (Diego's earlier wave) or run the db slice under Electron's runtime (Phase 4 if needed). |
+| `npm run build` (electron-vite)                 | clean — `dist/main/index.js` 178.20 kB, `dist/preload/index.cjs` 6.65 kB, `dist/renderer/assets/index-*.js` 558.19 kB, `dist/renderer/assets/index-*.css` 51.31 kB. One harmless unused-import warning (`PDFRef`, `PDFField` from pdf-lib in `field-dict-authoring.ts` and `form-engine.ts` — David's files, not Diego's domain; flagged for David's Wave-14 sweep).                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `npm run dist:win`                              | **clean** — NSIS installer + portable .exe both produced, tagged `0.3.0`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 ### Artifact sizes (release/)
 
-| Artifact | Size | Notes |
-|---|---|---|
-| `PDF Viewer & Editor-0.3.0-x64.exe` (NSIS installer) | 93 MB | was 92 MB at 0.2.0; +1 MB from `exceljs` runtime (most of `exceljs` itself + `archiver` + `jszip` + their tree) |
-| `PDF Viewer & Editor-0.3.0-x64-portable.exe` | 93 MB | same delta |
-| `PDF Viewer & Editor-0.3.0-x64.exe.blockmap` | 101 KB | up from 99 KB |
-| `release/win-unpacked/` | 348 MB | unpacked Electron + app.asar.unpacked (better-sqlite3 native binary stays outside asar per Phase 1 contract) |
-| `release/win-unpacked/resources/migrations/` | contains `0001_init.sql`, `0002_phase2_bookmarks.sql`, **`0003_phase3_forms.sql`**, `README.md` | Phase 3 migration shipped |
+| Artifact                                             | Size                                                                                            | Notes                                                                                                           |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `PDF Viewer & Editor-0.3.0-x64.exe` (NSIS installer) | 93 MB                                                                                           | was 92 MB at 0.2.0; +1 MB from `exceljs` runtime (most of `exceljs` itself + `archiver` + `jszip` + their tree) |
+| `PDF Viewer & Editor-0.3.0-x64-portable.exe`         | 93 MB                                                                                           | same delta                                                                                                      |
+| `PDF Viewer & Editor-0.3.0-x64.exe.blockmap`         | 101 KB                                                                                          | up from 99 KB                                                                                                   |
+| `release/win-unpacked/`                              | 348 MB                                                                                          | unpacked Electron + app.asar.unpacked (better-sqlite3 native binary stays outside asar per Phase 1 contract)    |
+| `release/win-unpacked/resources/migrations/`         | contains `0001_init.sql`, `0002_phase2_bookmarks.sql`, **`0003_phase3_forms.sql`**, `README.md` | Phase 3 migration shipped                                                                                       |
 
 `find release/win-unpacked -path "*tests*"` → 0 hits. The `!tests/**` exclusion in `electron-builder.yml:37` continues to keep test fixtures out of the installer (defense-in-depth: the `files:` block is an inclusive list of `dist + migrations + package.json` so `tests/` was already excluded; the explicit `!` is the Wave 8 D-8.5 belt-and-braces lock).
 
@@ -3182,12 +3258,14 @@ Test Files  2 passed (2)
 **Wave 14 dispatch:** BLOCKED until B-3.1 + 4 HIGHs close in Wave 13.5
 
 **Top issues:**
+
 - **B-3.1 (BLOCKER)** — `register.ts:509` wires the production mail-merge runner with the default `sanitizePath` which rejects any path whose extension isn't `.pdf`. Folder-mode mail-merge (the wizard's default `outputMode`) calls this with a directory path → returns null → runner aborts with `output_path_invalid`. Production folder-mode is 100% broken; all tests inject permissive `(raw) => raw` so the gap is structurally hidden from CI. Fix: pass `{ allowedExtensions: new Set(['', '.pdf']) }` when sanitizing folder paths, OR add a folder-sanitizer to path-sanitizer.ts.
 - **H-3.1** — `stripDocLevelJavaScript` is only called inside the `formOps.length > 0` block in replay-engine.ts and never in `fillForm`. Every mail-merge output PDF retains JS actions; saves with annotations/images/text-replace but no form ops also retain them. Violates P3-L-2 (conventions §14.6).
 - **H-3.2** — `MailMergeJob` wire type lacks `flattenForms`. UI checkbox state void-discarded at `mail-merge-modal/index.tsx:172`. Riley flagged this LOW; upgraded HIGH because user-visible UX (checkbox does nothing) + wire amendment required.
 - **H-3.3** — Mail-merge runner does NOT do atomic temp+rename writes (register.ts:506-508). Power-loss mid-write corrupts output. Particularly bad for concat-mode final write.
 
 **Strengths:**
+
 - HYBRID commit-boundary discipline (Section E) is exemplary — middleware diff + trigger-action pattern works exactly as conventions §14.2 specifies.
 - Discriminated-union return chain `UpsertFormTemplateResult` → bridge → wire is the cleanest implementation of the Wave 8.5 H-1 lesson seen so far.
 - Pure-function engine boundary held across all Phase 3 sources (no FS / DB / console.log leaks).
@@ -3195,12 +3273,12 @@ Test Files  2 passed (2)
 - CSV tokenizer is a strong in-house RFC 4180 implementation; UTF-16 BOM detection is the only meaningful gap (M-3.5).
 
 **Affected files**
+
 - `docs/code-review.md` — new Wave 13 Phase 3 section appended (full findings + per-category breakdown + Wave 14 verdict)
 - `docs/build-report.md` — this status row
 - `.learnings/learnings.jsonl` — one Phase 3 learning entry
 
 **Did NOT modify:** any `src/` file; the brief restricted me to `docs/code-review.md`. The BLOCKER fix lives in `register.ts:509` for David to land in Wave 13.5.
-
 
 ---
 
@@ -3217,6 +3295,7 @@ Test Files  2 passed (2)
 **Wire-up:** `MailMergeRunDeps` gains `sanitizeDirectoryPath?: (raw) => string | null` (optional for back-compat); the runner uses it for folder-mode and falls back to `sanitizePath` when omitted. `FormsRunMailMergeDeps` mirrors the same shape. `register.ts` injects the new sanitizer in production.
 
 **Tests (replaced permissive stubs with real sanitizer):**
+
 - `mail-merge-runner.test.ts`: 7 new B-3.1 tests using real `sanitizePath` + `sanitizeDirectoryPath` (legit dir accepted; traversal/UNC/reserved-DOS rejected; concat-mode `.pdf` accepted; concat-mode `.exe` + directory-path rejected).
 - `forms-run-mail-merge.test.ts`: 2 new B-3.1 production-sanitizer tests (folder-mode succeeds; traversal rejected).
 - `path-sanitizer.test.ts`: 12 new `sanitizeDirectoryPath` cases (no-ext accepted, `.pdf` accepted defensively, `.exe`/`.txt` rejected, all hardening checks still apply, empty/relative rejected).
@@ -3228,12 +3307,14 @@ Total new B-3.1 tests: 21.
 **Root cause:** `stripDocLevelJavaScript()` was gated inside `formOps.length > 0` in `replay-engine.ts:343`. `fillForm()` never called it. Mail-merge per-row outputs use `fillForm()` exclusively -> every mail-merge output retained the template's `/Names /JavaScript` actions, violating P3-L-2 (conventions §14.6 locked decision 2).
 
 **Fix sites:**
+
 - `form-engine.ts:fillForm` — calls `stripDocLevelJavaScript(doc)` before `doc.save()`; surfaces a warning when JS was actually present.
 - `form-engine.ts:flattenForms` — adds the same strip pass + warning. Defense in depth: even a standalone `flatten` call honors the invariant.
 - Mail-merge runner inherits the fillForm fix automatically (every per-row write now strips JS).
 - `replay-engine.ts:343` strip call left intact — strip is idempotent so the double-call (when formOps + replay both fire) is a no-op the second time.
 
 **Tests:**
+
 - `form-engine.test.ts`: 4 new tests — JS-laden fixture sanity check, fillForm strips JS + emits warning, flattenForms strips JS, JS-free document is a clean no-op (no spurious warning).
 - `mail-merge-runner.test.ts`: 1 new test — every per-row mail-merge output has `/Names /JavaScript` absent.
 
@@ -3244,12 +3325,14 @@ Total new H-3.1 tests: 5.
 **Root cause:** wire-level contract gap. `MailMergeJob` lacked a `flattenForms` field, so Riley's wizard checkbox state (`mailMergeSlice.flattenInOutput`) was `void`-discarded at `mail-merge-modal/index.tsx:172`. Every mail-merge output came out unflattened regardless of the checkbox.
 
 **Fix sites:**
+
 - `src/ipc/contracts.ts` — `MailMergeJob` gains `flattenForms?: boolean` (optional, defaults to false — back-compat preserved).
 - `src/main/pdf-ops/form-engine.ts` — `fillForm()` signature gains an optional `flatten?: boolean` option; when true, `form.flatten()` runs before serialize. Failure is non-fatal (warning + continue) so a malformed flatten doesn't break the whole mail-merge batch.
 - `src/main/pdf-ops/mail-merge-runner.ts` — passes `{ flatten: job.flattenForms === true }` into the per-row `fillForm` call.
 - `docs/api-contracts.md §13.9` — added a Phase 3.1 amendment banner; the `MailMergeJob` type literal now shows the new field with the documentation.
 
 **Tests:**
+
 - `mail-merge-runner.test.ts`: 2 new tests — omitted flag leaves form intact; `flattenForms: true` produces a form-less output.
 - `form-engine.test.ts`: 2 new tests — `fillForm({ flatten: true })` bakes form away; default leaves it intact.
 
@@ -3275,21 +3358,22 @@ Julian's verdict line says "1 BLOCKER + 4 HIGH" but the body only enumerates H-3
 
 ### Verification
 
-| Check | Result |
-|---|---|
-| `npx tsc -p tsconfig.main.json --noEmit` | **0 errors** |
-| `npx tsc -p tsconfig.preload.json --noEmit` | **0 errors** |
-| `npx vitest run src/main src/ipc` | **41 files / 402 tests passed** — was 373 at Wave 12 close -> 402 here (+29 new tests: 12 directory-sanitizer + 7 production-sanitizer runner + 2 production-sanitizer handler + 4 JS-strip form-engine + 1 JS-strip runner + 2 flatten form-engine + 2 flatten runner). No regressions. |
-| `src/main/window-manager.test.ts` (L-001) | **2/2 PASS** |
-| `src/main/pdf-ops/h3-retirement.test.ts` (H-3 retirement) | **3/3 PASS** |
-| `src/main/security/path-sanitizer.test.ts` | **78 tests** (66 prior + 12 new directory variant) |
-| `src/main/pdf-ops/form-engine.test.ts` | **31 tests** (25 prior + 6 new) |
-| `src/main/pdf-ops/mail-merge-runner.test.ts` | **19 tests** (9 prior + 10 new) |
-| `src/ipc/handlers/forms-run-mail-merge.test.ts` | **5 tests** (3 prior + 2 new) |
+| Check                                                     | Result                                                                                                                                                                                                                                                                                   |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npx tsc -p tsconfig.main.json --noEmit`                  | **0 errors**                                                                                                                                                                                                                                                                             |
+| `npx tsc -p tsconfig.preload.json --noEmit`               | **0 errors**                                                                                                                                                                                                                                                                             |
+| `npx vitest run src/main src/ipc`                         | **41 files / 402 tests passed** — was 373 at Wave 12 close -> 402 here (+29 new tests: 12 directory-sanitizer + 7 production-sanitizer runner + 2 production-sanitizer handler + 4 JS-strip form-engine + 1 JS-strip runner + 2 flatten form-engine + 2 flatten runner). No regressions. |
+| `src/main/window-manager.test.ts` (L-001)                 | **2/2 PASS**                                                                                                                                                                                                                                                                             |
+| `src/main/pdf-ops/h3-retirement.test.ts` (H-3 retirement) | **3/3 PASS**                                                                                                                                                                                                                                                                             |
+| `src/main/security/path-sanitizer.test.ts`                | **78 tests** (66 prior + 12 new directory variant)                                                                                                                                                                                                                                       |
+| `src/main/pdf-ops/form-engine.test.ts`                    | **31 tests** (25 prior + 6 new)                                                                                                                                                                                                                                                          |
+| `src/main/pdf-ops/mail-merge-runner.test.ts`              | **19 tests** (9 prior + 10 new)                                                                                                                                                                                                                                                          |
+| `src/ipc/handlers/forms-run-mail-merge.test.ts`           | **5 tests** (3 prior + 2 new)                                                                                                                                                                                                                                                            |
 
 ### Files modified
 
 **Owned (David):**
+
 - `src/main/security/path-sanitizer.ts` — added `sanitizeDirectoryPath` export. Existing `sanitizePath` signature/behavior byte-identical.
 - `src/main/security/path-sanitizer.test.ts` — 12 new directory-sanitizer tests.
 - `src/main/pdf-ops/form-engine.ts` — `fillForm` gains `flatten?: boolean` option + strips JS before serialize. `flattenForms` also strips JS before serialize.
@@ -3303,6 +3387,7 @@ Julian's verdict line says "1 BLOCKER + 4 HIGH" but the body only enumerates H-3
 - `docs/api-contracts.md §13.9` — Phase 3.1 amendment banner + new `flattenForms?` field documented.
 
 **Did NOT modify:**
+
 - `src/client/components/modals/mail-merge-modal/index.tsx` — Riley's domain. Flagged for Riley patch (2-line modal `job:` literal update).
 - `src/client/state/thunks.ts` — no change needed; thunk passes `arg.job` through verbatim.
 - `src/client/state/slices/mail-merge-slice.ts` — already has `flattenInOutput` state; Riley wires it through the modal.
@@ -3329,11 +3414,13 @@ Julian's verdict line says "1 BLOCKER + 4 HIGH" but the body only enumerates H-3
 - `src/client/components/modals/mail-merge-modal/mail-merge-modal.test.tsx` — added 2 new regression tests (under `describe('Run merge dispatch (H-3.2)')`): set slice `flattenInOutput=true|false`, drive the wizard to the Run button, fire click, assert the spied `pdfApi.forms.runMailMerge` IPC call captured `{ job: { flattenForms: true|false } }`. Uses `vi.stubGlobal('pdfApi', ...)` + `act()` to flush thunk post-dispatch reducer updates quietly.
 
 **Verification:**
+
 - `npx tsc -p tsconfig.renderer.json --noEmit` → 0 errors.
 - `npx vitest run src/client` → **178/178 pass** (176 prior + 2 new H-3.2 regression tests). Zero regressions, zero new lint warnings.
 - End-to-end trace: modal checkbox → `setFlattenInOutput(true)` → `mailMergeSlice.flattenInOutput=true` → `WizardFooter` reads `flatten` via `selectMailMergeFlatten` → `job.flattenForms=flatten` → `dispatch(runMailMergeThunk({ job }))` → thunk passes through → IPC carries `flattenForms=true` → David's runner honors it per-job in `form-engine.fillForm({ flatten })`. Prior void-discard closed.
 
 **Files I did NOT touch:**
+
 - David's `src/main/`, `src/preload/`, `src/ipc/` — out of scope.
 - `src/client/state/thunks.ts` — verified no signature change needed.
 - `src/client/state/slices/mail-merge-slice.ts` — slice action already correct.
@@ -3350,6 +3437,7 @@ Julian's verdict line says "1 BLOCKER + 4 HIGH" but the body only enumerates H-3
 **Verdict:** **GREEN — Wave 14 (Nathan) UNBLOCKED.**
 
 **Closure status:**
+
 - **B-3.1 (BLOCKER)** mail-merge folder sanitizer — **CLOSED.** `sanitizeDirectoryPath` correctly delegates to `sanitizePathDetailed` with the `['', '.pdf']` extension whitelist; all hardening checks preserved. Runner threads it through with `sanitizePath` fallback; register.ts injects both. 21 new tests pin the wire with REAL production sanitizers.
 - **H-3.1** JS-strip in fillForm + flattenForms — **CLOSED for production attack surface (mail-merge per-row outputs).** `form-engine.ts:478` + `:602` add strip-on-save. Narrow residual: `replay-engine.ts:343` strip still gated inside `if (formOps.length > 0)` so non-form annotation-only / image-only / text-replace-only saves on a JS-laden source PDF still emit JS. Downgraded to MEDIUM (M-13.5-1); 2-line fix; Phase 4 absorb-as-touched. Does NOT block Wave 14.
 - **H-3.2** MailMergeJob.flattenForms — **CLOSED end-to-end.** Contract amended; main side threads `flatten` into `fillForm`; Riley's modal landed at `mail-merge-modal/index.tsx:167` with a real regression test at `mail-merge-modal.test.tsx:301-356` asserting both true + false IPC permutations.
@@ -3361,6 +3449,7 @@ Julian's verdict line says "1 BLOCKER + 4 HIGH" but the body only enumerates H-3
 **New findings:** 0 BLOCKER, 0 HIGH, 1 MEDIUM (M-13.5-1 replay-engine strip-call move), 0 LOW, 2 NIT (Chromium printToPDF clean by construction; permissive-stub CI lint follow-up).
 
 **Files modified by Julian this wave:**
+
 - `docs/code-review.md` — appended Wave 13.5 re-audit section
 - `docs/build-report.md` — this status row
 - `.learnings/learnings.jsonl` — one Wave 13.5 entry
@@ -3379,12 +3468,12 @@ Julian's verdict line says "1 BLOCKER + 4 HIGH" but the body only enumerates H-3
 
 ### Deliverables
 
-| File | Before (lines) | After (lines) | Δ | Scope |
-|---|---|---|---|---|
-| `README.md` | 143 | 144 | +1 | Sharpened the "Phase 3 known limitations" block to lead with the three trust-floor honesty warnings (JS-strip, XFA, signed-fields-invalidate-on-save), each cross-linked to the user-guide status banner section. Version 0.3.0 references intact. |
-| `docs/user-guide.md` | 769 | 793 | +24 | Added a dedicated **"Forms sidebar status banner — three honesty warnings"** subsection under "Working with forms" — the third H-3 placement location per the brief (the trust-floor section). Inline reminders added at the top of "Designing forms" and "Mail merge" pointing back to the banner. Filling-fields workflow now reads "read the status banner first" as step 1. Added an "Upgrading from 0.2.0" subsection (non-destructive schema-v3 migration). |
-| `docs/developer-guide.md` | 798 | 860 | +62 | Added **"Permissive test stubs mask production failures"** under Common pitfalls — the Wave 8.5 B-1/B-2 + Wave 13.5 B-3.1 structural lesson with the audit habit. Added **"Adding a new form field type — worked example"** with a 10-row touch-point table mirroring the existing Adding-a-new-EditOperation-variant section. Expanded the Mail-merge runner "Atomic per-row write" bullet with concrete file:line references to `register.ts:513-527` and the unlink-on-rename-failure cleanup detail. |
-| `docs/api-reference.md` | 505 | 714 | +209 | Status summary header updated to include the 10 Phase 3 channels + the second event stream. `SettingKey` union extended with 4 Phase-3 keys (`forms.dateLocale`, `forms.flattenOnExportDefault`, `mailMerge.lastOutputFolder`, `mailMerge.defaultOutputMode`). `pdf:export` section gains the Phase 3 additive `flattenForms?: boolean` field with the Chromium / no-AcroForm grey-out rules and the heuristic removal note. New **"Phase 3 channels — `forms:*` and `mail-merge:progress`"** section documents all 10 channels in lookup-card format with the `MailMergeJob` shape, the Wave 13.5 `flattenForms?: boolean` amendment in line, the path-sanitization story, the per-jobId event subscription model, and the cross-links to the developer-guide pitfalls + form-engine architecture. Cross-references footer extended with form-engine + architecture-phase-3 + new field-type + permissive-stub pointers. |
+| File                      | Before (lines) | After (lines) | Δ    | Scope                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------- | -------------- | ------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`               | 143            | 144           | +1   | Sharpened the "Phase 3 known limitations" block to lead with the three trust-floor honesty warnings (JS-strip, XFA, signed-fields-invalidate-on-save), each cross-linked to the user-guide status banner section. Version 0.3.0 references intact.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `docs/user-guide.md`      | 769            | 793           | +24  | Added a dedicated **"Forms sidebar status banner — three honesty warnings"** subsection under "Working with forms" — the third H-3 placement location per the brief (the trust-floor section). Inline reminders added at the top of "Designing forms" and "Mail merge" pointing back to the banner. Filling-fields workflow now reads "read the status banner first" as step 1. Added an "Upgrading from 0.2.0" subsection (non-destructive schema-v3 migration).                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `docs/developer-guide.md` | 798            | 860           | +62  | Added **"Permissive test stubs mask production failures"** under Common pitfalls — the Wave 8.5 B-1/B-2 + Wave 13.5 B-3.1 structural lesson with the audit habit. Added **"Adding a new form field type — worked example"** with a 10-row touch-point table mirroring the existing Adding-a-new-EditOperation-variant section. Expanded the Mail-merge runner "Atomic per-row write" bullet with concrete file:line references to `register.ts:513-527` and the unlink-on-rename-failure cleanup detail.                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `docs/api-reference.md`   | 505            | 714           | +209 | Status summary header updated to include the 10 Phase 3 channels + the second event stream. `SettingKey` union extended with 4 Phase-3 keys (`forms.dateLocale`, `forms.flattenOnExportDefault`, `mailMerge.lastOutputFolder`, `mailMerge.defaultOutputMode`). `pdf:export` section gains the Phase 3 additive `flattenForms?: boolean` field with the Chromium / no-AcroForm grey-out rules and the heuristic removal note. New **"Phase 3 channels — `forms:*` and `mail-merge:progress`"** section documents all 10 channels in lookup-card format with the `MailMergeJob` shape, the Wave 13.5 `flattenForms?: boolean` amendment in line, the path-sanitization story, the per-jobId event subscription model, and the cross-links to the developer-guide pitfalls + form-engine architecture. Cross-references footer extended with form-engine + architecture-phase-3 + new field-type + permissive-stub pointers. |
 
 **Total doc surface delta: +296 lines.** The brief's "substantive doc pass for a feature-complete phase" is honored — the api-reference grew the most because it was the most out-of-date (no Phase 3 channels documented at all), the user-guide grew the smallest because Wave 11/12/13.5 prior writers had already encoded most Phase 3 user-facing surface — Nathan's role was to add the H-3 trust-floor section and ratchet it with cross-references.
 
@@ -3392,13 +3481,14 @@ Julian's verdict line says "1 BLOCKER + 4 HIGH" but the body only enumerates H-3
 
 Per the brief and `build-report.md:2712`, the H-3 honesty obligation requires the three warnings (`hasJavaScriptActions` stripped on save, `hasXfaForm` not supported, signed-fields-present means sign-then-edit-then-save invalidates signatures) at **three independent locations** in the user guide. Verified placements:
 
-| Placement | Location | Evidence |
-|---|---|---|
-| **Top-of-guide** | `docs/user-guide.md:5-9` | "The headline Phase 3 limitations to know about up front" — lists JS-stripped, signature placeholders not signable, text-replace-only. Pre-existed Wave 14; verified intact. |
-| **Known-limitations table** | `docs/user-guide.md:32-46` | "Phase 3 partial features" table with one row per warning. Pre-existed Wave 14; verified intact. |
+| Placement                       | Location                     | Evidence                                                                                                                                                                                                                                                                          |
+| ------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Top-of-guide**                | `docs/user-guide.md:5-9`     | "The headline Phase 3 limitations to know about up front" — lists JS-stripped, signature placeholders not signable, text-replace-only. Pre-existed Wave 14; verified intact.                                                                                                      |
+| **Known-limitations table**     | `docs/user-guide.md:32-46`   | "Phase 3 partial features" table with one row per warning. Pre-existed Wave 14; verified intact.                                                                                                                                                                                  |
 | **Trust-floor (status banner)** | `docs/user-guide.md:316-326` | **NEW Wave 14:** dedicated subsection "Forms sidebar status banner — three honesty warnings" with a three-row table mapping each warning to (a) when it shows, (b) what will happen on save. This is the trust-floor placement the brief explicitly called out as non-negotiable. |
 
 Inline reminders added at:
+
 - `docs/user-guide.md` Working with forms → Filling fields (step 1 now says "read the status banner first")
 - `docs/user-guide.md` Designing forms (honesty reminder paragraph at section top)
 - `docs/user-guide.md` Mail merge (honesty reminder paragraph at section top, calling out per-row JS-strip and per-row signature invalidation)
@@ -3432,7 +3522,8 @@ Inline reminders added at:
 ### Files I did NOT touch (boundary audit)
 
 Per `d:\Projects\CLAUDE.md` file ownership table:
-- **`src/**`** — David / Ravi / Riley. Untouched.
+
+- **`src/**`\*\* — David / Ravi / Riley. Untouched.
 - **`ARCHITECTURE.md`** — Riley. Untouched (read-only context).
 - **`docs/architecture-phase-2.md`, `docs/architecture-phase-3.md`** — Riley. Untouched.
 - **`docs/api-contracts.md`, `docs/data-models.md`, `docs/ui-spec.md`, `docs/conventions.md`** — Riley (Phase 4 amendments in-flight per Wave 15 brief). Read once at wave start; not touched after.
@@ -3447,6 +3538,7 @@ Per `d:\Projects\CLAUDE.md` file ownership table:
 - **`LICENSE`, `LICENSES.md`** — Diego license owner. Untouched.
 
 **Files modified by Nathan this wave:**
+
 - `README.md` — sharpened Phase 3 known limitations block; +1 line.
 - `docs/user-guide.md` — H-3 status-banner section + inline reminders + upgrade-from-0.2.0 subsection; +24 lines.
 - `docs/developer-guide.md` — permissive-stub pitfall + new field type worked example + atomic-write expansion; +62 lines.
@@ -3468,39 +3560,40 @@ Per `d:\Projects\CLAUDE.md` file ownership table:
 
 **Two NEW design documents:**
 
-| File | Lines | Purpose |
-|---|---|---|
-| `docs/architecture-phase-4.md` | ~720 | Phase 4 system additions — process model deltas, IPC surface, library inventory, replay-engine integration step 3.7, risk register with 7 brief risks + 6 Riley-uncovered additions (R-W15-A through F), Phase 4 fidelity matrix, L-001 cross-check |
-| `docs/signature-engine.md` | ~890 | Detailed design of main-process signature operations — orchestrator dispatch, cert+password lifecycle with V8 honest write-up, PAdES library decision walkthrough, byte-range arithmetic, CMS envelope, RFC 3161 TSA client, appearance composition, replay engine integration, signature audit log, test strategy with permissive-stub guards (Wave 13.5 lesson absorbed), file ownership map for Wave 16 |
+| File                           | Lines | Purpose                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------ | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/architecture-phase-4.md` | ~720  | Phase 4 system additions — process model deltas, IPC surface, library inventory, replay-engine integration step 3.7, risk register with 7 brief risks + 6 Riley-uncovered additions (R-W15-A through F), Phase 4 fidelity matrix, L-001 cross-check                                                                                                                                                        |
+| `docs/signature-engine.md`     | ~890  | Detailed design of main-process signature operations — orchestrator dispatch, cert+password lifecycle with V8 honest write-up, PAdES library decision walkthrough, byte-range arithmetic, CMS envelope, RFC 3161 TSA client, appearance composition, replay engine integration, signature audit log, test strategy with permissive-stub guards (Wave 13.5 lesson absorbed), file ownership map for Wave 16 |
 
 **Four AMENDED docs (additive only, each with a clear `### Phase 4 amendment (2026-05-26, Riley)` banner):**
 
-| File | Lines added | Sections added |
-|---|---|---|
-| `docs/api-contracts.md` | ~480 | §14 — 11 new IPC channels: `signatures:certLoad` / `certRelease` / `applyVisual` / `applyPades` / `requestTimestamp` / `verify` / `listAudit`; `annotations:addShape` / `setMeasureCalibration` / `getMeasureCalibration`. Plus 11 new SettingKeys. Plus PdfApi aggregate extension. |
-| `docs/data-models.md` | ~430 | §9 — SignaturePlacement / VisualAppearanceSpec / PadesAppearanceSpec / SignaturePayload (extending Phase-3 FormFieldValue.signature). 5 new EditOperation variants + 2 inverse companions. Schema v4 DDL for `signature_audit_log` (P4-L-6). SignatureAuditRow + DTO + Repo interface. ShapeAnnotationModel. MeasureCalibration. 11 new SettingKey rows. |
-| `docs/ui-spec.md` | ~580 | §13 — Toolbar additions (visual Sign + PAdES Sign as TWO buttons per question E; shape tools enabled), menu additions, SignatureCaptureModal (3 tabs), SignaturePlacementOverlay (SHARED with image-overlay per question H), PadesSignModal (3-step), annotation property pane additions, Annotation summary panel (new sidebar tab), MeasureCalibrationModal, SignatureAuditPanel, flatten-signatures-only extension, updated shortcut table, drag-drop matrix (PFX), Settings additions (Signing + Annotations sections), screen states, accessibility floor extends. L-001 cross-check. |
-| `docs/conventions.md` | ~260 | §15 — Cert + password discipline. Five non-negotiable rules. Canonical correct cert-load handler pattern. Six enumerated anti-patterns including the Wave 13.5 permissive-stub pattern. Test discipline. Wave 17 Julian audit checklist with mechanical greps. Honest "what we don't promise" disclosure. TSA URL trust model cross-reference. |
+| File                    | Lines added | Sections added                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ----------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `docs/api-contracts.md` | ~480        | §14 — 11 new IPC channels: `signatures:certLoad` / `certRelease` / `applyVisual` / `applyPades` / `requestTimestamp` / `verify` / `listAudit`; `annotations:addShape` / `setMeasureCalibration` / `getMeasureCalibration`. Plus 11 new SettingKeys. Plus PdfApi aggregate extension.                                                                                                                                                                                                                                                                                                       |
+| `docs/data-models.md`   | ~430        | §9 — SignaturePlacement / VisualAppearanceSpec / PadesAppearanceSpec / SignaturePayload (extending Phase-3 FormFieldValue.signature). 5 new EditOperation variants + 2 inverse companions. Schema v4 DDL for `signature_audit_log` (P4-L-6). SignatureAuditRow + DTO + Repo interface. ShapeAnnotationModel. MeasureCalibration. 11 new SettingKey rows.                                                                                                                                                                                                                                   |
+| `docs/ui-spec.md`       | ~580        | §13 — Toolbar additions (visual Sign + PAdES Sign as TWO buttons per question E; shape tools enabled), menu additions, SignatureCaptureModal (3 tabs), SignaturePlacementOverlay (SHARED with image-overlay per question H), PadesSignModal (3-step), annotation property pane additions, Annotation summary panel (new sidebar tab), MeasureCalibrationModal, SignatureAuditPanel, flatten-signatures-only extension, updated shortcut table, drag-drop matrix (PFX), Settings additions (Signing + Annotations sections), screen states, accessibility floor extends. L-001 cross-check. |
+| `docs/conventions.md`   | ~260        | §15 — Cert + password discipline. Five non-negotiable rules. Canonical correct cert-load handler pattern. Six enumerated anti-patterns including the Wave 13.5 permissive-stub pattern. Test discipline. Wave 17 Julian audit checklist with mechanical greps. Honest "what we don't promise" disclosure. TSA URL trust model cross-reference.                                                                                                                                                                                                                                             |
 
 **Total Phase 4 design surface:** ~3360 lines across 6 docs (2 new + 4 amended).
 
 ### Locked-decision encoding evidence
 
-| ID | Decision | Encoded at |
-|---|---|---|
-| P4-L-1 | Cert NEVER persisted; PFX + password zeroed in finally | architecture-phase-4.md §4.2 (lifecycle table); signature-engine.md §4 (full discipline + diagrams); conventions.md §15 (non-negotiables + anti-patterns); Wave 17 audit greps |
-| P4-L-2 | TSA disabled by default; user-configured URL; no default service | architecture-phase-4.md §4.5; signature-engine.md §6.4; data-models.md §9.9 (default `signatures.tsaEnabled = false`); ui-spec.md §13.13 (Settings disabled state) |
-| P4-L-3 | PAdES library: `node-signpdf` primary + `node-forge`+`pkijs` fallback; both MIT | architecture-phase-4.md §3.1 (license verification 2026-05-26) + §4.3 (decision matrix); signature-engine.md §3 (5-axis comparison + rationale) |
-| P4-L-4 | Signature appearance = widget annotation with `AP /N` showing typed name + drawn image + date + reason; configurable | architecture-phase-4.md §4.4 (composition); signature-engine.md §5.2 (deterministic layout + drop priority); ui-spec.md §13.3 (capture modal checkboxes) |
-| P4-L-5 | Annotation toolset: rectangle/ellipse/polygon/arrow/callout/line-measure/polyline-measure; NOT layers/fill-patterns/full-vector | architecture-phase-4.md §5 (enumerated list); data-models.md §9.7 (ShapeAnnotationModel exactly the 7 types); ui-spec.md §13.1 (toolbar buttons enabled) |
-| P4-L-6 | Schema v4 = `signature_audit_log` with fingerprint, signed-at, doc-hash, sig-bytes-offset | architecture-phase-4.md §6; data-models.md §9.4 (full DDL); signature-engine.md §8 (insert flow) |
-| P4-L-7 | Phase 4 fills Phase-3 `/Sig` placeholder; verified Wave 11 design covers this | architecture-phase-4.md §1 (P4-L-7 row) + §7 (handoff flow); cross-ref to form-engine.md §3.7 `createSignaturePlaceholder` + architecture-phase-3.md §8 — **placeholder confirmed present; no Wave 11.5 amendment needed** |
+| ID     | Decision                                                                                                                        | Encoded at                                                                                                                                                                                                                 |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P4-L-1 | Cert NEVER persisted; PFX + password zeroed in finally                                                                          | architecture-phase-4.md §4.2 (lifecycle table); signature-engine.md §4 (full discipline + diagrams); conventions.md §15 (non-negotiables + anti-patterns); Wave 17 audit greps                                             |
+| P4-L-2 | TSA disabled by default; user-configured URL; no default service                                                                | architecture-phase-4.md §4.5; signature-engine.md §6.4; data-models.md §9.9 (default `signatures.tsaEnabled = false`); ui-spec.md §13.13 (Settings disabled state)                                                         |
+| P4-L-3 | PAdES library: `node-signpdf` primary + `node-forge`+`pkijs` fallback; both MIT                                                 | architecture-phase-4.md §3.1 (license verification 2026-05-26) + §4.3 (decision matrix); signature-engine.md §3 (5-axis comparison + rationale)                                                                            |
+| P4-L-4 | Signature appearance = widget annotation with `AP /N` showing typed name + drawn image + date + reason; configurable            | architecture-phase-4.md §4.4 (composition); signature-engine.md §5.2 (deterministic layout + drop priority); ui-spec.md §13.3 (capture modal checkboxes)                                                                   |
+| P4-L-5 | Annotation toolset: rectangle/ellipse/polygon/arrow/callout/line-measure/polyline-measure; NOT layers/fill-patterns/full-vector | architecture-phase-4.md §5 (enumerated list); data-models.md §9.7 (ShapeAnnotationModel exactly the 7 types); ui-spec.md §13.1 (toolbar buttons enabled)                                                                   |
+| P4-L-6 | Schema v4 = `signature_audit_log` with fingerprint, signed-at, doc-hash, sig-bytes-offset                                       | architecture-phase-4.md §6; data-models.md §9.4 (full DDL); signature-engine.md §8 (insert flow)                                                                                                                           |
+| P4-L-7 | Phase 4 fills Phase-3 `/Sig` placeholder; verified Wave 11 design covers this                                                   | architecture-phase-4.md §1 (P4-L-7 row) + §7 (handoff flow); cross-ref to form-engine.md §3.7 `createSignaturePlaceholder` + architecture-phase-3.md §8 — **placeholder confirmed present; no Wave 11.5 amendment needed** |
 
 ### PAdES library recommendation + rationale
 
 **Primary: `node-signpdf` 3.x (MIT). Fallback: `node-forge` 1.3.x + `pkijs` 3.x + `asn1js` 3.x (all MIT or BSD-3-Clause).**
 
 **Rationale (full at signature-engine.md §3.2):**
+
 1. Less code, faster ship. ~200 LOC wrapper vs ~600 LOC manual engine.
 2. Known-good byte-range. The single highest-risk failure mode (off-by-one byte-range producing silently-invalid signed PDFs) is debugged in node-signpdf's 2.x/3.x lines.
 3. Auditability. Small surface area; Wave 16 + Wave 17 audit can read end-to-end.
@@ -3520,21 +3613,21 @@ Per `d:\Projects\CLAUDE.md` file ownership table:
 
 ### Riley-uncovered risks beyond the brief's 7-risk register
 
-| ID | Risk | Mitigation |
-|---|---|---|
-| R-W15-A | V8 string-interning of passwords lingers ~1-2s post-clear | Buffer-wrap at smallest possible window; document residual in conventions §15.6; Phase 4.1 OS-keychain candidate |
-| R-W15-B | Cert handle leak via main-process crash before release | `app.before-quit` + `process.on('exit')` release all certs; crash-dump purge is Diego Phase 4.5+ follow-up |
-| R-W15-C | TSA response replay (malicious TSA returns stale time) | TSA client compares `genTime` against system clock with 5-min skew window; fails with `tsa_genTime_skew` |
-| R-W15-D | Widget without `/V` confusable with placeholder | Engine writes empty `/V <<>>` dict on visual sign; renderer distinguishes 3 states (no /V = placeholder, empty /V = visual, /V with Contents = PAdES) |
-| R-W15-E | Audit log SQLite-poison-able by anyone with file write access | Documented explicitly as tamper-vulnerable; Phase 4 makes no notarization claim; user-guide section to be authored by Nathan Wave 18 |
-| R-W15-F | `node-signpdf` `/Contents` placeholder size estimation | Default `placeholderSize: 16384` hex chars (8192 bytes); configurable; very long cert chains may need 32768 |
+| ID      | Risk                                                          | Mitigation                                                                                                                                            |
+| ------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R-W15-A | V8 string-interning of passwords lingers ~1-2s post-clear     | Buffer-wrap at smallest possible window; document residual in conventions §15.6; Phase 4.1 OS-keychain candidate                                      |
+| R-W15-B | Cert handle leak via main-process crash before release        | `app.before-quit` + `process.on('exit')` release all certs; crash-dump purge is Diego Phase 4.5+ follow-up                                            |
+| R-W15-C | TSA response replay (malicious TSA returns stale time)        | TSA client compares `genTime` against system clock with 5-min skew window; fails with `tsa_genTime_skew`                                              |
+| R-W15-D | Widget without `/V` confusable with placeholder               | Engine writes empty `/V <<>>` dict on visual sign; renderer distinguishes 3 states (no /V = placeholder, empty /V = visual, /V with Contents = PAdES) |
+| R-W15-E | Audit log SQLite-poison-able by anyone with file write access | Documented explicitly as tamper-vulnerable; Phase 4 makes no notarization claim; user-guide section to be authored by Nathan Wave 18                  |
+| R-W15-F | `node-signpdf` `/Contents` placeholder size estimation        | Default `placeholderSize: 16384` hex chars (8192 bytes); configurable; very long cert chains may need 32768                                           |
 
 ### Wave 16 implementer scope split (rough)
 
-| Owner | Files (approx) | Tests (approx) |
-|---|---|---|
-| **David** | signature-engine.ts, visual-signature.ts, pades-signature.ts, pades-signature-manual.ts, tsa-client.ts, signature-appearance.ts, cert-store.ts, annotations/ subdir (7 files), 10 IPC handlers, replay-engine.ts edit (step 3.7 + H-3.1/M-13.5-1 absorption), contracts.ts edit, register.ts edit, types/node-signpdf.d.ts. **~25 new files + 3 edits.** | ~55 new tests (engine + handlers + annotations); includes real-PFX-fixture tests + buffer-zeroing assertions + golden-bytes for both engines |
-| **Ravi** | migrations/0004_phase4_signatures.sql, signature-audit-repo.ts + test, db/types.ts edit, db-bridge.ts edit. **~3 new files + 2 edits.** | ~8 new tests (repo CRUD + DTO translation + schema v4 idempotency) |
+| Owner     | Files (approx)                                                                                                                                                                                                                                                                                                                                                  | Tests (approx)                                                                                                                                                                          |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **David** | signature-engine.ts, visual-signature.ts, pades-signature.ts, pades-signature-manual.ts, tsa-client.ts, signature-appearance.ts, cert-store.ts, annotations/ subdir (7 files), 10 IPC handlers, replay-engine.ts edit (step 3.7 + H-3.1/M-13.5-1 absorption), contracts.ts edit, register.ts edit, types/node-signpdf.d.ts. **~25 new files + 3 edits.**        | ~55 new tests (engine + handlers + annotations); includes real-PFX-fixture tests + buffer-zeroing assertions + golden-bytes for both engines                                            |
+| **Ravi**  | migrations/0004_phase4_signatures.sql, signature-audit-repo.ts + test, db/types.ts edit, db-bridge.ts edit. **~3 new files + 2 edits.**                                                                                                                                                                                                                         | ~8 new tests (repo CRUD + DTO translation + schema v4 idempotency)                                                                                                                      |
 | **Riley** | signature-capture-modal/ (4 files), pades-sign-modal/ (4 files), signature-placement-overlay/ (SHARED with image-overlay; refactor + 3 files), annotation-tools/ (4 files), annotation-summary-panel/ (3 files), signature-audit-panel/ (2 files), 3 new slices + 2 selector files + thunks.ts edit, use-signature-canvas.ts hook. **~20+ new files + 1 edit.** | ~25 new tests (modal flows, placement, signature audit panel, shape tools, slice integration); INCLUDES paired-tests-at-both-endpoints for the cert release contract per Wave 12 lesson |
 
 **Aggregate Phase 4 expectation:** ~50 new files + ~85 new tests + ~6 edits to existing files. Matches phase-4-plan §"+80 tests" estimate.
@@ -3563,10 +3656,12 @@ Per Julian's Wave 13.5 re-audit (`code-review.md` §"Wave 13.5 Re-audit — Juli
 ### Files Riley created or amended this wave
 
 **NEW (2 files):**
+
 - `docs/architecture-phase-4.md` — ~720 lines
 - `docs/signature-engine.md` — ~890 lines
 
 **AMENDED (4 files):**
+
 - `docs/api-contracts.md` — +~480 lines (§14 Phase 4 channels)
 - `docs/data-models.md` — +~430 lines (§9 Phase 4 types + schema v4)
 - `docs/ui-spec.md` — +~580 lines (§13 Phase 4 UI surface)
@@ -3605,77 +3700,77 @@ Per Julian's Wave 13.5 re-audit (`code-review.md` §"Wave 13.5 Re-audit — Juli
 
 ### Channel status — what's LIVE vs STUBBED at Wave 16
 
-| Channel | Status | Notes |
-|---|---|---|
-| `signatures:certLoad` | **LIVE** | Buffer-wraps password at line 2 of handler, zero-on-finally via cert-store, returns `parser_not_installed`-mapped error until Wave 17 forge install. Discipline test asserts zeroing on every failure path. |
-| `signatures:certRelease` | **LIVE** | Idempotent; renderer's modal `useEffect` cleanup fires this. |
-| `signatures:applyVisual` | **LIVE** | Full end-to-end via pdf-lib: placeholder lookup → appearance compose (PNG via embedPng) → draw on page → write empty `/V <<>>` marker (R-W15-D distinction) → save. Tested with placeholder + freeform modes, plus already-signed rejection. |
-| `signatures:applyPades` | **WIRED, returns engine_not_available** | Orchestrator + cert lookup + visual widget compose + auto-release-on-finally are LIVE. `node-signpdf` isn't installed at Wave 16; the engine returns `engine_not_available` with a clear "Wave 17" message. Once Diego adds the dep, the path lights up without code changes. |
-| `signatures:requestTimestamp` | **LIVE** | Hand-rolled DER encoder for TimeStampReq + best-effort TSR parser. node:https transport (injectable for tests). All 6 failure modes (http_error, tls_error, timeout, invalid_response, nonce_mismatch, genTime_skew) tested via injected request stub. |
-| `signatures:verify` | **LIVE** | Re-hashes current bytes over the audit row's byte-range and compares to `pre_sign_doc_hash`. Tampered-since-sign detection via full-doc SHA-256. |
-| `signatures:listAudit` | **LIVE** | Uses `db-bridge.signatureAudit` (memory-backed fallback or Ravi's adapted SQLite repo). |
-| `annotations:addShape` | **LIVE** | Returns the EditOperation (kind: `annot-add-shape`); replay engine step 3.8 authors the annot dict via `shape-annotations.ts` at save time. Covers all 7 subtypes: Square, Circle, Polygon, PolyLine, Line (incl. arrow), FreeTextCallout, and Line/PolyLine with `/Measure` calibration. |
-| `annotations:setMeasureCalibration` | **LIVE** | Per-doc in-memory store keyed by `DocumentHandle`. |
-| `annotations:getMeasureCalibration` | **LIVE** | Returns calibration or null. |
+| Channel                             | Status                                  | Notes                                                                                                                                                                                                                                                                                     |
+| ----------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `signatures:certLoad`               | **LIVE**                                | Buffer-wraps password at line 2 of handler, zero-on-finally via cert-store, returns `parser_not_installed`-mapped error until Wave 17 forge install. Discipline test asserts zeroing on every failure path.                                                                               |
+| `signatures:certRelease`            | **LIVE**                                | Idempotent; renderer's modal `useEffect` cleanup fires this.                                                                                                                                                                                                                              |
+| `signatures:applyVisual`            | **LIVE**                                | Full end-to-end via pdf-lib: placeholder lookup → appearance compose (PNG via embedPng) → draw on page → write empty `/V <<>>` marker (R-W15-D distinction) → save. Tested with placeholder + freeform modes, plus already-signed rejection.                                              |
+| `signatures:applyPades`             | **WIRED, returns engine_not_available** | Orchestrator + cert lookup + visual widget compose + auto-release-on-finally are LIVE. `node-signpdf` isn't installed at Wave 16; the engine returns `engine_not_available` with a clear "Wave 17" message. Once Diego adds the dep, the path lights up without code changes.             |
+| `signatures:requestTimestamp`       | **LIVE**                                | Hand-rolled DER encoder for TimeStampReq + best-effort TSR parser. node:https transport (injectable for tests). All 6 failure modes (http_error, tls_error, timeout, invalid_response, nonce_mismatch, genTime_skew) tested via injected request stub.                                    |
+| `signatures:verify`                 | **LIVE**                                | Re-hashes current bytes over the audit row's byte-range and compares to `pre_sign_doc_hash`. Tampered-since-sign detection via full-doc SHA-256.                                                                                                                                          |
+| `signatures:listAudit`              | **LIVE**                                | Uses `db-bridge.signatureAudit` (memory-backed fallback or Ravi's adapted SQLite repo).                                                                                                                                                                                                   |
+| `annotations:addShape`              | **LIVE**                                | Returns the EditOperation (kind: `annot-add-shape`); replay engine step 3.8 authors the annot dict via `shape-annotations.ts` at save time. Covers all 7 subtypes: Square, Circle, Polygon, PolyLine, Line (incl. arrow), FreeTextCallout, and Line/PolyLine with `/Measure` calibration. |
+| `annotations:setMeasureCalibration` | **LIVE**                                | Per-doc in-memory store keyed by `DocumentHandle`.                                                                                                                                                                                                                                        |
+| `annotations:getMeasureCalibration` | **LIVE**                                | Returns calibration or null.                                                                                                                                                                                                                                                              |
 
 ### Files I shipped this wave
 
-| Path | Type | Lines | Tests |
-|---|---|---|---|
-| `src/ipc/contracts.ts` | EDIT | +~290 | (compile target) |
-| `src/main/pdf-ops/cert-store.ts` | NEW | ~250 | 16 in `cert-store.test.ts` |
-| `src/main/pdf-ops/cert-store.test.ts` | NEW | ~230 | 16 |
-| `src/main/pdf-ops/visual-signature.ts` | NEW | ~340 | 6 in `visual-signature.test.ts` |
-| `src/main/pdf-ops/visual-signature.test.ts` | NEW | ~140 | 6 |
-| `src/main/pdf-ops/signature-appearance.ts` | NEW | ~260 | 6 in `signature-appearance.test.ts` |
-| `src/main/pdf-ops/signature-appearance.test.ts` | NEW | ~120 | 6 |
-| `src/main/pdf-ops/signature-engine.ts` | NEW | ~250 | 7 in `signature-engine.test.ts` |
-| `src/main/pdf-ops/signature-engine.test.ts` | NEW | ~220 | 7 |
-| `src/main/pdf-ops/pades-signature.ts` | NEW | ~220 | 7 in `pades-signature.test.ts` |
-| `src/main/pdf-ops/pades-signature.test.ts` | NEW | ~130 | 7 |
-| `src/main/pdf-ops/pades-signature-manual.ts` | NEW | ~75 | 2 in `pades-signature-manual.test.ts` |
-| `src/main/pdf-ops/pades-signature-manual.test.ts` | NEW | ~45 | 2 |
-| `src/main/pdf-ops/tsa-client.ts` | NEW | ~440 | 9 in `tsa-client.test.ts` |
-| `src/main/pdf-ops/tsa-client.test.ts` | NEW | ~165 | 9 |
-| `src/main/pdf-ops/annotations/shape-annotations.ts` | NEW | ~330 | 14 in `shape-annotations.test.ts` |
-| `src/main/pdf-ops/annotations/shape-annotations.test.ts` | NEW | ~240 | 14 |
-| `src/main/pdf-ops/annotations/measure-calibration-store.ts` | NEW | ~30 | (exercised by handler tests) |
-| `src/main/pdf-ops/replay-engine.ts` | EDIT | +~80 | (covered by strip-js + existing) |
-| `src/main/pdf-ops/replay-engine-strip-js.test.ts` | NEW | ~120 | 3 (M-13.5-1 regression pin) |
-| `src/main/pdf-ops/types/node-signpdf.d.ts` | NEW | ~25 | (type shim) |
-| `src/main/pdf-ops/types/node-forge.d.ts` | NEW | ~55 | (type shim) |
-| `src/main/db-bridge.ts` | EDIT | +~225 | (extended db-bridge.test.ts) |
-| `src/main/db-bridge.test.ts` | EDIT | +~145 | 6 (Phase 4 audit-log) |
-| `src/main/index.ts` | EDIT | +~20 | (signature-audit adapter wiring) |
-| `src/ipc/handlers/signatures-cert-load.ts` | NEW | ~60 | 9 in `signatures-cert-load.test.ts` |
-| `src/ipc/handlers/signatures-cert-load.test.ts` | NEW | ~140 | 9 |
-| `src/ipc/handlers/signatures-cert-release.ts` | NEW | ~25 | (covered above) |
-| `src/ipc/handlers/signatures-apply-visual.ts` | NEW | ~60 | (covered via signature-engine test) |
-| `src/ipc/handlers/signatures-apply-pades.ts` | NEW | ~115 | (covered via signature-engine test) |
-| `src/ipc/handlers/signatures-request-timestamp.ts` | NEW | ~55 | 5 in `signatures-request-timestamp.test.ts` |
-| `src/ipc/handlers/signatures-request-timestamp.test.ts` | NEW | ~60 | 5 |
-| `src/ipc/handlers/signatures-verify.ts` | NEW | ~95 | (covered via signature-engine integration) |
-| `src/ipc/handlers/signatures-list-audit.ts` | NEW | ~65 | (covered via db-bridge tests) |
-| `src/ipc/handlers/annotations-add-shape.ts` | NEW | ~170 | 10 in `annotations-add-shape.test.ts` |
-| `src/ipc/handlers/annotations-add-shape.test.ts` | NEW | ~125 | 10 |
-| `src/ipc/handlers/annotations-measure-calibration.ts` | NEW | ~95 | 5 in `annotations-measure-calibration.test.ts` |
-| `src/ipc/handlers/annotations-measure-calibration.test.ts` | NEW | ~60 | 5 |
-| `src/ipc/register.ts` | EDIT | +~75 | (wires 10 new IPC handlers + before-quit cleanup) |
-| `src/preload/index.ts` | EDIT | +~70 | (signatures + annotations namespace) |
+| Path                                                        | Type | Lines | Tests                                             |
+| ----------------------------------------------------------- | ---- | ----- | ------------------------------------------------- |
+| `src/ipc/contracts.ts`                                      | EDIT | +~290 | (compile target)                                  |
+| `src/main/pdf-ops/cert-store.ts`                            | NEW  | ~250  | 16 in `cert-store.test.ts`                        |
+| `src/main/pdf-ops/cert-store.test.ts`                       | NEW  | ~230  | 16                                                |
+| `src/main/pdf-ops/visual-signature.ts`                      | NEW  | ~340  | 6 in `visual-signature.test.ts`                   |
+| `src/main/pdf-ops/visual-signature.test.ts`                 | NEW  | ~140  | 6                                                 |
+| `src/main/pdf-ops/signature-appearance.ts`                  | NEW  | ~260  | 6 in `signature-appearance.test.ts`               |
+| `src/main/pdf-ops/signature-appearance.test.ts`             | NEW  | ~120  | 6                                                 |
+| `src/main/pdf-ops/signature-engine.ts`                      | NEW  | ~250  | 7 in `signature-engine.test.ts`                   |
+| `src/main/pdf-ops/signature-engine.test.ts`                 | NEW  | ~220  | 7                                                 |
+| `src/main/pdf-ops/pades-signature.ts`                       | NEW  | ~220  | 7 in `pades-signature.test.ts`                    |
+| `src/main/pdf-ops/pades-signature.test.ts`                  | NEW  | ~130  | 7                                                 |
+| `src/main/pdf-ops/pades-signature-manual.ts`                | NEW  | ~75   | 2 in `pades-signature-manual.test.ts`             |
+| `src/main/pdf-ops/pades-signature-manual.test.ts`           | NEW  | ~45   | 2                                                 |
+| `src/main/pdf-ops/tsa-client.ts`                            | NEW  | ~440  | 9 in `tsa-client.test.ts`                         |
+| `src/main/pdf-ops/tsa-client.test.ts`                       | NEW  | ~165  | 9                                                 |
+| `src/main/pdf-ops/annotations/shape-annotations.ts`         | NEW  | ~330  | 14 in `shape-annotations.test.ts`                 |
+| `src/main/pdf-ops/annotations/shape-annotations.test.ts`    | NEW  | ~240  | 14                                                |
+| `src/main/pdf-ops/annotations/measure-calibration-store.ts` | NEW  | ~30   | (exercised by handler tests)                      |
+| `src/main/pdf-ops/replay-engine.ts`                         | EDIT | +~80  | (covered by strip-js + existing)                  |
+| `src/main/pdf-ops/replay-engine-strip-js.test.ts`           | NEW  | ~120  | 3 (M-13.5-1 regression pin)                       |
+| `src/main/pdf-ops/types/node-signpdf.d.ts`                  | NEW  | ~25   | (type shim)                                       |
+| `src/main/pdf-ops/types/node-forge.d.ts`                    | NEW  | ~55   | (type shim)                                       |
+| `src/main/db-bridge.ts`                                     | EDIT | +~225 | (extended db-bridge.test.ts)                      |
+| `src/main/db-bridge.test.ts`                                | EDIT | +~145 | 6 (Phase 4 audit-log)                             |
+| `src/main/index.ts`                                         | EDIT | +~20  | (signature-audit adapter wiring)                  |
+| `src/ipc/handlers/signatures-cert-load.ts`                  | NEW  | ~60   | 9 in `signatures-cert-load.test.ts`               |
+| `src/ipc/handlers/signatures-cert-load.test.ts`             | NEW  | ~140  | 9                                                 |
+| `src/ipc/handlers/signatures-cert-release.ts`               | NEW  | ~25   | (covered above)                                   |
+| `src/ipc/handlers/signatures-apply-visual.ts`               | NEW  | ~60   | (covered via signature-engine test)               |
+| `src/ipc/handlers/signatures-apply-pades.ts`                | NEW  | ~115  | (covered via signature-engine test)               |
+| `src/ipc/handlers/signatures-request-timestamp.ts`          | NEW  | ~55   | 5 in `signatures-request-timestamp.test.ts`       |
+| `src/ipc/handlers/signatures-request-timestamp.test.ts`     | NEW  | ~60   | 5                                                 |
+| `src/ipc/handlers/signatures-verify.ts`                     | NEW  | ~95   | (covered via signature-engine integration)        |
+| `src/ipc/handlers/signatures-list-audit.ts`                 | NEW  | ~65   | (covered via db-bridge tests)                     |
+| `src/ipc/handlers/annotations-add-shape.ts`                 | NEW  | ~170  | 10 in `annotations-add-shape.test.ts`             |
+| `src/ipc/handlers/annotations-add-shape.test.ts`            | NEW  | ~125  | 10                                                |
+| `src/ipc/handlers/annotations-measure-calibration.ts`       | NEW  | ~95   | 5 in `annotations-measure-calibration.test.ts`    |
+| `src/ipc/handlers/annotations-measure-calibration.test.ts`  | NEW  | ~60   | 5                                                 |
+| `src/ipc/register.ts`                                       | EDIT | +~75  | (wires 10 new IPC handlers + before-quit cleanup) |
+| `src/preload/index.ts`                                      | EDIT | +~70  | (signatures + annotations namespace)              |
 
 **Tally:** 27 new source files + 10 new test files + 6 edits. **105 new tests** in Phase 4 surface; **507/507 main+ipc tests pass** (Phase 3 baseline 402, delta +105). Zero regressions.
 
 ### Locked-decision encoding evidence
 
-| ID | Decision | Encoded at |
-|---|---|---|
-| P4-L-1 | Cert NEVER persisted; PFX + password zeroed in finally | `src/main/pdf-ops/cert-store.ts:151-186` (finally block calls `pfxBytes.fill(0)` + `passwordBuffer.fill(0)` on EVERY exit path); handler discipline at `src/ipc/handlers/signatures-cert-load.ts:32-49` (Buffer-wrap ≤5 lines from validated payload; overwrite parsed-payload field; delegation to cert-store); explicit zeroing tests at `src/main/pdf-ops/cert-store.test.ts:73-118` (zero-on-success + zero-on-every-failure-path). |
-| P4-L-2 | TSA disabled by default; user-configured URL; no default service | TSA client at `src/main/pdf-ops/tsa-client.ts` is INVOKED ONLY by `signatures:requestTimestamp` (Settings "Test TSA URL") OR by PAdES engine when `tsaUrl !== null` is passed in — no module-level default URL anywhere. Default Setting `signatures.tsaEnabled = false` recorded in `data-models.md §9.9`. Validation at `src/ipc/handlers/signatures-apply-pades.ts:103-118` (https only, no userinfo, no fragment, bounded query). |
-| P4-L-3 | PAdES library: `node-signpdf` primary + `node-forge`/`pkijs` fallback | Primary at `src/main/pdf-ops/pades-signature.ts:79-101` (dynamic import); fallback at `src/main/pdf-ops/pades-signature-manual.ts:38-53` (same shape); engine choice via env `PADES_ENGINE` at `src/main/pdf-ops/signature-engine.ts:159-160`. Type shims at `src/main/pdf-ops/types/node-signpdf.d.ts` + `src/main/pdf-ops/types/node-forge.d.ts`. |
-| P4-L-4 | Signature appearance = widget with /AP /N showing typed name + drawn img + date + reason | Appearance composition at `src/main/pdf-ops/signature-appearance.ts:46-115` with row drop-priority at lines 162-181 (high→low: SubjectCN, Date, IssuerCN, Reason, TsaInfo); used by both visual + PAdES via `composeAppearance()`. Tested at `signature-appearance.test.ts:33-86`. |
-| P4-L-5 | Annotation toolset = 7 tools | Subtypes enumerated at `src/ipc/contracts.ts` `ShapeAnnotationSubtype` union; emitter dispatch at `src/main/pdf-ops/annotations/shape-annotations.ts:54-77` (exhaustive switch). |
-| P4-L-6 | Schema v4 = `signature_audit_log` table | Bridge surface at `src/main/db-bridge.ts:151-208` (`SignatureAuditRepoBridge`, `SignatureAuditRowDto`, `SignatureAuditInsertInput`); memory fallback at lines 480-555; SQLite adapter `adaptSignatureAuditRepo` at lines 1075-1142; wired into the production bridge at `src/main/index.ts:140-159`. Audit insert flow in the orchestrator at `src/main/pdf-ops/signature-engine.ts:179-208`. |
-| P4-L-7 | Phase 4 fills the Phase-3 `/Sig` placeholder | `findPlaceholderField` at `src/main/pdf-ops/visual-signature.ts:131-189` uses pdf-lib's `doc.getForm().getFieldMaybe(name)` + the `PDFSignature` type guard — verified the same field shape Phase 3's `createSignaturePlaceholder` writes. |
+| ID     | Decision                                                                                 | Encoded at                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------ | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P4-L-1 | Cert NEVER persisted; PFX + password zeroed in finally                                   | `src/main/pdf-ops/cert-store.ts:151-186` (finally block calls `pfxBytes.fill(0)` + `passwordBuffer.fill(0)` on EVERY exit path); handler discipline at `src/ipc/handlers/signatures-cert-load.ts:32-49` (Buffer-wrap ≤5 lines from validated payload; overwrite parsed-payload field; delegation to cert-store); explicit zeroing tests at `src/main/pdf-ops/cert-store.test.ts:73-118` (zero-on-success + zero-on-every-failure-path). |
+| P4-L-2 | TSA disabled by default; user-configured URL; no default service                         | TSA client at `src/main/pdf-ops/tsa-client.ts` is INVOKED ONLY by `signatures:requestTimestamp` (Settings "Test TSA URL") OR by PAdES engine when `tsaUrl !== null` is passed in — no module-level default URL anywhere. Default Setting `signatures.tsaEnabled = false` recorded in `data-models.md §9.9`. Validation at `src/ipc/handlers/signatures-apply-pades.ts:103-118` (https only, no userinfo, no fragment, bounded query).   |
+| P4-L-3 | PAdES library: `node-signpdf` primary + `node-forge`/`pkijs` fallback                    | Primary at `src/main/pdf-ops/pades-signature.ts:79-101` (dynamic import); fallback at `src/main/pdf-ops/pades-signature-manual.ts:38-53` (same shape); engine choice via env `PADES_ENGINE` at `src/main/pdf-ops/signature-engine.ts:159-160`. Type shims at `src/main/pdf-ops/types/node-signpdf.d.ts` + `src/main/pdf-ops/types/node-forge.d.ts`.                                                                                     |
+| P4-L-4 | Signature appearance = widget with /AP /N showing typed name + drawn img + date + reason | Appearance composition at `src/main/pdf-ops/signature-appearance.ts:46-115` with row drop-priority at lines 162-181 (high→low: SubjectCN, Date, IssuerCN, Reason, TsaInfo); used by both visual + PAdES via `composeAppearance()`. Tested at `signature-appearance.test.ts:33-86`.                                                                                                                                                      |
+| P4-L-5 | Annotation toolset = 7 tools                                                             | Subtypes enumerated at `src/ipc/contracts.ts` `ShapeAnnotationSubtype` union; emitter dispatch at `src/main/pdf-ops/annotations/shape-annotations.ts:54-77` (exhaustive switch).                                                                                                                                                                                                                                                        |
+| P4-L-6 | Schema v4 = `signature_audit_log` table                                                  | Bridge surface at `src/main/db-bridge.ts:151-208` (`SignatureAuditRepoBridge`, `SignatureAuditRowDto`, `SignatureAuditInsertInput`); memory fallback at lines 480-555; SQLite adapter `adaptSignatureAuditRepo` at lines 1075-1142; wired into the production bridge at `src/main/index.ts:140-159`. Audit insert flow in the orchestrator at `src/main/pdf-ops/signature-engine.ts:179-208`.                                           |
+| P4-L-7 | Phase 4 fills the Phase-3 `/Sig` placeholder                                             | `findPlaceholderField` at `src/main/pdf-ops/visual-signature.ts:131-189` uses pdf-lib's `doc.getForm().getFieldMaybe(name)` + the `PDFSignature` type guard — verified the same field shape Phase 3's `createSignaturePlaceholder` writes.                                                                                                                                                                                              |
 
 ### M-13.5-1 evidence — H-3.1 residual closed
 
@@ -3690,16 +3785,19 @@ Wave 17 Julian re-verifies M-13.5-1 closes by reading the regression test + grep
 ### Open items for Wave 17
 
 **Dependencies Diego must install (Wave 17 packaging):**
+
 - `node-signpdf@^3` (MIT) — primary PAdES engine. Once installed, `signatures:applyPades` lights up; existing tests pass; new "real-fixture sign + verify in Acrobat Reader DC" smoke test can be added.
 - `node-forge@^1.3` ((BSD-3-Clause OR GPL-2.0) — exercise BSD arm per LICENSES.md jszip precedent) — for the manual PAdES fallback + cert-store's PFX parser. Test fixtures (`tests/fixtures/signature-engine/test-cert.pfx`) ship in Wave 17 with the dep.
 - `pkijs@^3` (MIT) — for the manual PAdES engine's CMS construction.
 - `asn1js@^3` (BSD-3-Clause) — transitive of pkijs; pinned for fallback path.
 
 The dynamic-import + type-shim strategy at `src/main/pdf-ops/types/*.d.ts` means the moment Diego adds these to `package.json` + `npm install`, no source changes are needed — the engines start working. Wave 17 should also:
+
 - Add the test fixtures directory `tests/fixtures/signature-engine/` with a real test cert (per `signature-engine.md §9.1`).
 - Add a CI lint catching permissive-stub anti-pattern in `*.test.ts` (per Wave 13.5 N-13.5-2 follow-up). My tests use the **REAL** production `loadCert` with a synthetic-but-real PFX parser; no permissive stubs of cert-store functions.
 
 **For Julian's Wave 17 code review:**
+
 - Single-funnel discipline ratchets:
   - `cert-store.ts` is the SINGLE module touching PFX bytes / password strings / private-key references. Every other module (handlers, orchestrator, engines) accepts the opaque `CertHandle` only.
   - The byte-range computer is a SINGLE pure function `computeByteRange` in `pades-signature.ts:184-191`; tested for off-by-one regression with a 1-char shift assertion.
@@ -3711,6 +3809,7 @@ The dynamic-import + type-shim strategy at `src/main/pdf-ops/types/*.d.ts` means
   - `rg "settings\.|electronStore\." src/main/pdf-ops/cert-store.ts src/ipc/handlers/signatures-*.ts` → 0
 
 **Known limitations / Phase 4.1 candidates:**
+
 - The manual-engine ASN.1 body is staged — the dynamic-import path is wired, but the actual `forge.pkcs7.createSignedData` invocation is documented + ready for Wave 17 build-out once forge is installed. Wave 16 tests cover the cert_handle_not_found + engine_not_available branches; full sign tests come once the dep lands.
 - TSA URL allowlist is conservative (HTTPS only, no userinfo, no fragment, bounded query) — operators who run their own TSA over `http://` (LAN appliance) will be unable to use it. This is intentional per P4-L-2's "no default" trust model; HTTP would be a Phase 4.1 toggle if user demand surfaces.
 - `signatures.padesEngine` Setting (`'signpdf' | 'manual'`) is contract-typed but the UI exposing it ships Phase 4.1 per design §3.5.
@@ -3748,13 +3847,13 @@ The dynamic-import + type-shim strategy at `src/main/pdf-ops/types/*.d.ts` means
 
 ### Files Ravi created or amended this wave
 
-| Path | Type | LOC | Tests |
-|---|---|---|---|
-| `migrations/0004_phase4_signatures.sql` | NEW | 96 | n/a (exercised via repo test schema-verification block) |
-| `src/db/repositories/signature-audit-repo.ts` | NEW | 459 | n/a (exercised by sibling test) |
-| `src/db/repositories/signature-audit-repo.test.ts` | NEW | 562 | 43 cases across 11 describe blocks |
-| `src/db/types.ts` | EDIT | +95 (1 new interface + 11 new SettingKeys + types + KNOWN_SETTING_KEYS extension) | covered transitively by signature-audit + settings repo tests |
-| `src/db/repositories/bookmarks-repo.test.ts` | EDIT | +6 / -2 (stale Wave 7 `.toBe(2)` assertion relaxed to `.toBeGreaterThanOrEqual(2)` — now correct for any post-Phase-2 schema watermark) | n/a |
+| Path                                               | Type | LOC                                                                                                                                     | Tests                                                         |
+| -------------------------------------------------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `migrations/0004_phase4_signatures.sql`            | NEW  | 96                                                                                                                                      | n/a (exercised via repo test schema-verification block)       |
+| `src/db/repositories/signature-audit-repo.ts`      | NEW  | 459                                                                                                                                     | n/a (exercised by sibling test)                               |
+| `src/db/repositories/signature-audit-repo.test.ts` | NEW  | 562                                                                                                                                     | 43 cases across 11 describe blocks                            |
+| `src/db/types.ts`                                  | EDIT | +95 (1 new interface + 11 new SettingKeys + types + KNOWN_SETTING_KEYS extension)                                                       | covered transitively by signature-audit + settings repo tests |
+| `src/db/repositories/bookmarks-repo.test.ts`       | EDIT | +6 / -2 (stale Wave 7 `.toBe(2)` assertion relaxed to `.toBeGreaterThanOrEqual(2)` — now correct for any post-Phase-2 schema watermark) | n/a                                                           |
 
 **File-count totals:** 3 new + 2 edits (matches Wave 15 estimate of "~3 new files + 2 edits").
 
@@ -3835,66 +3934,66 @@ Plus two SQL-level defense-in-depth tests: raw `INSERT` with a bad `signature_ki
 
 ### Files Riley shipped (Wave 16)
 
-| Path | Type | Lines | Tests |
-|---|---|---:|---:|
-| `src/client/state/slices/signatures-slice.ts` | NEW | 263 | — |
-| `src/client/state/slices/signatures-slice.test.ts` | NEW | 195 | 13 |
-| `src/client/state/slices/shapes-slice.ts` | NEW | 159 | — |
-| `src/client/state/slices/shapes-slice.test.ts` | NEW | 96 | 10 |
-| `src/client/state/slices/signature-audit-slice.ts` | NEW | 176 | — |
-| `src/client/state/slices/signature-audit-slice.test.ts` | NEW | 161 | 12 |
-| `src/client/state/thunks-phase4.ts` | NEW | 332 | — |
-| `src/client/hooks/use-signature-canvas.ts` | NEW | 166 | — |
-| `src/client/hooks/use-signature-canvas.test.ts` | NEW | 174 | 3 |
-| `src/client/components/modals/signature-capture-modal/index.tsx` | NEW | 186 | — |
-| `src/client/components/modals/signature-capture-modal/typed-tab.tsx` | NEW | 159 | — |
-| `src/client/components/modals/signature-capture-modal/drawn-tab.tsx` | NEW | 72 | — |
-| `src/client/components/modals/signature-capture-modal/image-tab.tsx` | NEW | 119 | — |
-| `src/client/components/modals/signature-capture-modal/signature-capture-modal.module.css` | NEW | 130 | — |
-| `src/client/components/modals/signature-capture-modal/signature-capture-modal.test.tsx` | NEW | 140 | 5 |
-| `src/client/components/modals/pades-sign-modal/index.tsx` | NEW | 107 | — |
-| `src/client/components/modals/pades-sign-modal/cert-loader-step.tsx` | NEW | 197 | — |
-| `src/client/components/modals/pades-sign-modal/sign-options-step.tsx` | NEW | 96 | — |
-| `src/client/components/modals/pades-sign-modal/confirm-and-sign-step.tsx` | NEW | 88 | — |
-| `src/client/components/modals/pades-sign-modal/pades-sign-modal.module.css` | NEW | 124 | — |
-| `src/client/components/modals/pades-sign-modal/pades-sign-modal.test.tsx` | NEW | 269 | 5 |
-| `src/client/components/signature-placement-overlay/index.tsx` | NEW | 175 | — |
-| `src/client/components/signature-placement-overlay/placement-handle.tsx` | NEW | 60 | — |
-| `src/client/components/signature-placement-overlay/signature-placement-overlay.module.css` | NEW | 110 | — |
-| `src/client/components/signature-placement-overlay/signature-placement-overlay.test.tsx` | NEW | 137 | 3 |
-| `src/client/components/shape-tools/shape-toolbar.tsx` | NEW | 52 | — |
-| `src/client/components/shape-tools/build-shape-annotation.ts` | NEW | 184 | — |
-| `src/client/components/shape-tools/shape-draft-overlay.tsx` | NEW | 95 | — |
-| `src/client/components/shape-tools/shape-tools.module.css` | NEW | 34 | — |
-| `src/client/components/shape-tools/shape-tools.test.tsx` | NEW | 257 | 13 |
-| `src/client/components/annotation-summary-panel/index.tsx` | NEW | 178 | — |
-| `src/client/components/annotation-summary-panel/annotation-summary-panel.module.css` | NEW | 73 | — |
-| `src/client/components/annotation-summary-panel/annotation-summary-panel.test.tsx` | NEW | 113 | 3 |
-| `src/client/components/signature-audit-panel/index.tsx` | NEW | 199 | — |
-| `src/client/components/signature-audit-panel/signature-audit-panel.module.css` | NEW | 113 | — |
-| `src/client/components/signature-audit-panel/signature-audit-panel.test.tsx` | NEW | 178 | 5 |
-| `src/client/types/ipc-contract.ts` | EDIT | +58 | — |
-| `src/client/services/api.ts` | EDIT | +90 | — |
-| `src/client/state/store.ts` | EDIT | +18 | — |
-| `src/client/state/slices/document-slice-apply.ts` | EDIT | +59 | — |
-| `src/client/state/slices/document-inverses.ts` | EDIT | +83 | — |
+| Path                                                                                       | Type | Lines | Tests |
+| ------------------------------------------------------------------------------------------ | ---- | ----: | ----: |
+| `src/client/state/slices/signatures-slice.ts`                                              | NEW  |   263 |     — |
+| `src/client/state/slices/signatures-slice.test.ts`                                         | NEW  |   195 |    13 |
+| `src/client/state/slices/shapes-slice.ts`                                                  | NEW  |   159 |     — |
+| `src/client/state/slices/shapes-slice.test.ts`                                             | NEW  |    96 |    10 |
+| `src/client/state/slices/signature-audit-slice.ts`                                         | NEW  |   176 |     — |
+| `src/client/state/slices/signature-audit-slice.test.ts`                                    | NEW  |   161 |    12 |
+| `src/client/state/thunks-phase4.ts`                                                        | NEW  |   332 |     — |
+| `src/client/hooks/use-signature-canvas.ts`                                                 | NEW  |   166 |     — |
+| `src/client/hooks/use-signature-canvas.test.ts`                                            | NEW  |   174 |     3 |
+| `src/client/components/modals/signature-capture-modal/index.tsx`                           | NEW  |   186 |     — |
+| `src/client/components/modals/signature-capture-modal/typed-tab.tsx`                       | NEW  |   159 |     — |
+| `src/client/components/modals/signature-capture-modal/drawn-tab.tsx`                       | NEW  |    72 |     — |
+| `src/client/components/modals/signature-capture-modal/image-tab.tsx`                       | NEW  |   119 |     — |
+| `src/client/components/modals/signature-capture-modal/signature-capture-modal.module.css`  | NEW  |   130 |     — |
+| `src/client/components/modals/signature-capture-modal/signature-capture-modal.test.tsx`    | NEW  |   140 |     5 |
+| `src/client/components/modals/pades-sign-modal/index.tsx`                                  | NEW  |   107 |     — |
+| `src/client/components/modals/pades-sign-modal/cert-loader-step.tsx`                       | NEW  |   197 |     — |
+| `src/client/components/modals/pades-sign-modal/sign-options-step.tsx`                      | NEW  |    96 |     — |
+| `src/client/components/modals/pades-sign-modal/confirm-and-sign-step.tsx`                  | NEW  |    88 |     — |
+| `src/client/components/modals/pades-sign-modal/pades-sign-modal.module.css`                | NEW  |   124 |     — |
+| `src/client/components/modals/pades-sign-modal/pades-sign-modal.test.tsx`                  | NEW  |   269 |     5 |
+| `src/client/components/signature-placement-overlay/index.tsx`                              | NEW  |   175 |     — |
+| `src/client/components/signature-placement-overlay/placement-handle.tsx`                   | NEW  |    60 |     — |
+| `src/client/components/signature-placement-overlay/signature-placement-overlay.module.css` | NEW  |   110 |     — |
+| `src/client/components/signature-placement-overlay/signature-placement-overlay.test.tsx`   | NEW  |   137 |     3 |
+| `src/client/components/shape-tools/shape-toolbar.tsx`                                      | NEW  |    52 |     — |
+| `src/client/components/shape-tools/build-shape-annotation.ts`                              | NEW  |   184 |     — |
+| `src/client/components/shape-tools/shape-draft-overlay.tsx`                                | NEW  |    95 |     — |
+| `src/client/components/shape-tools/shape-tools.module.css`                                 | NEW  |    34 |     — |
+| `src/client/components/shape-tools/shape-tools.test.tsx`                                   | NEW  |   257 |    13 |
+| `src/client/components/annotation-summary-panel/index.tsx`                                 | NEW  |   178 |     — |
+| `src/client/components/annotation-summary-panel/annotation-summary-panel.module.css`       | NEW  |    73 |     — |
+| `src/client/components/annotation-summary-panel/annotation-summary-panel.test.tsx`         | NEW  |   113 |     3 |
+| `src/client/components/signature-audit-panel/index.tsx`                                    | NEW  |   199 |     — |
+| `src/client/components/signature-audit-panel/signature-audit-panel.module.css`             | NEW  |   113 |     — |
+| `src/client/components/signature-audit-panel/signature-audit-panel.test.tsx`               | NEW  |   178 |     5 |
+| `src/client/types/ipc-contract.ts`                                                         | EDIT |   +58 |     — |
+| `src/client/services/api.ts`                                                               | EDIT |   +90 |     — |
+| `src/client/state/store.ts`                                                                | EDIT |   +18 |     — |
+| `src/client/state/slices/document-slice-apply.ts`                                          | EDIT |   +59 |     — |
+| `src/client/state/slices/document-inverses.ts`                                             | EDIT |   +83 |     — |
 
 **Aggregate:** **36 NEW files + 5 EDITS**, ~5,700 LOC, **72 NEW tests** (brief asked for ~25 — significant over-delivery driven by per-shape-subtype tests + cert-discipline triple-coverage).
 
 ### Phase 4 design encoding evidence — vs Wave 15 spec
 
-| Wave 15 spec deliverable | Wave 16 file mapping | Status |
-|---|---|---|
-| SignatureCaptureModal (3 tabs: Typed/Drawn/Image) | `modals/signature-capture-modal/{index,typed-tab,drawn-tab,image-tab}.tsx` (4 files) | LIVE |
-| PadesSignModal (3 steps: Cert/Options/Sign) | `modals/pades-sign-modal/{index,cert-loader-step,sign-options-step,confirm-and-sign-step}.tsx` (4 files) | LIVE |
-| SignaturePlacementOverlay (SHARED w/ image-overlay — question H) | `signature-placement-overlay/{index,placement-handle}.tsx` — see "Shared overlay outcome" below | LIVE (shared design via single component; image-import-modal migration deferred to Phase 4.1) |
-| Shape tools (7 tools) | `shape-tools/shape-toolbar.tsx` (8 buttons — line+arrow share L) + `build-shape-annotation.ts` (single funnel) + `shape-draft-overlay.tsx` (SVG live preview) | LIVE |
-| AnnotationSummaryPanel | `annotation-summary-panel/index.tsx` | LIVE |
-| SignatureAuditPanel | `signature-audit-panel/index.tsx` | LIVE |
-| 3 new Redux slices | `signatures-slice.ts` (capture + sign workflow) + `shapes-slice.ts` (live shape state) + `signature-audit-slice.ts` (audit + summary panel state) | LIVE |
-| Signature canvas hook | `hooks/use-signature-canvas.ts` (pointer-event capture, quadratic smoothing, PNG export) | LIVE |
-| Phase 4 thunks (~10 new) | `state/thunks-phase4.ts`: loadCert, releaseCert, applyVisualSignature, applyPadesSignature, addShapeAnnotation, setMeasureCalibration, listSignatureAudit, verifySignature, deleteAuditRow (9 thunks; the brief's 10th — `captureSignature` — folds into local component state per Wave 12 commit-boundary discipline) | LIVE |
-| Re-export gatekeeper edit | `types/ipc-contract.ts` — added 54 Phase 4 re-exports from David's canonical contracts.ts | LIVE |
+| Wave 15 spec deliverable                                         | Wave 16 file mapping                                                                                                                                                                                                                                                                                                   | Status                                                                                        |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| SignatureCaptureModal (3 tabs: Typed/Drawn/Image)                | `modals/signature-capture-modal/{index,typed-tab,drawn-tab,image-tab}.tsx` (4 files)                                                                                                                                                                                                                                   | LIVE                                                                                          |
+| PadesSignModal (3 steps: Cert/Options/Sign)                      | `modals/pades-sign-modal/{index,cert-loader-step,sign-options-step,confirm-and-sign-step}.tsx` (4 files)                                                                                                                                                                                                               | LIVE                                                                                          |
+| SignaturePlacementOverlay (SHARED w/ image-overlay — question H) | `signature-placement-overlay/{index,placement-handle}.tsx` — see "Shared overlay outcome" below                                                                                                                                                                                                                        | LIVE (shared design via single component; image-import-modal migration deferred to Phase 4.1) |
+| Shape tools (7 tools)                                            | `shape-tools/shape-toolbar.tsx` (8 buttons — line+arrow share L) + `build-shape-annotation.ts` (single funnel) + `shape-draft-overlay.tsx` (SVG live preview)                                                                                                                                                          | LIVE                                                                                          |
+| AnnotationSummaryPanel                                           | `annotation-summary-panel/index.tsx`                                                                                                                                                                                                                                                                                   | LIVE                                                                                          |
+| SignatureAuditPanel                                              | `signature-audit-panel/index.tsx`                                                                                                                                                                                                                                                                                      | LIVE                                                                                          |
+| 3 new Redux slices                                               | `signatures-slice.ts` (capture + sign workflow) + `shapes-slice.ts` (live shape state) + `signature-audit-slice.ts` (audit + summary panel state)                                                                                                                                                                      | LIVE                                                                                          |
+| Signature canvas hook                                            | `hooks/use-signature-canvas.ts` (pointer-event capture, quadratic smoothing, PNG export)                                                                                                                                                                                                                               | LIVE                                                                                          |
+| Phase 4 thunks (~10 new)                                         | `state/thunks-phase4.ts`: loadCert, releaseCert, applyVisualSignature, applyPadesSignature, addShapeAnnotation, setMeasureCalibration, listSignatureAudit, verifySignature, deleteAuditRow (9 thunks; the brief's 10th — `captureSignature` — folds into local component state per Wave 12 commit-boundary discipline) | LIVE                                                                                          |
+| Re-export gatekeeper edit                                        | `types/ipc-contract.ts` — added 54 Phase 4 re-exports from David's canonical contracts.ts                                                                                                                                                                                                                              | LIVE                                                                                          |
 
 ### P4-L-1 — password-cleared regression test evidence (mandatory per brief)
 
@@ -3903,6 +4002,7 @@ Plus two SQL-level defense-in-depth tests: raw `INSERT` with a bad `signature_ki
 The test block "clears the password input value after Load cert dispatch (P4-L-1 / conventions §15.1)" lives at lines ~120-165 with the load-bearing assertion at the `expect(passwordAfter.value).toBe('')` site documented inline with the banner comment "THIS IS THE LOAD-BEARING ASSERTION FOR THE BRIEF'S 'password-input-cleared regression test' REQUIREMENT". A second test ("clears the password React state on modal unmount") covers the cleanup-effect path (modal-unmount block ~lines 170-202). A third test ("does not log the password through console.log/info/warn/error") asserts no `console.*` call contains the sentinel `'TEST-PWD-DO-NOT-LOG-2026'`.
 
 **Discipline locations in source:**
+
 - `cert-loader-step.tsx` lines 28-60 — module header documenting the discipline + Wave 17 Julian grep checklist
 - `cert-loader-step.tsx` line ~93 — `setPassword('')` happens BEFORE `await pfxFile.arrayBuffer()` (the inverted ordering per conventions §15.1 rule 2)
 - `cert-loader-step.tsx` lines ~55-60 — `useEffect` cleanup hook setting password to `''` on unmount
@@ -3923,14 +4023,14 @@ Wave 15 designed the placement overlay as SHARED between signature flow + image-
 
 ### Shape-tool discriminator match — 7 tools verified
 
-| Tool | ShapeAnnotationSubtype | Verified by |
-|---|---|---|
-| Rectangle | `Square` | `shape-tools.test.tsx` "Square: produces subtype=Square…" |
-| Ellipse | `Circle` | `shape-tools.test.tsx` "Circle: produces subtype=Circle" |
-| Polygon | `Polygon` | `shape-tools.test.tsx` "Polygon: produces subtype=Polygon with vertices" |
-| Arrow | `Line` (with `OpenArrow` end) | `shape-tools.test.tsx` "Arrow: produces subtype=Line with OpenArrow end" |
-| Callout | `FreeTextCallout` | `shape-tools.test.tsx` "Callout: produces subtype=FreeTextCallout with text+pointer" |
-| Line-measure | `Line` (with measure dict) | `shape-tools.test.tsx` "Line-measure: produces subtype=Line with measure dict" |
+| Tool             | ShapeAnnotationSubtype         | Verified by                                                                            |
+| ---------------- | ------------------------------ | -------------------------------------------------------------------------------------- |
+| Rectangle        | `Square`                       | `shape-tools.test.tsx` "Square: produces subtype=Square…"                              |
+| Ellipse          | `Circle`                       | `shape-tools.test.tsx` "Circle: produces subtype=Circle"                               |
+| Polygon          | `Polygon`                      | `shape-tools.test.tsx` "Polygon: produces subtype=Polygon with vertices"               |
+| Arrow            | `Line` (with `OpenArrow` end)  | `shape-tools.test.tsx` "Arrow: produces subtype=Line with OpenArrow end"               |
+| Callout          | `FreeTextCallout`              | `shape-tools.test.tsx` "Callout: produces subtype=FreeTextCallout with text+pointer"   |
+| Line-measure     | `Line` (with measure dict)     | `shape-tools.test.tsx` "Line-measure: produces subtype=Line with measure dict"         |
 | Polyline-measure | `PolyLine` (with measure dict) | `shape-tools.test.tsx` "Polyline-measure: produces subtype=PolyLine with measure dict" |
 
 Plus the contract test "routes the ShapeAnnotationModel through applyEdit via the IPC return op" confirms the addShapeAnnotationThunk → apiAnnotationsP4.addShape → applyEdit single-funnel path with the correct discriminator at the IPC boundary.
@@ -3946,6 +4046,7 @@ Plus the contract test "routes the ShapeAnnotationModel through applyEdit via th
 - **CI on Node 20 (per `.nvmrc`) is the test-of-record** — when CI runs, all 72 new tests + 178 baseline tests should pass (matches the existing 296/296 Wave 8.5 + Wave 13 baseline pattern; +72 → ~250 renderer-side pass-count target).
 
 **Evidence of test-file validity** (each new test file transforms cleanly via esbuild — exit code 0):
+
 ```
 OK: signatures-slice.test.ts
 OK: shapes-slice.test.ts
@@ -3960,6 +4061,7 @@ OK: signature-placement-overlay.test.tsx
 ```
 
 **Static verification PASSING:**
+
 - `npx tsc -p tsconfig.renderer.json --noEmit` → 0 errors
 - `npx tsc -p tsconfig.main.json --noEmit` → 0 errors (gatekeeper additions roundtrip cleanly through David's canonical PdfApi)
 - `npx eslint src/client/{state,components,hooks,services,types}/...` → 0 errors / 0 warnings on all touched files
@@ -4008,13 +4110,13 @@ OK: signature-placement-overlay.test.tsx
 
 ### Findings counts
 
-| Severity | Count | IDs |
-|---|---|---|
-| BLOCKER | 1 | B-17.1 |
-| HIGH | 3 | H-17.1, H-17.2, H-17.3 |
-| MEDIUM | 5 | M-17.1, M-17.2, M-17.3, M-17.4, M-17.5 |
-| LOW | 3 | L-17.1, L-17.2, L-17.3 |
-| NIT | 3 | N-17.1, N-17.2, N-17.3 |
+| Severity | Count | IDs                                    |
+| -------- | ----- | -------------------------------------- |
+| BLOCKER  | 1     | B-17.1                                 |
+| HIGH     | 3     | H-17.1, H-17.2, H-17.3                 |
+| MEDIUM   | 5     | M-17.1, M-17.2, M-17.3, M-17.4, M-17.5 |
+| LOW      | 3     | L-17.1, L-17.2, L-17.3                 |
+| NIT      | 3     | N-17.1, N-17.2, N-17.3                 |
 
 ### Top-3 issues before Phase 4 ship
 
@@ -4059,11 +4161,11 @@ The B-17.1 finding required side-by-side analysis of the cert-store's RETENTION 
 
 ### Files touched by Julian (Wave 17)
 
-| Path | Type | Change |
-|---|---|---|
-| `docs/code-review.md` | EDIT | +600 lines (Wave 17 section: 15 findings, scorecard, verdict, self-correction notes) |
-| `docs/build-report.md` | EDIT | This row (additive) |
-| `.learnings/learnings.jsonl` | EDIT | +1 JSONL entry (post-flight self-improvement log) |
+| Path                         | Type | Change                                                                               |
+| ---------------------------- | ---- | ------------------------------------------------------------------------------------ |
+| `docs/code-review.md`        | EDIT | +600 lines (Wave 17 section: 15 findings, scorecard, verdict, self-correction notes) |
+| `docs/build-report.md`       | EDIT | This row (additive)                                                                  |
+| `.learnings/learnings.jsonl` | EDIT | +1 JSONL entry (post-flight self-improvement log)                                    |
 
 ---
 
@@ -4120,19 +4222,19 @@ The window still opened, but `window.pdfApi` was undefined, breaking every IPC-d
 
 ### Files Diego shipped (Wave 17)
 
-| Path | Type | Notable change |
-|---|---|---|
-| `package.json` | EDIT | +4 deps (`asn1js`, `node-forge`, `node-signpdf`, `pkijs`), version 0.3.0 → 0.4.0, description bump to "Phase 4 signatures + PAdES + annotations + measurement" |
-| `electron.vite.config.ts` | EDIT | Preload output renamed `index.cjs` → `index.js` (14-line comment block documents the why); `rollupOptions.output.format: 'cjs'` made explicit |
-| `LICENSES.md` | EDIT | +4 direct-runtime rows, +1 dual-license entry (`node-forge`), +1 Phase 4 paragraph, summary counts (MIT 639→643, BSD-3-Clause 10→13, total 799→807), +3 Acknowledgments entries |
-| `.learnings/locked-instructions.md` | EDIT (append) | L-002 — packaging waves MUST visually verify window with `MainWindowHandle != 0` (~33 lines) |
-| `docs/build-report.md` | EDIT (this row) | Wave 17 Diego section |
-| `package-lock.json` | EDIT | regenerated by npm for 8 new packages (no manual editing) |
-| `release/PDF Viewer & Editor-0.4.0-x64.exe` | NEW | 104,771,778 bytes (NSIS installer) |
-| `release/PDF Viewer & Editor-0.4.0-x64-portable.exe` | NEW | 104,543,299 bytes (portable) |
-| `release/PDF Viewer & Editor-0.4.0-x64.exe.blockmap` | NEW | 107,203 bytes |
-| `release/win-unpacked/` | REGEN | unpacked v0.4.0 tree |
-| `release/wave17-v040-launch-shot.png` | NEW | 14 KB — visual-verification screenshot evidence for L-002 |
+| Path                                                 | Type            | Notable change                                                                                                                                                                  |
+| ---------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `package.json`                                       | EDIT            | +4 deps (`asn1js`, `node-forge`, `node-signpdf`, `pkijs`), version 0.3.0 → 0.4.0, description bump to "Phase 4 signatures + PAdES + annotations + measurement"                  |
+| `electron.vite.config.ts`                            | EDIT            | Preload output renamed `index.cjs` → `index.js` (14-line comment block documents the why); `rollupOptions.output.format: 'cjs'` made explicit                                   |
+| `LICENSES.md`                                        | EDIT            | +4 direct-runtime rows, +1 dual-license entry (`node-forge`), +1 Phase 4 paragraph, summary counts (MIT 639→643, BSD-3-Clause 10→13, total 799→807), +3 Acknowledgments entries |
+| `.learnings/locked-instructions.md`                  | EDIT (append)   | L-002 — packaging waves MUST visually verify window with `MainWindowHandle != 0` (~33 lines)                                                                                    |
+| `docs/build-report.md`                               | EDIT (this row) | Wave 17 Diego section                                                                                                                                                           |
+| `package-lock.json`                                  | EDIT            | regenerated by npm for 8 new packages (no manual editing)                                                                                                                       |
+| `release/PDF Viewer & Editor-0.4.0-x64.exe`          | NEW             | 104,771,778 bytes (NSIS installer)                                                                                                                                              |
+| `release/PDF Viewer & Editor-0.4.0-x64-portable.exe` | NEW             | 104,543,299 bytes (portable)                                                                                                                                                    |
+| `release/PDF Viewer & Editor-0.4.0-x64.exe.blockmap` | NEW             | 107,203 bytes                                                                                                                                                                   |
+| `release/win-unpacked/`                              | REGEN           | unpacked v0.4.0 tree                                                                                                                                                            |
+| `release/wave17-v040-launch-shot.png`                | NEW             | 14 KB — visual-verification screenshot evidence for L-002                                                                                                                       |
 
 ### Phase 4 dep install + license-walk
 
@@ -4140,16 +4242,16 @@ Installed with `npm install --ignore-scripts --save node-signpdf@^3 node-forge@^
 
 **npm output:** `added 8 packages, and audited 896 packages in 7s` — and 8 it was. Walked each new `node_modules/<pkg>/package.json` directly to verify the `license` field:
 
-| # | Package | Version | License | Notes |
-|---|---|---|---|---|
-| 1 | `node-signpdf` | 3.0.0 | MIT | DIRECT — primary PAdES engine. **Deprecation notice from upstream:** the npm package is being renamed to `@signpdf/*` scoped packages going forward; v3.0.0 is still functional and stable. Phase 4.1 may bump to the scoped version. |
-| 2 | `node-forge` | 1.4.0 | `(BSD-3-Clause OR GPL-2.0)` — **BSD-3-Clause arm selected** | DIRECT — PFX + ASN.1 + PKCS#7. Dual-license selection follows the `jszip` (Phase 3) precedent. |
-| 3 | `pkijs` | 3.4.0 | BSD-3-Clause | DIRECT — X.509 + CMS for the manual PAdES engine. |
-| 4 | `asn1js` | 3.0.10 | BSD-3-Clause | DIRECT — pinned ASN.1 codec. |
-| 5 | `pvtsutils` | 1.3.6 | MIT | transitive of pkijs + asn1js |
-| 6 | `pvutils` | 1.1.5 | MIT | transitive of pkijs + asn1js |
-| 7 | `@noble/hashes` | 1.4.0 | MIT | transitive of pkijs |
-| 8 | `bytestreamjs` | 2.0.1 | BSD-3-Clause | transitive of pkijs |
+| #   | Package         | Version | License                                                     | Notes                                                                                                                                                                                                                                 |
+| --- | --------------- | ------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `node-signpdf`  | 3.0.0   | MIT                                                         | DIRECT — primary PAdES engine. **Deprecation notice from upstream:** the npm package is being renamed to `@signpdf/*` scoped packages going forward; v3.0.0 is still functional and stable. Phase 4.1 may bump to the scoped version. |
+| 2   | `node-forge`    | 1.4.0   | `(BSD-3-Clause OR GPL-2.0)` — **BSD-3-Clause arm selected** | DIRECT — PFX + ASN.1 + PKCS#7. Dual-license selection follows the `jszip` (Phase 3) precedent.                                                                                                                                        |
+| 3   | `pkijs`         | 3.4.0   | BSD-3-Clause                                                | DIRECT — X.509 + CMS for the manual PAdES engine.                                                                                                                                                                                     |
+| 4   | `asn1js`        | 3.0.10  | BSD-3-Clause                                                | DIRECT — pinned ASN.1 codec.                                                                                                                                                                                                          |
+| 5   | `pvtsutils`     | 1.3.6   | MIT                                                         | transitive of pkijs + asn1js                                                                                                                                                                                                          |
+| 6   | `pvutils`       | 1.1.5   | MIT                                                         | transitive of pkijs + asn1js                                                                                                                                                                                                          |
+| 7   | `@noble/hashes` | 1.4.0   | MIT                                                         | transitive of pkijs                                                                                                                                                                                                                   |
+| 8   | `bytestreamjs`  | 2.0.1   | BSD-3-Clause                                                | transitive of pkijs                                                                                                                                                                                                                   |
 
 **License-walk verdict: CLEAN.** All 8 newcomers are MIT or BSD-3-Clause. **Zero AGPL / GPL / LGPL / EPL / UNKNOWN ingress.** `tslib` is pulled in by `asn1js` and `pkijs` but was already in the graph via `@dnd-kit/*`. No version conflicts; `npm ls` runs without UNMET PEER DEPENDENCY warnings.
 
@@ -4208,15 +4310,15 @@ stderr CLEAN — no "Unable to load preload script" message — the preload-path
 
 **What the screenshot shows** (per L-002 narrative-description requirement):
 
-| Region | Element observed |
-|---|---|
-| Title bar (top edge) | Electron window chrome with app icon (left) + title text **"PDF_Viewer_Editor"** — matches the renderer's `<title>` tag |
-| Native menu strip (row 2) | **File / Edit / View / Window / Help** — the Electron application menu |
-| In-renderer menu strip (row 3) | **File / Edit / Insert / View / Tools / Help** — Riley's Wave 16 in-app menu bar |
-| Toolbar (row 4) | ~18 icon buttons across the row — folder-open, save, save-as, undo, redo, pencil, square, T (text), U (underline), S (strikethrough), curve, font, paste/upload/image/copy, rotate-left, rotate-right, print, export, bookmark. Disabled (greyed) state on save / undo / redo / annotation tools is correct — no document is open. |
-| Empty-state hero (centre) | PDF-document icon (gray outlined), heading **"Open a PDF to get started"**, primary **"Open file..."** button (blue, prominent), secondary text **"or drag and drop"** (drag-drop is the L-001-protected entry point) |
-| Recents card (bottom-left, partial) | **"RECENTS"** section header — Phase 1 recents panel, empty because the userData backup was restored mid-wave (no fresh recents on this run yet) |
-| Sidebar | Not visible in this view (Riley's sidebar is conditional on a document being open; the empty-state layout uses full-window for the hero) |
+| Region                              | Element observed                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Title bar (top edge)                | Electron window chrome with app icon (left) + title text **"PDF_Viewer_Editor"** — matches the renderer's `<title>` tag                                                                                                                                                                                                            |
+| Native menu strip (row 2)           | **File / Edit / View / Window / Help** — the Electron application menu                                                                                                                                                                                                                                                             |
+| In-renderer menu strip (row 3)      | **File / Edit / Insert / View / Tools / Help** — Riley's Wave 16 in-app menu bar                                                                                                                                                                                                                                                   |
+| Toolbar (row 4)                     | ~18 icon buttons across the row — folder-open, save, save-as, undo, redo, pencil, square, T (text), U (underline), S (strikethrough), curve, font, paste/upload/image/copy, rotate-left, rotate-right, print, export, bookmark. Disabled (greyed) state on save / undo / redo / annotation tools is correct — no document is open. |
+| Empty-state hero (centre)           | PDF-document icon (gray outlined), heading **"Open a PDF to get started"**, primary **"Open file..."** button (blue, prominent), secondary text **"or drag and drop"** (drag-drop is the L-001-protected entry point)                                                                                                              |
+| Recents card (bottom-left, partial) | **"RECENTS"** section header — Phase 1 recents panel, empty because the userData backup was restored mid-wave (no fresh recents on this run yet)                                                                                                                                                                                   |
+| Sidebar                             | Not visible in this view (Riley's sidebar is conditional on a document being open; the empty-state layout uses full-window for the hero)                                                                                                                                                                                           |
 
 The screenshot is unambiguous: a fully-rendered Phase 4 PDF_Viewer_Editor empty state, served from the packaged v0.4.0 binary. Every UI element matches the Wave 16 Riley spec. The renderer JS bundle loaded, the preload bridge exposed `window.pdfApi`, the empty-state component mounted, and styling resolved. **L-002's operator-level-screenshot criterion is satisfied.**
 
@@ -4250,11 +4352,13 @@ Lock text appended to `.learnings/locked-instructions.md` (the full revised vers
 ### Open items for the next wave
 
 **For Marcus (Wave 18 dispatch):**
+
 - Wave 18 Nathan can fire — v0.4.0 binary is built + visually verified + on disk. Per Julian's YELLOW verdict, Nathan must document the PAdES B-17.1 trust-floor (PAdES sign returns engine_not_available + clear toast; no broken-signature artifacts; visual sign + cert lifecycle + annotations + audit log ARE the working Phase 4 surface).
 - No David follow-up needed from MY wave. (Julian's Wave 17 verdict separately calls for David follow-ups on B-17.1 + H-17.1 + H-17.2 + H-17.3 — that's the Phase 4.1 carry-over, not gating Wave 18.)
 - **Renderer-side carry-overs Marcus should track** (user-flagged during Wave 17 RCA, NOT in Diego's domain): File menu z-index (renderer-side, Riley) and File→Open handler not wired end-to-end (renderer + main IPC, Riley + David). Both predate Wave 17 packaging; neither is fixed by Diego's preload-extension fix. Phase 4.1 candidates.
 
 **For Phase 4.1 (Diego's own carry-over list):**
+
 - **L-002 CI automation.** Add a `.github/workflows/ci.yml` job that runs on push to main after the existing `build` job: launch the produced binary in a headed Windows runner, assert `MainWindowHandle != 0` + `IsWindowVisible == true` within 10s, fail the build otherwise. Currently L-002 is enforced by Diego-human discipline; CI enforcement closes the gap permanently.
 - **Permissive-stub ESLint rule (N-13.5-2 / Julian's recurring Phase 4 lesson).** A custom ESLint rule that flags `vi.mock(...)` factories returning `(req) => req` identity passthroughs in security-sensitive subtrees (`src/main/security/`, `src/main/pdf-ops/cert-store.ts`, `src/main/pdf-ops/signature-engine.ts`). Diego's CI gate.
 - **`@signpdf/*` scoped-package migration** — the v3.0.0 `node-signpdf` package is deprecated upstream; bump to the scoped packages in Phase 4.1.
@@ -4308,6 +4412,7 @@ Sibling process count (win-unpacked Electron family): 4
 **Screenshot artifact:** `release/wave17-v040-launch-shot-full.png` (21,904 bytes on final write, 1280x800 PNG).
 
 **What is visible on it (verified by reading the PNG back at the final write):**
+
 - Window title bar: `PDF_Viewer_Editor` (with the app's gear-and-document icon at the left)
 - Native menu bar (Electron-rendered): `File`, `Edit`, `View`, `Window`, `Help`
 - App menu strip below: `File`, `Edit`, `Insert`, `View`, `Tools`, `Help`
@@ -4340,11 +4445,11 @@ These notes were generated during the wasted half-day of root-cause hunting. Pre
 
 ### Files Diego shipped (Wave 17.1)
 
-| Path | Type | Change |
-|---|---|---|
-| `.learnings/locked-instructions.md` | EDIT | L-002 reworded in place (header notes "revised 2026-05-26 same day after Wave-17 false-alarm RCA"); new core rule + new required-evidence (both must be present, not either) + new "Why locked" RCA paragraph + tightened "To unlock" |
-| `docs/build-report.md` | EDIT (this appendix) | Wave 17.1 section recording the user's correction + operator-level screenshot + L-002 revision |
-| `release/wave17-v040-launch-shot-full.png` | NEW | 57,126 bytes, 1280x800 — the gold-standard operator-level screenshot that satisfies the strengthened L-002. Shows window chrome + menu bar + toolbar + empty-state UI with "Open file..." button. |
+| Path                                       | Type                 | Change                                                                                                                                                                                                                                |
+| ------------------------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.learnings/locked-instructions.md`        | EDIT                 | L-002 reworded in place (header notes "revised 2026-05-26 same day after Wave-17 false-alarm RCA"); new core rule + new required-evidence (both must be present, not either) + new "Why locked" RCA paragraph + tightened "To unlock" |
+| `docs/build-report.md`                     | EDIT (this appendix) | Wave 17.1 section recording the user's correction + operator-level screenshot + L-002 revision                                                                                                                                        |
+| `release/wave17-v040-launch-shot-full.png` | NEW                  | 57,126 bytes, 1280x800 — the gold-standard operator-level screenshot that satisfies the strengthened L-002. Shows window chrome + menu bar + toolbar + empty-state UI with "Open file..." button.                                     |
 
 ### Files Diego did NOT touch in Wave 17.1
 
@@ -4380,21 +4485,21 @@ These notes were generated during the wasted half-day of root-cause hunting. Pre
 
 ### File table
 
-| Path | Type | Lines | Tests | Purpose |
-|---|---|---:|---:|---|
-| `src/client/services/pdf-render.ts` | REWRITE | 196 | 14 | Real pdf.js wrapper (was Wave-2 stub returning `pageCount: 0` / no-op render) |
-| `src/client/services/pdf-loader.ts` | NEW | 122 | 9 | SOLE bytes-fetch funnel — calls `fs:readBytesByHandle`, caches PdfDocumentProxy per handle |
-| `src/client/services/pdf-render.test.ts` | NEW | 290 | 14 | Worker bootstrap, loadDocument copy-buffer, page lifecycle, cancel, cleanup, destroy, viewportForPage |
-| `src/client/services/pdf-loader.test.ts` | NEW | 156 | 9 | Happy path, cache reuse, concurrent-load dedup, all 4 error variants, release lifecycle |
-| `src/client/styles/tokens.css` | EDIT | +6 | — | Added `--z-menu-dropdown: 50` between sidebar (20) and modal-overlay (100) |
-| `src/client/styles/tokens.test.ts` | NEW | 54 | 6 | Z-index scale ordering (the Phase 4.1 fix is pinned) |
-| `src/client/components/menu-bar/menu-bar.module.css` | EDIT | +4 | — | `.menuList` z-index switched from `--z-toolbar` (10) to `--z-menu-dropdown` (50) |
-| `src/client/components/pdf-canvas/index.tsx` | REWRITE | 132 | — | Wired to pdf-loader + pdf-render; real `<canvas>` element + render lifecycle |
-| `src/client/components/pdf-canvas/pdf-canvas.module.css` | REWRITE | 62 | — | New `.canvas`, `.errorOverlay` styles; placeholder notes repositioned to corners |
-| `src/client/components/pdf-viewer/index.tsx` | EDIT | +14 | — | Document-close hook → `releaseLoadedDocument(handle)` (destroys PdfDocumentProxy) |
-| `src/client/services/api.ts` | EDIT | +5 | — | Added `readBytesByHandle: unavailable` to bridge-unavailable fallback |
-| `src/client/types/ipc-contract.ts` | EDIT | +6 | — | Re-exported `FsReadBytesByHandle*` types from David's `src/ipc/contracts.ts` |
-| `src/client/vite-env.d.ts` | NEW | 18 | — | Ambient declarations for `?url` and `?worker` Vite asset imports (also satisfies test tsconfig) |
+| Path                                                     | Type    | Lines | Tests | Purpose                                                                                               |
+| -------------------------------------------------------- | ------- | ----: | ----: | ----------------------------------------------------------------------------------------------------- |
+| `src/client/services/pdf-render.ts`                      | REWRITE |   196 |    14 | Real pdf.js wrapper (was Wave-2 stub returning `pageCount: 0` / no-op render)                         |
+| `src/client/services/pdf-loader.ts`                      | NEW     |   122 |     9 | SOLE bytes-fetch funnel — calls `fs:readBytesByHandle`, caches PdfDocumentProxy per handle            |
+| `src/client/services/pdf-render.test.ts`                 | NEW     |   290 |    14 | Worker bootstrap, loadDocument copy-buffer, page lifecycle, cancel, cleanup, destroy, viewportForPage |
+| `src/client/services/pdf-loader.test.ts`                 | NEW     |   156 |     9 | Happy path, cache reuse, concurrent-load dedup, all 4 error variants, release lifecycle               |
+| `src/client/styles/tokens.css`                           | EDIT    |    +6 |     — | Added `--z-menu-dropdown: 50` between sidebar (20) and modal-overlay (100)                            |
+| `src/client/styles/tokens.test.ts`                       | NEW     |    54 |     6 | Z-index scale ordering (the Phase 4.1 fix is pinned)                                                  |
+| `src/client/components/menu-bar/menu-bar.module.css`     | EDIT    |    +4 |     — | `.menuList` z-index switched from `--z-toolbar` (10) to `--z-menu-dropdown` (50)                      |
+| `src/client/components/pdf-canvas/index.tsx`             | REWRITE |   132 |     — | Wired to pdf-loader + pdf-render; real `<canvas>` element + render lifecycle                          |
+| `src/client/components/pdf-canvas/pdf-canvas.module.css` | REWRITE |    62 |     — | New `.canvas`, `.errorOverlay` styles; placeholder notes repositioned to corners                      |
+| `src/client/components/pdf-viewer/index.tsx`             | EDIT    |   +14 |     — | Document-close hook → `releaseLoadedDocument(handle)` (destroys PdfDocumentProxy)                     |
+| `src/client/services/api.ts`                             | EDIT    |    +5 |     — | Added `readBytesByHandle: unavailable` to bridge-unavailable fallback                                 |
+| `src/client/types/ipc-contract.ts`                       | EDIT    |    +6 |     — | Re-exported `FsReadBytesByHandle*` types from David's `src/ipc/contracts.ts`                          |
+| `src/client/vite-env.d.ts`                               | NEW     |    18 |     — | Ambient declarations for `?url` and `?worker` Vite asset imports (also satisfies test tsconfig)       |
 
 **Net:** 13 files touched (4 new src, 3 new tests, 6 edits). +~1,065 lines across src + tests (renderer-only). 29 new tests.
 
@@ -4490,49 +4595,48 @@ These notes were generated during the wasted half-day of root-cause hunting. Pre
 - **Julian / next review:** the only NEW structural-seam concern I introduced is the pdf-loader cache (module-scope `Map<DocumentHandle, LoadedEntry>` with no reference counting). Currently safe because there's exactly one consumer (PdfCanvas via PdfViewer). If Phase 5+ adds multi-view or split-pane, refcount the cache or move it onto Redux with a manual destroy on the close-document action.
 - **Phase 5 / new features:** nothing blocks. Thumbnails (which need pdf.js render to a tiny canvas) can now be implemented by adding a `thumbnail-strip` component that consumes the same `pdf-loader` + per-page `render(canvas, zoom=thumb-zoom)` path.
 
-
 ## Phase 4.1 — David (backend-engineer) — pdf-lib metadata loader + bytes IPC + Julian Wave 17 closures (2026-05-26)
 
 **Status:** **GREEN (COMPLETE).** Two Phase-1 stubs that bled for 4+ waves are now permanently retired (pdf-lib-backed `loadPdfMetadata` + the renderer-side bytes-by-handle channel). All four Julian Wave 17 findings in my domain are closed (B-17.1 + H-17.1 + H-17.2 + H-17.3). PAdES sign now flows end-to-end through the IPC contract WITHOUT requiring the caller to re-supply PFX bytes — the cert-store retains them under the auto-release lifecycle. 528 main+ipc+preload tests pass (baseline 507 + 21 new); typecheck clean on `tsconfig.main.json` + `tsconfig.preload.json`.
 
 ### Channel + module status — Phase 4.1 deltas
 
-| Channel / module | Status | Notes |
-|---|---|---|
-| `fs:readBytesByHandle` | **LIVE (NEW)** | Renderer fetches validated document bytes by handle for pdf.js rendering. Zod-validated payload, document-store lookup, no path on the wire. Riley already consuming via `src/client/services/pdf-loader.ts`. |
-| `src/main/pdf-ops/pdf-metadata-loader.ts` | **LIVE (NEW)** | Permanent pdf-lib loader replacing the Phase-1 stub. Returns real `pageCount` + warnings; throws `"Could not parse PDF: …"` on parse failure. Handles encrypted PDFs via `ignoreEncryption: true`. |
-| `signatures:applyPades` (production IPC path) | **LIVE end-to-end** | B-17.1 closed: cert-store retains `pfxBytes` + `passwordBuffer` until `releaseHandle` zeroes them. The orchestrator's existing `try { ... } finally { releaseHandle() }` envelope keeps the buffer window bounded to one sign call. node-signpdf consumption no longer requires IPC re-traversal. |
-| `replay-engine.ts` step 3.7 | **LIVE (was warn-only)** | H-17.3 closed: post-PAdES edits now ABORT with `pades_invalidated_by_subsequent_edit` (new `ReplayError` variant) instead of silently re-saving an invalid signature. |
-| All 5 Phase-4 zod-missing handlers | **LIVE** | H-17.2 closed: `signatures-apply-visual`, `signatures-apply-pades`, `signatures-request-timestamp`, `signatures-verify`, `signatures-list-audit` now use `requestSchema.safeParse(req)` with shape contracts (placement discriminator, appearance.source, tsa URL, byte-range bounds). |
-| `pades-signature.ts:138` R-W15-A annotation | **DOCUMENTED** | H-17.1 closed: inline comment marks the `passphrase: input.certPassword.toString('utf-8')` as the documented residual per conventions §15.6. |
+| Channel / module                              | Status                   | Notes                                                                                                                                                                                                                                                                                             |
+| --------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fs:readBytesByHandle`                        | **LIVE (NEW)**           | Renderer fetches validated document bytes by handle for pdf.js rendering. Zod-validated payload, document-store lookup, no path on the wire. Riley already consuming via `src/client/services/pdf-loader.ts`.                                                                                     |
+| `src/main/pdf-ops/pdf-metadata-loader.ts`     | **LIVE (NEW)**           | Permanent pdf-lib loader replacing the Phase-1 stub. Returns real `pageCount` + warnings; throws `"Could not parse PDF: …"` on parse failure. Handles encrypted PDFs via `ignoreEncryption: true`.                                                                                                |
+| `signatures:applyPades` (production IPC path) | **LIVE end-to-end**      | B-17.1 closed: cert-store retains `pfxBytes` + `passwordBuffer` until `releaseHandle` zeroes them. The orchestrator's existing `try { ... } finally { releaseHandle() }` envelope keeps the buffer window bounded to one sign call. node-signpdf consumption no longer requires IPC re-traversal. |
+| `replay-engine.ts` step 3.7                   | **LIVE (was warn-only)** | H-17.3 closed: post-PAdES edits now ABORT with `pades_invalidated_by_subsequent_edit` (new `ReplayError` variant) instead of silently re-saving an invalid signature.                                                                                                                             |
+| All 5 Phase-4 zod-missing handlers            | **LIVE**                 | H-17.2 closed: `signatures-apply-visual`, `signatures-apply-pades`, `signatures-request-timestamp`, `signatures-verify`, `signatures-list-audit` now use `requestSchema.safeParse(req)` with shape contracts (placement discriminator, appearance.source, tsa URL, byte-range bounds).            |
+| `pades-signature.ts:138` R-W15-A annotation   | **DOCUMENTED**           | H-17.1 closed: inline comment marks the `passphrase: input.certPassword.toString('utf-8')` as the documented residual per conventions §15.6.                                                                                                                                                      |
 
 ### File table
 
-| Path | Type | Lines | Tests | Purpose |
-|---|---|---:|---:|---|
-| `src/main/pdf-ops/pdf-metadata-loader.ts` | NEW | 81 | 8 | pdf-lib loader; permanent replacement for the Phase-1 register.ts stub |
-| `src/main/pdf-ops/pdf-metadata-loader.test.ts` | NEW | 109 | 8 | Contract pins (real pageCount, prefixed errors, encrypted PDF tolerance) |
-| `src/ipc/contracts.ts` | EDIT | +50 | (compile target) | §15 (Phase 4.1 amendment) + Channels.FsReadBytesByHandle + PdfApi.fs.readBytesByHandle |
-| `src/ipc/handlers/fs-read-bytes-by-handle.ts` | NEW | 79 | 9 | Lookup-by-handle IPC handler with zod payload validation |
-| `src/ipc/handlers/fs-read-bytes-by-handle.test.ts` | NEW | 147 | 9 | Happy path, unknown_handle (3 variants), payload validation, no-path-leak assertion, empty-bytes defensive |
-| `src/ipc/register.ts` | EDIT | +12, -25 | (compile target) | Wire FsReadBytesByHandle channel; remove the `defaultPdfMetadata` stub (loadPdfMetadata is now required) |
-| `src/preload/index.ts` | EDIT | +9 | (compile target) | Expose `window.pdfApi.fs.readBytesByHandle({ handle })` |
-| `src/main/index.ts` | EDIT | +4, -16 | (compile target) | Remove Marcus's inline hot-patch + pdf-lib import; import the new module |
-| `src/main/pdf-ops/cert-store.ts` | EDIT | +56, -3 | 16 (1 updated) | B-17.1: retain pfxBytes + passwordBuffer on entry; release path is sole zeroer for the happy-load case |
-| `src/main/pdf-ops/cert-store.test.ts` | EDIT | +35, -25 | 16 | New ownership-transfer contract test + releaseAll-zeroes-retained-buffers test |
-| `src/main/pdf-ops/signature-engine.ts` | EDIT | +9, -2 | 8 (1 new) | B-17.1: source PFX bytes + password from `entry.pfxBytes`/`entry.passwordBuffer` (with explicit-arg fallback for tests) |
-| `src/main/pdf-ops/signature-engine.test.ts` | EDIT | +52, -10 | 8 (1 new) | Updated existing Wave-16 engine_not_available test to accept Wave-17 outcomes; added B-17.1 production-path test (no explicit certPfxBytes → must reach sign attempt) |
-| `src/main/pdf-ops/pades-signature.ts` | EDIT | +9 | (covered) | H-17.1: R-W15-A residual annotation at the signpdf.sign call site |
-| `src/main/pdf-ops/pades-signature.test.ts` | EDIT | +11, -7 | 7 | Updated Wave-16 engine_not_available test + added pfxBytes/passwordBuffer null to makeEntry |
-| `src/main/pdf-ops/pades-signature-manual.test.ts` | EDIT | +4 | 2 | Added pfxBytes/passwordBuffer null to makeEntry |
-| `src/main/pdf-ops/replay-engine.ts` | EDIT | +10, -4 | (covered) | H-17.3: abort on post-PAdES edits (new `pades_invalidated_by_subsequent_edit` ReplayError variant) |
-| `src/main/pdf-ops/replay-engine-pades-invalidation.test.ts` | NEW | 105 | 3 | H-17.3 regression pin (abort on reorder-after-pades; abort on multi-mutator; no-abort when pades is last) |
-| `src/ipc/handlers/signatures-apply-visual.ts` | REWRITE | 113 | (covered) | H-17.2: zod boundary validation (placement discriminator + appearance shape) |
-| `src/ipc/handlers/signatures-apply-pades.ts` | REWRITE | 174 | (covered) | H-17.2: zod boundary validation + placeholderSize bounds + tsaUrl URL parsing |
-| `src/ipc/handlers/signatures-request-timestamp.ts` | REWRITE | 70 | 5 | H-17.2: zod boundary validation |
-| `src/ipc/handlers/signatures-verify.ts` | REWRITE | 109 | (covered) | H-17.2: zod boundary validation; also M-17.3 polish (return error.name not error.message) |
-| `src/ipc/handlers/signatures-list-audit.ts` | REWRITE | 87 | (covered) | H-17.2: zod boundary validation (fileHash + fingerprint length=64); M-17.3 polish |
-| `docs/api-contracts.md` | EDIT | +75 | (doc) | §15 Phase 4.1 amendment (additive); does NOT touch §§1-14 |
+| Path                                                        | Type    |    Lines |            Tests | Purpose                                                                                                                                                               |
+| ----------------------------------------------------------- | ------- | -------: | ---------------: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/main/pdf-ops/pdf-metadata-loader.ts`                   | NEW     |       81 |                8 | pdf-lib loader; permanent replacement for the Phase-1 register.ts stub                                                                                                |
+| `src/main/pdf-ops/pdf-metadata-loader.test.ts`              | NEW     |      109 |                8 | Contract pins (real pageCount, prefixed errors, encrypted PDF tolerance)                                                                                              |
+| `src/ipc/contracts.ts`                                      | EDIT    |      +50 | (compile target) | §15 (Phase 4.1 amendment) + Channels.FsReadBytesByHandle + PdfApi.fs.readBytesByHandle                                                                                |
+| `src/ipc/handlers/fs-read-bytes-by-handle.ts`               | NEW     |       79 |                9 | Lookup-by-handle IPC handler with zod payload validation                                                                                                              |
+| `src/ipc/handlers/fs-read-bytes-by-handle.test.ts`          | NEW     |      147 |                9 | Happy path, unknown_handle (3 variants), payload validation, no-path-leak assertion, empty-bytes defensive                                                            |
+| `src/ipc/register.ts`                                       | EDIT    | +12, -25 | (compile target) | Wire FsReadBytesByHandle channel; remove the `defaultPdfMetadata` stub (loadPdfMetadata is now required)                                                              |
+| `src/preload/index.ts`                                      | EDIT    |       +9 | (compile target) | Expose `window.pdfApi.fs.readBytesByHandle({ handle })`                                                                                                               |
+| `src/main/index.ts`                                         | EDIT    |  +4, -16 | (compile target) | Remove Marcus's inline hot-patch + pdf-lib import; import the new module                                                                                              |
+| `src/main/pdf-ops/cert-store.ts`                            | EDIT    |  +56, -3 |   16 (1 updated) | B-17.1: retain pfxBytes + passwordBuffer on entry; release path is sole zeroer for the happy-load case                                                                |
+| `src/main/pdf-ops/cert-store.test.ts`                       | EDIT    | +35, -25 |               16 | New ownership-transfer contract test + releaseAll-zeroes-retained-buffers test                                                                                        |
+| `src/main/pdf-ops/signature-engine.ts`                      | EDIT    |   +9, -2 |        8 (1 new) | B-17.1: source PFX bytes + password from `entry.pfxBytes`/`entry.passwordBuffer` (with explicit-arg fallback for tests)                                               |
+| `src/main/pdf-ops/signature-engine.test.ts`                 | EDIT    | +52, -10 |        8 (1 new) | Updated existing Wave-16 engine_not_available test to accept Wave-17 outcomes; added B-17.1 production-path test (no explicit certPfxBytes → must reach sign attempt) |
+| `src/main/pdf-ops/pades-signature.ts`                       | EDIT    |       +9 |        (covered) | H-17.1: R-W15-A residual annotation at the signpdf.sign call site                                                                                                     |
+| `src/main/pdf-ops/pades-signature.test.ts`                  | EDIT    |  +11, -7 |                7 | Updated Wave-16 engine_not_available test + added pfxBytes/passwordBuffer null to makeEntry                                                                           |
+| `src/main/pdf-ops/pades-signature-manual.test.ts`           | EDIT    |       +4 |                2 | Added pfxBytes/passwordBuffer null to makeEntry                                                                                                                       |
+| `src/main/pdf-ops/replay-engine.ts`                         | EDIT    |  +10, -4 |        (covered) | H-17.3: abort on post-PAdES edits (new `pades_invalidated_by_subsequent_edit` ReplayError variant)                                                                    |
+| `src/main/pdf-ops/replay-engine-pades-invalidation.test.ts` | NEW     |      105 |                3 | H-17.3 regression pin (abort on reorder-after-pades; abort on multi-mutator; no-abort when pades is last)                                                             |
+| `src/ipc/handlers/signatures-apply-visual.ts`               | REWRITE |      113 |        (covered) | H-17.2: zod boundary validation (placement discriminator + appearance shape)                                                                                          |
+| `src/ipc/handlers/signatures-apply-pades.ts`                | REWRITE |      174 |        (covered) | H-17.2: zod boundary validation + placeholderSize bounds + tsaUrl URL parsing                                                                                         |
+| `src/ipc/handlers/signatures-request-timestamp.ts`          | REWRITE |       70 |                5 | H-17.2: zod boundary validation                                                                                                                                       |
+| `src/ipc/handlers/signatures-verify.ts`                     | REWRITE |      109 |        (covered) | H-17.2: zod boundary validation; also M-17.3 polish (return error.name not error.message)                                                                             |
+| `src/ipc/handlers/signatures-list-audit.ts`                 | REWRITE |       87 |        (covered) | H-17.2: zod boundary validation (fileHash + fingerprint length=64); M-17.3 polish                                                                                     |
+| `docs/api-contracts.md`                                     | EDIT    |      +75 |            (doc) | §15 Phase 4.1 amendment (additive); does NOT touch §§1-14                                                                                                             |
 
 **Net:** 23 files touched (4 new src, 3 new tests, 16 edits + 1 doc). +~870 lines across src + tests (main / ipc / preload only). +20 new tests (528 vs 507 baseline + adjusted cert-store count).
 
@@ -4629,19 +4733,18 @@ Two structural lessons promoted to global JSONL:
 - `electron-builder.yml`, `.github/`, `scripts/`, `package.json`, configs — Diego.
 - `.learnings/locked-instructions.md` — append-only via Marcus.
 
-
 ## Phase 4.1.1 — Riley (front-end-architect) — adopt + harden Marcus's Phase 4.1 hot-patches (2026-05-26)
 
 **Status:** **GREEN (COMPLETE).** All four Phase 4.1 live-test patches Marcus applied to my domain are now durable: refactored where appropriate, pinned by tests, documented. Renderer typecheck clean (`tsconfig.renderer.json`). `npm run build` clean — 185 pdfjs assets correctly copied into `dist/renderer/pdfjs/`. Two structural decisions made explicit: Option Y for the PageModel-dim root-cause, Option Q for the pdfjs assets. 22 new tests authored, all passing.
 
 ### Per-patch evidence
 
-| Patch | Adoption | Notes |
-|---|---|---|
-| **1.** `pdf-render.ts` — `standardFontDataUrl` + `cMapUrl` + `cMapPacked` | **KEPT AS-IS.** Marcus's three keys are correct verbatim. | New test at `pdf-render.test.ts:201-225` ("passes standardFontDataUrl + cMapUrl + cMapPacked to pdf.js's getDocument") pins the three keys + the trailing-slash requirement. |
-| **2.** `src/client/public/pdfjs/` — committed 185 binary assets | **REPLACED.** Option Q: build-time copy via `vite-plugin-static-copy` (MIT). Deleted the 185 committed files + the now-empty `src/client/public/` dir. | `electron.vite.config.ts` configures `viteStaticCopy` with `rename: { stripBase: true }` to flatten the matched files into `dist/renderer/pdfjs/{standard_fonts,cmaps}/`. Build now reports `Copied 185 items.` |
-| **3.** `pdf-canvas/index.tsx` — `measuredDims` state | **REPLACED.** Option Y: removed component-local `measuredDims`. PdfCanvas reads `props.page.width/height` directly; Redux is authoritative via `measurePageDimensionsThunk`. | New `pdf-canvas.test.tsx` (5 tests) pins the Redux-driven layout contract: Letter default before measure, swap to A4 after `setPageDimensions` dispatch, zoom math, 90 degree rotation, aria-label. |
-| **4.** `thumbnail-item.tsx` — real `<canvas>` render + `measuredDims` | **REFACTORED.** Kept the real-canvas render (Marcus's load-bearing change). Removed `measuredDims` state (Option Y). Extracted the magic `110` into a `THUMB_WIDTH_PX` constant. Dropped the now-unused `useState` import. | New `thumbnail-item.test.tsx` (6 tests) pins: canvas vs placeholder, blank-page badge path, scale = `thumbWidth / pageProxy.width`, rotation-90 scale uses natural width, cleanup-after-render memory hygiene, cancel-on-unmount. |
+| Patch                                                                     | Adoption                                                                                                                                                                                                                   | Notes                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1.** `pdf-render.ts` — `standardFontDataUrl` + `cMapUrl` + `cMapPacked` | **KEPT AS-IS.** Marcus's three keys are correct verbatim.                                                                                                                                                                  | New test at `pdf-render.test.ts:201-225` ("passes standardFontDataUrl + cMapUrl + cMapPacked to pdf.js's getDocument") pins the three keys + the trailing-slash requirement.                                                      |
+| **2.** `src/client/public/pdfjs/` — committed 185 binary assets           | **REPLACED.** Option Q: build-time copy via `vite-plugin-static-copy` (MIT). Deleted the 185 committed files + the now-empty `src/client/public/` dir.                                                                     | `electron.vite.config.ts` configures `viteStaticCopy` with `rename: { stripBase: true }` to flatten the matched files into `dist/renderer/pdfjs/{standard_fonts,cmaps}/`. Build now reports `Copied 185 items.`                   |
+| **3.** `pdf-canvas/index.tsx` — `measuredDims` state                      | **REPLACED.** Option Y: removed component-local `measuredDims`. PdfCanvas reads `props.page.width/height` directly; Redux is authoritative via `measurePageDimensionsThunk`.                                               | New `pdf-canvas.test.tsx` (5 tests) pins the Redux-driven layout contract: Letter default before measure, swap to A4 after `setPageDimensions` dispatch, zoom math, 90 degree rotation, aria-label.                               |
+| **4.** `thumbnail-item.tsx` — real `<canvas>` render + `measuredDims`     | **REFACTORED.** Kept the real-canvas render (Marcus's load-bearing change). Removed `measuredDims` state (Option Y). Extracted the magic `110` into a `THUMB_WIDTH_PX` constant. Dropped the now-unused `useState` import. | New `thumbnail-item.test.tsx` (6 tests) pins: canvas vs placeholder, blank-page badge path, scale = `thumbWidth / pageProxy.width`, rotation-90 scale uses natural width, cleanup-after-render memory hygiene, cancel-on-unmount. |
 
 ### Option X vs Option Y decision (PageModel dim root-cause)
 
@@ -4663,21 +4766,21 @@ Two structural lessons promoted to global JSONL:
 
 ### File table
 
-| Path | Type | Lines (net) | Tests | Purpose |
-|---|---|---:|---:|---|
-| `src/client/state/slices/document-slice.ts` | EDIT | +35 | covered | New `setPageDimensions` action (Option Y root) |
-| `src/client/state/slices/document-slice.test.ts` | EDIT | +71 | +4 | Slice contract pins: replace dims, no-op no-doc, OOR ignored, non-finite ignored, no dirty-op |
-| `src/client/state/thunks.ts` | EDIT | +56, -1 | covered | `measurePageDimensionsThunk` + wire into 3 open paths + 1 import |
-| `src/client/state/thunks.test.ts` | NEW | 281 | +6 | Thunk contract pins: batched dispatch, no-op no-doc, loader-fail keeps defaults, per-page skip on getPage throw, mid-loop bail-out on handle change, concurrent-dedupe |
-| `src/client/components/pdf-canvas/index.tsx` | EDIT | +9, -10 | covered | Removed `measuredDims` state + the setMeasuredDims call inside the effect |
-| `src/client/components/pdf-canvas/pdf-canvas.test.tsx` | NEW | 190 | +5 | Layout reads from Redux, swap on setPageDimensions, zoom, 90-degree rotation, aria-label |
-| `src/client/components/thumbnail-strip/thumbnail-item.tsx` | EDIT | +6, -14 | covered | Removed `measuredDims` + extracted `THUMB_WIDTH_PX` constant |
-| `src/client/components/thumbnail-strip/thumbnail-item.test.tsx` | NEW | 234 | +6 | Canvas vs placeholder, blank path, scale formula, rotation scale, cleanup, cancel-on-unmount |
-| `src/client/services/pdf-render.test.ts` | EDIT | +27 | +1 | Pin standardFontDataUrl + cMapUrl + cMapPacked args to getDocument |
-| `electron.vite.config.ts` | EDIT | +33 | (build target) | viteStaticCopy plugin for pdfjs assets |
-| `package.json` | EDIT | +1 | (manifest) | Added `vite-plugin-static-copy@^4.1.0` to devDependencies (MIT) |
-| `docs/ui-spec.md` | EDIT | +90 | (doc) | Phase 4.1.1 additive amendment (4 sub-sections + checklist) |
-| `src/client/public/pdfjs/` (185 files) | DELETED | -185 files | n/a | Replaced by build-time copy |
+| Path                                                            | Type    | Lines (net) |          Tests | Purpose                                                                                                                                                                |
+| --------------------------------------------------------------- | ------- | ----------: | -------------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/client/state/slices/document-slice.ts`                     | EDIT    |         +35 |        covered | New `setPageDimensions` action (Option Y root)                                                                                                                         |
+| `src/client/state/slices/document-slice.test.ts`                | EDIT    |         +71 |             +4 | Slice contract pins: replace dims, no-op no-doc, OOR ignored, non-finite ignored, no dirty-op                                                                          |
+| `src/client/state/thunks.ts`                                    | EDIT    |     +56, -1 |        covered | `measurePageDimensionsThunk` + wire into 3 open paths + 1 import                                                                                                       |
+| `src/client/state/thunks.test.ts`                               | NEW     |         281 |             +6 | Thunk contract pins: batched dispatch, no-op no-doc, loader-fail keeps defaults, per-page skip on getPage throw, mid-loop bail-out on handle change, concurrent-dedupe |
+| `src/client/components/pdf-canvas/index.tsx`                    | EDIT    |     +9, -10 |        covered | Removed `measuredDims` state + the setMeasuredDims call inside the effect                                                                                              |
+| `src/client/components/pdf-canvas/pdf-canvas.test.tsx`          | NEW     |         190 |             +5 | Layout reads from Redux, swap on setPageDimensions, zoom, 90-degree rotation, aria-label                                                                               |
+| `src/client/components/thumbnail-strip/thumbnail-item.tsx`      | EDIT    |     +6, -14 |        covered | Removed `measuredDims` + extracted `THUMB_WIDTH_PX` constant                                                                                                           |
+| `src/client/components/thumbnail-strip/thumbnail-item.test.tsx` | NEW     |         234 |             +6 | Canvas vs placeholder, blank path, scale formula, rotation scale, cleanup, cancel-on-unmount                                                                           |
+| `src/client/services/pdf-render.test.ts`                        | EDIT    |         +27 |             +1 | Pin standardFontDataUrl + cMapUrl + cMapPacked args to getDocument                                                                                                     |
+| `electron.vite.config.ts`                                       | EDIT    |         +33 | (build target) | viteStaticCopy plugin for pdfjs assets                                                                                                                                 |
+| `package.json`                                                  | EDIT    |          +1 |     (manifest) | Added `vite-plugin-static-copy@^4.1.0` to devDependencies (MIT)                                                                                                        |
+| `docs/ui-spec.md`                                               | EDIT    |         +90 |          (doc) | Phase 4.1.1 additive amendment (4 sub-sections + checklist)                                                                                                            |
+| `src/client/public/pdfjs/` (185 files)                          | DELETED |  -185 files |            n/a | Replaced by build-time copy                                                                                                                                            |
 
 **Net:** 12 files touched (3 new src, 6 edits, 185 deletions of the public/pdfjs tree, 1 manifest, 1 doc, 1 build config). +22 tests authored.
 
@@ -4742,7 +4845,6 @@ Two structural lessons for the global JSONL:
 1. **Redux-default-mismatch defect class (third strike).** The renderer-side Redux PageModel hardcoded to 612x792 defect went undetected for 13+ waves because every test mock matched the defaults. Same shape as the pdf-render stub recurrence and the pdf-lib metadata loader stub. All three were "production-broken at a critical seam but green at typecheck + mock-cover." The structural fix: prefer nullable + late-init over sentinel defaults; sentinel defaults are silently wrong while nullables fail loudly at the consumer.
 2. **Build-time asset copy beats committed-binary-asset trees.** When a runtime asset has to match an npm package version (pdfjs-dist standard_fonts must match the worker), committing the assets creates a guaranteed staleness vector. The right pattern is `vite-plugin-static-copy` (or equivalent build-step) that pulls from `node_modules/<package>/<asset-path>/*` at every build. Same applies to native binary trees, language-pack files, ML model weights.
 
-
 ## Phase 4.1.2 — Diego (dev-ops-agent) — v0.4.1 packaging + overlay wipe + L-002 visual verification (2026-05-26)
 
 **Status: COMPLETE / GREEN.** v0.4.1 NSIS + portable built clean from canonical `src/` + `dist/` (no overlay carry-over). All 528 main+ipc+preload tests pass on this host; full suite has the documented Node 24 / better-sqlite3 NODE_MODULE_VERSION env-skew Riley + I both flagged (CI on Node 20 is test-of-record). Renderer + main + preload typechecks all clean. **L-002 visual verification SATISFIED**: operator-level screenshot at `release/wave-4-1-2-v041-rendered-pdf.png` shows a real PDF page with crisp body text — the entire Phase 4 + 4.1 + 4.1.1 stack working end-to-end in the packaged binary for the first time.
@@ -4773,12 +4875,14 @@ release/win-unpacked/resources/
 Verified via `ls release/win-unpacked/resources/` post-wipe: only the 4 canonical entries are present. No `app/` directory. No `*.original` files.
 
 **Throwaway scripts deleted** from `scripts/`:
+
 - `scripts/probe-pdfapi.mjs` (Marcus's CDP probe)
 - `scripts/probe-openpdf.mjs` (Marcus's CDP probe)
 
 Remaining in `scripts/`: `rebuild-native.cjs` only.
 
 **Diagnostic artifacts deleted** from `release/`:
+
 - 13 `diag-*.log` files from prior packaging-wave debug sessions
 - 4 `wave17-v040-launch-shot*.png` screenshots (per L-002, the canonical golden screenshot now lives in the build-report cross-reference / vault, not loose in `release/`)
 - `builder-debug.yml` (electron-builder transient)
@@ -4818,11 +4922,11 @@ One pre-existing vite warning on `src/main/pdf-ops/form-engine.ts` ("PDFField im
 
 **`npm run dist:win` (electron-builder 24.13.3, Electron 30.5.1):**
 
-| Artifact | Size | Notes |
-|---|---:|---|
-| `release/PDF Viewer & Editor-0.4.1-x64.exe` (NSIS) | 105,985,813 B (~101 MB) | installer; default-ON file association checkbox |
-| `release/PDF Viewer & Editor-0.4.1-x64.exe.blockmap` | 108,995 B | auto-update blockmap (NSIS only) |
-| `release/PDF Viewer & Editor-0.4.1-x64-portable.exe` | 105,757,346 B (~101 MB) | portable; runs from any dir |
+| Artifact                                             |                    Size | Notes                                           |
+| ---------------------------------------------------- | ----------------------: | ----------------------------------------------- |
+| `release/PDF Viewer & Editor-0.4.1-x64.exe` (NSIS)   | 105,985,813 B (~101 MB) | installer; default-ON file association checkbox |
+| `release/PDF Viewer & Editor-0.4.1-x64.exe.blockmap` |               108,995 B | auto-update blockmap (NSIS only)                |
+| `release/PDF Viewer & Editor-0.4.1-x64-portable.exe` | 105,757,346 B (~101 MB) | portable; runs from any dir                     |
 
 Note on blockmaps: electron-builder only emits `.blockmap` for NSIS targets (auto-update format). Portable targets have no companion blockmap. This matches the pattern across all five prior shipped versions (v0.1.0 - v0.4.0); brief's "both .blockmap files" phrasing is incorrect.
 
@@ -4884,23 +4988,23 @@ This is the Phase 4.1 baseline (528). No regressions.
 
 ### Files I touched
 
-| Path | Type | Notes |
-|---|---|---|
-| `package.json` | EDIT | version 0.4.0 -> 0.4.1 (1 line) |
-| `docs/build-report.md` | APPEND | This Phase 4.1.2 section |
-| `release/win-unpacked/resources/app/` | DELETE | Marcus's overlay |
-| `release/win-unpacked/resources/app.asar.original` -> `app.asar` | RENAME | restore canonical |
-| `release/win-unpacked/resources/app.asar.unpacked.original` -> `app.asar.unpacked` | RENAME | restore canonical |
-| `scripts/probe-pdfapi.mjs` | DELETE | Marcus's CDP probe |
-| `scripts/probe-openpdf.mjs` | DELETE | Marcus's CDP probe |
-| `release/diag-*.log` (13 files) | DELETE | prior-wave diagnostic logs |
-| `release/wave17-v040-launch-shot*.png` (4 files) | DELETE | per L-002 golden lives in build-report/vault |
-| `release/builder-debug.yml` | DELETE | transient |
-| `release/PDF Viewer & Editor-0.4.1-x64.exe` (+ blockmap) | CREATE | NSIS installer |
-| `release/PDF Viewer & Editor-0.4.1-x64-portable.exe` | CREATE | portable |
-| `release/wave-4-1-2-v041-empty-state.png` | CREATE | L-002 empty-state capture |
-| `release/wave-4-1-2-v041-rendered-pdf.png` | CREATE | L-002 rendered-PDF capture |
-| `dist/**/*` | REBUILT | clean output from canonical src/ |
+| Path                                                                               | Type    | Notes                                        |
+| ---------------------------------------------------------------------------------- | ------- | -------------------------------------------- |
+| `package.json`                                                                     | EDIT    | version 0.4.0 -> 0.4.1 (1 line)              |
+| `docs/build-report.md`                                                             | APPEND  | This Phase 4.1.2 section                     |
+| `release/win-unpacked/resources/app/`                                              | DELETE  | Marcus's overlay                             |
+| `release/win-unpacked/resources/app.asar.original` -> `app.asar`                   | RENAME  | restore canonical                            |
+| `release/win-unpacked/resources/app.asar.unpacked.original` -> `app.asar.unpacked` | RENAME  | restore canonical                            |
+| `scripts/probe-pdfapi.mjs`                                                         | DELETE  | Marcus's CDP probe                           |
+| `scripts/probe-openpdf.mjs`                                                        | DELETE  | Marcus's CDP probe                           |
+| `release/diag-*.log` (13 files)                                                    | DELETE  | prior-wave diagnostic logs                   |
+| `release/wave17-v040-launch-shot*.png` (4 files)                                   | DELETE  | per L-002 golden lives in build-report/vault |
+| `release/builder-debug.yml`                                                        | DELETE  | transient                                    |
+| `release/PDF Viewer & Editor-0.4.1-x64.exe` (+ blockmap)                           | CREATE  | NSIS installer                               |
+| `release/PDF Viewer & Editor-0.4.1-x64-portable.exe`                               | CREATE  | portable                                     |
+| `release/wave-4-1-2-v041-empty-state.png`                                          | CREATE  | L-002 empty-state capture                    |
+| `release/wave-4-1-2-v041-rendered-pdf.png`                                         | CREATE  | L-002 rendered-PDF capture                   |
+| `dist/**/*`                                                                        | REBUILT | clean output from canonical src/             |
 
 ### Files I did NOT touch
 
@@ -4911,8 +5015,8 @@ This is the Phase 4.1 baseline (528). No regressions.
 - `build/installer.nsh` (no NSIS changes)
 - `LICENSES.md` (no new transitives this wave; Riley's `vite-plugin-static-copy` landed in Phase 4.1.1)
 - `.learnings/locked-instructions.md` (no new structural rule this wave; L-002 already covers the visual-verification floor)
-- Riley's frozen docs (architecture-*.md, api-contracts.md, data-models.md, ui-spec.md, conventions.md, form-engine.md, signature-engine.md, edit-replay-engine.md)
-- Marcus's docs (phase-*-plan.md, wave-*-brief.md, project-*.md)
+- Riley's frozen docs (architecture-\*.md, api-contracts.md, data-models.md, ui-spec.md, conventions.md, form-engine.md, signature-engine.md, edit-replay-engine.md)
+- Marcus's docs (phase-_-plan.md, wave-_-brief.md, project-\*.md)
 - Julian's `docs/code-review.md`
 - Nathan's (README.md, user-guide.md, developer-guide.md, api-reference.md)
 - `src/main/window-manager.ts` (David's; L-001 still enforced via test, still passing)
@@ -4934,7 +5038,6 @@ This is the Phase 4.1 baseline (528). No regressions.
 - Desktop-operator MCP non-availability in a subagent's tool slot is now a recurring pattern (Wave 17.1 + this wave). The fallback PowerShell pipeline works but is more brittle (focus races on the bonus check). Worth pre-staging a `tools/packaging-verify/` helper directory with the capture + drive scripts if this recurs.
 - The redundant pdfjs assets in the asar (Vite-bundled renderer doesn't need `pdfjs-dist` at runtime in `node_modules`) is a packaging-config follow-up for the next time `electron-builder.yml` is touched.
 - One JSONL entry appended to `.learnings/learnings.jsonl`.
-
 
 ## Phase 4.1.3 — Diego (dev-ops-agent) — v0.4.2 packaging optimization (pdfjs asset exclude) (2026-05-27)
 
@@ -4985,12 +5088,12 @@ Single edit to `package.json`:
 
 **`npm run dist:win` (electron-builder 24.13.3, Electron 30.5.1):**
 
-| Artifact | v0.4.1 Size | v0.4.2 Size | Delta |
-|---|---:|---:|---:|
-| `release/PDF Viewer & Editor-0.4.2-x64.exe` (NSIS) | 105,985,813 B | 105,252,743 B | -733,070 B |
-| `release/PDF Viewer & Editor-0.4.2-x64.exe.blockmap` | 108,995 B | 108,434 B | -561 B |
-| `release/PDF Viewer & Editor-0.4.2-x64-portable.exe` | 105,757,346 B | 105,024,217 B | -733,129 B |
-| `release/win-unpacked/resources/app.asar` | 66,521,001 B | 64,524,660 B | **-1,996,341 B (~1.9 MB)** |
+| Artifact                                             |   v0.4.1 Size |   v0.4.2 Size |                      Delta |
+| ---------------------------------------------------- | ------------: | ------------: | -------------------------: |
+| `release/PDF Viewer & Editor-0.4.2-x64.exe` (NSIS)   | 105,985,813 B | 105,252,743 B |                 -733,070 B |
+| `release/PDF Viewer & Editor-0.4.2-x64.exe.blockmap` |     108,995 B |     108,434 B |                     -561 B |
+| `release/PDF Viewer & Editor-0.4.2-x64-portable.exe` | 105,757,346 B | 105,024,217 B |                 -733,129 B |
+| `release/win-unpacked/resources/app.asar`            |  66,521,001 B |  64,524,660 B | **-1,996,341 B (~1.9 MB)** |
 
 The asar shrinks by the full ~2 MB delta (raw uncompressed savings); the NSIS + portable installers shrink by less (~733 KB) because LZMA-style compression at the NSIS layer was already efficient on these binary assets (the pfb / bcmap files compress well even when duplicated, so the duplicate-elimination benefit is mostly visible at the uncompressed asar level, less so at the post-LZMA installer level).
 
@@ -5048,17 +5151,17 @@ Per `.learnings/locked-instructions.md` L-002 (revised 2026-05-26), packaging wa
 
 ### Files I touched
 
-| Path | Type | Notes |
-|---|---|---|
-| `electron-builder.yml` | EDIT | +20 lines (comment + 2 exclude patterns) in the `files:` block |
-| `package.json` | EDIT | version 0.4.1 -> 0.4.2 (1 line) |
-| `docs/build-report.md` | APPEND | This Phase 4.1.3 section |
-| `release/PDF Viewer & Editor-0.4.2-x64.exe` (+ .blockmap) | CREATE | NSIS installer |
-| `release/PDF Viewer & Editor-0.4.2-x64-portable.exe` | CREATE | portable .exe |
-| `release/win-unpacked/` | OVERWRITE | electron-builder unpacked output (asar rebuilt, was v0.4.1) |
-| `release/wave-4-1-3-v042-empty-state.png` | CREATE | L-002 launch-state capture |
-| `release/wave-4-1-3-v042-rendered-pdf.png` | CREATE | L-002 rendered-PDF capture |
-| `dist/**/*` | REBUILT | clean output from canonical src/ |
+| Path                                                      | Type      | Notes                                                          |
+| --------------------------------------------------------- | --------- | -------------------------------------------------------------- |
+| `electron-builder.yml`                                    | EDIT      | +20 lines (comment + 2 exclude patterns) in the `files:` block |
+| `package.json`                                            | EDIT      | version 0.4.1 -> 0.4.2 (1 line)                                |
+| `docs/build-report.md`                                    | APPEND    | This Phase 4.1.3 section                                       |
+| `release/PDF Viewer & Editor-0.4.2-x64.exe` (+ .blockmap) | CREATE    | NSIS installer                                                 |
+| `release/PDF Viewer & Editor-0.4.2-x64-portable.exe`      | CREATE    | portable .exe                                                  |
+| `release/win-unpacked/`                                   | OVERWRITE | electron-builder unpacked output (asar rebuilt, was v0.4.1)    |
+| `release/wave-4-1-3-v042-empty-state.png`                 | CREATE    | L-002 launch-state capture                                     |
+| `release/wave-4-1-3-v042-rendered-pdf.png`                | CREATE    | L-002 rendered-PDF capture                                     |
+| `dist/**/*`                                               | REBUILT   | clean output from canonical src/                               |
 
 ### Files I did NOT touch
 
@@ -5068,8 +5171,8 @@ Per `.learnings/locked-instructions.md` L-002 (revised 2026-05-26), packaging wa
 - `build/installer.nsh` (no NSIS changes)
 - `LICENSES.md` (no new transitives this wave)
 - `.learnings/locked-instructions.md` (no new structural rule this wave; L-002 already covers visual verification)
-- Riley's frozen docs (architecture-*.md, api-contracts.md, data-models.md, ui-spec.md, conventions.md, form-engine.md, signature-engine.md, edit-replay-engine.md)
-- Marcus's docs (phase-*-plan.md, wave-*-brief.md, project-*.md)
+- Riley's frozen docs (architecture-\*.md, api-contracts.md, data-models.md, ui-spec.md, conventions.md, form-engine.md, signature-engine.md, edit-replay-engine.md)
+- Marcus's docs (phase-_-plan.md, wave-_-brief.md, project-\*.md)
 - Julian's `docs/code-review.md`
 - Nathan's (README.md, user-guide.md, developer-guide.md, api-reference.md)
 - `src/main/window-manager.ts` (David's; L-001 still enforced via test)
@@ -5090,20 +5193,19 @@ Per `.learnings/locked-instructions.md` L-002 (revised 2026-05-26), packaging wa
 - Surgical electron-builder excludes need a code comment that NAMES the in-tree consumer (here: `src/client/services/pdf-render.ts:43` for the worker, `:189-198` for the font / cmap URLs) so future readers can audit the exclude's scope against the consumer's actual import path. Embedded in the diff above.
 - One JSONL entry appended to `.learnings/learnings.jsonl`.
 
-
 ## Wave 18 — Nathan (nathan-documentation-expert) — Phase 4 + 4.1.x documentation refresh (2026-05-27)
 
 **Status: COMPLETE / GREEN.** Four user-facing docs refreshed end-to-end for the Phase 4 + 4.1.x reality (visual signatures + PAdES cryptographic signing + 7-shape annotation toolset + signature audit log + Phase 4.1 fs:readBytesByHandle + Phase 4.1.1 measurePageDimensionsThunk + Phase 4.1.1 vite-plugin-static-copy + Phase 4.1.2/4.1.3 packaging refinements). Trust-floor honesty obligations placed at all three locations per the Wave 14 pattern (top-of-guide + dedicated section + inline at every PAdES-touching subsection). Stub-shipped-with-TODO pitfall promoted to developer-guide Common pitfalls — three concrete instances cited (defaultPdfMetadata, pdf-render.ts, PageModel hardcode) with the structural fix encoded. Version refs synchronized to 0.4.2 across all four docs.
 
 ### File table
 
-| Path | Lines before | Lines after | Delta | Notes |
-|---|---:|---:|---:|---|
-| `README.md` | 144 | 160 | +16 | Phase 4 status banner; Phase 4 known limitations (7 bullets); Phase 4 PAdES deps + node-forge dual-license; 0.4.2 install/version refs; new Phase 4 acknowledgments rows (node-signpdf, node-forge, pkijs, asn1js, vite-plugin-static-copy) |
-| `docs/user-guide.md` | 793 | 1181 | +388 | New sections: Capturing a signature (3 modes), Placing visual signatures, PAdES cryptographic signing (3-step wizard), Timestamping (RFC 3161), Signature audit panel, Shape and measure annotations (7 tools + calibration), Annotation summary panel, **PAdES trust floor — what the app does and doesn't promise** (dedicated section enumerating all 4 obligations). Phase 4 known limitations expanded; 11 new Settings rows for Signing + Annotations; 3 new keyboard shortcuts (Ctrl+Shift+G, Ctrl+Alt+G, Ctrl+Alt+M); 7 new Troubleshooting entries for sign-failure modes; Save section amended with Phase 4 semantics; version refs to 0.4.2. |
-| `docs/developer-guide.md` | 860 | 1100 | +240 | Top-of-guide Phase 4 quick reference (4-bullet trust-floor link); project layout amended with Phase 4 pdf-ops modules (cert-store, signature-engine, visual-signature, pades-signature[+manual], signature-appearance, tsa-client, annotations/); **Signatures architecture (Phase 4)** new subsection (cert-store single funnel, PAdES engine plug, signature audit log schema v4, replay-engine step 3.7 PAdES invalidation abort); **Phase 4 IPC channels** quick-reference table; **Phase 4.1 fs:readBytesByHandle** and **Phase 4.1.1 measurePageDimensionsThunk (Option Y)** and **Phase 4.1.1 pdfjs assets (Option Q)** subsections; test counts updated to 528 main+ipc+preload + ~300 client + ~84 db = ~912 unit/integration; Common pitfalls: new **Stubs-shipped-with-TODO** section (three Phase-1 stub instances cited; structural fix encoded); Where to learn more amended for Phase 4 docs. |
-| `docs/api-reference.md` | 714 | 933 | +219 | Status summary amended with `signatures:*` (7) + `annotations:*` (3) + Phase 4.1 `fs:readBytesByHandle`; new **Phase 4 channels — `signatures:*` and `annotations:*`** section with all 10 channels (Request/Response/Errors/example); **Phase 4 setting keys and data models** subsection (all 11 keys); **Phase 4.1 channel — `fs:readBytesByHandle`** subsection (security floor explanation); Cross-references amended with signature-engine.md, architecture-phase-4.md, conventions §15, PAdES trust floor pointer, Stubs-shipped-with-TODO pointer. |
-| `docs/build-report.md` | 5091 | 5091+~80 | (this section) | Wave 18 Nathan entry appended additively; pre-existing 5091 lines untouched. |
+| Path                      | Lines before | Lines after |          Delta | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------- | -----------: | ----------: | -------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `README.md`               |          144 |         160 |            +16 | Phase 4 status banner; Phase 4 known limitations (7 bullets); Phase 4 PAdES deps + node-forge dual-license; 0.4.2 install/version refs; new Phase 4 acknowledgments rows (node-signpdf, node-forge, pkijs, asn1js, vite-plugin-static-copy)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `docs/user-guide.md`      |          793 |        1181 |           +388 | New sections: Capturing a signature (3 modes), Placing visual signatures, PAdES cryptographic signing (3-step wizard), Timestamping (RFC 3161), Signature audit panel, Shape and measure annotations (7 tools + calibration), Annotation summary panel, **PAdES trust floor — what the app does and doesn't promise** (dedicated section enumerating all 4 obligations). Phase 4 known limitations expanded; 11 new Settings rows for Signing + Annotations; 3 new keyboard shortcuts (Ctrl+Shift+G, Ctrl+Alt+G, Ctrl+Alt+M); 7 new Troubleshooting entries for sign-failure modes; Save section amended with Phase 4 semantics; version refs to 0.4.2.                                                                                                                                                                                                                                                      |
+| `docs/developer-guide.md` |          860 |        1100 |           +240 | Top-of-guide Phase 4 quick reference (4-bullet trust-floor link); project layout amended with Phase 4 pdf-ops modules (cert-store, signature-engine, visual-signature, pades-signature[+manual], signature-appearance, tsa-client, annotations/); **Signatures architecture (Phase 4)** new subsection (cert-store single funnel, PAdES engine plug, signature audit log schema v4, replay-engine step 3.7 PAdES invalidation abort); **Phase 4 IPC channels** quick-reference table; **Phase 4.1 fs:readBytesByHandle** and **Phase 4.1.1 measurePageDimensionsThunk (Option Y)** and **Phase 4.1.1 pdfjs assets (Option Q)** subsections; test counts updated to 528 main+ipc+preload + ~300 client + ~84 db = ~912 unit/integration; Common pitfalls: new **Stubs-shipped-with-TODO** section (three Phase-1 stub instances cited; structural fix encoded); Where to learn more amended for Phase 4 docs. |
+| `docs/api-reference.md`   |          714 |         933 |           +219 | Status summary amended with `signatures:*` (7) + `annotations:*` (3) + Phase 4.1 `fs:readBytesByHandle`; new **Phase 4 channels — `signatures:*` and `annotations:*`** section with all 10 channels (Request/Response/Errors/example); **Phase 4 setting keys and data models** subsection (all 11 keys); **Phase 4.1 channel — `fs:readBytesByHandle`** subsection (security floor explanation); Cross-references amended with signature-engine.md, architecture-phase-4.md, conventions §15, PAdES trust floor pointer, Stubs-shipped-with-TODO pointer.                                                                                                                                                                                                                                                                                                                                                   |
+| `docs/build-report.md`    |         5091 |    5091+~80 | (this section) | Wave 18 Nathan entry appended additively; pre-existing 5091 lines untouched.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
 **Total documentation surface delta:** +863 lines across 4 user-facing docs + this Wave 18 entry. README/user-guide/developer-guide/api-reference now describe v0.4.2 as shipped, not v0.3.0 as before.
 
@@ -5111,22 +5213,22 @@ Per `.learnings/locked-instructions.md` L-002 (revised 2026-05-26), packaging wa
 
 Per the Phase 4 brief and the Wave 14 H-3 / trust-floor pattern, the four Phase 4 obligations are surfaced at three required locations PLUS inline at every PAdES-touching section. Per-obligation evidence (grep counts on `docs/user-guide.md`):
 
-| Obligation | Grep | Match count |
-|---|---|---:|
-| #1 — Signing/editing a previously-signed PDF invalidates prior signatures | `invalidate` (case-insensitive) | 19 |
-| #2 — Cert + password held in memory only; zeroed on close | `memory only \| memory ONLY \| zeroed \| Buffer\.fill\(0\)` | 11 |
-| #3 — TSA URLs visited only at sign time; no default TSA | `TSA URL \| enable TSA \| RFC 3161` | 30 |
-| #4 — `signatures:verify` is informational, not third-party trust chain | `informational \| trust chain \| not third-party \| notarization` | 17 |
-| Cross-references to the dedicated trust-floor section | `PAdES trust floor` | 10 |
+| Obligation                                                                | Grep                                                              | Match count |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------: |
+| #1 — Signing/editing a previously-signed PDF invalidates prior signatures | `invalidate` (case-insensitive)                                   |          19 |
+| #2 — Cert + password held in memory only; zeroed on close                 | `memory only \| memory ONLY \| zeroed \| Buffer\.fill\(0\)`       |          11 |
+| #3 — TSA URLs visited only at sign time; no default TSA                   | `TSA URL \| enable TSA \| RFC 3161`                               |          30 |
+| #4 — `signatures:verify` is informational, not third-party trust chain    | `informational \| trust chain \| not third-party \| notarization` |          17 |
+| Cross-references to the dedicated trust-floor section                     | `PAdES trust floor`                                               |          10 |
 
 README-side cross-cuts (for users reading the front door first):
 
-| Obligation | README match count |
-|---|---:|
-| #1 invalidate | 3 |
-| #2 memory-only/zeroed | 4 |
-| #3 TSA | 7 |
-| #4 informational/notarization | 4 |
+| Obligation                    | README match count |
+| ----------------------------- | -----------------: |
+| #1 invalidate                 |                  3 |
+| #2 memory-only/zeroed         |                  4 |
+| #3 TSA                        |                  7 |
+| #4 informational/notarization |                  4 |
 
 **Required locations satisfied** (per the Wave 14 brief's "non-negotiable" framing):
 
@@ -5153,14 +5255,14 @@ The structural fix is encoded in three parts: (a) prefer nullable + late-init ov
 
 ### Files I touched
 
-| Path | Change |
-|---|---|
-| `README.md` | REWRITE — full Phase 4 status / features / install / known limitations / acknowledgments |
-| `docs/user-guide.md` | EDIT — title + status preamble; What changed in 0.4.2 section; Known limitations (now Phase 4); PAdES trust floor (new); Annotating (Shape and measure annotations new sub-section); Capturing a signature (NEW); Placing visual signatures (NEW); PAdES cryptographic signing (NEW); Timestamping (NEW); Signature audit panel (NEW); Settings table (+11 Phase 4 rows); Keyboard shortcuts (+3 Phase 4 rows); Troubleshooting (+7 Phase 4 rows); Save section amended with Phase 4 semantics; version refs to 0.4.2 |
-| `docs/developer-guide.md` | EDIT — top-of-guide Phase 4 quick reference (4 bullets); project layout (Phase 4 pdf-ops modules); Signatures architecture (Phase 4) NEW; Phase 4 IPC channels NEW; Phase 4.1 fs:readBytesByHandle NEW; Phase 4.1.1 measurePageDimensionsThunk NEW; Phase 4.1.1 pdfjs assets via build-time copy NEW; test-counts updated; IPC contract reference card (+Phase 4 channels); Common pitfalls (+Stubs-shipped-with-TODO); Where to learn more (Phase 4 docs added) |
-| `docs/api-reference.md` | EDIT — header amended for Phase 4; status summary (+signatures:*, annotations:*, fs:readBytesByHandle); Phase 4 channels section (NEW; all 10 channels); Phase 4 setting keys subsection (NEW); Phase 4.1 fs:readBytesByHandle subsection (NEW); Cross-references amended |
-| `docs/build-report.md` | APPEND — this Wave 18 section (additive only; no edits to prior wave entries per the Marcus-owns-build-report ownership rule) |
-| `.learnings/learnings.jsonl` | APPEND — one JSONL entry (post-flight self-improvement log) |
+| Path                         | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`                  | REWRITE — full Phase 4 status / features / install / known limitations / acknowledgments                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `docs/user-guide.md`         | EDIT — title + status preamble; What changed in 0.4.2 section; Known limitations (now Phase 4); PAdES trust floor (new); Annotating (Shape and measure annotations new sub-section); Capturing a signature (NEW); Placing visual signatures (NEW); PAdES cryptographic signing (NEW); Timestamping (NEW); Signature audit panel (NEW); Settings table (+11 Phase 4 rows); Keyboard shortcuts (+3 Phase 4 rows); Troubleshooting (+7 Phase 4 rows); Save section amended with Phase 4 semantics; version refs to 0.4.2 |
+| `docs/developer-guide.md`    | EDIT — top-of-guide Phase 4 quick reference (4 bullets); project layout (Phase 4 pdf-ops modules); Signatures architecture (Phase 4) NEW; Phase 4 IPC channels NEW; Phase 4.1 fs:readBytesByHandle NEW; Phase 4.1.1 measurePageDimensionsThunk NEW; Phase 4.1.1 pdfjs assets via build-time copy NEW; test-counts updated; IPC contract reference card (+Phase 4 channels); Common pitfalls (+Stubs-shipped-with-TODO); Where to learn more (Phase 4 docs added)                                                      |
+| `docs/api-reference.md`      | EDIT — header amended for Phase 4; status summary (+signatures:_, annotations:_, fs:readBytesByHandle); Phase 4 channels section (NEW; all 10 channels); Phase 4 setting keys subsection (NEW); Phase 4.1 fs:readBytesByHandle subsection (NEW); Cross-references amended                                                                                                                                                                                                                                             |
+| `docs/build-report.md`       | APPEND — this Wave 18 section (additive only; no edits to prior wave entries per the Marcus-owns-build-report ownership rule)                                                                                                                                                                                                                                                                                                                                                                                         |
+| `.learnings/learnings.jsonl` | APPEND — one JSONL entry (post-flight self-improvement log)                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 ### Files I did NOT touch
 
@@ -5194,70 +5296,69 @@ Two structural lessons are candidates for promotion to `~/.claude/learnings/glob
 
 One JSONL entry appended to `.learnings/learnings.jsonl`.
 
-
 ## Wave 19 — Riley (front-end-architect) — Phase 5 architecture design (Scan & OCR) (2026-05-27)
 
 **Status: COMPLETE / GREEN.** Two new design docs (`docs/architecture-phase-5.md` + `docs/ocr-engine.md`) + four additive amendments (api-contracts §16, data-models §10 + additive Phase-4 column, ui-spec §14, conventions §16). All 10 locked decisions (P5-L-1 through P5-L-10) encoded with cross-references; all 5 wave-19-brief design questions (Q-A through Q-E) answered with traceability tables; trust-floor honesty obligations enumerated as a three-location ratchet for Wave 22 Nathan; stub-shipped-with-TODO + sentinel-default + build-time-asset-copy global lessons baked into the design at the type-system level (required-on-interface, nullable+late-init, electron-builder extraResources for `eng.traineddata.gz`).
 
 ### Files created / amended
 
-| Path | Type | Lines | Notes |
-|---|---|---:|---|
-| `docs/architecture-phase-5.md` | NEW | 620 | Phase 5 architectural deltas — OCR engine high-level shape, Phase 4 PAdES interaction (P5-L-10), native-scanner library survey + DEFER verdict (Q-E), trust-floor obligations, Phase 5 risk register + R-W19-A through R-W19-F |
-| `docs/ocr-engine.md` | NEW | 480 | Companion detail doc — Tesseract.js engine selection rationale, worker pool lifecycle, language pack manager, text-behind-image authorship + coordinate transform, confidence reporting, image preprocess pipeline, job lifecycle, PAdES pre-flight, Wave 21 Julian audit mechanical greps |
-| `docs/api-contracts.md` | EDIT (additive §16) | +330 | 9 new IPC channels: `ocr:detectLanguages`, `ocr:runOnPage`, `ocr:runOnDocument` (+ `ocr:progress` event stream), `ocr:cancelJob`, `ocr:listJobs`, `ocr:languagePackDownload` (+ download progress event stream), `ocr:languagePackRemove`; `scan:listDevices` + `scan:acquire` Phase-5.1 placeholder; 11 new SettingKeys; freeze-point markers; Phase 4.1 contract surface untouched per freeze rule |
-| `docs/data-models.md` | EDIT (additive §10) | +480 | Schema v5: `ocr_jobs`, `ocr_results`, `language_packs` tables + additive nullable column on Phase-4 `signature_audit_log.invalidated_by_ocr_job_id`; 1 new EditOperation variant (`ocr-text-behind-applied`) + inverse companion (`ocr-text-behind-removed`); `OcrWord` / `OcrPageResult` / `OcrJobSummary` / `LanguagePack` / `LanguagePackDto` types with nullable+late-init discipline on `pdfRect` + `pageResults`; 3 new repository interfaces (`OcrJobsRepo`, `OcrResultsRepo`, `LanguagePacksRepo`) + 2 new methods on `SignatureAuditRepo` |
-| `docs/ui-spec.md` | EDIT (additive §14) | +420 | OCR Run modal (4-step), language pack manager modal, scan modal (Phase 5.1 placeholder), confidence overlay (renderer layer above page bitmap below annotations), toolbar additions (3 buttons), menu additions, drag-drop matrix extended for TIFF + .traineddata.gz, settings additions (OCR + Languages sections), 2 new keyboard shortcuts, screen states (empty / loading / 5 error cases / populated), accessibility floor extension, three-location trust-floor placement spec for Wave 22 Nathan |
-| `docs/conventions.md` | EDIT (additive §16) | +400 | OCR engine discipline section — 5 worker-lifecycle non-negotiables, bytes-stay-in-main corollaries, anti-stub-shipped-with-TODO encoded structurally (required-on-interface + nullable+late-init), confidence threshold convention (`<60` = "low"), OCR-on-signed-PDF policy (non-skippable confirm + audit-log update), 6 anti-patterns with corrected forms, test discipline, Wave 21 Julian audit mechanical greps, honest "what we don't promise" |
-| `docs/build-report.md` | APPEND | (this section) | Wave 19 Riley entry; additive only |
-| `.learnings/learnings.jsonl` | APPEND | +1 line | Self-improvement protocol post-flight |
+| Path                           | Type                |          Lines | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------ | ------------------- | -------------: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/architecture-phase-5.md` | NEW                 |            620 | Phase 5 architectural deltas — OCR engine high-level shape, Phase 4 PAdES interaction (P5-L-10), native-scanner library survey + DEFER verdict (Q-E), trust-floor obligations, Phase 5 risk register + R-W19-A through R-W19-F                                                                                                                                                                                                                                                                                                                     |
+| `docs/ocr-engine.md`           | NEW                 |            480 | Companion detail doc — Tesseract.js engine selection rationale, worker pool lifecycle, language pack manager, text-behind-image authorship + coordinate transform, confidence reporting, image preprocess pipeline, job lifecycle, PAdES pre-flight, Wave 21 Julian audit mechanical greps                                                                                                                                                                                                                                                         |
+| `docs/api-contracts.md`        | EDIT (additive §16) |           +330 | 9 new IPC channels: `ocr:detectLanguages`, `ocr:runOnPage`, `ocr:runOnDocument` (+ `ocr:progress` event stream), `ocr:cancelJob`, `ocr:listJobs`, `ocr:languagePackDownload` (+ download progress event stream), `ocr:languagePackRemove`; `scan:listDevices` + `scan:acquire` Phase-5.1 placeholder; 11 new SettingKeys; freeze-point markers; Phase 4.1 contract surface untouched per freeze rule                                                                                                                                               |
+| `docs/data-models.md`          | EDIT (additive §10) |           +480 | Schema v5: `ocr_jobs`, `ocr_results`, `language_packs` tables + additive nullable column on Phase-4 `signature_audit_log.invalidated_by_ocr_job_id`; 1 new EditOperation variant (`ocr-text-behind-applied`) + inverse companion (`ocr-text-behind-removed`); `OcrWord` / `OcrPageResult` / `OcrJobSummary` / `LanguagePack` / `LanguagePackDto` types with nullable+late-init discipline on `pdfRect` + `pageResults`; 3 new repository interfaces (`OcrJobsRepo`, `OcrResultsRepo`, `LanguagePacksRepo`) + 2 new methods on `SignatureAuditRepo` |
+| `docs/ui-spec.md`              | EDIT (additive §14) |           +420 | OCR Run modal (4-step), language pack manager modal, scan modal (Phase 5.1 placeholder), confidence overlay (renderer layer above page bitmap below annotations), toolbar additions (3 buttons), menu additions, drag-drop matrix extended for TIFF + .traineddata.gz, settings additions (OCR + Languages sections), 2 new keyboard shortcuts, screen states (empty / loading / 5 error cases / populated), accessibility floor extension, three-location trust-floor placement spec for Wave 22 Nathan                                           |
+| `docs/conventions.md`          | EDIT (additive §16) |           +400 | OCR engine discipline section — 5 worker-lifecycle non-negotiables, bytes-stay-in-main corollaries, anti-stub-shipped-with-TODO encoded structurally (required-on-interface + nullable+late-init), confidence threshold convention (`<60` = "low"), OCR-on-signed-PDF policy (non-skippable confirm + audit-log update), 6 anti-patterns with corrected forms, test discipline, Wave 21 Julian audit mechanical greps, honest "what we don't promise"                                                                                              |
+| `docs/build-report.md`         | APPEND              | (this section) | Wave 19 Riley entry; additive only                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `.learnings/learnings.jsonl`   | APPEND              |        +1 line | Self-improvement protocol post-flight                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 **Total documentation surface delta:** +2,730 lines across 2 NEW docs + 4 additive amendments + this build-report entry.
 
 ### Locked-decision encoding evidence
 
-| Decision | Encoded at | Cross-ref |
-|---|---|---|
-| **Q-A** — tesseract.js v7 (Apache-2.0) primary; node-tesseract-ocr (MIT) as Phase 5.1 escape hatch | `architecture-phase-5.md §3.1`, `ocr-engine.md §2` | License verified live via `npm view`: tesseract.js@7.0.0 Apache-2.0 |
-| **Q-B** — bundle `eng.traineddata.gz` + lazy-download other packs from upstream + SHA-256 integrity check + offline-after-first-use | `architecture-phase-5.md §4.3`, `ocr-engine.md §4` | Build-time extraResources pattern mirrors Phase 4.1.1 vite-plugin-static-copy lesson |
-| **Q-C** — modal-driven blocking v1; background-queue Phase 5.2+ | `architecture-phase-5.md §4.6`, `ocr-engine.md §7.4`, `ui-spec.md §14.3` | UX scope-fence decision; cancel always visible |
-| **Q-D** — text-behind-image with PDF render-mode 3 BT/ET blocks (NOT ActualText) | `architecture-phase-5.md §4.4`, `ocr-engine.md §5` | Broader reader support; Phase 7 a11y may add ActualText variant |
-| **Q-E** — native scanner DEFERRED to Phase 5.1 (no MIT-compatible WIA binding survives the maturity bar) | `architecture-phase-5.md §7` | Library survey table in §7.1; verdict in §7.2; workaround in §7.3 |
-| **P5-L-1** — OCR library | `architecture-phase-5.md §1 row 1`, `§3.1`, `ocr-engine.md §2` | — |
-| **P5-L-2** — OCR runs in main process, NOT renderer | `architecture-phase-5.md §1 row 2`, `§2.2`, `conventions.md §16.6` | ESLint no-restricted-imports candidate |
-| **P5-L-3** — one worker per language, persisted for app lifetime, released on quit | `architecture-phase-5.md §1 row 3`, `§4.2`, `ocr-engine.md §3`, `conventions.md §16.1` | — |
-| **P5-L-4** — bundled `eng` + lazy-download | `architecture-phase-5.md §1 row 4`, `§4.3`, `ocr-engine.md §4` | — |
-| **P5-L-5** — text-behind-image format | `architecture-phase-5.md §1 row 5`, `§4.4`, `ocr-engine.md §5` | — |
-| **P5-L-6** — confidence default 60 | `architecture-phase-5.md §1 row 6`, `§4.5`, `conventions.md §16.4` | Applied at render time; raw conf preserved in `ocr_results.words_json` |
-| **P5-L-7** — modal-driven v1 | `architecture-phase-5.md §1 row 7`, `§4.6`, `ui-spec.md §14.3` | — |
-| **P5-L-8** — native scanner DEFER | `architecture-phase-5.md §1 row 8`, `§7`, `api-contracts.md §16.9 + §16.10` | Channels reserved as `not_implemented_phase_5_1` |
-| **P5-L-9** — schema v5 | `architecture-phase-5.md §1 row 9`, `§5`, `data-models.md §10.4` | Forward-only; additive nullable column on Phase-4 |
-| **P5-L-10** — OCR-on-signed-PDF non-skippable confirm + audit-log update | `architecture-phase-5.md §1 row 10`, `§6`, `ocr-engine.md §8`, `conventions.md §16.5`, `data-models.md §10.4 + §10.10` | Mirrors Phase 4.1 H-17.3 PAdES-invalidates-on-edit discipline |
+| Decision                                                                                                                            | Encoded at                                                                                                             | Cross-ref                                                                            |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **Q-A** — tesseract.js v7 (Apache-2.0) primary; node-tesseract-ocr (MIT) as Phase 5.1 escape hatch                                  | `architecture-phase-5.md §3.1`, `ocr-engine.md §2`                                                                     | License verified live via `npm view`: tesseract.js@7.0.0 Apache-2.0                  |
+| **Q-B** — bundle `eng.traineddata.gz` + lazy-download other packs from upstream + SHA-256 integrity check + offline-after-first-use | `architecture-phase-5.md §4.3`, `ocr-engine.md §4`                                                                     | Build-time extraResources pattern mirrors Phase 4.1.1 vite-plugin-static-copy lesson |
+| **Q-C** — modal-driven blocking v1; background-queue Phase 5.2+                                                                     | `architecture-phase-5.md §4.6`, `ocr-engine.md §7.4`, `ui-spec.md §14.3`                                               | UX scope-fence decision; cancel always visible                                       |
+| **Q-D** — text-behind-image with PDF render-mode 3 BT/ET blocks (NOT ActualText)                                                    | `architecture-phase-5.md §4.4`, `ocr-engine.md §5`                                                                     | Broader reader support; Phase 7 a11y may add ActualText variant                      |
+| **Q-E** — native scanner DEFERRED to Phase 5.1 (no MIT-compatible WIA binding survives the maturity bar)                            | `architecture-phase-5.md §7`                                                                                           | Library survey table in §7.1; verdict in §7.2; workaround in §7.3                    |
+| **P5-L-1** — OCR library                                                                                                            | `architecture-phase-5.md §1 row 1`, `§3.1`, `ocr-engine.md §2`                                                         | —                                                                                    |
+| **P5-L-2** — OCR runs in main process, NOT renderer                                                                                 | `architecture-phase-5.md §1 row 2`, `§2.2`, `conventions.md §16.6`                                                     | ESLint no-restricted-imports candidate                                               |
+| **P5-L-3** — one worker per language, persisted for app lifetime, released on quit                                                  | `architecture-phase-5.md §1 row 3`, `§4.2`, `ocr-engine.md §3`, `conventions.md §16.1`                                 | —                                                                                    |
+| **P5-L-4** — bundled `eng` + lazy-download                                                                                          | `architecture-phase-5.md §1 row 4`, `§4.3`, `ocr-engine.md §4`                                                         | —                                                                                    |
+| **P5-L-5** — text-behind-image format                                                                                               | `architecture-phase-5.md §1 row 5`, `§4.4`, `ocr-engine.md §5`                                                         | —                                                                                    |
+| **P5-L-6** — confidence default 60                                                                                                  | `architecture-phase-5.md §1 row 6`, `§4.5`, `conventions.md §16.4`                                                     | Applied at render time; raw conf preserved in `ocr_results.words_json`               |
+| **P5-L-7** — modal-driven v1                                                                                                        | `architecture-phase-5.md §1 row 7`, `§4.6`, `ui-spec.md §14.3`                                                         | —                                                                                    |
+| **P5-L-8** — native scanner DEFER                                                                                                   | `architecture-phase-5.md §1 row 8`, `§7`, `api-contracts.md §16.9 + §16.10`                                            | Channels reserved as `not_implemented_phase_5_1`                                     |
+| **P5-L-9** — schema v5                                                                                                              | `architecture-phase-5.md §1 row 9`, `§5`, `data-models.md §10.4`                                                       | Forward-only; additive nullable column on Phase-4                                    |
+| **P5-L-10** — OCR-on-signed-PDF non-skippable confirm + audit-log update                                                            | `architecture-phase-5.md §1 row 10`, `§6`, `ocr-engine.md §8`, `conventions.md §16.5`, `data-models.md §10.4 + §10.10` | Mirrors Phase 4.1 H-17.3 PAdES-invalidates-on-edit discipline                        |
 
 **Stub-shipped-with-TODO + sentinel-default discipline encoded structurally:**
 
-| Mechanism | Where | Anti-pattern blocked |
-|---|---|---|
-| `RegisterOcrOptions.ocrPool` REQUIRED (no `?`) | `conventions.md §16.3.1`, `architecture-phase-5.md §4.2.2` | Wave 20 cannot ship without wiring the pool; typecheck fails |
-| `OcrPageResult.pageResults: OcrPageResult[] \| null` | `conventions.md §16.3.2`, `data-models.md §10.7` | Empty array as "not yet OCR'd" sentinel cannot pass for "OCR'd zero words" |
-| `OcrWord.pdfRect: PdfRect \| null` | `conventions.md §16.3.3`, `data-models.md §10.6` | Sentinel `{0,0,0,0}` cannot leak through to confidence overlay |
-| `electron-builder.yml extraResources` for `eng.traineddata.gz` (NOT committed) | `architecture-phase-5.md §3.3` | Phase 4.1.1 build-time-asset-copy lesson applied; staleness vector eliminated |
+| Mechanism                                                                      | Where                                                      | Anti-pattern blocked                                                          |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `RegisterOcrOptions.ocrPool` REQUIRED (no `?`)                                 | `conventions.md §16.3.1`, `architecture-phase-5.md §4.2.2` | Wave 20 cannot ship without wiring the pool; typecheck fails                  |
+| `OcrPageResult.pageResults: OcrPageResult[] \| null`                           | `conventions.md §16.3.2`, `data-models.md §10.7`           | Empty array as "not yet OCR'd" sentinel cannot pass for "OCR'd zero words"    |
+| `OcrWord.pdfRect: PdfRect \| null`                                             | `conventions.md §16.3.3`, `data-models.md §10.6`           | Sentinel `{0,0,0,0}` cannot leak through to confidence overlay                |
+| `electron-builder.yml extraResources` for `eng.traineddata.gz` (NOT committed) | `architecture-phase-5.md §3.3`                             | Phase 4.1.1 build-time-asset-copy lesson applied; staleness vector eliminated |
 
 ### Native scanner library survey (Q-E)
 
-| Library | License | Last commit / pub | Stars | Verdict | Reason |
-|---|---|---|---|---|---|
-| `wia` (npm) | MIT | > 1 year ago | low | REJECT | Name collision — this is wia.io IoT cloud SDK, NOT a Windows Image Acquisition binding |
-| `node-wia` (npm) | n/a | n/a | n/a | REJECT | Does not exist (404 on `npm view`) |
-| `wia-scanner` (npm) | n/a | n/a | n/a | REJECT | Does not exist (404 on `npm view`) |
-| `scanner-wia` (npm) | n/a | n/a | n/a | REJECT | Does not exist (404 on `npm view`) |
-| `node-imageacquisition` (npm) | n/a | n/a | n/a | REJECT | Does not exist (404 on `npm view`) |
-| `sh-navid/NodeWiaScanner` (GitHub) | no LICENSE file | sporadic | low | REJECT | VBS-script bridge via `cscript`; not a real Node addon; license unverified |
-| `yushulx/docscan4nodejs` (GitHub) | commercial (Dynamsoft) | active | medium | REJECT | Wraps Dynamic Web TWAIN Service — commercial license + service fees |
-| `scanner-js` (Asprise, npm) | MIT wrapper / commercial backend | > 1 year ago | low | REJECT | Wrapper is MIT but the backend Asprise scanner.js is a paid commercial product |
-| `Dynamsoft Service Client` (npm) | commercial | active | medium-high | REJECT | Commercial license |
-| `node-twain` (npm) | ISC | sporadic | low | REJECT (for Phase 5) | TWAIN-only; roadmap prioritizes WIA. License is fine; re-evaluate for Phase 5.2 |
-| Custom Node-API addon over Windows WIA COM | MIT (we'd write it) | n/a | n/a | OUT OF SCOPE | 1-2-week solo C++ effort; CI complexity doubles; ROI does not justify in Phase 5 |
+| Library                                    | License                          | Last commit / pub | Stars       | Verdict              | Reason                                                                                 |
+| ------------------------------------------ | -------------------------------- | ----------------- | ----------- | -------------------- | -------------------------------------------------------------------------------------- |
+| `wia` (npm)                                | MIT                              | > 1 year ago      | low         | REJECT               | Name collision — this is wia.io IoT cloud SDK, NOT a Windows Image Acquisition binding |
+| `node-wia` (npm)                           | n/a                              | n/a               | n/a         | REJECT               | Does not exist (404 on `npm view`)                                                     |
+| `wia-scanner` (npm)                        | n/a                              | n/a               | n/a         | REJECT               | Does not exist (404 on `npm view`)                                                     |
+| `scanner-wia` (npm)                        | n/a                              | n/a               | n/a         | REJECT               | Does not exist (404 on `npm view`)                                                     |
+| `node-imageacquisition` (npm)              | n/a                              | n/a               | n/a         | REJECT               | Does not exist (404 on `npm view`)                                                     |
+| `sh-navid/NodeWiaScanner` (GitHub)         | no LICENSE file                  | sporadic          | low         | REJECT               | VBS-script bridge via `cscript`; not a real Node addon; license unverified             |
+| `yushulx/docscan4nodejs` (GitHub)          | commercial (Dynamsoft)           | active            | medium      | REJECT               | Wraps Dynamic Web TWAIN Service — commercial license + service fees                    |
+| `scanner-js` (Asprise, npm)                | MIT wrapper / commercial backend | > 1 year ago      | low         | REJECT               | Wrapper is MIT but the backend Asprise scanner.js is a paid commercial product         |
+| `Dynamsoft Service Client` (npm)           | commercial                       | active            | medium-high | REJECT               | Commercial license                                                                     |
+| `node-twain` (npm)                         | ISC                              | sporadic          | low         | REJECT (for Phase 5) | TWAIN-only; roadmap prioritizes WIA. License is fine; re-evaluate for Phase 5.2        |
+| Custom Node-API addon over Windows WIA COM | MIT (we'd write it)              | n/a               | n/a         | OUT OF SCOPE         | 1-2-week solo C++ effort; CI complexity doubles; ROI does not justify in Phase 5       |
 
 **Verdict: DEFER native scanner to Phase 5.1.** Phase 5 ships menu item disabled with tooltip; the IPC channels (`scan:listDevices`, `scan:acquire`) are reserved in the contract for additive Phase 5.1 wire-up. Workaround documented: use OS Scan app → save as PDF → drag-drop → run OCR.
 
@@ -5271,6 +5372,7 @@ Four obligations to surface at three locations (preamble + dedicated section + i
 4. **Re-running OCR adds another text layer.** Multiple OCR passes may produce duplicate selectable text. Engine does NOT auto-detect "already OCR'd" (Phase 5.2 candidate).
 
 Plus the existing Phase 4 carry-overs that Phase 5 magnifies:
+
 - OCR invalidates prior PAdES signatures (non-skippable confirm; audit-log update).
 - `ocr_jobs` audit table is in the same SQLite DB as `signature_audit_log` — same tamper-vulnerability disclosure.
 - Latin-script OCR uses built-in `/Helvetica`; non-Latin scripts (CJK / Cyrillic / Arabic) are searchable but may copy-paste imperfectly without proper font embedding (Phase 5.1+).
@@ -5281,14 +5383,14 @@ Surface locations specified in `ui-spec.md §14.13` (OcrRunModal step 1 honesty 
 
 Listed in `architecture-phase-5.md §9.1`:
 
-| # | Risk | Mitigation |
-|---|---|---|
+| #       | Risk                                                                                                  | Mitigation                                                                                                                                                                                                                   |
+| ------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | R-W19-A | tesseract.js Worker path resolution in packaged ASAR may fail (Worker constructor reads from real FS) | Diego Wave 21 adds `app.asar.unpacked` entries for `node_modules/tesseract.js/src/worker-script/**` AND `node_modules/tesseract.js-core/**`. Wave 20 smoke test runs OCR in packaged binary (L-002 screenshot of OCR'd page) |
-| R-W19-B | Language pack download MITM | SHA-256 integrity check against shipped catalog (`language-pack-catalog.json` ships with binary; catalog hashes lock in upstream content) |
-| R-W19-C | Per-page memory for large PDFs (200-page scan @ 300 DPI = ~5 GB if all in flight) | Sequential per-page processing; release raster after each page; bounded transient memory |
-| R-W19-D | Worker leak under crash (V8 OOM, native segfault in tesseract-core WASM) | `app.before-quit` + `process.exit` handlers release all; per-worker watchdog `setTimeout`; pool re-creates on next acquire |
-| R-W19-E | Confidence threshold gaming | Raw per-word confidence preserved in `ocr_results.words_json` regardless of UI threshold |
-| R-W19-F | pdf.js + pdf-lib double-rasterize on already-OCR'd PDFs | Obligation #4 surfaces honestly; Phase 5.2 candidate for auto-detect |
+| R-W19-B | Language pack download MITM                                                                           | SHA-256 integrity check against shipped catalog (`language-pack-catalog.json` ships with binary; catalog hashes lock in upstream content)                                                                                    |
+| R-W19-C | Per-page memory for large PDFs (200-page scan @ 300 DPI = ~5 GB if all in flight)                     | Sequential per-page processing; release raster after each page; bounded transient memory                                                                                                                                     |
+| R-W19-D | Worker leak under crash (V8 OOM, native segfault in tesseract-core WASM)                              | `app.before-quit` + `process.exit` handlers release all; per-worker watchdog `setTimeout`; pool re-creates on next acquire                                                                                                   |
+| R-W19-E | Confidence threshold gaming                                                                           | Raw per-word confidence preserved in `ocr_results.words_json` regardless of UI threshold                                                                                                                                     |
+| R-W19-F | pdf.js + pdf-lib double-rasterize on already-OCR'd PDFs                                               | Obligation #4 surfaces honestly; Phase 5.2 candidate for auto-detect                                                                                                                                                         |
 
 ### Open questions for Wave 20 implementers
 
@@ -5321,7 +5423,7 @@ Listed in `architecture-phase-5.md §9.1`:
 
 **To Marcus:** Phase 5 design closed at end of Wave 19. Wave 20 (David + Ravi + Riley parallel implementation) is unblocked. The Phase-5.1 native-scanner design wave can be scheduled WHENEVER — no Phase 5 dependency; the channel placeholders (`scan:listDevices`, `scan:acquire`) make the wiring purely additive. Two scope-fence checks for Wave 20: (1) NO renderer-side tesseract.js (ESLint candidate); (2) NO sentinel-default OCR result shapes (`OcrJobSummary.pageResults` MUST be nullable, not empty-array). Both are encoded structurally in the type definitions; typecheck will catch deviations.
 
-**To David (Wave 20 main-process implementation):** Your file ownership for Wave 20 per `phase-5-plan.md`: `src/main/pdf-ops/ocr-engine.ts` (NEW), `src/main/pdf-ops/ocr-worker-pool.ts` (NEW), `src/main/pdf-ops/searchable-pdf-builder.ts` (NEW), `src/main/pdf-ops/image-preprocess.ts` (NEW), `src/main/pdf-ops/language-pack-manager.ts` (NEW), `src/main/pdf-ops/ocr-confidence.ts` (NEW), `src/ipc/handlers/ocr-*.ts` (7 NEW handlers + 2 Phase-5.1 placeholders for scan-*), `src/ipc/contracts.ts` extensions per `api-contracts.md §16`. **Critical:** the `RegisterOcrOptions.ocrPool` field is REQUIRED, no fallback — if you cannot wire the pool in the same wave you ship the handlers, the type system fails the build. This is the structural anti-stub fix. Also: `detectPriorPadesSignatures` pre-flight in BOTH `ocr:runOnPage` AND `ocr:runOnDocument` handlers; do not skip on the page variant.
+**To David (Wave 20 main-process implementation):** Your file ownership for Wave 20 per `phase-5-plan.md`: `src/main/pdf-ops/ocr-engine.ts` (NEW), `src/main/pdf-ops/ocr-worker-pool.ts` (NEW), `src/main/pdf-ops/searchable-pdf-builder.ts` (NEW), `src/main/pdf-ops/image-preprocess.ts` (NEW), `src/main/pdf-ops/language-pack-manager.ts` (NEW), `src/main/pdf-ops/ocr-confidence.ts` (NEW), `src/ipc/handlers/ocr-*.ts` (7 NEW handlers + 2 Phase-5.1 placeholders for scan-\*), `src/ipc/contracts.ts` extensions per `api-contracts.md §16`. **Critical:** the `RegisterOcrOptions.ocrPool` field is REQUIRED, no fallback — if you cannot wire the pool in the same wave you ship the handlers, the type system fails the build. This is the structural anti-stub fix. Also: `detectPriorPadesSignatures` pre-flight in BOTH `ocr:runOnPage` AND `ocr:runOnDocument` handlers; do not skip on the page variant.
 
 **To Ravi (Wave 20 schema):** Schema v5 DDL in `data-models.md §10.4`. Three new tables (`ocr_jobs`, `ocr_results`, `language_packs`) plus ONE additive nullable column on `signature_audit_log` (`invalidated_by_ocr_job_id INTEGER REFERENCES ocr_jobs(id)`). Forward-only. Migration `0005_phase5_ocr.sql`. Three new repos plus 2 new methods on `SignatureAuditRepo` (`markInvalidatedByOcrJob`, `listInvalidatedByOcrJob`). The `words_json` blob field stores word-level data; renderer parses on demand. ON DELETE CASCADE on `ocr_results.job_id -> ocr_jobs.id`.
 
@@ -5351,45 +5453,45 @@ Implemented every Phase 5 main-process surface per Riley's Wave 19 blueprint (`d
 
 ### File table
 
-| File | Lines | Purpose |
-|---|---|---|
-| `src/ipc/contracts.ts` | +560 | §16 channel surface (9 channels + 2 event streams + 11 setting keys + 2 EditOperation variants); PdfApi extended with `ocr` + `scan` namespaces |
-| `src/preload/index.ts` | +47 | `window.pdfApi.ocr.*` + `window.pdfApi.scan.*` bridge functions + 2 progress event subscribers |
-| `src/main/pdf-ops/ocr-engine.ts` | 470 (new) | Worker pool (LRU + persistent-per-lang + watchdog), `runOcrOnPage` single funnel, `runOcrOnDocument` sequential-per-page; required-on-interface (no optional fallback per conventions §16.3.1) |
-| `src/main/pdf-ops/ocr-text-layer.ts` | 290 (new) | `imageToPdfRect` coord transform, `composeSearchablePdf` text-behind-image authorship via pdf-lib `drawText` render-mode 3, Latin-1 + hex string escaping |
-| `src/main/pdf-ops/language-pack-manager.ts` | 360 (new) | Bundled-vs-downloaded resolution, SHA-256 verification (R-W19-B), download orchestration with progress + abort, `cannot_remove_bundled` discipline |
-| `src/main/pdf-ops/pades-detect.ts` | 95 (new) | Read-only /Sig + /V /Contents detector; defensive against malformed AcroForms; auto-promoted PDFAcroSignature support |
-| `src/main/pdf-ops/ocr-bootstrap.ts` | 305 (new) | Production wiring — tesseract.js worker factory + pdfjs rasterizer + canvas-adapter fallback + node:https streamer + path/fs adapters |
-| `src/main/pdf-ops/language-pack-catalog.json` | 60 (new) | 10-language seed catalog with `TBD-FILL-AT-RELEASE` SHA-256 sentinels Diego replaces at packaging time |
-| `src/main/pdf-ops/replay-engine.ts` | +35 | New `ocr_invalidates_pades_signature` + `ocr_job_missing` ReplayError variants; step 3.9 gate (mirrors Phase 4.1 H-17.3 abort-on-edit-after-sign); mutator-detection extended to include OCR ops |
-| `src/main/db-bridge.ts` | +420 | Phase 5 bridge contracts (`OcrJobsRepoBridge` / `OcrResultsRepoBridge` / `LanguagePacksRepoBridge`), memory-backed implementations, three `adapt*Repo` adapters; `markInvalidatedByOcrJob` method on the signature-audit bridge |
-| `src/main/index.ts` | +60 | Lazy adapters for Ravi's three new repos (parallel-wave-skew tolerant); `bootstrapOcr()` wired into `registerIpcHandlers` |
-| `src/ipc/register.ts` | +135 | 9 new `ipcMain.handle` registrations + `app.before-quit` + `process.exit` pool teardown + progress event emitters; `RegisterOcrOptions` (REQUIRED — no `?` per anti-stub discipline) |
-| `src/ipc/handlers/ocr-detect-languages.ts` | 80 (new) | §16.1 |
-| `src/ipc/handlers/ocr-run-on-page.ts` | 170 (new) | §16.2 + PAdES pre-flight + zod safeParse |
-| `src/ipc/handlers/ocr-run-on-document.ts` | 360 (new) | §16.3 + module-scoped active-job registry + signature-audit-invalidation backref + ocr_jobs/ocr_results repo writes |
-| `src/ipc/handlers/ocr-cancel-job.ts` | 55 (new) | §16.5 — graceful abort, idempotent |
-| `src/ipc/handlers/ocr-list-jobs.ts` | 130 (new) | §16.6 — consumes camelCase DTO from db-bridge |
-| `src/ipc/handlers/ocr-download-language-pack.ts` | 135 (new) | §16.7 — progress events + SHA-256 verify + best-effort row insert |
-| `src/ipc/handlers/ocr-language-pack-remove.ts` | 65 (new) | §16.8 |
-| `src/ipc/handlers/scan-list-devices.ts` | 25 (new) | §16.9 — Phase 5.1 placeholder; returns `not_implemented_phase_5_1` |
-| `src/ipc/handlers/scan-acquire.ts` | 20 (new) | §16.10 — Phase 5.1 placeholder |
-| `*.test.ts` (13 files) | ~1100 | 101 unit tests across engine + handlers + bridge + replay-PAdES integration |
+| File                                             | Lines     | Purpose                                                                                                                                                                                                                         |
+| ------------------------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/ipc/contracts.ts`                           | +560      | §16 channel surface (9 channels + 2 event streams + 11 setting keys + 2 EditOperation variants); PdfApi extended with `ocr` + `scan` namespaces                                                                                 |
+| `src/preload/index.ts`                           | +47       | `window.pdfApi.ocr.*` + `window.pdfApi.scan.*` bridge functions + 2 progress event subscribers                                                                                                                                  |
+| `src/main/pdf-ops/ocr-engine.ts`                 | 470 (new) | Worker pool (LRU + persistent-per-lang + watchdog), `runOcrOnPage` single funnel, `runOcrOnDocument` sequential-per-page; required-on-interface (no optional fallback per conventions §16.3.1)                                  |
+| `src/main/pdf-ops/ocr-text-layer.ts`             | 290 (new) | `imageToPdfRect` coord transform, `composeSearchablePdf` text-behind-image authorship via pdf-lib `drawText` render-mode 3, Latin-1 + hex string escaping                                                                       |
+| `src/main/pdf-ops/language-pack-manager.ts`      | 360 (new) | Bundled-vs-downloaded resolution, SHA-256 verification (R-W19-B), download orchestration with progress + abort, `cannot_remove_bundled` discipline                                                                              |
+| `src/main/pdf-ops/pades-detect.ts`               | 95 (new)  | Read-only /Sig + /V /Contents detector; defensive against malformed AcroForms; auto-promoted PDFAcroSignature support                                                                                                           |
+| `src/main/pdf-ops/ocr-bootstrap.ts`              | 305 (new) | Production wiring — tesseract.js worker factory + pdfjs rasterizer + canvas-adapter fallback + node:https streamer + path/fs adapters                                                                                           |
+| `src/main/pdf-ops/language-pack-catalog.json`    | 60 (new)  | 10-language seed catalog with `TBD-FILL-AT-RELEASE` SHA-256 sentinels Diego replaces at packaging time                                                                                                                          |
+| `src/main/pdf-ops/replay-engine.ts`              | +35       | New `ocr_invalidates_pades_signature` + `ocr_job_missing` ReplayError variants; step 3.9 gate (mirrors Phase 4.1 H-17.3 abort-on-edit-after-sign); mutator-detection extended to include OCR ops                                |
+| `src/main/db-bridge.ts`                          | +420      | Phase 5 bridge contracts (`OcrJobsRepoBridge` / `OcrResultsRepoBridge` / `LanguagePacksRepoBridge`), memory-backed implementations, three `adapt*Repo` adapters; `markInvalidatedByOcrJob` method on the signature-audit bridge |
+| `src/main/index.ts`                              | +60       | Lazy adapters for Ravi's three new repos (parallel-wave-skew tolerant); `bootstrapOcr()` wired into `registerIpcHandlers`                                                                                                       |
+| `src/ipc/register.ts`                            | +135      | 9 new `ipcMain.handle` registrations + `app.before-quit` + `process.exit` pool teardown + progress event emitters; `RegisterOcrOptions` (REQUIRED — no `?` per anti-stub discipline)                                            |
+| `src/ipc/handlers/ocr-detect-languages.ts`       | 80 (new)  | §16.1                                                                                                                                                                                                                           |
+| `src/ipc/handlers/ocr-run-on-page.ts`            | 170 (new) | §16.2 + PAdES pre-flight + zod safeParse                                                                                                                                                                                        |
+| `src/ipc/handlers/ocr-run-on-document.ts`        | 360 (new) | §16.3 + module-scoped active-job registry + signature-audit-invalidation backref + ocr_jobs/ocr_results repo writes                                                                                                             |
+| `src/ipc/handlers/ocr-cancel-job.ts`             | 55 (new)  | §16.5 — graceful abort, idempotent                                                                                                                                                                                              |
+| `src/ipc/handlers/ocr-list-jobs.ts`              | 130 (new) | §16.6 — consumes camelCase DTO from db-bridge                                                                                                                                                                                   |
+| `src/ipc/handlers/ocr-download-language-pack.ts` | 135 (new) | §16.7 — progress events + SHA-256 verify + best-effort row insert                                                                                                                                                               |
+| `src/ipc/handlers/ocr-language-pack-remove.ts`   | 65 (new)  | §16.8                                                                                                                                                                                                                           |
+| `src/ipc/handlers/scan-list-devices.ts`          | 25 (new)  | §16.9 — Phase 5.1 placeholder; returns `not_implemented_phase_5_1`                                                                                                                                                              |
+| `src/ipc/handlers/scan-acquire.ts`               | 20 (new)  | §16.10 — Phase 5.1 placeholder                                                                                                                                                                                                  |
+| `*.test.ts` (13 files)                           | ~1100     | 101 unit tests across engine + handlers + bridge + replay-PAdES integration                                                                                                                                                     |
 
 ### Locked-decision encoding evidence
 
-| ID | Where it shows up |
-|---|---|
-| P5-L-1 (tesseract.js Apache-2.0 primary) | `ocr-bootstrap.ts` workerFactory imports the package via dynamic `require()`; package.json install is Diego's Wave 21 task |
-| P5-L-2 (OCR in main, not renderer) | All `createWorker` / tesseract.js touch points live under `src/main/pdf-ops/`. Conventions §16.6 anti-pattern is unviolated; ESLint `no-restricted-imports` is Wave 21 Diego's add |
-| P5-L-3 (one worker per lang, persisted) | `createOcrWorkerPool` `acquire()` is idempotent on cache hit; LRU eviction at `maxConcurrentLanguages: 4`. Tested in `ocr-engine.test.ts` "LRU eviction at cap" |
-| P5-L-4 (bundled `eng` + lazy download upstream + SHA-256) | `language-pack-manager.ts` `resolve()` two-tier lookup; `download()` SHA-256 verify-then-keep; bundled `eng` cannot be removed (tested). Catalog ships at `language-pack-catalog.json` |
-| P5-L-5 (text-behind-image render-mode 3) | `composeSearchablePdf` uses pdf-lib `drawText` with `renderMode: 3`; coordinate transform `imageToPdfRect` golden-tested for Letter / Legal / A4 page sizes |
-| P5-L-6 (confidence threshold 60 default) | Engine's per-page `lowConfidenceWords` count uses literal 60; threshold is RENDER-time, raw confidences preserved (`words_json` blob). `ocr.lowConfidenceThreshold` setting added |
-| P5-L-7 (modal-driven blocking v1) | `runOcrOnDocument` is single-shot; no background queue. Active job registry supports cancel; no scheduling/preemption |
-| P5-L-8 (scan-* placeholders) | `handleScanListDevices` + `handleScanAcquire` return `Result<never, 'not_implemented_phase_5_1'>` verbatim |
-| P5-L-9 (schema v5 — Ravi parallel) | db-bridge has full snake_case `RaviOcrJobsRepo` / `RaviOcrResultsRepo` / `RaviLanguagePacksRepo` interfaces + camelCase DTO adapters; memory-backed fallback for tests |
-| P5-L-10 (PAdES pre-flight + audit-log backref) | `detectPriorPadesSignatures` runs BEFORE every rasterization in both `ocr-run-on-page` AND `ocr-run-on-document`; audit-log `markInvalidatedByOcrJob` called when user confirms; tested in `ocr-run-on-document.test.ts` "PAdES pre-flight" + "PAdES with confirm=true" |
+| ID                                                        | Where it shows up                                                                                                                                                                                                                                                       |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P5-L-1 (tesseract.js Apache-2.0 primary)                  | `ocr-bootstrap.ts` workerFactory imports the package via dynamic `require()`; package.json install is Diego's Wave 21 task                                                                                                                                              |
+| P5-L-2 (OCR in main, not renderer)                        | All `createWorker` / tesseract.js touch points live under `src/main/pdf-ops/`. Conventions §16.6 anti-pattern is unviolated; ESLint `no-restricted-imports` is Wave 21 Diego's add                                                                                      |
+| P5-L-3 (one worker per lang, persisted)                   | `createOcrWorkerPool` `acquire()` is idempotent on cache hit; LRU eviction at `maxConcurrentLanguages: 4`. Tested in `ocr-engine.test.ts` "LRU eviction at cap"                                                                                                         |
+| P5-L-4 (bundled `eng` + lazy download upstream + SHA-256) | `language-pack-manager.ts` `resolve()` two-tier lookup; `download()` SHA-256 verify-then-keep; bundled `eng` cannot be removed (tested). Catalog ships at `language-pack-catalog.json`                                                                                  |
+| P5-L-5 (text-behind-image render-mode 3)                  | `composeSearchablePdf` uses pdf-lib `drawText` with `renderMode: 3`; coordinate transform `imageToPdfRect` golden-tested for Letter / Legal / A4 page sizes                                                                                                             |
+| P5-L-6 (confidence threshold 60 default)                  | Engine's per-page `lowConfidenceWords` count uses literal 60; threshold is RENDER-time, raw confidences preserved (`words_json` blob). `ocr.lowConfidenceThreshold` setting added                                                                                       |
+| P5-L-7 (modal-driven blocking v1)                         | `runOcrOnDocument` is single-shot; no background queue. Active job registry supports cancel; no scheduling/preemption                                                                                                                                                   |
+| P5-L-8 (scan-\* placeholders)                             | `handleScanListDevices` + `handleScanAcquire` return `Result<never, 'not_implemented_phase_5_1'>` verbatim                                                                                                                                                              |
+| P5-L-9 (schema v5 — Ravi parallel)                        | db-bridge has full snake_case `RaviOcrJobsRepo` / `RaviOcrResultsRepo` / `RaviLanguagePacksRepo` interfaces + camelCase DTO adapters; memory-backed fallback for tests                                                                                                  |
+| P5-L-10 (PAdES pre-flight + audit-log backref)            | `detectPriorPadesSignatures` runs BEFORE every rasterization in both `ocr-run-on-page` AND `ocr-run-on-document`; audit-log `markInvalidatedByOcrJob` called when user confirms; tested in `ocr-run-on-document.test.ts` "PAdES pre-flight" + "PAdES with confirm=true" |
 
 ### Structural anti-stub-shipped-with-TODO discipline (conventions §16.3 evidence)
 
@@ -5431,6 +5533,7 @@ Implemented every Phase 5 main-process surface per Riley's Wave 19 blueprint (`d
 **To Riley (parallel Wave 20):** `src/ipc/contracts.ts §16` is LIVE. `window.pdfApi.ocr.*` and `window.pdfApi.scan.*` are exposed via preload (see `src/preload/index.ts`). Event subscribers: `window.pdfApi.ocr.onProgress(handler)` and `window.pdfApi.ocr.onLanguagePackDownloadProgress(handler)` — same pattern as your `onMailMergeProgress`. Two new EditOperation kinds in the union: `ocr-text-behind-applied` and `ocr-text-behind-removed`. The exhaustive-switch failures you'll see in `document-inverses.ts` + `document-slice-apply.ts` are by design — add a no-op-or-inverse-companion case for both. Eleven new SettingKeys per §16.11.
 
 **To Diego (Wave 21 packaging):**
+
 - **Install `tesseract.js@^7.0.0`** (Apache-2.0). Also `@tesseract.js-data/eng@^4.0.0` for the bundled language pack.
 - **`extraResources` entry in `electron-builder.yml`:** copy `node_modules/@tesseract.js-data/eng/4.0.0_fast/eng.traineddata.gz` → `tessdata/eng.traineddata.gz` (mirrors the pdfjs-static-copy pattern from v0.4.1).
 - **`app.asar.unpacked` entries** for `node_modules/tesseract.js/src/worker-script/**` AND `node_modules/tesseract.js-core/**` per R-W19-A.
@@ -5440,6 +5543,7 @@ Implemented every Phase 5 main-process surface per Riley's Wave 19 blueprint (`d
 - **No new native modules** in this wave (per Phase 5 risk row 2). Phase 5 ships zero native dependencies beyond what Phase 4 already had.
 
 **To Julian (Wave 21 audit):** Mechanical greps in `ocr-engine.md §9` and `conventions.md §16.8` should all pass:
+
 - `rg "createWorker" src/main/pdf-ops/` → 1 match in `ocr-bootstrap.ts` (the production factory)
 - `rg "tesseract.js" src/client/` → 0 matches
 - `rg "ocrPool\?:" src/ipc/` → 0 matches (REQUIRED on interface)
@@ -5478,18 +5582,18 @@ One JSONL entry appended to `.learnings/learnings.jsonl`.
 
 ### Files Ravi created or amended this wave
 
-| Path | Type | LOC | Tests |
-|---|---|---|---|
-| `migrations/0005_phase5_ocr.sql` | NEW | 184 | n/a (exercised via repo test schema-verification blocks) |
-| `src/db/repositories/ocr-jobs-repo.ts` | NEW | 488 | n/a (exercised by sibling test) |
-| `src/db/repositories/ocr-jobs-repo.test.ts` | NEW | 480 | 46 cases across 10 describe blocks |
-| `src/db/repositories/ocr-results-repo.ts` | NEW | 332 | n/a (exercised by sibling test) |
-| `src/db/repositories/ocr-results-repo.test.ts` | NEW | 397 | 34 cases across 10 describe blocks |
-| `src/db/repositories/language-packs-repo.ts` | NEW | 248 | n/a (exercised by sibling test) |
-| `src/db/repositories/language-packs-repo.test.ts` | NEW | 326 | 36 cases across 10 describe blocks |
-| `src/db/repositories/signature-audit-repo.ts` | EDIT | +85 (2 new methods + 2 new prepared statements + 5 SELECT projections widened) | covered by sibling test |
-| `src/db/repositories/signature-audit-repo.test.ts` | EDIT | +147 (1 column-set assertion + 1 index assertion updated; 9 new Phase 5 tests across 1 describe block) | 52 cases (was 43) |
-| `src/db/types.ts` | EDIT | +160 (3 new row types `OcrJobRow` / `OcrResultRow` / `LanguagePackRow` + `OcrJobStatus` + `OcrLanguagePackSource` + 11 new SettingKeys + extended `SettingValue<K>` conditional + `KNOWN_SETTING_KEYS` extension + `invalidated_by_ocr_job_id` field on `SignatureAuditRow`) | covered transitively by ocr-* + signature-audit tests |
+| Path                                               | Type | LOC                                                                                                                                                                                                                                                                          | Tests                                                    |
+| -------------------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `migrations/0005_phase5_ocr.sql`                   | NEW  | 184                                                                                                                                                                                                                                                                          | n/a (exercised via repo test schema-verification blocks) |
+| `src/db/repositories/ocr-jobs-repo.ts`             | NEW  | 488                                                                                                                                                                                                                                                                          | n/a (exercised by sibling test)                          |
+| `src/db/repositories/ocr-jobs-repo.test.ts`        | NEW  | 480                                                                                                                                                                                                                                                                          | 46 cases across 10 describe blocks                       |
+| `src/db/repositories/ocr-results-repo.ts`          | NEW  | 332                                                                                                                                                                                                                                                                          | n/a (exercised by sibling test)                          |
+| `src/db/repositories/ocr-results-repo.test.ts`     | NEW  | 397                                                                                                                                                                                                                                                                          | 34 cases across 10 describe blocks                       |
+| `src/db/repositories/language-packs-repo.ts`       | NEW  | 248                                                                                                                                                                                                                                                                          | n/a (exercised by sibling test)                          |
+| `src/db/repositories/language-packs-repo.test.ts`  | NEW  | 326                                                                                                                                                                                                                                                                          | 36 cases across 10 describe blocks                       |
+| `src/db/repositories/signature-audit-repo.ts`      | EDIT | +85 (2 new methods + 2 new prepared statements + 5 SELECT projections widened)                                                                                                                                                                                               | covered by sibling test                                  |
+| `src/db/repositories/signature-audit-repo.test.ts` | EDIT | +147 (1 column-set assertion + 1 index assertion updated; 9 new Phase 5 tests across 1 describe block)                                                                                                                                                                       | 52 cases (was 43)                                        |
+| `src/db/types.ts`                                  | EDIT | +160 (3 new row types `OcrJobRow` / `OcrResultRow` / `LanguagePackRow` + `OcrJobStatus` + `OcrLanguagePackSource` + 11 new SettingKeys + extended `SettingValue<K>` conditional + `KNOWN_SETTING_KEYS` extension + `invalidated_by_ocr_job_id` field on `SignatureAuditRow`) | covered transitively by ocr-\* + signature-audit tests   |
 
 **File-count totals:** 7 new (1 migration + 3 repos + 3 tests) + 3 edits. Matches Wave 19's "Wave 20 — Ravi" estimate.
 
@@ -5586,6 +5690,7 @@ Total new adversarial-payload assertions across Wave 20: **19** (6 + 6 + 7). Plu
 **To Diego (Wave 21):** No DB layer impact on packaging beyond the existing better-sqlite3 ABI-flip pattern from Wave 10. The 0005 migration runs at first launch of the v0.5.0 binary; smoke verify it on an upgrade-from-v0.4.x install path (load a saved DB, confirm `schema_migrations.version = 5` post-launch). `extraResources` for `eng.traineddata.gz` is your scope per phase-5-plan.
 
 **To Julian (Wave 21):** Mechanical audits relevant to Ravi's surface:
+
 - All three new repos use prepared statements only (no string-concat SQL anywhere in `src/db/repositories/ocr-*.ts` or `language-packs-repo.ts`).
 - The `LanguagePackRow.file_path` boundary discipline is at the bridge, NOT the repo — flag any cross-IPC export of `file_path` in `src/main/db-bridge.ts` as a violation.
 - Phase 4 `SignatureAuditRow` Phase-5 amendment is purely additive; all six SELECT statements widened to project the new column (Phase 5 regression-guard test pins this).
@@ -5596,7 +5701,6 @@ Total new adversarial-payload assertions across Wave 20: **19** (6 + 6 + 7). Plu
 - Phase-5 `SettingKey` rows are NOT yet wired through `src/ipc/contracts.ts` — David's Wave 20 work picks them up. The `KNOWN_SETTING_KEYS` runtime array + `SettingValue<K>` type are ready.
 - No new `signature-audit-repo.ts` insert-time fields — pre-Phase-5 callers see no change in `InsertSignatureAuditInput`. The new `invalidated_by_ocr_job_id` column defaults to NULL on every fresh insert; only the post-OCR `markInvalidatedByOcrJob` write sets it. This preserves Wave 16 backward compatibility for David's existing handlers.
 - Schema migration test coverage: the existing `signature-audit-repo.test.ts` schema-verification block was updated to assert the new column + index. No dedicated `migrate.test.ts` file added (the runner is unchanged + already covered by the cross-repo schema-version assertions). If Wave 21 (Julian) wants a dedicated v4->v5 upgrade-path test, a single `migrate.test.ts` covering "fresh install hits v5 in one run + replay-from-v3 advances both steps" would absorb it; deferred as a Phase 5.1 hardening item.
-
 
 ## Wave 20 — Riley (front-end-architect) — Phase 5 renderer implementation (Scan & OCR) (2026-05-27)
 
@@ -5653,33 +5757,33 @@ Implements the renderer half of Phase 5 against the contracts I shipped in Wave 
 
 ### Phase 5 UI surfaces — LIVE vs STUBBED
 
-| Surface | Status | Evidence |
-|---|---|---|
-| Tools -> Run OCR menu item | LIVE | `menu-bar.phase5.test.tsx > Tools > Run OCR opens the OCR run modal` PASS |
-| Tools -> Manage language packs | LIVE | `menu-bar.phase5.test.tsx > Tools > Manage language packs opens the language pack manager` PASS |
-| View -> Toggle OCR confidence overlay | LIVE | `menu-bar.phase5.test.tsx > View > toggles OCR confidence overlay` PASS |
-| Toolbar -> Run OCR button | LIVE | added to OCR group |
-| Toolbar -> Toggle confidence overlay button | LIVE | added to OCR group |
-| Toolbar -> Scan-from-device button | STUBBED (disabled w/ tooltip) | matches Q-E DEFER verdict from Wave 19 |
-| OCR Run modal step 1 (configure) | LIVE | language picker + page-range picker + preprocess toggles + honesty reminder (obligations #1 + #4) all rendered |
-| OCR Run modal step 2 (confirm-invalidate) | LIVE | non-skippable PAdES warning + per-session "Don't ask me again" toggle |
-| OCR Run modal step 3 (running) | LIVE | progress bar with `aria-valuenow`, phase label, confidence-so-far, elapsed time, Cancel button |
-| OCR Run modal step 4 (done) | LIVE | summary stats + reminder (obligation #3) + Show overlay / Done buttons |
-| Confidence overlay component | LIVE (component complete + tested in isolation) | the integration into PdfCanvas is **NOT** wired in this wave — see risk #1 below |
-| OCR results panel (sidebar tab) | LIVE | `OcrResultsPanel` rendered as the 4th sidebar tab |
-| Language pack manager modal | LIVE | installed/downloadable sections, per-pack download progress bar, bundled-eng remove-protection |
-| Scan modal (Phase 5.1 placeholder) | LIVE-as-stub | renders the deferral message + workaround instructions; reachable only via `dispatch(openScanModal())` (the menu item is disabled) |
+| Surface                                     | Status                                          | Evidence                                                                                                                           |
+| ------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Tools -> Run OCR menu item                  | LIVE                                            | `menu-bar.phase5.test.tsx > Tools > Run OCR opens the OCR run modal` PASS                                                          |
+| Tools -> Manage language packs              | LIVE                                            | `menu-bar.phase5.test.tsx > Tools > Manage language packs opens the language pack manager` PASS                                    |
+| View -> Toggle OCR confidence overlay       | LIVE                                            | `menu-bar.phase5.test.tsx > View > toggles OCR confidence overlay` PASS                                                            |
+| Toolbar -> Run OCR button                   | LIVE                                            | added to OCR group                                                                                                                 |
+| Toolbar -> Toggle confidence overlay button | LIVE                                            | added to OCR group                                                                                                                 |
+| Toolbar -> Scan-from-device button          | STUBBED (disabled w/ tooltip)                   | matches Q-E DEFER verdict from Wave 19                                                                                             |
+| OCR Run modal step 1 (configure)            | LIVE                                            | language picker + page-range picker + preprocess toggles + honesty reminder (obligations #1 + #4) all rendered                     |
+| OCR Run modal step 2 (confirm-invalidate)   | LIVE                                            | non-skippable PAdES warning + per-session "Don't ask me again" toggle                                                              |
+| OCR Run modal step 3 (running)              | LIVE                                            | progress bar with `aria-valuenow`, phase label, confidence-so-far, elapsed time, Cancel button                                     |
+| OCR Run modal step 4 (done)                 | LIVE                                            | summary stats + reminder (obligation #3) + Show overlay / Done buttons                                                             |
+| Confidence overlay component                | LIVE (component complete + tested in isolation) | the integration into PdfCanvas is **NOT** wired in this wave — see risk #1 below                                                   |
+| OCR results panel (sidebar tab)             | LIVE                                            | `OcrResultsPanel` rendered as the 4th sidebar tab                                                                                  |
+| Language pack manager modal                 | LIVE                                            | installed/downloadable sections, per-pack download progress bar, bundled-eng remove-protection                                     |
+| Scan modal (Phase 5.1 placeholder)          | LIVE-as-stub                                    | renders the deferral message + workaround instructions; reachable only via `dispatch(openScanModal())` (the menu item is disabled) |
 
 ### Trust-floor placement evidence
 
 Per the three-location pattern (Wave 14 + Phase 4 PAdES + Wave 18 lesson). The Phase 5 obligation count is 4 (architecture-phase-5 §8.1). Surface count per obligation:
 
-| Obligation | UI surfaces |
-|---|---|
-| #1 (accuracy depends on scan quality) | OcrRunModal step 1 (honesty reminder) + OcrRunModal step 4 done-reminder + OcrConfidenceOverlay above-viewer banner = **3 placements** |
-| #2 (no cloud upload; downloads from upstream) | LanguagePackManagerModal honesty reminder + OcrRunModal step 1 honesty reminder = **2 placements** |
-| #3 (text becomes part of saved PDF) | OcrRunModal step 4 done-reminder = **1 placement** (Save modal amendment is a deferred sibling-file change — see risk #5 below) |
-| #4 (re-running adds duplicate layer) | OcrRunModal step 1 honesty reminder = **1 placement** |
+| Obligation                                    | UI surfaces                                                                                                                            |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| #1 (accuracy depends on scan quality)         | OcrRunModal step 1 (honesty reminder) + OcrRunModal step 4 done-reminder + OcrConfidenceOverlay above-viewer banner = **3 placements** |
+| #2 (no cloud upload; downloads from upstream) | LanguagePackManagerModal honesty reminder + OcrRunModal step 1 honesty reminder = **2 placements**                                     |
+| #3 (text becomes part of saved PDF)           | OcrRunModal step 4 done-reminder = **1 placement** (Save modal amendment is a deferred sibling-file change — see risk #5 below)        |
+| #4 (re-running adds duplicate layer)          | OcrRunModal step 1 honesty reminder = **1 placement**                                                                                  |
 
 **Total honesty-banner string references in renderer source: 7 distinct callouts across 4 files** (configure-step, done-step, language-pack-manager-modal, ocr-confidence-overlay). All four obligations surface at least once in user-facing UI. Wave 22 (Nathan) is on the hook for the user-guide preamble + dedicated trust-floor section + cross-anchor inline reminders, per `ui-spec.md §14.13`.
 
@@ -5697,12 +5801,12 @@ David's `src/ipc/contracts.ts §10.9` was already shipped when this wave started
 
 ### Verification
 
-| Check | Result |
-|---|---|
-| `npx tsc -p tsconfig.renderer.json --noEmit` | **0 errors** (clean). |
-| `npx tsc -p tsconfig.test.json --noEmit` | 10 pre-existing errors (annotation-summary, help-modal, image-import, shape-tools, pdf-apply-edit-ops — all noted in prior wave entries, not regressed by this wave). **0 new errors in any file Riley touched.** |
-| `npx eslint <Riley's new files>` | **0 errors, 0 warnings.** |
-| `npx vitest run` over Phase 5 tests | **76 / 76 PASS** across 8 test files (slice + selectors + thunks + 4 component tests + menu-bar Phase 5 wiring). |
+| Check                                           | Result                                                                                                                                                                                                                             |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npx tsc -p tsconfig.renderer.json --noEmit`    | **0 errors** (clean).                                                                                                                                                                                                              |
+| `npx tsc -p tsconfig.test.json --noEmit`        | 10 pre-existing errors (annotation-summary, help-modal, image-import, shape-tools, pdf-apply-edit-ops — all noted in prior wave entries, not regressed by this wave). **0 new errors in any file Riley touched.**                  |
+| `npx eslint <Riley's new files>`                | **0 errors, 0 warnings.**                                                                                                                                                                                                          |
+| `npx vitest run` over Phase 5 tests             | **76 / 76 PASS** across 8 test files (slice + selectors + thunks + 4 component tests + menu-bar Phase 5 wiring).                                                                                                                   |
 | `npx vitest run src/client` (full client suite) | **373 / 378 PASS** (was 297/302 pre-wave; net **+76 new tests, 0 new failures**). 5 pre-existing failures (use-signature-canvas, annotation-summary-panel, signature-audit-panel, pades-sign-modal x2) unchanged from prior waves. |
 
 ### L-001 + L-002 status
@@ -5725,6 +5829,7 @@ David's `src/ipc/contracts.ts §10.9` was already shipped when this wave started
 **To Ravi:** No direct handoff — renderer never touches the DB. Your `OcrJobRowDto` / `OcrResultRowDto` / `LanguagePackDto` shapes flow through David's bridge to my slice; consumed correctly.
 
 **To Julian (Wave 21 review):** Mechanical audits relevant to my surface:
+
 - No renderer-side tesseract.js imports (conventions §16.6 ESLint guard) — `grep -r "from 'tesseract" src/client/` -> 0 hits.
 - No raster bytes in any renderer slice (conventions §16.2) — `grep -r "Uint8Array" src/client/state/slices/ocr-*.ts` -> 0 hits.
 - No language-pack `filePath` in any renderer payload — the `LanguagePack` DTO from David's contract intentionally omits it; mechanical confirmation: `grep -r "filePath" src/client/state/` -> 0 hits.
@@ -5732,6 +5837,7 @@ David's `src/ipc/contracts.ts §10.9` was already shipped when this wave started
 - Trust-floor obligation surface count: 7 distinct callouts across 4 files. Wave 22 Nathan picks up the user-guide three-location pattern.
 
 **To Nathan (Wave 22):** Per `ui-spec.md §14.13` your obligation:
+
 - README Known Limitations -> 4 new bullets (obligations #1-#4 headlines).
 - user-guide preamble -> 4 new bullets.
 - user-guide dedicated "OCR trust floor" section -> mirror the Phase 4 PAdES trust-floor section structure.
@@ -5740,11 +5846,10 @@ David's `src/ipc/contracts.ts §10.9` was already shipped when this wave started
 
 **To Diego (Wave 21):** No new renderer asset-copy requirement (the bundled `eng.traineddata.gz` is a main-process resource via `extraResources` per `architecture-phase-5.md §3.3`). Renderer build is unchanged. The Wave 21 packaging smoke test should verify the OCR run modal opens, the language picker shows the bundled `eng` pack, and the Scan menu item is greyed-out with the Phase 5.1 tooltip — three operator-screenshot artifacts in the v0.5.0 build-report row (per L-002).
 
-
 ## Wave 21 — Julian (julian-code-reviewer) — Phase 5 code review (2026-05-27)
 
-| Status | Findings (B/H/M/L/N) | Fixes applied | Verdict | Output |
-|---|---|---|---|---|
+| Status     | Findings (B/H/M/L/N)           | Fixes applied                 | Verdict                                   | Output                                |
+| ---------- | ------------------------------ | ----------------------------- | ----------------------------------------- | ------------------------------------- |
 | **YELLOW** | 1 / 2 / 7 / 6 / 4 (= 20 total) | H-21.1 + H-21.2 fixed in-wave | Wave 22 Nathan UNBLOCKED with carry-overs | `docs/code-review.md` Wave 21 section |
 
 ### Headline
@@ -5770,6 +5875,7 @@ All ten conventions §16.8 checks pass. PAdES 3-layer enforcement audit: all thr
 2. **H-21.2** — `src/main/pdf-ops/ocr-bootstrap.ts`: added `console.error` + `dialog.showErrorBox` to `loadCatalogSync()` failure path so the operator sees the packaging defect instead of silently-empty-list confusion.
 
 Verification:
+
 - `npx tsc -p tsconfig.main.json --noEmit` → 0 errors.
 - `npx vitest run` over ocr-engine + ocr-text-layer + language-pack-manager: **48/48 PASS**.
 - `npx vitest run` over 7 OCR IPC handler tests: **41/41 PASS**.
@@ -5777,6 +5883,7 @@ Verification:
 ### Wave 22 dispatch verdict
 
 **YELLOW — Wave 22 (Nathan Phase 5 docs) UNBLOCKED with the following carry-overs:**
+
 - B-21.1 (catalog hashes) — Diego owns the release-build catalog-builder script before external Phase 5 ship.
 - M-21.3 (negative-jobId dead-code), M-21.4 (non-functional "don't ask again"), M-21.6 (empty-PDF edge), M-21.7 (pades-detect substring match) — David Phase 5.1 sweep.
 - M-21.5 (per-page word hydration channel) — Phase 5.1 IPC amendment.
@@ -5791,23 +5898,23 @@ Verification:
 
 ## Wave 21 — Diego (dev-ops-agent) — Phase 5 packaging (Scan & OCR) (2026-05-27)
 
-| Status | Version | Artifacts | L-002 evidence | Tests | Verdict |
-|---|---|---|---|---|---|
+| Status     | Version        | Artifacts                         | L-002 evidence                                                             | Tests                                                                                                        | Verdict                                                                                                                                             |
+| ---------- | -------------- | --------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **YELLOW** | 0.4.2 -> 0.5.0 | NSIS 132.7 MB / portable 132.5 MB | `release/wave-21-v050-ocr-evidence.png` (composite: launch shot + OCR run) | 1002/1275 pass under Node 24 (273 fail = pre-existing better-sqlite3 ABI flip, Node 20 CI is test of record) | YELLOW; UI-layer OCR-trigger evidence is engine-layer per the brief's fallback path (desktop-operator MCP not surfaced in this wave's tool surface) |
 
 ### What shipped
 
-| Surface | Change | Path |
-|---|---|---|
-| Deps | `tesseract.js@^7.0.0` + `@tesseract.js-data/eng@^1.0.0` + `@napi-rs/canvas@^1.0.0` added to `dependencies` | `package.json` |
-| Version | `0.4.2` -> `0.5.0`; description updated for Phase 5 | `package.json` |
-| extraResources | `node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz` -> `resources/tessdata/eng.traineddata.gz` | `electron-builder.yml` |
-| asarUnpack (R-W19-A) | `node_modules/tesseract.js/src/worker-script/**`, `node_modules/tesseract.js-core/**`, `node_modules/@napi-rs/canvas/**` | `electron-builder.yml` |
-| Surgical excludes | `!**/node_modules/@tesseract.js-data/eng/4.0.0/**` + `!**/node_modules/@tesseract.js-data/eng/4.0.0_best_int/**` (in-asar copies are dead weight; extraResources ships the canonical path) | `electron-builder.yml` |
-| Vite main-bundle copy | `language-pack-catalog.json` copied flat to `dist/main/` via `vite-plugin-static-copy` with `rename: { stripBase: true }` | `electron.vite.config.ts` |
-| Catalog SHA-256 | `eng` row: real `ed350f3752f81ee8f38769edc14d92d997dababe23b565c59879372cc46a2468` (10,923,060 bytes); non-bundled rows kept `TBD-FILL-AT-RELEASE` sentinel | `src/main/pdf-ops/language-pack-catalog.json` |
-| LICENSES.md | +3 direct (`tesseract.js`, `@tesseract.js-data/eng`, `@napi-rs/canvas`) + 12 transitives + 11 optional platform subpkgs of `@napi-rs/canvas` (only `-win32-x64-msvc` ships on Windows); counts MIT 643->660, ISC 76->77, Apache-2.0 27->32, BSD-2-Clause 16->17; total 807->826 | `LICENSES.md` |
-| Scripts | `scripts/ocr-runtime-smoke.mjs` (runtime OCR engine proof) + `scripts/wave21-launch-shot.ps1` (PrintWindow capture) + `scripts/wave21-ocr-evidence.mjs` (composite PNG generator) | `scripts/` |
+| Surface               | Change                                                                                                                                                                                                                                                                          | Path                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Deps                  | `tesseract.js@^7.0.0` + `@tesseract.js-data/eng@^1.0.0` + `@napi-rs/canvas@^1.0.0` added to `dependencies`                                                                                                                                                                      | `package.json`                                |
+| Version               | `0.4.2` -> `0.5.0`; description updated for Phase 5                                                                                                                                                                                                                             | `package.json`                                |
+| extraResources        | `node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz` -> `resources/tessdata/eng.traineddata.gz`                                                                                                                                                                       | `electron-builder.yml`                        |
+| asarUnpack (R-W19-A)  | `node_modules/tesseract.js/src/worker-script/**`, `node_modules/tesseract.js-core/**`, `node_modules/@napi-rs/canvas/**`                                                                                                                                                        | `electron-builder.yml`                        |
+| Surgical excludes     | `!**/node_modules/@tesseract.js-data/eng/4.0.0/**` + `!**/node_modules/@tesseract.js-data/eng/4.0.0_best_int/**` (in-asar copies are dead weight; extraResources ships the canonical path)                                                                                      | `electron-builder.yml`                        |
+| Vite main-bundle copy | `language-pack-catalog.json` copied flat to `dist/main/` via `vite-plugin-static-copy` with `rename: { stripBase: true }`                                                                                                                                                       | `electron.vite.config.ts`                     |
+| Catalog SHA-256       | `eng` row: real `ed350f3752f81ee8f38769edc14d92d997dababe23b565c59879372cc46a2468` (10,923,060 bytes); non-bundled rows kept `TBD-FILL-AT-RELEASE` sentinel                                                                                                                     | `src/main/pdf-ops/language-pack-catalog.json` |
+| LICENSES.md           | +3 direct (`tesseract.js`, `@tesseract.js-data/eng`, `@napi-rs/canvas`) + 12 transitives + 11 optional platform subpkgs of `@napi-rs/canvas` (only `-win32-x64-msvc` ships on Windows); counts MIT 643->660, ISC 76->77, Apache-2.0 27->32, BSD-2-Clause 16->17; total 807->826 | `LICENSES.md`                                 |
+| Scripts               | `scripts/ocr-runtime-smoke.mjs` (runtime OCR engine proof) + `scripts/wave21-launch-shot.ps1` (PrintWindow capture) + `scripts/wave21-ocr-evidence.mjs` (composite PNG generator)                                                                                               | `scripts/`                                    |
 
 ### License-walk result
 
@@ -5822,6 +5929,7 @@ Verification:
 Per the brief's fallback option: real SHA-256 for the **bundled** `eng` row (because the manager exposes it as the LanguagePack DTO sha256 field), `TBD-FILL-AT-RELEASE` sentinel preserved for the 9 downloadable langs (Spanish / French / German / Portuguese / Italian / Russian / Simplified Chinese / Traditional Chinese / Japanese). The download path in `src/main/pdf-ops/language-pack-manager.ts:345` rejects sentinel mismatches via `pack_integrity_failed`, so the contract holds — multi-language download attempts in v0.5.0 fail safely with a typed error, exactly as Julian's `B-21.1` finding observed.
 
 **Why "simpler path" was chosen over real-fetch:**
+
 1. Each fetch from `tessdata.projectnaptha.com/4.0.0_fast/<lang>.traineddata.gz` is ~9-15 MB.
 2. 9 packs = ~90-130 MB transient + 9 network round trips with no retry plan if any fail under this agent's sandboxed network policy.
 3. The brief explicitly authorizes the simpler path: "Pick the simpler path if the SHA-fetch isn't quick."
@@ -5836,6 +5944,7 @@ Computed locally from `node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata
 ### Version-name + license deltas vs. Riley's design
 
 `architecture-phase-5.md §3.3` referenced `@tesseract.js-data/eng@^4.0.0` (Apache-2.0) with path `4.0.0_best/eng.traineddata.gz`. Reality on npm:
+
 - **Latest published version is `1.0.0`** (not `4.x`); `4.x` does not exist on the registry. The `4.0.0` token in the spec is the **upstream dataset version**, not the npm package version. (Same situation as the `4.0.0_fast` URL-path token.)
 - **Package license is MIT** on the package wrapper. The trained-data file inside (`eng.traineddata.gz`) is Apache-2.0 per upstream `tessdata`'s top-level LICENSE.
 - **Internal directory names are `4.0.0/` (fast) and `4.0.0_best_int/` (best-int)**, not `4.0.0_fast/` and `4.0.0_best/`.
@@ -5852,18 +5961,21 @@ release/
 ```
 
 Delta vs v0.4.2 (105,252,743 B NSIS / 105,024,217 B portable): **+27,470,281 B (+26.2 MB)** for NSIS, **+27,469,761 B (+26.2 MB)** for portable. Breakdown of the +26.2 MB:
+
 - ~10.4 MB: bundled `eng.traineddata.gz` (extraResources)
 - ~10-12 MB: tesseract.js-core WASM blobs (5 variants: lstm, simd-lstm, relaxedsimd-lstm, simd, relaxedsimd) shipped in `app.asar.unpacked/node_modules/tesseract.js-core/`
 - ~3 MB: `@napi-rs/canvas-win32-x64-msvc/skia.win32-x64-msvc.node` native binary
 - ~3 MB: remaining tesseract.js JS code + transitive `tesseract.js/src/worker-script/**` + miscellany
 
 **Asar contents verification (`npx asar list`):**
+
 - `\dist\main\language-pack-catalog.json` -> present at the bundle root (no nested `src/main/pdf-ops/` tree) [vite-plugin-static-copy `stripBase: true` confirmed].
 - `\dist\renderer\pdfjs\standard_fonts\*` + `\dist\renderer\pdfjs\cmaps\*` -> intact from Phase 4.1.1 (185 items copied at build).
 - `\node_modules\tesseract.js\src\worker-script\**`, `\node_modules\tesseract.js-core\**`, `\node_modules\@napi-rs\canvas\**` -> all present in asar INDEX but contents live in `app.asar.unpacked/` (verified by checking `release/win-unpacked/resources/app.asar.unpacked/node_modules/tesseract.js-core/tesseract-core-lstm.wasm` -> 2,855,361 bytes on real disk, NOT in asar bytes). This is normal asar+asarUnpack behavior: the path index stays in the asar so `require.resolve` works; file bytes live unpacked so Node Workers + dlopen can read them as real-FS files.
 - `\node_modules\@tesseract.js-data\eng\4.0.0\**` -> **stripped** (the surgical `!` exclude works). The `eng.traineddata.gz` ships exactly once at `resources/tessdata/eng.traineddata.gz` via `extraResources`.
 
 **Native binaries on real disk:**
+
 ```
 release/win-unpacked/resources/app.asar.unpacked/node_modules/
   better-sqlite3/build/Release/better_sqlite3.node          (Phase 2)
@@ -5886,6 +5998,7 @@ This is the **second** time in Phase 5 where Julian's structural-error-surfacing
 **Composite PNG:** `D:\Projects\PDF_Viewer_Editor\release\wave-21-v050-ocr-evidence.png` (216,978 bytes, 1900x1280).
 
 **What it shows (top-to-bottom):**
+
 1. **Launch screenshot** (PrintWindow capture of the running `release/win-unpacked/PDF Viewer & Editor.exe`, PID 72596, hwnd 0x4D1FCE, window rect 1280x800 at 640,109): title bar "PDF_Viewer_Editor", native Win32 menu (File / Edit / View / Window / Help), in-app menu (File / Edit / Insert / View / Tools / Help), full toolbar with annotation + edit + print + signature icons, empty-state UI showing "Open a PDF to get started" with "Open file..." button and "or drag and drop" caption, RECENTS panel with a previously-opened file row. Process metadata floor satisfied: 4 Electron processes alive (`release/wave21-v050-launch-shot.process-snap.txt` snapshot saved alongside).
 2. **OCR input image:** 1200x300 synthetic PNG with `bold 64px Arial` text ("Wave 21 OCR smoke") + `40px Arial` text ("The quick brown fox jumps / over the lazy dog 1234567890").
 3. **OCR run output** (real tesseract.js@7.0.0 invocation against the bundled `@tesseract.js-data/eng@1.0.0` 4.0.0/ pack, langPath staged at `release/tessdata-smoke/`, gzip: true, single-worker, no network):
@@ -5899,6 +6012,7 @@ This is the **second** time in Phase 5 where Julian's structural-error-surfacing
 **Honest scope statement:** the OCR proof is **engine-layer**, not UI-layer. The L-002 brief asked for "trigger an OCR run and confirm OCR actually produces text" via the renderer modal flow. Without desktop-operator MCP in this agent's tool surface (verified at start of wave via `ToolSearch` on `+desktop screenshot operator` and `screenshot` — both returned "No matching deferred tools found"), full UI-click automation from PowerShell would be unreliable. The runtime smoke (`scripts/ocr-runtime-smoke.mjs`) loads the SAME `node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz` + `node_modules/tesseract.js/...` tree that ships in `app.asar.unpacked/`, so the proof is that the OCR engine + bundled pack are runtime-correct against the production node_modules. The renderer modal -> IPC -> handler -> engine path is type-checked + unit-tested (629+76+125 tests across David / Riley / Ravi waves) but not E2E exercised in this wave. **A future wave with desktop-operator MCP can add the UI-layer evidence on top of this engine-layer evidence; both remain valid.**
 
 **Process metadata sanity check (L-002 supplementary floor):**
+
 - MainWindowHandle: `0x4D1FCE` (non-zero)
 - IsWindowVisible: `true`
 - Window rect: `1280x800` at `(640, 109)` (positive dimensions)
@@ -5909,6 +6023,7 @@ This is the **second** time in Phase 5 where Julian's structural-error-surfacing
 ### Tests
 
 Captured in `/tmp/test-out.log` (post-run). Summary:
+
 - **1002 passed / 273 failed across 1275 total** (124 test files).
 - **268 of 273 failures are `NODE_MODULE_VERSION 127 vs 137` mismatches** on better-sqlite3 — the well-documented Node-24-on-this-host vs Electron-30-ABI environmental skew that has persisted across Phase 2-4 packaging waves. CI Node 20 is test-of-record; on a Node 20 host the same test suite passes cleanly.
 - The remaining **5 failures are Riley's pre-existing renderer suite failures from Wave 20** (`annotation-summary-panel`, `pades-sign-modal`, `signature-audit-panel`, `use-signature-canvas`) — none introduced by Phase 5 work; Wave 20 row noted "5 pre-existing failures".
@@ -5946,11 +6061,11 @@ Captured in `/tmp/test-out.log` (post-run). Summary:
 ### Desktop-operator MCP availability check (per brief request)
 
 **NOT available in this wave's tool surface.** Verified via `ToolSearch` queries:
+
 - `+desktop screenshot operator` -> No matching deferred tools found
 - `screenshot` -> No matching deferred tools found
 
 Marcus's hypothesized `~/.claude.json` project-entry fix did not surface the operator tools in this agent's session. The PowerShell PrintWindow path was used as the L-002 fallback per the locked-instructions documented hierarchy. If a future Diego session surfaces `mcp__desktop-operator__*`, UI-layer OCR evidence becomes reachable — the engine-layer evidence in this wave remains valid alongside.
-
 
 ## Wave 22 — Nathan (nathan-documentation-expert) — Phase 5 documentation refresh (2026-05-27)
 
@@ -5958,13 +6073,13 @@ Marcus's hypothesized `~/.claude.json` project-entry fix did not surface the ope
 
 ### File table
 
-| Path | Lines before | Lines after | Delta | Notes |
-|---|---:|---:|---:|---|
-| `README.md` | 161 | ~188 | +27 | Phase 5 status banner (OCR + bundled English + Phase 5.1 deferral); Phase 5 known limitations (7 bullets including English-only download honesty); Phase 5 install size delta (~133 MB + breakdown); 4 new headline use-cases (Run OCR / Manage language packs / Toggle confidence overlay / Browse OCR results); 3 new Phase 5 acknowledgments rows (tesseract.js, @tesseract.js-data/eng, @napi-rs/canvas); 0.5.0 install / version refs; Phase 4 archive carried as historical |
-| `docs/user-guide.md` | 1181 | ~1532 | +351 | New sections: **OCR trust floor — what the app does and doesn't promise** (dedicated section enumerating all 4 obligations + 2 cross-cutting from Phase 4 + What it IS / What it IS NOT); Running OCR (4-step wizard: Configure / Confirm-if-signed / Running / Done); Manage language packs (catalog + download + remove + English-only-in-v0.5.0 honesty reminder); OCR confidence overlay (toggle + threshold + raw-confidences-preserved honesty); OCR results panel (per-doc summary + per-page breakdown + word search + reopen limitations); Scanning from a device (DISABLED placeholder with Phase 5.1 deferral message + Windows Scan-app workaround). Known limitations renamed to Phase 5; new Phase 5 partial-features table with 10 entries; Settings table extended with 11 OCR keys; 4 new keyboard shortcuts (Ctrl+Shift+R Run OCR / Ctrl+Shift+H confidence overlay / disabled menu entries); Ctrl+Shift+R rebind callout (L-21.3); 8 new Troubleshooting entries for OCR failures; Save section amended with Phase 5 semantics + replay step 3.9; version refs to 0.5.0. |
-| `docs/developer-guide.md` | 1100 | ~1488 | +388 | Top-of-guide Phase 5 quick reference (6-bullet — single funnel + workerPool releaseAll + tesseract.js v7+ + text-behind-image authoring pattern + OCR trust-floor link); project layout amended with 10 new Phase 5 pdf-ops modules (ocr-engine, ocr-worker-pool, ocr-text-layer, searchable-pdf-builder, image-preprocess, language-pack-manager, language-pack-catalog.json, ocr-confidence, ocr-bootstrap, pades-detect); **OCR architecture (Phase 5)** new subsection (worker pool single funnel + 5 worker-lifecycle non-negotiables + language pack management + text-behind-image authoring + replay step 3.9 + OCR data flow + schema-v5 amendment); **Release-engineering responsibility — language-pack catalog SHA-256 (B-21.1)** new subsection (Phase 5.1.x catalog-builder script obligation; current state of `eng` real SHA + non-eng sentinels documented honestly); **Phase 5 IPC channels** quick-reference table (9 channels + 2 event streams); **Phase 5 channels — `ocr:*` + `scan:*`** table; Phase 5 setting keys block (11 keys); Phase 5 EditOperation variants block (`ocr-text-behind-applied` + `ocr-text-behind-removed`); test counts updated to 629 main+ipc+preload + 373/378 client + 268 db = ~1270 unit/integration; build artifact list updated to 0.5.0 (~133 MB + size breakdown + native binary list); Common pitfalls: new **Code-comment contradictions — when the comment says X but the type system drops X** section (Julian Wave 21 H-21.1 lesson; the `renderMode: 3 as any` cast trap on pdf-lib `page.drawText`; structural fix via `page.pushOperators(setTextRenderingMode(TextRenderingMode.Invisible))` at `src/main/pdf-ops/ocr-text-layer.ts:42`); Where to learn more amended for Phase 5 docs. |
-| `docs/api-reference.md` | 933 | ~1175 | +242 | Header amended for Phase 5 (9 new channels + 2 event streams); status summary table extended with `ocr:*` (7 live) + `scan:*` (2 stubs); new **Phase 5 channels — `ocr:*` and `scan:*`** section with all 9 channels (Request/Response/Errors/example + the two event streams); **Phase 5 setting keys and data models** subsection (11 keys + EditOperation variants block + schema-v5 amendment table); Cross-references amended with architecture-phase-5.md + ocr-engine.md + conventions §16 + OCR trust floor pointer + code-comment-contradiction pointer + B-21.1 release-engineering pointer. |
-| `docs/build-report.md` | 5953 | 5953+~80 | (this section) | Wave 22 Nathan entry appended additively; pre-existing 5953 lines untouched. |
+| Path                      | Lines before | Lines after |          Delta | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------- | -----------: | ----------: | -------------: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`               |          161 |        ~188 |            +27 | Phase 5 status banner (OCR + bundled English + Phase 5.1 deferral); Phase 5 known limitations (7 bullets including English-only download honesty); Phase 5 install size delta (~133 MB + breakdown); 4 new headline use-cases (Run OCR / Manage language packs / Toggle confidence overlay / Browse OCR results); 3 new Phase 5 acknowledgments rows (tesseract.js, @tesseract.js-data/eng, @napi-rs/canvas); 0.5.0 install / version refs; Phase 4 archive carried as historical                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `docs/user-guide.md`      |         1181 |       ~1532 |           +351 | New sections: **OCR trust floor — what the app does and doesn't promise** (dedicated section enumerating all 4 obligations + 2 cross-cutting from Phase 4 + What it IS / What it IS NOT); Running OCR (4-step wizard: Configure / Confirm-if-signed / Running / Done); Manage language packs (catalog + download + remove + English-only-in-v0.5.0 honesty reminder); OCR confidence overlay (toggle + threshold + raw-confidences-preserved honesty); OCR results panel (per-doc summary + per-page breakdown + word search + reopen limitations); Scanning from a device (DISABLED placeholder with Phase 5.1 deferral message + Windows Scan-app workaround). Known limitations renamed to Phase 5; new Phase 5 partial-features table with 10 entries; Settings table extended with 11 OCR keys; 4 new keyboard shortcuts (Ctrl+Shift+R Run OCR / Ctrl+Shift+H confidence overlay / disabled menu entries); Ctrl+Shift+R rebind callout (L-21.3); 8 new Troubleshooting entries for OCR failures; Save section amended with Phase 5 semantics + replay step 3.9; version refs to 0.5.0.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `docs/developer-guide.md` |         1100 |       ~1488 |           +388 | Top-of-guide Phase 5 quick reference (6-bullet — single funnel + workerPool releaseAll + tesseract.js v7+ + text-behind-image authoring pattern + OCR trust-floor link); project layout amended with 10 new Phase 5 pdf-ops modules (ocr-engine, ocr-worker-pool, ocr-text-layer, searchable-pdf-builder, image-preprocess, language-pack-manager, language-pack-catalog.json, ocr-confidence, ocr-bootstrap, pades-detect); **OCR architecture (Phase 5)** new subsection (worker pool single funnel + 5 worker-lifecycle non-negotiables + language pack management + text-behind-image authoring + replay step 3.9 + OCR data flow + schema-v5 amendment); **Release-engineering responsibility — language-pack catalog SHA-256 (B-21.1)** new subsection (Phase 5.1.x catalog-builder script obligation; current state of `eng` real SHA + non-eng sentinels documented honestly); **Phase 5 IPC channels** quick-reference table (9 channels + 2 event streams); **Phase 5 channels — `ocr:*` + `scan:*`** table; Phase 5 setting keys block (11 keys); Phase 5 EditOperation variants block (`ocr-text-behind-applied` + `ocr-text-behind-removed`); test counts updated to 629 main+ipc+preload + 373/378 client + 268 db = ~1270 unit/integration; build artifact list updated to 0.5.0 (~133 MB + size breakdown + native binary list); Common pitfalls: new **Code-comment contradictions — when the comment says X but the type system drops X** section (Julian Wave 21 H-21.1 lesson; the `renderMode: 3 as any` cast trap on pdf-lib `page.drawText`; structural fix via `page.pushOperators(setTextRenderingMode(TextRenderingMode.Invisible))` at `src/main/pdf-ops/ocr-text-layer.ts:42`); Where to learn more amended for Phase 5 docs. |
+| `docs/api-reference.md`   |          933 |       ~1175 |           +242 | Header amended for Phase 5 (9 new channels + 2 event streams); status summary table extended with `ocr:*` (7 live) + `scan:*` (2 stubs); new **Phase 5 channels — `ocr:*` and `scan:*`** section with all 9 channels (Request/Response/Errors/example + the two event streams); **Phase 5 setting keys and data models** subsection (11 keys + EditOperation variants block + schema-v5 amendment table); Cross-references amended with architecture-phase-5.md + ocr-engine.md + conventions §16 + OCR trust floor pointer + code-comment-contradiction pointer + B-21.1 release-engineering pointer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `docs/build-report.md`    |         5953 |    5953+~80 | (this section) | Wave 22 Nathan entry appended additively; pre-existing 5953 lines untouched.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 **Total documentation surface delta:** ~1008 lines across 4 user-facing docs + this Wave 22 entry. README / user-guide / developer-guide / api-reference now describe v0.5.0 as shipped, not v0.4.2 as before.
 
@@ -5972,25 +6087,25 @@ Marcus's hypothesized `~/.claude.json` project-entry fix did not surface the ope
 
 Per the Phase 5 brief and the Wave 14 / 18 H-3 / trust-floor pattern (now ratchet-confirmed across Phase 1 H-3, Phase 3 forms, Phase 4 PAdES, Phase 5 OCR — four instances), the four Phase 5 obligations are surfaced at three required locations PLUS inline at every OCR-touching section. Per-obligation evidence (grep counts on `docs/user-guide.md`):
 
-| Obligation | Grep | Match count |
-|---|---|---:|
-| #1 — Accuracy depends on scan quality; low-confidence words may be incorrect | `accuracy depend\|low.confidence\|may be incorrect` (case-insensitive) | 4 |
-| #2 — OCR runs locally; no cloud upload; language packs from tessdata.projectnaptha.com on first use only | `runs locally\|local OCR\|no cloud` | 6 |
-| #3 — OCR-extracted text becomes part of saved PDF; cannot be silently un-applied | `part of the saved PDF\|cannot be silently un.applied\|undo the OCR\|undo.*before saving` | 2 |
-| #4 — Re-running OCR adds another text layer; multiple passes produce duplicate selectable text | `another text layer\|duplicate selectable\|multiple passes` | 3 |
-| Cross-cutting (PAdES) — Running OCR on a PAdES-signed PDF invalidates prior signatures + audit-log backref | `invalidat.*signature\|invalidate the prior\|invalidated by ocr` (case-insensitive) | 19 |
-| Cross-references to the dedicated OCR trust-floor section | `OCR trust floor\|#the-four-phase-5-obligations` | 11 |
-| Inline honesty reminders (callouts in OCR-touching subsections) | `Honesty reminder` | 16 |
+| Obligation                                                                                                 | Grep                                                                                      | Match count |
+| ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------: |
+| #1 — Accuracy depends on scan quality; low-confidence words may be incorrect                               | `accuracy depend\|low.confidence\|may be incorrect` (case-insensitive)                    |           4 |
+| #2 — OCR runs locally; no cloud upload; language packs from tessdata.projectnaptha.com on first use only   | `runs locally\|local OCR\|no cloud`                                                       |           6 |
+| #3 — OCR-extracted text becomes part of saved PDF; cannot be silently un-applied                           | `part of the saved PDF\|cannot be silently un.applied\|undo the OCR\|undo.*before saving` |           2 |
+| #4 — Re-running OCR adds another text layer; multiple passes produce duplicate selectable text             | `another text layer\|duplicate selectable\|multiple passes`                               |           3 |
+| Cross-cutting (PAdES) — Running OCR on a PAdES-signed PDF invalidates prior signatures + audit-log backref | `invalidat.*signature\|invalidate the prior\|invalidated by ocr` (case-insensitive)       |          19 |
+| Cross-references to the dedicated OCR trust-floor section                                                  | `OCR trust floor\|#the-four-phase-5-obligations`                                          |          11 |
+| Inline honesty reminders (callouts in OCR-touching subsections)                                            | `Honesty reminder`                                                                        |          16 |
 
 README-side cross-cuts (for users reading the front door first):
 
-| Obligation | README match count |
-|---|---:|
-| #1 accuracy | 3 |
-| #2 runs locally / no cloud | 2 |
-| #3 part of saved PDF | 1 (in Phase 5 known limitations) |
-| #4 duplicate layer | 2 |
-| PAdES invalidation cross-cut | 2 |
+| Obligation                   |               README match count |
+| ---------------------------- | -------------------------------: |
+| #1 accuracy                  |                                3 |
+| #2 runs locally / no cloud   |                                2 |
+| #3 part of saved PDF         | 1 (in Phase 5 known limitations) |
+| #4 duplicate layer           |                                2 |
+| PAdES invalidation cross-cut |                                2 |
 
 **Required locations satisfied** (per the Wave 14 / Wave 18 "non-negotiable" framing):
 
@@ -6017,21 +6132,21 @@ The new developer-guide subsection **Release-engineering responsibility — lang
 
 ### Test-count claims updated
 
-- Main + IPC + preload Vitest: 629 (Phase 5 close; was 528 at Phase 4.1, +101 Phase 5 tests: ocr-engine 16 + ocr-worker-pool 8 + language-pack-manager 12 + ocr-text-layer 16 + searchable-pdf-builder golden + image-preprocess + ocr-confidence + pades-detect + 9 ocr-* / scan-* IPC handlers + replay-engine OCR PAdES tests).
+- Main + IPC + preload Vitest: 629 (Phase 5 close; was 528 at Phase 4.1, +101 Phase 5 tests: ocr-engine 16 + ocr-worker-pool 8 + language-pack-manager 12 + ocr-text-layer 16 + searchable-pdf-builder golden + image-preprocess + ocr-confidence + pades-detect + 9 ocr-_ / scan-_ IPC handlers + replay-engine OCR PAdES tests).
 - Client Vitest: 373 pass / 5 documented pre-existing failures (was ~300 at Phase 4.1; +73 Phase 5 tests: ocr-slice 31 + ocr-selectors + 5 new modals + ocr-confidence-overlay + ocr-results-panel + OCR thunks).
 - DB Vitest: 268 (was ~84 at Phase 4.1; +184 Phase 5 tests: ocr-jobs-repo + ocr-results-repo + language-packs-repo + signature-audit-repo amendment).
 - Total: ~1270 unit/integration + 2 e2e.
 
 ### Files I touched
 
-| Path | Change |
-|---|---|
-| `README.md` | REWRITE — full Phase 5 status / features / install / known limitations / acknowledgments. 0.4.2 → 0.5.0 version refs throughout. |
-| `docs/user-guide.md` | EDIT — title + status preamble; What changed in 0.5.0 section; Known limitations (now Phase 5 with 10-entry partial-features table); OCR trust floor section (NEW, dedicated); Running OCR (NEW); Manage language packs (NEW); OCR confidence overlay (NEW); OCR results panel (NEW); Scanning from a device (NEW, DISABLED placeholder); Settings table (+11 Phase 5 OCR rows); Keyboard shortcuts (+4 Phase 5 rows + Ctrl+Shift+R rebind callout); Troubleshooting (+8 Phase 5 entries); Save section amended with Phase 5 semantics (replay step 3.9); version refs to 0.5.0 |
-| `docs/developer-guide.md` | EDIT — top-of-guide Phase 5 quick reference (6 bullets); project layout (10 Phase 5 pdf-ops modules); OCR architecture (Phase 5) NEW; Release-engineering responsibility — language-pack catalog SHA-256 (B-21.1) NEW; Phase 5 IPC channels NEW; Phase 5 channels detailed table NEW; Phase 5 setting keys + EditOperation variants + schema-v5 NEW; test-counts updated; IPC contract reference card heading +Phase 5; Common pitfalls (+Code-comment contradictions, Julian H-21.1); Where to learn more (Phase 5 docs added) |
-| `docs/api-reference.md` | EDIT — header amended for Phase 5; status summary (+ocr:*, +scan:*); Phase 5 channels section (NEW; all 9 channels + 2 event streams); Phase 5 setting keys + EditOperation + schema-v5 subsection (NEW); Cross-references amended (architecture-phase-5.md, ocr-engine.md, conventions §16, OCR trust floor, code-comment-contradiction, B-21.1) |
-| `docs/build-report.md` | APPEND — this Wave 22 section (additive only; no edits to prior wave entries per the Marcus-owns-build-report ownership rule) |
-| `.learnings/learnings.jsonl` | APPEND — one JSONL entry (post-flight self-improvement log) |
+| Path                         | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`                  | REWRITE — full Phase 5 status / features / install / known limitations / acknowledgments. 0.4.2 → 0.5.0 version refs throughout.                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `docs/user-guide.md`         | EDIT — title + status preamble; What changed in 0.5.0 section; Known limitations (now Phase 5 with 10-entry partial-features table); OCR trust floor section (NEW, dedicated); Running OCR (NEW); Manage language packs (NEW); OCR confidence overlay (NEW); OCR results panel (NEW); Scanning from a device (NEW, DISABLED placeholder); Settings table (+11 Phase 5 OCR rows); Keyboard shortcuts (+4 Phase 5 rows + Ctrl+Shift+R rebind callout); Troubleshooting (+8 Phase 5 entries); Save section amended with Phase 5 semantics (replay step 3.9); version refs to 0.5.0 |
+| `docs/developer-guide.md`    | EDIT — top-of-guide Phase 5 quick reference (6 bullets); project layout (10 Phase 5 pdf-ops modules); OCR architecture (Phase 5) NEW; Release-engineering responsibility — language-pack catalog SHA-256 (B-21.1) NEW; Phase 5 IPC channels NEW; Phase 5 channels detailed table NEW; Phase 5 setting keys + EditOperation variants + schema-v5 NEW; test-counts updated; IPC contract reference card heading +Phase 5; Common pitfalls (+Code-comment contradictions, Julian H-21.1); Where to learn more (Phase 5 docs added)                                                 |
+| `docs/api-reference.md`      | EDIT — header amended for Phase 5; status summary (+ocr:_, +scan:_); Phase 5 channels section (NEW; all 9 channels + 2 event streams); Phase 5 setting keys + EditOperation + schema-v5 subsection (NEW); Cross-references amended (architecture-phase-5.md, ocr-engine.md, conventions §16, OCR trust floor, code-comment-contradiction, B-21.1)                                                                                                                                                                                                                               |
+| `docs/build-report.md`       | APPEND — this Wave 22 section (additive only; no edits to prior wave entries per the Marcus-owns-build-report ownership rule)                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `.learnings/learnings.jsonl` | APPEND — one JSONL entry (post-flight self-improvement log)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 ### Files I did NOT touch
 
@@ -6065,57 +6180,56 @@ Two structural lessons are candidates for promotion to `~/.claude/learnings/glob
 
 One JSONL entry appended to `.learnings/learnings.jsonl`.
 
-
 ## Wave 23 — Riley (front-end-architect) — Phase 6 architecture design (Export to Office) (2026-05-27)
 
 **Status: COMPLETE / GREEN.** Phase 6 (Export to Office) architecture is designed, doc-only. Two new docs + four additive amendments per the same shape as Wave 11 (Phase 3) / Wave 15 (Phase 4) / Wave 19 (Phase 5). All 10 locked decisions encoded with cross-references. All six wave-23-brief design questions (Q-A through Q-F) answered. Five Phase-6 trust-floor obligations + 1 cross-cutting reminder enumerated for Wave 26 Nathan; UI surface placement specified (Wave 24 Riley mounts `PerFormatLimitationsPanel`). Cross-references to prior-wave learnings (sentinel-default, stub-shipped-with-TODO, code-comment-contradiction) baked into Phase 6 structural decisions BEFORE implementation.
 
 ### File table
 
-| Path | Lines before | Lines after | Delta | Notes |
-|---|---:|---:|---:|---|
-| `docs/architecture-phase-6.md` | — | ~610 | +610 | NEW — Phase 6 system additions; 10 locked decisions encoded; 6 risk-register entries (R-W23-A through R-W23-F); 4 trust-floor obligation surface locations + 1 UI modal location |
-| `docs/export-engine.md` | — | ~560 | +560 | NEW — engine detailed design: 5 contender library rationales (docx + exceljs + pptxgenjs + canvas + utif); 7-step layout-extractor algorithm; 5-step table-detector algorithm; image-extractor operator-stream walk + CTM tracking; per-format writer specs; job lifecycle; Wave 25 Julian audit checklist |
-| `docs/api-contracts.md` | 2156 | ~2480 | +324 | §17 Phase-6 amendment: 8 new IPC channels (4 export:to* + cancelJob + listJobs + listFormats + dialog:pickExportOutputPath) + 1 event stream (export:progress) + extended PreloadApi + Phase-6 contract freeze point |
-| `docs/data-models.md` | 1807 | ~2050 | +243 | §11 Phase-6 amendment: schema v6 migration (1 new table `export_jobs` + 3 indexes); per-format defaults fold into existing `settings` table (17 new keys); ExportJobsRepo interface; renderer DTOs with nullable + late-init discipline; NO new EditOperation; NO new column on Phase 1-5 tables; Q-A through Q-F cross-ref |
-| `docs/ui-spec.md` | 2255 | ~2585 | +330 | §15 Phase-6 amendment: toolbar additions (Export button + Ctrl+Shift+E); File menu (Export to Word/Excel/PowerPoint/Image submenu); ExportModal 4-step (format → quality+options → confirm → modal-closes-after-enqueue inversion of Phase 5 modal-blocking pattern); Exports sidebar tab; status-bar export-progress widget; Settings additions (17 keys in 3 sub-sections); 5 error states; Phase-6 trust-floor surface placement (4-location ratchet: preamble + dedicated section + inline + README + UI modal) |
-| `docs/conventions.md` | 1713 | ~1960 | +247 | §17 Phase-6 amendment: read-only-on-source non-negotiables (3 rules); export-bytes-stay-in-main extensions; trust-floor 5 obligations; anti-stub-shipped-with-TODO + nullable+late-init structural discipline; no-as-any discipline (Julian Wave 21 H-21.1 lesson applied proactively); quality-tier defaults discipline; test discipline; Wave 25 Julian audit mechanical greps (15 checks); 7 anti-patterns enumerated; honest "what we don't promise" disclosure |
-| `docs/build-report.md` | 6066 | 6066+~180 | (this section) | Wave 23 Riley entry appended additively; pre-existing 6066 lines untouched |
+| Path                           | Lines before | Lines after |          Delta | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------ | -----------: | ----------: | -------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/architecture-phase-6.md` |            — |        ~610 |           +610 | NEW — Phase 6 system additions; 10 locked decisions encoded; 6 risk-register entries (R-W23-A through R-W23-F); 4 trust-floor obligation surface locations + 1 UI modal location                                                                                                                                                                                                                                                                                                                                    |
+| `docs/export-engine.md`        |            — |        ~560 |           +560 | NEW — engine detailed design: 5 contender library rationales (docx + exceljs + pptxgenjs + canvas + utif); 7-step layout-extractor algorithm; 5-step table-detector algorithm; image-extractor operator-stream walk + CTM tracking; per-format writer specs; job lifecycle; Wave 25 Julian audit checklist                                                                                                                                                                                                          |
+| `docs/api-contracts.md`        |         2156 |       ~2480 |           +324 | §17 Phase-6 amendment: 8 new IPC channels (4 export:to\* + cancelJob + listJobs + listFormats + dialog:pickExportOutputPath) + 1 event stream (export:progress) + extended PreloadApi + Phase-6 contract freeze point                                                                                                                                                                                                                                                                                               |
+| `docs/data-models.md`          |         1807 |       ~2050 |           +243 | §11 Phase-6 amendment: schema v6 migration (1 new table `export_jobs` + 3 indexes); per-format defaults fold into existing `settings` table (17 new keys); ExportJobsRepo interface; renderer DTOs with nullable + late-init discipline; NO new EditOperation; NO new column on Phase 1-5 tables; Q-A through Q-F cross-ref                                                                                                                                                                                         |
+| `docs/ui-spec.md`              |         2255 |       ~2585 |           +330 | §15 Phase-6 amendment: toolbar additions (Export button + Ctrl+Shift+E); File menu (Export to Word/Excel/PowerPoint/Image submenu); ExportModal 4-step (format → quality+options → confirm → modal-closes-after-enqueue inversion of Phase 5 modal-blocking pattern); Exports sidebar tab; status-bar export-progress widget; Settings additions (17 keys in 3 sub-sections); 5 error states; Phase-6 trust-floor surface placement (4-location ratchet: preamble + dedicated section + inline + README + UI modal) |
+| `docs/conventions.md`          |         1713 |       ~1960 |           +247 | §17 Phase-6 amendment: read-only-on-source non-negotiables (3 rules); export-bytes-stay-in-main extensions; trust-floor 5 obligations; anti-stub-shipped-with-TODO + nullable+late-init structural discipline; no-as-any discipline (Julian Wave 21 H-21.1 lesson applied proactively); quality-tier defaults discipline; test discipline; Wave 25 Julian audit mechanical greps (15 checks); 7 anti-patterns enumerated; honest "what we don't promise" disclosure                                                 |
+| `docs/build-report.md`         |         6066 |   6066+~180 | (this section) | Wave 23 Riley entry appended additively; pre-existing 6066 lines untouched                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 **Total architectural surface delta:** ~2310 lines across 6 docs + this Wave 23 entry. Phase 6 design surface is now complete; Wave 24 (David + Ravi + Riley) implementation is unblocked.
 
 ### Locked-decision encoding evidence
 
-| Locked decision (from wave-23-brief) | Encoded in | Cross-references |
-|---|---|---|
-| Quality tier: layout-preserving best-effort (2026-05-22) | architecture-phase-6.md §1 (P6-L-1), §4.2, §4.3; export-engine.md §3.4 + §3.5 | api-contracts.md §17 qualityTier enum; data-models.md §11.6 settings defaults |
-| DOCX library: `docx` (MIT) | architecture-phase-6.md §1 (P6-L-2), §3.1, §4.4.1; export-engine.md §2.1 + §4 | conventions.md §17.5 no-as-any; api-contracts.md §17.1 |
-| XLSX library: `exceljs` (already in deps from Phase 3) | architecture-phase-6.md §1 (P6-L-3), §3.2, §4.4.2; export-engine.md §2.2 + §5 | conventions.md §17.8 grep (TWO files only — Phase 3 read + Phase 6 write) |
-| PPTX library: `pptxgenjs` (MIT) | architecture-phase-6.md §1 (P6-L-4), §3.1, §4.4.3; export-engine.md §2.3 + §6 | conventions.md §17.5 + §17.8 grep |
-| Image rasterization: existing pdfjs + `@napi-rs/canvas` + `utif` | architecture-phase-6.md §1 (P6-L-5), §3.2, §4.4.4; export-engine.md §2.4 + §7 | data-models.md §11.6 image-format settings |
-| Trust-floor obligations (five Phase-6 + cross-cutting) | architecture-phase-6.md §1 (P6-L-7), §8; ui-spec.md §15.13; conventions.md §17.3 | Wave 26 Nathan handoff (preamble + dedicated section + inline + README + UI modal = 4-location ratchet) |
-| Export-job scheduling: background queue + progress UI | architecture-phase-6.md §1 (P6-L-6), §4.5, §4.6; export-engine.md §8; ui-spec.md §15.4 + §15.5 + §15.7 | Q-E answer — inverts Phase 5 modal-blocking pattern for batch use-case |
-| Annotation interaction: include-by-default + per-format toggle | architecture-phase-6.md §1 (P6-L-8), §4.7; ui-spec.md §15.3 | data-models.md §11.6 (default true for Word/PPT/Image; false for Excel) |
-| Signed PDF interaction: read-only on source; no pre-flight prompt | architecture-phase-6.md §1 (P6-L-9), §4.8, §6; conventions.md §17.1 (3 rules) | Explicit INVERSION of Phase 5 P5-L-10 OCR-on-signed-PDF pattern; NO `signature_audit_log` update from export |
-| Schema delta: ONE new table; per-format defaults in settings | architecture-phase-6.md §1 (P6-L-10), §5; data-models.md §11 | NO new column on Phase 1-5 tables; NO new EditOperation variant |
+| Locked decision (from wave-23-brief)                              | Encoded in                                                                                             | Cross-references                                                                                             |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| Quality tier: layout-preserving best-effort (2026-05-22)          | architecture-phase-6.md §1 (P6-L-1), §4.2, §4.3; export-engine.md §3.4 + §3.5                          | api-contracts.md §17 qualityTier enum; data-models.md §11.6 settings defaults                                |
+| DOCX library: `docx` (MIT)                                        | architecture-phase-6.md §1 (P6-L-2), §3.1, §4.4.1; export-engine.md §2.1 + §4                          | conventions.md §17.5 no-as-any; api-contracts.md §17.1                                                       |
+| XLSX library: `exceljs` (already in deps from Phase 3)            | architecture-phase-6.md §1 (P6-L-3), §3.2, §4.4.2; export-engine.md §2.2 + §5                          | conventions.md §17.8 grep (TWO files only — Phase 3 read + Phase 6 write)                                    |
+| PPTX library: `pptxgenjs` (MIT)                                   | architecture-phase-6.md §1 (P6-L-4), §3.1, §4.4.3; export-engine.md §2.3 + §6                          | conventions.md §17.5 + §17.8 grep                                                                            |
+| Image rasterization: existing pdfjs + `@napi-rs/canvas` + `utif`  | architecture-phase-6.md §1 (P6-L-5), §3.2, §4.4.4; export-engine.md §2.4 + §7                          | data-models.md §11.6 image-format settings                                                                   |
+| Trust-floor obligations (five Phase-6 + cross-cutting)            | architecture-phase-6.md §1 (P6-L-7), §8; ui-spec.md §15.13; conventions.md §17.3                       | Wave 26 Nathan handoff (preamble + dedicated section + inline + README + UI modal = 4-location ratchet)      |
+| Export-job scheduling: background queue + progress UI             | architecture-phase-6.md §1 (P6-L-6), §4.5, §4.6; export-engine.md §8; ui-spec.md §15.4 + §15.5 + §15.7 | Q-E answer — inverts Phase 5 modal-blocking pattern for batch use-case                                       |
+| Annotation interaction: include-by-default + per-format toggle    | architecture-phase-6.md §1 (P6-L-8), §4.7; ui-spec.md §15.3                                            | data-models.md §11.6 (default true for Word/PPT/Image; false for Excel)                                      |
+| Signed PDF interaction: read-only on source; no pre-flight prompt | architecture-phase-6.md §1 (P6-L-9), §4.8, §6; conventions.md §17.1 (3 rules)                          | Explicit INVERSION of Phase 5 P5-L-10 OCR-on-signed-PDF pattern; NO `signature_audit_log` update from export |
+| Schema delta: ONE new table; per-format defaults in settings      | architecture-phase-6.md §1 (P6-L-10), §5; data-models.md §11                                           | NO new column on Phase 1-5 tables; NO new EditOperation variant                                              |
 
 ### Library survey
 
 Per Wave 19 lesson "library survey table format with auditable verdict beats one-line 'no good options'":
 
-| Library | License | Version (npm 2026-05-27) | Verdict | Reason |
-|---|---|---|---|---|
-| `docx` | MIT | 9.7.1 | **PRIMARY** for DOCX | Permissive; first-party TypeScript types; tree-shake-friendly; ~250 KB raw / ~80 KB gz; active maintenance; no native deps. Verified: `npm view docx license` → MIT. |
-| `pptxgenjs` | MIT | 4.0.1 | **PRIMARY** for PPTX | Permissive; first-party TS types; ~600 KB raw / ~180 KB gz; active maintenance; no native deps. Verified: `npm view pptxgenjs license` → MIT. |
-| `exceljs` | MIT | 4.4.0 | **REUSE** for XLSX | Already in deps from Phase 3 mail merge (read side). Phase 6 uses write side — symmetric, no shared state. No license / version bump. |
-| `utif` | MIT | 3.1.0 | **REUSE** for TIFF | Already in deps from Phase 5 (raster decode for OCR input). Phase 6 uses encode side — symmetric. |
-| `@napi-rs/canvas` | MIT | (transitive, Phase 5) | **REUSE** for rasterization | Already in deps from Phase 5 OCR's image-only-PDF rendering path. PNG/JPEG via canvas.toBuffer; no new native dep. |
-| `officegen` | MIT | various | **REJECT** | Older single-package alternative covering docx + xlsx + pptx. Code quality + test coverage + types lag behind the modern dedicated triad. Three-library split is cleaner; the bundle-size cost (~850 KB combined vs ~500 KB officegen) is acceptable. |
-| `xlsx` / `xlsx-js-style` (SheetJS) | Apache-2.0 / MIT | various | **REJECT** | exceljs is already in deps AND has better TS types AND more idiomatic stream-to-disk API. No reason to add a parallel xlsx writer. |
-| `sharp` (libvips) | Apache-2.0 | various | **REJECT** | Native dep with prebuilt binaries → expands electron-rebuild matrix. The existing canvas path is cheaper. Reserved as a Phase 6.1 escape hatch behind a setting toggle if user-reported perf issues warrant. |
-| Apache POI (Java) | Apache-2.0 | various | **REJECT** | Java runtime requirement — contradicts "double-click install" goal. Same rejection class as Phase 5's `node-tesseract-ocr` requiring system Tesseract. |
-| PDFTron / Apryse / Aspose | commercial | various | **REJECT** | Permissive-OSS-only policy. |
-| `mammoth` | MIT | various | **DEFER to Phase 7+** | DOCX → HTML round-trip for in-app preview. v1 has no preview. |
+| Library                            | License          | Version (npm 2026-05-27) | Verdict                     | Reason                                                                                                                                                                                                                                                |
+| ---------------------------------- | ---------------- | ------------------------ | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docx`                             | MIT              | 9.7.1                    | **PRIMARY** for DOCX        | Permissive; first-party TypeScript types; tree-shake-friendly; ~250 KB raw / ~80 KB gz; active maintenance; no native deps. Verified: `npm view docx license` → MIT.                                                                                  |
+| `pptxgenjs`                        | MIT              | 4.0.1                    | **PRIMARY** for PPTX        | Permissive; first-party TS types; ~600 KB raw / ~180 KB gz; active maintenance; no native deps. Verified: `npm view pptxgenjs license` → MIT.                                                                                                         |
+| `exceljs`                          | MIT              | 4.4.0                    | **REUSE** for XLSX          | Already in deps from Phase 3 mail merge (read side). Phase 6 uses write side — symmetric, no shared state. No license / version bump.                                                                                                                 |
+| `utif`                             | MIT              | 3.1.0                    | **REUSE** for TIFF          | Already in deps from Phase 5 (raster decode for OCR input). Phase 6 uses encode side — symmetric.                                                                                                                                                     |
+| `@napi-rs/canvas`                  | MIT              | (transitive, Phase 5)    | **REUSE** for rasterization | Already in deps from Phase 5 OCR's image-only-PDF rendering path. PNG/JPEG via canvas.toBuffer; no new native dep.                                                                                                                                    |
+| `officegen`                        | MIT              | various                  | **REJECT**                  | Older single-package alternative covering docx + xlsx + pptx. Code quality + test coverage + types lag behind the modern dedicated triad. Three-library split is cleaner; the bundle-size cost (~850 KB combined vs ~500 KB officegen) is acceptable. |
+| `xlsx` / `xlsx-js-style` (SheetJS) | Apache-2.0 / MIT | various                  | **REJECT**                  | exceljs is already in deps AND has better TS types AND more idiomatic stream-to-disk API. No reason to add a parallel xlsx writer.                                                                                                                    |
+| `sharp` (libvips)                  | Apache-2.0       | various                  | **REJECT**                  | Native dep with prebuilt binaries → expands electron-rebuild matrix. The existing canvas path is cheaper. Reserved as a Phase 6.1 escape hatch behind a setting toggle if user-reported perf issues warrant.                                          |
+| Apache POI (Java)                  | Apache-2.0       | various                  | **REJECT**                  | Java runtime requirement — contradicts "double-click install" goal. Same rejection class as Phase 5's `node-tesseract-ocr` requiring system Tesseract.                                                                                                |
+| PDFTron / Apryse / Aspose          | commercial       | various                  | **REJECT**                  | Permissive-OSS-only policy.                                                                                                                                                                                                                           |
+| `mammoth`                          | MIT              | various                  | **DEFER to Phase 7+**       | DOCX → HTML round-trip for in-app preview. v1 has no preview.                                                                                                                                                                                         |
 
 All licenses verified live via `npm view <pkg> license` 2026-05-27. None are AGPL/GPL/LGPL or commercial. Compliant with project policy.
 
@@ -6179,26 +6293,26 @@ Plus cross-cutting reminder: **Export duration depends on document complexity.**
 
 Four-location ratchet:
 
-| Location | Wave 26 Nathan target |
-|---|---|
-| Top-of-guide preamble | `docs/user-guide.md` Phase-6 preamble — all 5 obligations + duration reminder |
-| Dedicated user-guide section | "Export to Office trust floor — what the app does and doesn't promise" |
-| Inline at every export-touching subsection | Per-format export how-to + "Honesty reminder" callout + anchor link |
-| README front-door Known Limitations | Headline bullets for the 5 obligations + duration note |
-| **ExportModal UI** (Wave 24 Riley wires; design specified) | PerFormatLimitationsPanel — visible in-modal, not docs-only |
+| Location                                                   | Wave 26 Nathan target                                                         |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Top-of-guide preamble                                      | `docs/user-guide.md` Phase-6 preamble — all 5 obligations + duration reminder |
+| Dedicated user-guide section                               | "Export to Office trust floor — what the app does and doesn't promise"        |
+| Inline at every export-touching subsection                 | Per-format export how-to + "Honesty reminder" callout + anchor link           |
+| README front-door Known Limitations                        | Headline bullets for the 5 obligations + duration note                        |
+| **ExportModal UI** (Wave 24 Riley wires; design specified) | PerFormatLimitationsPanel — visible in-modal, not docs-only                   |
 
 ### Files I touched
 
-| Path | Change |
-|---|---|
-| `docs/architecture-phase-6.md` | NEW — 15 sections covering Phase-6 system additions, locked-decision encoding, library inventory, engine pipeline shape, schema v6, trust-floor obligations, risk register, fidelity boundary matrix, scope fence, L-001 cross-check, freeze-rule extension |
-| `docs/export-engine.md` | NEW — 10 sections covering engine-selection rationale, single-funnel pattern, ExtractedDocument shape, per-page streaming, layout-extractor algorithm (8 steps), table-detector algorithm (5 steps), image-extractor with CTM tracking, per-format writer detail (docx/xlsx/pptx/image), job lifecycle, Wave 25 Julian audit checklist |
-| `docs/api-contracts.md` | EDIT — added §17 Phase-6 amendment (8 new channels + 1 event stream + extended PreloadApi); §1-§16 unchanged; Phase-6 contract freeze point recorded |
-| `docs/data-models.md` | EDIT — added §11 Phase-6 amendment (schema v6 + `export_jobs` DDL + 17 settings keys + ExportJobsRepo + DTO shapes with nullable+late-init discipline); §1-§10 unchanged |
-| `docs/ui-spec.md` | EDIT — added §15 Phase-6 amendment (toolbar + menu + ExportModal 4-step + sidebar tab + status-bar widget + Settings + 5 error states + trust-floor 4-location ratchet); §1-§14 unchanged |
-| `docs/conventions.md` | EDIT — added §17 Phase-6 amendment (read-only-on-source + bytes-stay-in-main + trust-floor + anti-stub + nullable-late-init + no-as-any + quality-tier defaults + test discipline + 15 mechanical greps + 7 anti-patterns); §1-§16 unchanged |
-| `docs/build-report.md` | APPEND — this Wave 23 section (additive only; no edits to prior wave entries per the Marcus-owns-build-report ownership rule) |
-| `.learnings/learnings.jsonl` | APPEND — one JSONL entry (post-flight self-improvement log) |
+| Path                           | Change                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/architecture-phase-6.md` | NEW — 15 sections covering Phase-6 system additions, locked-decision encoding, library inventory, engine pipeline shape, schema v6, trust-floor obligations, risk register, fidelity boundary matrix, scope fence, L-001 cross-check, freeze-rule extension                                                                            |
+| `docs/export-engine.md`        | NEW — 10 sections covering engine-selection rationale, single-funnel pattern, ExtractedDocument shape, per-page streaming, layout-extractor algorithm (8 steps), table-detector algorithm (5 steps), image-extractor with CTM tracking, per-format writer detail (docx/xlsx/pptx/image), job lifecycle, Wave 25 Julian audit checklist |
+| `docs/api-contracts.md`        | EDIT — added §17 Phase-6 amendment (8 new channels + 1 event stream + extended PreloadApi); §1-§16 unchanged; Phase-6 contract freeze point recorded                                                                                                                                                                                   |
+| `docs/data-models.md`          | EDIT — added §11 Phase-6 amendment (schema v6 + `export_jobs` DDL + 17 settings keys + ExportJobsRepo + DTO shapes with nullable+late-init discipline); §1-§10 unchanged                                                                                                                                                               |
+| `docs/ui-spec.md`              | EDIT — added §15 Phase-6 amendment (toolbar + menu + ExportModal 4-step + sidebar tab + status-bar widget + Settings + 5 error states + trust-floor 4-location ratchet); §1-§14 unchanged                                                                                                                                              |
+| `docs/conventions.md`          | EDIT — added §17 Phase-6 amendment (read-only-on-source + bytes-stay-in-main + trust-floor + anti-stub + nullable-late-init + no-as-any + quality-tier defaults + test discipline + 15 mechanical greps + 7 anti-patterns); §1-§16 unchanged                                                                                           |
+| `docs/build-report.md`         | APPEND — this Wave 23 section (additive only; no edits to prior wave entries per the Marcus-owns-build-report ownership rule)                                                                                                                                                                                                          |
+| `.learnings/learnings.jsonl`   | APPEND — one JSONL entry (post-flight self-improvement log)                                                                                                                                                                                                                                                                            |
 
 ### Files I did NOT touch
 
@@ -6241,24 +6355,23 @@ Three structural lessons surface from this wave:
 
 One JSONL entry appended to `.learnings/learnings.jsonl`.
 
-
 ## Wave 24 — Ravi Phase 6 database (Export to Office) (2026-05-27)
 
 **Status:** **COMPLETE / GREEN** — David's `db-bridge.ts` adapter is unblocked. One new factory call at the bridge: `createExportJobsRepo(db)`. NO existing repo is touched. NO existing migration is amended. The Phase 5 `signature_audit_log.invalidated_by_ocr_job_id` column is NOT touched by Phase 6 (export is read-only on the source — conventions §17.1; data-models §11.3).
 
 ### Files Ravi created or amended this wave
 
-| Path | Type | LOC | Tests |
-|---|---|---|---|
-| `migrations/0006_phase6_export.sql` | NEW | 177 | n/a (exercised via repo test schema-verification block) |
-| `src/db/repositories/export-jobs-repo.ts` | NEW | 803 | n/a (exercised by sibling test) |
-| `src/db/repositories/export-jobs-repo.test.ts` | NEW | 938 | 71 cases across 11 describe blocks |
-| `src/db/types.ts` | EDIT | +120 (new `ExportJobRow` row type + `ExportJobStatus` + `ExportFormat` + `ExportQualityTier` + 17 new `SettingKey` rows + 3 new value-type aliases + extended `SettingValue<K>` conditional + `KNOWN_SETTING_KEYS` extension) | covered transitively by export-jobs + settings tests |
-| `src/db/repositories/settings-repo.test.ts` | EDIT | +9 (one assertion updated to `toMatchObject` plus Phase-6 default smoke checks; pre-existing strict `toEqual` would false-flag the new INSERT OR IGNORE seeds) | 14 cases (same count, 1 widened) |
+| Path                                           | Type | LOC                                                                                                                                                                                                                           | Tests                                                   |
+| ---------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `migrations/0006_phase6_export.sql`            | NEW  | 177                                                                                                                                                                                                                           | n/a (exercised via repo test schema-verification block) |
+| `src/db/repositories/export-jobs-repo.ts`      | NEW  | 803                                                                                                                                                                                                                           | n/a (exercised by sibling test)                         |
+| `src/db/repositories/export-jobs-repo.test.ts` | NEW  | 938                                                                                                                                                                                                                           | 71 cases across 11 describe blocks                      |
+| `src/db/types.ts`                              | EDIT | +120 (new `ExportJobRow` row type + `ExportJobStatus` + `ExportFormat` + `ExportQualityTier` + 17 new `SettingKey` rows + 3 new value-type aliases + extended `SettingValue<K>` conditional + `KNOWN_SETTING_KEYS` extension) | covered transitively by export-jobs + settings tests    |
+| `src/db/repositories/settings-repo.test.ts`    | EDIT | +9 (one assertion updated to `toMatchObject` plus Phase-6 default smoke checks; pre-existing strict `toEqual` would false-flag the new INSERT OR IGNORE seeds)                                                                | 14 cases (same count, 1 widened)                        |
 
 **File-count totals:** 3 new (1 migration + 1 repo + 1 test) + 2 edits. Matches the Wave 23 "To Ravi (Wave 24 db)" estimate.
 
-**Test totals:** 71 new tests added to the project. All 339 db-layer tests pass (`vitest run src/db` — 9 files / 339 tests / 0 failures). The 268 prior Phase 1-5 tests still green (no regression). The one updated Phase 1 assertion (settings-repo `getAll()`) is structural — the test no longer asserts strict equality against a 2-key map because the migration now seeds 17 export.* defaults; the user-set keys still round-trip and a Phase-6 smoke assertion was added.
+**Test totals:** 71 new tests added to the project. All 339 db-layer tests pass (`vitest run src/db` — 9 files / 339 tests / 0 failures). The 268 prior Phase 1-5 tests still green (no regression). The one updated Phase 1 assertion (settings-repo `getAll()`) is structural — the test no longer asserts strict equality against a 2-key map because the migration now seeds 17 export.\* defaults; the user-set keys still round-trip and a Phase-6 smoke assertion was added.
 
 ### Schema v6 deltas vs `docs/data-models.md` §11
 
@@ -6352,17 +6465,18 @@ After each payload: (a) the row is retrievable verbatim through `get` + `listByD
 
 ### Cross-wave handoffs
 
-**To David:** One new factory call — `createExportJobsRepo(db)`. Row shapes snake_case matching `data-models.md` §11.2 + §11.7 verbatim; bridge owns camelCase translation + the four boundary translations (`include_annotations` 0/1 → boolean; `multi_page_tiff` 0/1/null → boolean | null; nested `imageOptions` for image formats; nested `contentStats` for completed office formats). The `output_path` column is **main-only** — your DTO strip in `db-bridge.ts` MUST drop this field before crossing IPC (data-models §11.5 + conventions §17.2; same boundary discipline as Phase 5 `LanguagePackRow.file_path`). The repo surface differs slightly from your bridge contract: my `updateProgress(id, input)` takes an input object (COALESCE-friendly); your bridge `updateProgress(id, pagesProcessed, extras?)` is positional. Compose `adaptExportJobsRepo` so the positional bridge call lands an input object on the repo. Same for the `listAll(filters, limit, offset)` bridge method: my repo has discrete `listByDocHash` / `listByStatus` / `listRecent` / `listInProgress` methods; the bridge composes these into a unified `listAll` with optional filters (mirror the Wave 20 OCR pattern). Five mark-* convenience methods (`markRunning`, `markCompleted`, `markCancelled`, `markFailed`) are available if you want to use them at the channel handler — they wrap `updateStatus` + `updateProgress` for terminal transitions without the bridge having to assemble the watermark inputs itself.
+**To David:** One new factory call — `createExportJobsRepo(db)`. Row shapes snake_case matching `data-models.md` §11.2 + §11.7 verbatim; bridge owns camelCase translation + the four boundary translations (`include_annotations` 0/1 → boolean; `multi_page_tiff` 0/1/null → boolean | null; nested `imageOptions` for image formats; nested `contentStats` for completed office formats). The `output_path` column is **main-only** — your DTO strip in `db-bridge.ts` MUST drop this field before crossing IPC (data-models §11.5 + conventions §17.2; same boundary discipline as Phase 5 `LanguagePackRow.file_path`). The repo surface differs slightly from your bridge contract: my `updateProgress(id, input)` takes an input object (COALESCE-friendly); your bridge `updateProgress(id, pagesProcessed, extras?)` is positional. Compose `adaptExportJobsRepo` so the positional bridge call lands an input object on the repo. Same for the `listAll(filters, limit, offset)` bridge method: my repo has discrete `listByDocHash` / `listByStatus` / `listRecent` / `listInProgress` methods; the bridge composes these into a unified `listAll` with optional filters (mirror the Wave 20 OCR pattern). Five mark-\* convenience methods (`markRunning`, `markCompleted`, `markCancelled`, `markFailed`) are available if you want to use them at the channel handler — they wrap `updateStatus` + `updateProgress` for terminal transitions without the bridge having to assemble the watermark inputs itself.
 
 **To Riley:** No direct dependency. Renderer talks to David's bridge, not Ravi's repo. The 17 new `SettingKey`s are wired through `src/db/types.ts` (this wave) so your `useExportSettings` selector can pull all 17 via `settings:getAll` without an unknown-key rejection.
 
-**To Diego (Wave 25):** No DB layer impact on packaging beyond the existing better-sqlite3 ABI-flip pattern from Wave 10 + Wave 20. The 0006 migration runs at first launch of the v0.6.0 binary; smoke verify it on an upgrade-from-v0.5.x install path (load a saved DB, confirm `schema_migrations.version = 6` post-launch, confirm the 17 export.* seeds are present in `app_settings`, confirm `export_jobs` table exists with 3 indexes). One packaging concern: the prebuild gap for Node 24 on this host (see Test-environment recovery note above) — if you are shipping v0.6.0 against Node 22 LTS (per `engines`), this is a non-issue; if you bumped to Node 24 for any reason, the rebuild step must succeed or no test will run in CI either. Confirm CI Node version matches the engines pin before tag.
+**To Diego (Wave 25):** No DB layer impact on packaging beyond the existing better-sqlite3 ABI-flip pattern from Wave 10 + Wave 20. The 0006 migration runs at first launch of the v0.6.0 binary; smoke verify it on an upgrade-from-v0.5.x install path (load a saved DB, confirm `schema_migrations.version = 6` post-launch, confirm the 17 export.\* seeds are present in `app_settings`, confirm `export_jobs` table exists with 3 indexes). One packaging concern: the prebuild gap for Node 24 on this host (see Test-environment recovery note above) — if you are shipping v0.6.0 against Node 22 LTS (per `engines`), this is a non-issue; if you bumped to Node 24 for any reason, the rebuild step must succeed or no test will run in CI either. Confirm CI Node version matches the engines pin before tag.
 
 **To Julian (Wave 25):** Mechanical audits relevant to Ravi surface:
+
 - The new repo uses prepared statements only (no string-concat SQL anywhere in `src/db/repositories/export-jobs-repo.ts`). Verified by inspection + 7 adversarial-payload SQLi tests.
 - The `output_path` boundary discipline is at the bridge, NOT the repo — flag any cross-IPC export of `output_path` in `src/main/db-bridge.ts` as a violation (mirrors the Wave 21 Julian H-21.2 / Phase 5 `LanguagePackRow.file_path` pattern).
 - Phase 6 introduces no `as any` / `@ts-ignore` in `src/db/`; the conventions §17.5 ban on these patterns in writers extends naturally to the repo (defense-in-depth — repo code should not need them either).
-- The five mark-* convenience methods + `listInProgress` are beyond strict §11.7 surface — note in audit but Marcus blessed the same pattern at Wave 7 (`move()`), Wave 12 (`upsert()`), Wave 20 (`upsert()` + `markInvalidatedByOcrJob`). The doc is the floor, never the ceiling.
+- The five mark-\* convenience methods + `listInProgress` are beyond strict §11.7 surface — note in audit but Marcus blessed the same pattern at Wave 7 (`move()`), Wave 12 (`upsert()`), Wave 20 (`upsert()` + `markInvalidatedByOcrJob`). The doc is the floor, never the ceiling.
 - Anti-sentinel-default discipline: every not-yet-known column is nullable; the schema DDL + repo validators + tests collectively enforce it. The one `NOT NULL DEFAULT 0` count (`pages_processed`) is justified as a real count, not a sentinel — boundary is the status discriminant.
 - Settings table name correction: the migration uses `app_settings` (not the `settings` referenced by data-models §11.6 spec text). Documented in the migration header. Flag if you find any other code path that defaults to `settings` instead of `app_settings` — that would be a downstream copy-paste defect.
 
@@ -6423,6 +6537,7 @@ Per conventions §17.3 the four-location ratchet (preamble + dedicated section +
 4. **(Wave 26 Nathan)** — user-guide preamble + dedicated section + inline subsections + README front-door.
 
 Grep evidence (mechanical, per conventions §17.8):
+
 - `PerFormatLimitationsPanel` mounted in 2 locations in the modal (`index.tsx` step 2 + step 3).
 - `obligation-` data attribute count in the rendered DOM: 6 for DOCX/PPTX, 5 for XLSX, 3-4 for image formats.
 - Honesty banner mounted once in the sidebar (`exports-panel/index.tsx`).
@@ -6430,6 +6545,7 @@ Grep evidence (mechanical, per conventions §17.8):
 ### Test coverage
 
 99 new renderer tests across 7 files:
+
 - `export-slice.test.ts` (28 tests) — initial state, modal lifecycle, draft edits, format catalog, job lifecycle, recent jobs, errors, + Phase 1 surface preservation.
 - `thunks-phase6.test.ts` (20 tests) — `listExportFormatsThunk`, `pickExportOutputPathThunk`, `startExportThunk` per-format dispatch (docx/xlsx/png/jpeg/tiff routing + n/a tier coercion), `cancelExportThunk` (job_already_terminal benign), `refreshExportJobsThunk`, `closeExportModalAndCleanup`, `subscribeExportProgress` event bridge.
 - `export-modal.test.tsx` (13 tests) — Step 1 format cards + image sub-picker; Step 2 quality picker hidden-for-image + obligations panel content (data-obligation attribute assertions); Step 3 confirm summary + re-surfaced panel; Step 4 running view.
@@ -6483,48 +6599,48 @@ The runtime end-to-end smoke (modal open → IPC call → progress events → co
 
 ### What shipped
 
-| Domain | Files (all NEW unless noted) | Channel surface |
-|---|---|---|
-| Contract types | `src/ipc/contracts.ts` (extended §10.6 + Channels registry + `PdfApi.export` + `PdfApi.dialog.pickExportOutputPath`) | 8 Phase-6 channels + 1 event stream |
-| Export engine | `src/main/export/types.ts`, `export-engine.ts`, `layout-extract.ts`, `table-detect.ts`, `image-extract.ts`, `export-bootstrap.ts` | single-funnel; required-on-interface DI |
-| Writers | `src/main/export/writers/docx-writer.ts`, `xlsx-writer.ts`, `pptx-writer.ts`, `image-writer.ts` | one per format; library-injection pattern |
-| IPC handlers | `src/ipc/handlers/export-to-{docx,xlsx,pptx,images}.ts`, `export-cancel-job.ts`, `export-list-formats.ts`, `export-list-jobs.ts`, `dialog-pick-export-output-path.ts`, `export-shared.ts` | preflight + zod safeParse + engine dispatch |
-| db-bridge | `src/main/db-bridge.ts` (extended — `ExportJobsRepoBridge`, `MemoryExportJobsRepo`, `adaptExportJobsRepo`, `DbBridge.exportJobs`) | mirrors OCR-jobs-repo pattern |
-| Wiring | `src/ipc/register.ts` (extended — Phase 6 channels + `RegisterIpcOptions.exportEngine` REQUIRED), `src/main/index.ts` (export-bootstrap wired) | engine REQUIRED, no fallback |
-| Preload | `src/preload/index.ts` (extended — `pdfApi.export.*` + `pdfApi.dialog.pickExportOutputPath`) | typed bridge surface |
-| Tests | `src/main/export/*.test.ts` (4 files, 50+ specs), `src/main/export/writers/writers.test.ts` (20+ specs), `src/ipc/handlers/export-handlers.test.ts` (25+ specs), `scripts/smoke-export.mjs` (27 specs, all passing) | golden-bytes-LITE + boundary tests |
+| Domain         | Files (all NEW unless noted)                                                                                                                                                                                        | Channel surface                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Contract types | `src/ipc/contracts.ts` (extended §10.6 + Channels registry + `PdfApi.export` + `PdfApi.dialog.pickExportOutputPath`)                                                                                                | 8 Phase-6 channels + 1 event stream         |
+| Export engine  | `src/main/export/types.ts`, `export-engine.ts`, `layout-extract.ts`, `table-detect.ts`, `image-extract.ts`, `export-bootstrap.ts`                                                                                   | single-funnel; required-on-interface DI     |
+| Writers        | `src/main/export/writers/docx-writer.ts`, `xlsx-writer.ts`, `pptx-writer.ts`, `image-writer.ts`                                                                                                                     | one per format; library-injection pattern   |
+| IPC handlers   | `src/ipc/handlers/export-to-{docx,xlsx,pptx,images}.ts`, `export-cancel-job.ts`, `export-list-formats.ts`, `export-list-jobs.ts`, `dialog-pick-export-output-path.ts`, `export-shared.ts`                           | preflight + zod safeParse + engine dispatch |
+| db-bridge      | `src/main/db-bridge.ts` (extended — `ExportJobsRepoBridge`, `MemoryExportJobsRepo`, `adaptExportJobsRepo`, `DbBridge.exportJobs`)                                                                                   | mirrors OCR-jobs-repo pattern               |
+| Wiring         | `src/ipc/register.ts` (extended — Phase 6 channels + `RegisterIpcOptions.exportEngine` REQUIRED), `src/main/index.ts` (export-bootstrap wired)                                                                      | engine REQUIRED, no fallback                |
+| Preload        | `src/preload/index.ts` (extended — `pdfApi.export.*` + `pdfApi.dialog.pickExportOutputPath`)                                                                                                                        | typed bridge surface                        |
+| Tests          | `src/main/export/*.test.ts` (4 files, 50+ specs), `src/main/export/writers/writers.test.ts` (20+ specs), `src/ipc/handlers/export-handlers.test.ts` (25+ specs), `scripts/smoke-export.mjs` (27 specs, all passing) | golden-bytes-LITE + boundary tests          |
 
 ### Channels LIVE vs stubbed
 
-| Channel | Status | Notes |
-|---|---|---|
-| `export:toDocx` | **LIVE-with-Wave-25-handoff** | Handler + engine + writer wired. `docx@^9.7.1` library NOT yet installed (Diego Wave 25); writer's `compose()` throws an honest typed error if invoked at runtime. Tests use the in-memory recorder library; all dispatch + zod paths verified. |
-| `export:toXlsx` | **LIVE** | Uses `exceljs` already in deps from Phase 3. Engine + writer end-to-end. |
-| `export:toPptx` | **LIVE-with-Wave-25-handoff** | Same handoff as docx — `pptxgenjs@^4.0.1` not yet installed; tests use recorder. |
-| `export:toImages` | **LIVE-engine, source-loader STUB** | Encoder path (PNG via canvas, JPEG via canvas, TIFF via utif) all wire to existing deps. The pdf.js → rasterize-RGBA loader is a typed throwing stub until Wave 25 wires the operator-stream extractor — same handoff pattern as Phase 5 OCR's pdfjs-bootstrap. Handler returns `rasterize_failed` honestly. |
-| `export:cancelJob` | **LIVE** | AbortController-based; idempotent; pattern mirrors `ocr:cancelJob`. |
-| `export:listJobs` | **LIVE** | Snake_case → camelCase translation + outputPath → basename+dirHint at the boundary (conventions §17.2). Memory-backed when Ravi's repo not yet wired. |
-| `export:listFormats` | **LIVE** | Static catalog of 6 formats with per-format defaults (Q-D locked: docx/pptx layout-preserving; xlsx text-only; image n/a). |
-| `dialog:pickExportOutputPath` | **LIVE** | Mirrors `dialog:saveAs`; rejects path separators in defaultBasename; returns null on user cancel. |
-| `export:progress` event | **LIVE** | Emitted from engine through `getMainWindow().webContents.send`. All 9 phase variants covered. |
+| Channel                       | Status                              | Notes                                                                                                                                                                                                                                                                                                        |
+| ----------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `export:toDocx`               | **LIVE-with-Wave-25-handoff**       | Handler + engine + writer wired. `docx@^9.7.1` library NOT yet installed (Diego Wave 25); writer's `compose()` throws an honest typed error if invoked at runtime. Tests use the in-memory recorder library; all dispatch + zod paths verified.                                                              |
+| `export:toXlsx`               | **LIVE**                            | Uses `exceljs` already in deps from Phase 3. Engine + writer end-to-end.                                                                                                                                                                                                                                     |
+| `export:toPptx`               | **LIVE-with-Wave-25-handoff**       | Same handoff as docx — `pptxgenjs@^4.0.1` not yet installed; tests use recorder.                                                                                                                                                                                                                             |
+| `export:toImages`             | **LIVE-engine, source-loader STUB** | Encoder path (PNG via canvas, JPEG via canvas, TIFF via utif) all wire to existing deps. The pdf.js → rasterize-RGBA loader is a typed throwing stub until Wave 25 wires the operator-stream extractor — same handoff pattern as Phase 5 OCR's pdfjs-bootstrap. Handler returns `rasterize_failed` honestly. |
+| `export:cancelJob`            | **LIVE**                            | AbortController-based; idempotent; pattern mirrors `ocr:cancelJob`.                                                                                                                                                                                                                                          |
+| `export:listJobs`             | **LIVE**                            | Snake_case → camelCase translation + outputPath → basename+dirHint at the boundary (conventions §17.2). Memory-backed when Ravi's repo not yet wired.                                                                                                                                                        |
+| `export:listFormats`          | **LIVE**                            | Static catalog of 6 formats with per-format defaults (Q-D locked: docx/pptx layout-preserving; xlsx text-only; image n/a).                                                                                                                                                                                   |
+| `dialog:pickExportOutputPath` | **LIVE**                            | Mirrors `dialog:saveAs`; rejects path separators in defaultBasename; returns null on user cancel.                                                                                                                                                                                                            |
+| `export:progress` event       | **LIVE**                            | Emitted from engine through `getMainWindow().webContents.send`. All 9 phase variants covered.                                                                                                                                                                                                                |
 
 ### Locked-decision evidence
 
-| Lock | Where encoded | Verified by |
-|---|---|---|
-| P6-L-1 layout-preserving best-effort | `layout-extract.ts` 8-step pipeline; settings configurable | smoke-export.mjs 6 layout tests (H1 detection, multi-column, bold detection) |
-| P6-L-2 docx library scope (Paragraph/TextRun/Heading1-3/Table/ImageRun) | `docx-writer.ts` `DocxChild` discriminated union | writers.test.ts docx specs |
-| P6-L-3 exceljs WRITE side reused | `xlsx-writer.ts` injection; `export-bootstrap.ts:createExcelJsLibrary` | grep `from 'exceljs'` in src/ ⇒ 2 files only (mail-merge.ts + xlsx-writer.ts via bootstrap) |
-| P6-L-4 pptxgenjs slide-per-page | `pptx-writer.ts` 16:9 layout, EMU conversion | writers.test.ts pptx specs |
-| P6-L-5 image rasterization via canvas | `export-bootstrap.ts:createCanvasPngEncoder` / `createCanvasJpegEncoder` | image-writer.test.ts file-signature assertions |
-| P6-L-6 background queue + cancel | `export-engine.ts` `ActiveJob` registry + 3 cancel checkpoints | export-engine.test.ts cancellation spec |
-| P6-L-9 read-only on source | Engine never calls pdf-lib `.save()`; no `signature_audit_log` import in `src/main/export/**` | grep `signature_audit_log\|edit_history` in src/main/export ⇒ ZERO matches |
-| P6-L-10 schema delta (export_jobs) | `db-bridge.ts` `ExportJobsRepoBridge` interface; Ravi delivers migration | adapter ready to wrap Ravi's repo |
-| Anti-sentinel discipline | `LayoutRect = {...} \| null` everywhere; `ExportJobSummary.perPageProgress` nullable; `ExportJobRowDto.imageOptions`/`contentStats` nullable | grep `{x: 0, y: 0, w: 0, h: 0}` in src/main/export ⇒ ZERO matches |
-| Required-on-interface (anti-stub) | `ExportEngineDeps.writers` REQUIRES all four; `RegisterIpcOptions.exportEngine` REQUIRED | typecheck would fail if any writer omitted |
-| No `as any` discipline | grep `as any` in src/main/export/writers/ ⇒ ZERO matches | matches conventions §17.5 audit pattern |
-| qualityTier z.enum (not optional) | All 3 office handlers use `z.enum(['text-only', 'layout-preserving'])` no `.optional()` | export-handlers.test.ts spec "rejects invalid_payload on missing qualityTier" |
-| Atomic write | `writeAtomic` helper writes `.export-temp` then renames | export-engine.test.ts "writeAtomic helper unlinks tmp on rename failure" |
+| Lock                                                                    | Where encoded                                                                                                                                | Verified by                                                                                 |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| P6-L-1 layout-preserving best-effort                                    | `layout-extract.ts` 8-step pipeline; settings configurable                                                                                   | smoke-export.mjs 6 layout tests (H1 detection, multi-column, bold detection)                |
+| P6-L-2 docx library scope (Paragraph/TextRun/Heading1-3/Table/ImageRun) | `docx-writer.ts` `DocxChild` discriminated union                                                                                             | writers.test.ts docx specs                                                                  |
+| P6-L-3 exceljs WRITE side reused                                        | `xlsx-writer.ts` injection; `export-bootstrap.ts:createExcelJsLibrary`                                                                       | grep `from 'exceljs'` in src/ ⇒ 2 files only (mail-merge.ts + xlsx-writer.ts via bootstrap) |
+| P6-L-4 pptxgenjs slide-per-page                                         | `pptx-writer.ts` 16:9 layout, EMU conversion                                                                                                 | writers.test.ts pptx specs                                                                  |
+| P6-L-5 image rasterization via canvas                                   | `export-bootstrap.ts:createCanvasPngEncoder` / `createCanvasJpegEncoder`                                                                     | image-writer.test.ts file-signature assertions                                              |
+| P6-L-6 background queue + cancel                                        | `export-engine.ts` `ActiveJob` registry + 3 cancel checkpoints                                                                               | export-engine.test.ts cancellation spec                                                     |
+| P6-L-9 read-only on source                                              | Engine never calls pdf-lib `.save()`; no `signature_audit_log` import in `src/main/export/**`                                                | grep `signature_audit_log\|edit_history` in src/main/export ⇒ ZERO matches                  |
+| P6-L-10 schema delta (export_jobs)                                      | `db-bridge.ts` `ExportJobsRepoBridge` interface; Ravi delivers migration                                                                     | adapter ready to wrap Ravi's repo                                                           |
+| Anti-sentinel discipline                                                | `LayoutRect = {...} \| null` everywhere; `ExportJobSummary.perPageProgress` nullable; `ExportJobRowDto.imageOptions`/`contentStats` nullable | grep `{x: 0, y: 0, w: 0, h: 0}` in src/main/export ⇒ ZERO matches                           |
+| Required-on-interface (anti-stub)                                       | `ExportEngineDeps.writers` REQUIRES all four; `RegisterIpcOptions.exportEngine` REQUIRED                                                     | typecheck would fail if any writer omitted                                                  |
+| No `as any` discipline                                                  | grep `as any` in src/main/export/writers/ ⇒ ZERO matches                                                                                     | matches conventions §17.5 audit pattern                                                     |
+| qualityTier z.enum (not optional)                                       | All 3 office handlers use `z.enum(['text-only', 'layout-preserving'])` no `.optional()`                                                      | export-handlers.test.ts spec "rejects invalid_payload on missing qualityTier"               |
+| Atomic write                                                            | `writeAtomic` helper writes `.export-temp` then renames                                                                                      | export-engine.test.ts "writeAtomic helper unlinks tmp on rename failure"                    |
 
 ### Test infrastructure note (REPO-WIDE BLOCKER — surfaced for Marcus)
 
@@ -6555,6 +6671,7 @@ The runtime end-to-end smoke (modal open → IPC call → progress events → co
 ### Deviations from Riley's spec
 
 None substantive. Where Riley's spec said "do X", I did X:
+
 - 8-step bounding-box clustering (export-engine.md §3.4): implemented all 8 steps + an early empty-page guard + a Y-bucket X-gap split as a pre-pass (catches multi-column ROWS before paragraph clustering — without it, the paragraph-stage column detector merges multi-column rows into single paragraphs spanning the page).
 - 5-step line-grid table detection (export-engine.md §3.5): implemented as written. Density check uses `>= 0.8` threshold of expected perimeter+internal coverage.
 - Image extraction with CTM stack (export-engine.md §3.6): save/restore/transform tracked across opList; XObject + inline + mask all captured; skip threshold 8x8 px / 16 pt² applied as spec'd.
@@ -6570,14 +6687,14 @@ One **inferred refinement** beyond the spec (documented honestly): the body-font
 
 ### Findings counts
 
-| Severity | Count | IDs |
-|---|---|---|
-| BLOCKER | 0 | — |
-| HIGH | 2 | H-25.1 (ExportQueue documented but not implemented), H-25.2 (2 failing tests — fixed this wave) |
-| MEDIUM | 6 | M-25.1 (synthetic-negative-jobId recurrence), M-25.2 (obligation-id mis-label — fixed), M-25.3 (raw `(e as Error).message` leaked to renderer toast), M-25.4 (`createProdSourceLoader` throwing stub), M-25.5 (ImageExtractor sync-vs-Promise doc drift), M-25.6 (no opList → LineSegment converter shipped) |
-| LOW | 6 | L-25.1 ... L-25.6 |
-| NIT | 5 | N-25.1 ... N-25.5 |
-| **TOTAL** | **19** | |
+| Severity  | Count  | IDs                                                                                                                                                                                                                                                                                                          |
+| --------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| BLOCKER   | 0      | —                                                                                                                                                                                                                                                                                                            |
+| HIGH      | 2      | H-25.1 (ExportQueue documented but not implemented), H-25.2 (2 failing tests — fixed this wave)                                                                                                                                                                                                              |
+| MEDIUM    | 6      | M-25.1 (synthetic-negative-jobId recurrence), M-25.2 (obligation-id mis-label — fixed), M-25.3 (raw `(e as Error).message` leaked to renderer toast), M-25.4 (`createProdSourceLoader` throwing stub), M-25.5 (ImageExtractor sync-vs-Promise doc drift), M-25.6 (no opList → LineSegment converter shipped) |
+| LOW       | 6      | L-25.1 ... L-25.6                                                                                                                                                                                                                                                                                            |
+| NIT       | 5      | N-25.1 ... N-25.5                                                                                                                                                                                                                                                                                            |
+| **TOTAL** | **19** |                                                                                                                                                                                                                                                                                                              |
 
 ### Top-3 must-close
 
@@ -6587,13 +6704,13 @@ One **inferred refinement** beyond the spec (documented honestly): the body-font
 
 ### Five-ratchet compliance
 
-| Ratchet | Phase 6 status |
-|---|---|
-| Permissive-stub anti-pattern (Wave 13.5 lesson) | **ZERO new instances.** Required-on-interface DI structural fix holds for the fifth consecutive wave. |
-| Sentinel-default discipline (Phase 4.1.1 lesson) | **ZERO new instances.** `LayoutRect = T \| null` honored end-to-end. |
-| Code-comment-contradiction (Julian H-21.1 lesson) | **ZERO new instances.** No `as any` / `@ts-ignore` in production writers; library-injection pattern avoids the issue. |
-| Stub-shipped-with-TODO (global JSONL 2026-05-27) | **TWO honest THROW stubs** (`createProdSourceLoader` + `uninstalledDocxLibrary`/`uninstalledPptxLibrary`). Not silent defaults — they throw with clear messages on first use, handler maps to typed `extraction_failed` / `writer_failed`. Conforms to anti-stub structural pattern. |
-| Layout-preserving-best-effort honesty (Phase 6-fifth-instance trust-floor) | **3+ UI surfaces per obligation.** PerFormatLimitationsPanel mounts in Step 2 + Step 3 + ExportsPanel sidebar banner. Meets ratchet at UI level; Wave 26 Nathan owns docs locations. |
+| Ratchet                                                                    | Phase 6 status                                                                                                                                                                                                                                                                       |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Permissive-stub anti-pattern (Wave 13.5 lesson)                            | **ZERO new instances.** Required-on-interface DI structural fix holds for the fifth consecutive wave.                                                                                                                                                                                |
+| Sentinel-default discipline (Phase 4.1.1 lesson)                           | **ZERO new instances.** `LayoutRect = T \| null` honored end-to-end.                                                                                                                                                                                                                 |
+| Code-comment-contradiction (Julian H-21.1 lesson)                          | **ZERO new instances.** No `as any` / `@ts-ignore` in production writers; library-injection pattern avoids the issue.                                                                                                                                                                |
+| Stub-shipped-with-TODO (global JSONL 2026-05-27)                           | **TWO honest THROW stubs** (`createProdSourceLoader` + `uninstalledDocxLibrary`/`uninstalledPptxLibrary`). Not silent defaults — they throw with clear messages on first use, handler maps to typed `extraction_failed` / `writer_failed`. Conforms to anti-stub structural pattern. |
+| Layout-preserving-best-effort honesty (Phase 6-fifth-instance trust-floor) | **3+ UI surfaces per obligation.** PerFormatLimitationsPanel mounts in Step 2 + Step 3 + ExportsPanel sidebar banner. Meets ratchet at UI level; Wave 26 Nathan owns docs locations.                                                                                                 |
 
 ### Export-job lifecycle verdict
 
@@ -6639,21 +6756,21 @@ Verification: `npx vitest run src/main/export src/client/components/modals/expor
 
 ### Files added / edited
 
-| File | Status | Purpose |
-|---|---|---|
-| `package.json` | edited | Version 0.5.0 → 0.6.0; +`docx@^9.7.1`; +`pptxgenjs@^4.0.1`; `vitest` + `@vitest/ui` ^1.6.0 → ^2.1.9; description updated for Phase 6 |
-| `package-lock.json` | edited | npm install --legacy-peer-deps; 19 added, 34 removed, 17 changed (net -9 packages, 826 → 817) |
-| `electron-builder.yml` | unchanged | No new asarUnpack entries (pure-JS docx + pptxgenjs); existing bundle config covers them |
-| `electron.vite.config.ts` | edited | Added `emitExportBootstrapCjs()` closeBundle plugin — esbuild-compiles `src/main/export/export-bootstrap.ts` to CJS at `dist/main/export/export-bootstrap.js` + writes sibling `package.json {type:commonjs}`. Diego-domain packaging fix for David's runtime require pattern that vite tree-shakes into the main bundle (would otherwise prevent app launch). |
-| `.github/workflows/ci.yml` | edited | Added comment block documenting the Node-24-vs-Node-20-ABI rebuild ordering + vitest 2.x pin rationale referencing the Wave 25 RCA. CI itself still runs on Node 20 LTS (unchanged). |
-| `LICENSES.md` | edited | Refreshed Phase 6 block: +`docx`, +`pptxgenjs`, +`nanoid` (transitive); vitest version bump; net package count delta; esbuild-emit-pattern documentation under packaging-only newcomers; +2 Acknowledgments entries (Dolan Miu + Brent Ely). |
-| `scripts/wave25-license-walk.mjs` | new | Hand-rolled license walk script (license-checker still broken on Node 24). Rolls up every `package.json` in `node_modules/`, applies SPDX dual-license arm-selection, flags forbidden licenses. 817 packages scanned, zero AGPL/GPL ingress. |
-| `scripts/wave25-test-triage.mjs` | new | Reads vitest JSON reporter output, buckets failures by domain (src/db / src/main / src/ipc / src/preload / src/client / other), clusters error messages. Used to confirm the 7 post-bump failures are all pre-existing or David-domain. |
-| `scripts/wave25-export-xlsx-evidence.ps1` | new | L-002 evidence helper — launches v0.6.0 with a sample PDF, drives Ctrl+Shift+E via SendKeys (failed in non-interactive shell with "Access is denied"; documented limitation, the static launch shot is sufficient for L-002), captures full-window screenshot. |
-| `scripts/wave25-xlsx-bytes-evidence.mjs` | new | **Packaged-binary end-to-end xlsx proof.** Extracts `release/win-unpacked/resources/app.asar` to a temp dir, `require()`s the extracted `dist/main/export/export-bootstrap.js`, drives `engine.runJob()` with a synthetic source loader against the LIVE packaged code, writes a real `.xlsx` file, verifies ZIP signature (504b0304 / "PK") and reads it back via exceljs to confirm 2 sheets + per-page text content present. |
-| `release/wave-25-v060-launch-shot.png` | new | L-002 mandated visual verification PNG. 1280×800. Captures running v0.6.0 chrome: title bar "PDF_Viewer_Editor", native Electron menu (File/Edit/View/Window/Help), app menu bar (File/Edit/Insert/View/Tools/Help), 20+ toolbar icons (open, save, undo, redo, annotation tools, page ops, print, export), empty-state "Open a PDF to get started" + blue Open file button + RECENTS panel with one previously-opened file. |
-| `release/wave-25-v060-launch-shot.process-snap.txt` | new | Process metadata supplementary check per L-002 (floor not ceiling): 4-process Electron family tree (main PID 60832 with MainWindowHandle=0xB40DE6 + title "PDF_Viewer_Editor"; GPU PID 45388; utility PID 87620; renderer PID 97232). All four > 0 handle counts. |
-| `release/wave-25-v060-xlsx-output.xlsx` | new | Real 7097-byte workbook produced by the packaged engine (binary evidence companion to the launch screenshot). 2 sheets ("Page1", "Page2"), each with the synthesized text content from the script. |
+| File                                                | Status    | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| --------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `package.json`                                      | edited    | Version 0.5.0 → 0.6.0; +`docx@^9.7.1`; +`pptxgenjs@^4.0.1`; `vitest` + `@vitest/ui` ^1.6.0 → ^2.1.9; description updated for Phase 6                                                                                                                                                                                                                                                                                            |
+| `package-lock.json`                                 | edited    | npm install --legacy-peer-deps; 19 added, 34 removed, 17 changed (net -9 packages, 826 → 817)                                                                                                                                                                                                                                                                                                                                   |
+| `electron-builder.yml`                              | unchanged | No new asarUnpack entries (pure-JS docx + pptxgenjs); existing bundle config covers them                                                                                                                                                                                                                                                                                                                                        |
+| `electron.vite.config.ts`                           | edited    | Added `emitExportBootstrapCjs()` closeBundle plugin — esbuild-compiles `src/main/export/export-bootstrap.ts` to CJS at `dist/main/export/export-bootstrap.js` + writes sibling `package.json {type:commonjs}`. Diego-domain packaging fix for David's runtime require pattern that vite tree-shakes into the main bundle (would otherwise prevent app launch).                                                                  |
+| `.github/workflows/ci.yml`                          | edited    | Added comment block documenting the Node-24-vs-Node-20-ABI rebuild ordering + vitest 2.x pin rationale referencing the Wave 25 RCA. CI itself still runs on Node 20 LTS (unchanged).                                                                                                                                                                                                                                            |
+| `LICENSES.md`                                       | edited    | Refreshed Phase 6 block: +`docx`, +`pptxgenjs`, +`nanoid` (transitive); vitest version bump; net package count delta; esbuild-emit-pattern documentation under packaging-only newcomers; +2 Acknowledgments entries (Dolan Miu + Brent Ely).                                                                                                                                                                                    |
+| `scripts/wave25-license-walk.mjs`                   | new       | Hand-rolled license walk script (license-checker still broken on Node 24). Rolls up every `package.json` in `node_modules/`, applies SPDX dual-license arm-selection, flags forbidden licenses. 817 packages scanned, zero AGPL/GPL ingress.                                                                                                                                                                                    |
+| `scripts/wave25-test-triage.mjs`                    | new       | Reads vitest JSON reporter output, buckets failures by domain (src/db / src/main / src/ipc / src/preload / src/client / other), clusters error messages. Used to confirm the 7 post-bump failures are all pre-existing or David-domain.                                                                                                                                                                                         |
+| `scripts/wave25-export-xlsx-evidence.ps1`           | new       | L-002 evidence helper — launches v0.6.0 with a sample PDF, drives Ctrl+Shift+E via SendKeys (failed in non-interactive shell with "Access is denied"; documented limitation, the static launch shot is sufficient for L-002), captures full-window screenshot.                                                                                                                                                                  |
+| `scripts/wave25-xlsx-bytes-evidence.mjs`            | new       | **Packaged-binary end-to-end xlsx proof.** Extracts `release/win-unpacked/resources/app.asar` to a temp dir, `require()`s the extracted `dist/main/export/export-bootstrap.js`, drives `engine.runJob()` with a synthetic source loader against the LIVE packaged code, writes a real `.xlsx` file, verifies ZIP signature (504b0304 / "PK") and reads it back via exceljs to confirm 2 sheets + per-page text content present. |
+| `release/wave-25-v060-launch-shot.png`              | new       | L-002 mandated visual verification PNG. 1280×800. Captures running v0.6.0 chrome: title bar "PDF_Viewer_Editor", native Electron menu (File/Edit/View/Window/Help), app menu bar (File/Edit/Insert/View/Tools/Help), 20+ toolbar icons (open, save, undo, redo, annotation tools, page ops, print, export), empty-state "Open a PDF to get started" + blue Open file button + RECENTS panel with one previously-opened file.    |
+| `release/wave-25-v060-launch-shot.process-snap.txt` | new       | Process metadata supplementary check per L-002 (floor not ceiling): 4-process Electron family tree (main PID 60832 with MainWindowHandle=0xB40DE6 + title "PDF_Viewer_Editor"; GPU PID 45388; utility PID 87620; renderer PID 97232). All four > 0 handle counts.                                                                                                                                                               |
+| `release/wave-25-v060-xlsx-output.xlsx`             | new       | Real 7097-byte workbook produced by the packaged engine (binary evidence companion to the launch screenshot). 2 sheets ("Page1", "Page2"), each with the synthesized text content from the script.                                                                                                                                                                                                                              |
 
 ### Real bug caught by L-002 visual-verification mandate
 
@@ -6673,7 +6790,7 @@ Require stack:
 
 Even with an emitted ESM sibling, Electron 30's Node 20 rejects `require()` of ESM with `ERR_REQUIRE_ESM` (the Node 22+ `--experimental-require-module` flag is not available on this runtime).
 
-**Fix (Diego-domain, electron.vite.config.ts only — no `src/**` edits):** Added a closeBundle plugin `emitExportBootstrapCjs()` that runs after the main vite build. It uses esbuild (already in the toolchain) to bundle `src/main/export/export-bootstrap.ts` directly to CJS at `dist/main/export/export-bootstrap.js`, externalizing the same packages vite externalizes (electron + native modules). It also writes a sibling `dist/main/export/package.json` containing `{"type":"commonjs"}` to override the root `"type":"module"` so Node resolves the file as CJS — without this, even a CJS-formatted file in this directory gets treated as ESM and `require()` throws `ERR_REQUIRE_ESM`. End result: `require('./export/export-bootstrap.js')` from the ESM main bundle (which itself uses `createRequire(import.meta.url)`) succeeds synchronously, exposes `bootstrapExportEngine + createProdSourceLoader + ...`, the app launches, renderer spawns, L-002 screenshot succeeds.
+**Fix (Diego-domain, electron.vite.config.ts only — no `src/**`edits):** Added a closeBundle plugin`emitExportBootstrapCjs()`that runs after the main vite build. It uses esbuild (already in the toolchain) to bundle`src/main/export/export-bootstrap.ts`directly to CJS at`dist/main/export/export-bootstrap.js`, externalizing the same packages vite externalizes (electron + native modules). It also writes a sibling `dist/main/export/package.json`containing`{"type":"commonjs"}`to override the root`"type":"module"`so Node resolves the file as CJS — without this, even a CJS-formatted file in this directory gets treated as ESM and`require()`throws`ERR_REQUIRE_ESM`. End result: `require('./export/export-bootstrap.js')`from the ESM main bundle (which itself uses`createRequire(import.meta.url)`) succeeds synchronously, exposes `bootstrapExportEngine + createProdSourceLoader + ...`, the app launches, renderer spawns, L-002 screenshot succeeds.
 
 **This is the third instance of the "L-002 catches what process-metadata misses" pattern** that motivated the lock. Wave 17 caught preload-path .cjs/.js mismatch (silent IPC no-op despite clean handle counts). Wave 17 also caught the ELECTRON_RUN_AS_NODE-broken-bootstrap false alarm (handle counts looked broken but screenshot would have shown a perfectly working UI). Wave 25 caught the runtime-require missing-emit pattern (3-process tree, no window, would have been called green by any automated process-metadata check that demands "process count >= 4 implies running"). The lock holds.
 
@@ -6705,12 +6822,12 @@ npm install --legacy-peer-deps
 > 826 packages (Phase 5) → 817 packages (Phase 6 Wave 25)
 ```
 
-| New direct dep | Version | License | Transitive deps added |
-|---|---|---|---|
-| `docx` | 9.7.1 | MIT | `nanoid@5.1.11` (MIT, nested under docx) |
-| `pptxgenjs` | 4.0.1 | MIT | zero (ships pre-rolled `dist/pptxgen.bundle.js`) |
-| `vitest` (bump) | 1.6.0 → 2.1.9 | MIT | net -12 transitives (tighter dep graph in 2.x) |
-| `@vitest/ui` (bump) | 1.6.0 → 2.1.9 | MIT | already deduped |
+| New direct dep      | Version       | License | Transitive deps added                            |
+| ------------------- | ------------- | ------- | ------------------------------------------------ |
+| `docx`              | 9.7.1         | MIT     | `nanoid@5.1.11` (MIT, nested under docx)         |
+| `pptxgenjs`         | 4.0.1         | MIT     | zero (ships pre-rolled `dist/pptxgen.bundle.js`) |
+| `vitest` (bump)     | 1.6.0 → 2.1.9 | MIT     | net -12 transitives (tighter dep graph in 2.x)   |
+| `@vitest/ui` (bump) | 1.6.0 → 2.1.9 | MIT     | already deduped                                  |
 
 License walk via `scripts/wave25-license-walk.mjs`: **zero AGPL/GPL/LGPL/EPL ingress.** Single UNKNOWN remains `buffers@0.1.1` (Phase 3 carry-over via exceljs → unzipper → binary → buffers; documented + tracked since Phase 3). Full rollup in `LICENSES.md`.
 
@@ -6740,14 +6857,14 @@ Duration    17.56s
 
 Pre-bump (Node 24.14.1 + vitest 1.6.1): every one of the 138 test files reported "No test suite found", 0 tests collected, 0 passed. Post-bump: 1520/1527 pass (99.5%). The 7 failures broken down:
 
-| Test | File | Domain | Status |
-|---|---|---|---|
-| pptx-writer Y-flip | `src/main/export/writers/writers.test.ts` | David Phase 6 | **Fixed by Julian Wave 25 remediation** (line 441-449) — re-run shows still 1 failing assertion; David follow-up |
-| image-extract CTM restore | `src/main/export/image-extract.test.ts` | David Phase 6 | **Fixed by Julian Wave 25 remediation** (line 89-127) — re-run shows still 1 failing assertion; David follow-up |
-| PadesSignModal × 2 | `src/client/components/modals/pades-sign-modal/pades-sign-modal.test.tsx` | Riley pre-existing | Documented as brittle in Riley Wave 24 row |
-| useSignatureCanvas | `src/client/hooks/use-signature-canvas.test.ts` | Riley pre-existing | Documented as brittle in Riley Wave 24 row |
-| SignatureAuditPanel | `src/client/components/signature-audit-panel/signature-audit-panel.test.tsx` | Riley pre-existing | Documented as brittle in Riley Wave 24 row |
-| AnnotationSummaryPanel | `src/client/components/annotation-summary-panel/annotation-summary-panel.test.tsx` | Riley pre-existing | Documented as brittle in Riley Wave 24 row |
+| Test                      | File                                                                               | Domain             | Status                                                                                                           |
+| ------------------------- | ---------------------------------------------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| pptx-writer Y-flip        | `src/main/export/writers/writers.test.ts`                                          | David Phase 6      | **Fixed by Julian Wave 25 remediation** (line 441-449) — re-run shows still 1 failing assertion; David follow-up |
+| image-extract CTM restore | `src/main/export/image-extract.test.ts`                                            | David Phase 6      | **Fixed by Julian Wave 25 remediation** (line 89-127) — re-run shows still 1 failing assertion; David follow-up  |
+| PadesSignModal × 2        | `src/client/components/modals/pades-sign-modal/pades-sign-modal.test.tsx`          | Riley pre-existing | Documented as brittle in Riley Wave 24 row                                                                       |
+| useSignatureCanvas        | `src/client/hooks/use-signature-canvas.test.ts`                                    | Riley pre-existing | Documented as brittle in Riley Wave 24 row                                                                       |
+| SignatureAuditPanel       | `src/client/components/signature-audit-panel/signature-audit-panel.test.tsx`       | Riley pre-existing | Documented as brittle in Riley Wave 24 row                                                                       |
+| AnnotationSummaryPanel    | `src/client/components/annotation-summary-panel/annotation-summary-panel.test.tsx` | Riley pre-existing | Documented as brittle in Riley Wave 24 row                                                                       |
 
 **None Diego-domain.** All 339 src/db tests pass (after a one-time better-sqlite3 binding swap — see "Test environment recovery" below). All 350+ Phase-6 src/main/export tests pass except the two Julian listed as "should be fixed" but still showing failures (likely a stale test file or Julian's edit didn't take; flagged for David follow-up).
 
@@ -6850,24 +6967,24 @@ Promotion candidate for global JSONL: the **"vite tree-shakes a David-owned runt
 
 ### Files refreshed (Nathan-owned)
 
-| File | Delta | What changed |
-|---|---|---|
-| `README.md` | full rewrite (status banner 0.5.0 → 0.6.0; Phase 6 feature bullets; new Phase 6 known-limitations section with 9 headline bullets; install table 0.6.0 binaries + ~134 MB + 0.5.0→0.6.0 schema-v6 migration story; docx + pptxgenjs acknowledgments + Dolan Miu / Brent Ely; vitest 2.x acknowledgment; Phase 5/4/3 archive sections demoted) | Refreshed feature list with Phase 6 surface; documented xlsx-LIVE-end-to-end + docx/pptx/images-LIVE-pending-source-loader + ExportQueue-inline-concurrency-1 honestly |
-| `docs/user-guide.md` | +~330 lines (header 0.5.0 → 0.6.0; preamble 5-obligation trust-floor enumeration; new "Known limitations in Phase 6" table with 15 Phase-6 partial-features rows; new dedicated **Export trust floor** section; new **Exporting to Office and images** section (4-step wizard); new **Exports sidebar** section; new **Status-bar progress widget** section; 17 new `export.*` Settings rows; Ctrl+Shift+E shortcut; Coming-in-6.1/7 table) | Phase 6 user-facing workflows + the trust-floor honesty banner at three doc locations (preamble + dedicated section + inline at every export-touching subsection) |
-| `docs/developer-guide.md` | +~210 lines (Phase 6 quick-reference at top; export-engine architecture subsection — pipeline + layout-detect 8-step + table-detect 5-step + image-extract CTM + four writers + job lifecycle; Phase 6 IPC channel reference card; 17 setting keys; schema v6; test counts updated to 1520/1527; project layout `src/main/export/**` tree; migrations 0006; **runtime-require pitfall** as new top-of-pitfalls subsection; **vitest 2.x / Node 24 pitfall**; Node-24-ABI third-instance note; Phase 6 test-gaps; Where-to-learn-more + read-order) | Phase 6 + Wave 25 fixes developer-facing; the two pitfalls placed with file:line refs |
-| `docs/api-reference.md` | +~230 lines (intro + Phase 6 channel-status note; status-summary `export:*` row + `dialog:*` bump to 3; full Phase 6 channels section — 8 `export:*` + `dialog:pickExportOutputPath` + `export:progress` with Request/Response/Errors/example per channel; Phase 6 setting keys + schema v6 + `ExportJobSummary` type; cross-references) | Phase 6 public IPC surface with honest per-channel status (xlsx LIVE; docx/pptx LIVE-pending-source-loader; images LIVE-engine-pending-source-loader) |
+| File                      | Delta                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | What changed                                                                                                                                                           |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`               | full rewrite (status banner 0.5.0 → 0.6.0; Phase 6 feature bullets; new Phase 6 known-limitations section with 9 headline bullets; install table 0.6.0 binaries + ~134 MB + 0.5.0→0.6.0 schema-v6 migration story; docx + pptxgenjs acknowledgments + Dolan Miu / Brent Ely; vitest 2.x acknowledgment; Phase 5/4/3 archive sections demoted)                                                                                                                                                                                                      | Refreshed feature list with Phase 6 surface; documented xlsx-LIVE-end-to-end + docx/pptx/images-LIVE-pending-source-loader + ExportQueue-inline-concurrency-1 honestly |
+| `docs/user-guide.md`      | +~330 lines (header 0.5.0 → 0.6.0; preamble 5-obligation trust-floor enumeration; new "Known limitations in Phase 6" table with 15 Phase-6 partial-features rows; new dedicated **Export trust floor** section; new **Exporting to Office and images** section (4-step wizard); new **Exports sidebar** section; new **Status-bar progress widget** section; 17 new `export.*` Settings rows; Ctrl+Shift+E shortcut; Coming-in-6.1/7 table)                                                                                                        | Phase 6 user-facing workflows + the trust-floor honesty banner at three doc locations (preamble + dedicated section + inline at every export-touching subsection)      |
+| `docs/developer-guide.md` | +~210 lines (Phase 6 quick-reference at top; export-engine architecture subsection — pipeline + layout-detect 8-step + table-detect 5-step + image-extract CTM + four writers + job lifecycle; Phase 6 IPC channel reference card; 17 setting keys; schema v6; test counts updated to 1520/1527; project layout `src/main/export/**` tree; migrations 0006; **runtime-require pitfall** as new top-of-pitfalls subsection; **vitest 2.x / Node 24 pitfall**; Node-24-ABI third-instance note; Phase 6 test-gaps; Where-to-learn-more + read-order) | Phase 6 + Wave 25 fixes developer-facing; the two pitfalls placed with file:line refs                                                                                  |
+| `docs/api-reference.md`   | +~230 lines (intro + Phase 6 channel-status note; status-summary `export:*` row + `dialog:*` bump to 3; full Phase 6 channels section — 8 `export:*` + `dialog:pickExportOutputPath` + `export:progress` with Request/Response/Errors/example per channel; Phase 6 setting keys + schema v6 + `ExportJobSummary` type; cross-references)                                                                                                                                                                                                           | Phase 6 public IPC surface with honest per-channel status (xlsx LIVE; docx/pptx LIVE-pending-source-loader; images LIVE-engine-pending-source-loader)                  |
 
 ### Trust-floor placement evidence (fifth-instance ratchet)
 
 The trust-floor pattern is now confirmed at its **fifth consecutive instance** with the same doc structure: Phase 1 H-3 walking-skeleton + Phase 3 forms (JS-strip / XFA / signed-fields-invalidated) + Phase 4 PAdES (4 obligations) + Phase 5 OCR (4 obligations + 2 cross-cutting) + **Phase 6 Export (5 obligations + 1 cross-cutting)**. The five surfaces (per Riley conventions §17.3 four-doc-locations-plus-UI-modal):
 
-| Surface | Location | Owner | Status |
-|---|---|---|---|
-| 1. Top-of-guide preamble | `docs/user-guide.md` header (5 obligations + duration reminder in 6 bullets) | Nathan Wave 26 | DONE |
-| 2. Dedicated trust-floor section | `docs/user-guide.md` "Export trust floor — what the app does and doesn't promise" (full 5-obligation enumeration + cross-cutting reminder + What-IS / What-IS-NOT) | Nathan Wave 26 | DONE |
-| 3. Inline at every export-touching subsection | Honesty-reminder callouts in Exporting / Exports-sidebar / Status-bar-widget / Settings + OCR-results-panel cross-link | Nathan Wave 26 | DONE (5 inline callouts + 1 cross-link from OCR results panel) |
-| 4. README front-door | `README.md` "Phase 6 known limitations" 9 headline bullets | Nathan Wave 26 | DONE |
-| 5. ExportModal PerFormatLimitationsPanel (UI) | `src/client/components/modals/export-modal/per-format-limitations.ts` | Riley Wave 24 | Pre-existing (Riley); Nathan documents the UI surface + the user-guide anchor it links to |
+| Surface                                       | Location                                                                                                                                                           | Owner          | Status                                                                                    |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- | ----------------------------------------------------------------------------------------- |
+| 1. Top-of-guide preamble                      | `docs/user-guide.md` header (5 obligations + duration reminder in 6 bullets)                                                                                       | Nathan Wave 26 | DONE                                                                                      |
+| 2. Dedicated trust-floor section              | `docs/user-guide.md` "Export trust floor — what the app does and doesn't promise" (full 5-obligation enumeration + cross-cutting reminder + What-IS / What-IS-NOT) | Nathan Wave 26 | DONE                                                                                      |
+| 3. Inline at every export-touching subsection | Honesty-reminder callouts in Exporting / Exports-sidebar / Status-bar-widget / Settings + OCR-results-panel cross-link                                             | Nathan Wave 26 | DONE (5 inline callouts + 1 cross-link from OCR results panel)                            |
+| 4. README front-door                          | `README.md` "Phase 6 known limitations" 9 headline bullets                                                                                                         | Nathan Wave 26 | DONE                                                                                      |
+| 5. ExportModal PerFormatLimitationsPanel (UI) | `src/client/components/modals/export-modal/per-format-limitations.ts`                                                                                              | Riley Wave 24  | Pre-existing (Riley); Nathan documents the UI surface + the user-guide anchor it links to |
 
 Inline anchor target: `#the-five-phase-6-obligations` (the obligations subsection); section anchor: `#export-trust-floor--what-the-app-does-and-doesnt-promise`. Verified resolvable against the emitted headings.
 
@@ -6931,19 +7048,20 @@ Developer-guide testing-strategy block updated to the Diego Wave 25 aggregate: *
 
 A pdf-lib-authored text PDF run through `bootstrapExportEngine(createProdSourceLoader().loader, .rasterize)`:
 
-| Format | Output | Signature | Result |
-|---|---|---|---|
-| docx | 8636 B | `504b0304` (ZIP) | OK — 2 paragraphs extracted |
-| xlsx | 6481 B | `504b0304` (ZIP) | OK |
-| pptx | 45420 B | `504b0304` (ZIP) | OK |
-| png  | 5996 B | `89504e47` (PNG) | OK |
-| jpeg | 7862 B | `ffd8ffe0` (JPEG) | OK |
-| tiff | 3.4 MB | `4d4d002a` (TIFF) | OK |
+| Format | Output  | Signature         | Result                      |
+| ------ | ------- | ----------------- | --------------------------- |
+| docx   | 8636 B  | `504b0304` (ZIP)  | OK — 2 paragraphs extracted |
+| xlsx   | 6481 B  | `504b0304` (ZIP)  | OK                          |
+| pptx   | 45420 B | `504b0304` (ZIP)  | OK                          |
+| png    | 5996 B  | `89504e47` (PNG)  | OK                          |
+| jpeg   | 7862 B  | `ffd8ffe0` (JPEG) | OK                          |
+| tiff   | 3.4 MB  | `4d4d002a` (TIFF) | OK                          |
 
 ### Per-item (A-F)
 
 **A — `createProdSourceLoader` wired to real pdf.js (M-25.4, highest priority): DONE.**
 New module `src/main/export/pdfjs-source.ts` (`createProdPdfJsSource`) is the SINGLE production funnel for all four formats, mirroring `ocr-bootstrap.ts:rasterizePageProd`:
+
 - `getTextContent` -> `page.getTextContent()` normalized to `PdfTextItem` (drops non-TextItem marked-content).
 - `getOperatorList` -> `page.getOperatorList()` with numeric pdf.js OPS codes translated to the string `OpName` shape the image-extract walker expects.
 - `getImageResolver` -> `page.objs.get(name)` + `commonObjs`, normalized to `PdfImageObject` (ImageKind RGB/RGBA/GRAYSCALE_1BPP -> one-byte-per-pixel unpack).
@@ -6953,6 +7071,7 @@ New module `src/main/export/pdfjs-source.ts` (`createProdPdfJsSource`) is the SI
 Per-job binding: the engine is a singleton; each `runJob(spec)` carries its own `spec.sourceBytes`. Added optional `bind(spec)`/`release()` to `PageSourceLoader`; the engine awaits `bind` at job start and `release` in a `finally` on every terminal path. xlsx now flows through the SAME loader as the other three (unified funnel) — there is no separate xlsx path.
 
 Two real production bugs found + fixed while wiring (regression-guarded in `prod-render.test.ts`):
+
 1. **Buffer detach:** pdf.js transfers (detaches) the input `data` ArrayBuffer to its worker. `documentStore.getBytes()` returns the same stored buffer each call, so a second export of the same doc would throw `Cannot transfer object of unsupported type`. Fix: `bind()` passes `spec.sourceBytes.slice()` (a copy).
 2. **pdf.js v4 Path2D in Node:** `page.render()` of any text page threw `Value is none of these types String, Path` because pdf.js builds an internal `Path` polyfill when `globalThis.Path2D` is absent, which @napi-rs/canvas's `ctx.fill()` rejects. Fix: register `Path2D`/`DOMMatrix`/`ImageData`/`DOMPoint` from @napi-rs/canvas onto `globalThis` BEFORE pdf.js loads (idempotent, never clobbers an existing global). Also wired `standardFontDataUrl`/`cMapUrl` from the pdfjs-dist package root.
 
@@ -6961,9 +7080,10 @@ Two real production bugs found + fixed while wiring (regression-guarded in `prod
 
 **C — 2 failing Phase-6 tests (Diego follow-up #4): VERIFIED GREEN — no production bug remained.**
 Both tests now pass under vitest 2.1.9:
+
 - `writers.test.ts` "layout-preserving converts paragraph rects from pt -> in (PDF Y flipped)" — pptx-writer Y-flip math `ptToIn(pageHeightPt - (rect.y + rect.h)) * sy` is correct (PDF origin bottom-left -> PPTX top-left). PASS.
 - `image-extract.test.ts` "respects save/restore — CTM resets after restore" — the `restore` op pops the CTM stack; the second post-restore transform starts from identity. PASS.
-The Wave-25 1520/1527 aggregate predated Julian's remediation landing; the build-report itself noted the env state had shifted (vitest already 2.1.9 at audit). I confirmed the PRODUCTION code matches the test expectations exactly — no fix needed, no test expectation was wrong.
+  The Wave-25 1520/1527 aggregate predated Julian's remediation landing; the build-report itself noted the env state had shifted (vitest already 2.1.9 at audit). I confirmed the PRODUCTION code matches the test expectations exactly — no fix needed, no test expectation was wrong.
 
 **D — uninstalled-library stubs replaced (Diego follow-up #5): DONE.**
 `uninstalledDocxLibrary`/`uninstalledPptxLibrary` throwers removed. `createDocxLibrary()` binds the real `docx@9.7.1`; `createPptxLibrary()` binds the real `pptxgenjs@4.0.1` (addSlide/addText/addImage/addTable/write). `real-libraries.test.ts` exercises all three real libs (docx/pptx/xlsx) and asserts valid ZIP signature + non-trivial size + correct writer stats. Single-funnel preserved: the libs are reached only via indirect-string `require` in the bootstrap (Julian `from 'docx'` grep stays at ZERO).
@@ -6972,6 +7092,7 @@ The Wave-25 1520/1527 aggregate predated Julian's remediation landing; the build
 New module `src/main/export/export-queue.ts` (`createExportQueue`): single-worker FIFO, concurrency=1, queued+1-running cap (`export.maxQueueSize`, default 50), same-output-path collision rejection at enqueue (case/separator-insensitive on win32), and `cancel(jobId)` that drops a queued job OR aborts the running one via its `ActiveJob` AbortController. Wired into `register.ts` and routed through `runAndPersist` (the handler still awaits the result so the IPC `{ jobId, summary }` response shape is unchanged — the queue serializes execution; the await preserves the contract). `getActiveJobCount` now reflects queue state (running + queued). Cancel handler routes through the queue so still-queued jobs can be cancelled. Collision maps to the contract-valid `output_path_unwritable` (no contract change — `output_path_collision` is a Riley contract addition for Phase 6.2). `export-queue.test.ts` proves FIFO order, concurrency=1 (maxConcurrent===1), collision rejection, queue_full cap, and queued+running cancel.
 
 **F — Tests: all green.**
+
 - `src/main/export/pdfjs-source.test.ts` (10) — prod source-loader: text-content, op-list translation, image resolver, line-segments, rasterize, grayscale unpack, bind/release, out-of-range.
 - `src/main/export/writers/real-libraries.test.ts` (5) — real docx/pptx/xlsx valid output.
 - `src/main/export/prod-render.test.ts` (2) — real @napi-rs/canvas render + buffer-detach regression guard.
@@ -6980,17 +7101,17 @@ New module `src/main/export/export-queue.ts` (`createExportQueue`): single-worke
 
 ### Files added / edited
 
-| File | Change |
-|---|---|
-| `src/main/export/pdfjs-source.ts` | NEW — production pdf.js source loader + rasterizer (single funnel) |
-| `src/main/export/export-queue.ts` | NEW — FIFO concurrency=1 queue (H-25.1) |
-| `src/main/export/export-bootstrap.ts` | real docx/pptx/exceljs libraries; real `createProdSourceLoader` (returns loader+rasterize bundle); font-data + canvas-global resolvers |
-| `src/main/export/export-engine.ts` | added optional `bind`/`release` to `PageSourceLoader`; engine binds per-job + releases in `finally` |
-| `src/main/index.ts` | runtime require -> static import; wire real source bundle |
-| `src/ipc/register.ts` | construct + wire `ExportQueue`; queue-aware active-job count + cancel |
-| `src/ipc/handlers/export-shared.ts` | route `runAndPersist` through the queue; collision handling |
-| `src/ipc/handlers/export-{to-docx,to-xlsx,to-pptx,to-images,cancel-job}.ts` | map collision -> `output_path_unwritable`; cancel routes through queue |
-| `src/main/export/{pdfjs-source,export-queue,prod-render}.test.ts`, `writers/real-libraries.test.ts` | NEW tests |
+| File                                                                                                | Change                                                                                                                                 |
+| --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/main/export/pdfjs-source.ts`                                                                   | NEW — production pdf.js source loader + rasterizer (single funnel)                                                                     |
+| `src/main/export/export-queue.ts`                                                                   | NEW — FIFO concurrency=1 queue (H-25.1)                                                                                                |
+| `src/main/export/export-bootstrap.ts`                                                               | real docx/pptx/exceljs libraries; real `createProdSourceLoader` (returns loader+rasterize bundle); font-data + canvas-global resolvers |
+| `src/main/export/export-engine.ts`                                                                  | added optional `bind`/`release` to `PageSourceLoader`; engine binds per-job + releases in `finally`                                    |
+| `src/main/index.ts`                                                                                 | runtime require -> static import; wire real source bundle                                                                              |
+| `src/ipc/register.ts`                                                                               | construct + wire `ExportQueue`; queue-aware active-job count + cancel                                                                  |
+| `src/ipc/handlers/export-shared.ts`                                                                 | route `runAndPersist` through the queue; collision handling                                                                            |
+| `src/ipc/handlers/export-{to-docx,to-xlsx,to-pptx,to-images,cancel-job}.ts`                         | map collision -> `output_path_unwritable`; cancel routes through queue                                                                 |
+| `src/main/export/{pdfjs-source,export-queue,prod-render}.test.ts`, `writers/real-libraries.test.ts` | NEW tests                                                                                                                              |
 
 ### Diego handoff (v0.6.1 repack)
 
@@ -7009,6 +7130,7 @@ New module `src/main/export/export-queue.ts` (`createExportQueue`): single-worke
 Removed `emitExportBootstrapCjs()` from `electron.vite.config.ts` (the plugin function, its entry in the `main.plugins` array, and the now-unused `node:fs` imports `mkdirSync`/`writeFileSync`/`existsSync`). David's Phase 6.1 conversion of `src/main/index.ts`'s runtime `require('./export/export-bootstrap.js')` to a top-level static import means Vite now bundles the bootstrap INLINE into `dist/main/index.js`.
 
 **Verification (`scripts/wave-26-1-verify-no-dead-bootstrap.mjs`, all PASS):**
+
 - `dist/main/index.js` inlines the bootstrap — **4 refs** to `createProdPdfJsSource` / `bootstrapExportEngine`.
 - **ZERO** dangling `require('./export/export-bootstrap.js')` in `dist/main/index.js`.
 - The standalone CJS sibling `dist/main/export/export-bootstrap.js` is **NOT emitted** (confirmed in dist/ AND in the shipped asar — `npx asar list` shows only `dist/main/{index.js, language-pack-catalog.json, shape-annotations-*.js}`, no `dist/main/export/`).
@@ -7019,14 +7141,17 @@ Main bundle grew 330 KB -> 391.49 KB (the inlined bootstrap), which is expected 
 ### Objective 2 — pdfjs-font asarUnpack (David handoff #2): RESOLVED via REVERSE-EXCLUDE + UNPACK
 
 **Path resolution determined by grep of David's source.** `src/main/export/export-bootstrap.ts:500-516 resolveExportFontData()` does:
+
 ```
 const root = dirname(require.resolve('pdfjs-dist/package.json'));
 standardFontDataUrl = pathToFileURL(join(root, 'standard_fonts') + sep).href
 cMapUrl             = pathToFileURL(join(root, 'cmaps') + sep).href
 ```
+
 i.e. the MAIN-process export loader resolves fonts from the **`node_modules/pdfjs-dist/` package root**, NOT from `dist/renderer/pdfjs/`. This is the renderer-vs-main asset-path **divergence**: the renderer reads `dist/renderer/pdfjs/` (Riley's vite-plugin-static-copy output), the main export reads `node_modules/pdfjs-dist/{standard_fonts,cmaps}/`. Both must exist in the packaged binary.
 
 **Two reconciling changes to `electron-builder.yml`:**
+
 1. **Reversed the Phase 4.1.3 excludes** (`!**/node_modules/pdfjs-dist/standard_fonts/**` + `cmaps/**`). Those were correct when only the renderer used pdfjs and the node_modules copies were dead weight; Phase 6.1's main-process loader makes them load-bearing.
 2. **Added asarUnpack** for `node_modules/pdfjs-dist/{package.json, standard_fonts/**, cmaps/**}`. Unpacking (not just un-excluding) is mandatory because pdf.js fetches the `.pfb`/`.bcmap` assets over `file://` URLs, and `file://` resolves against the REAL filesystem — an asar virtual path is not a real file. `package.json` is unpacked too so `require.resolve('pdfjs-dist/package.json')` returns the `app.asar.unpacked/` path (Electron's asar shim redirects require.resolve only when the resolved file itself is unpacked), making `dirname(pkgJson)` point at the unpacked root where the sibling `standard_fonts/` + `cmaps/` dirs are real files.
 
@@ -7042,6 +7167,7 @@ i.e. the MAIN-process export loader resolves fonts from the **`node_modules/pdfj
 ### Objective 4 — package v0.6.1: DONE
 
 `npm run dist:win` -> electron-builder 24.13.3, electron 30.5.1, rebuilt better-sqlite3@11.10.0 for win32-x64 (Electron ABI), produced:
+
 - `release/PDF Viewer & Editor-0.6.1-x64.exe` (NSIS) — **128.88 MB**
 - `release/PDF Viewer & Editor-0.6.1-x64-portable.exe` — **128.66 MB**
 - `release/PDF Viewer & Editor-0.6.1-x64.exe.blockmap` (NSIS only; portable has none — expected)
@@ -7056,12 +7182,12 @@ i.e. the MAIN-process export loader resolves fonts from the **`node_modules/pdfj
 
 **ALL FOUR FORMATS — PACKAGED-BINARY end-to-end evidence** (`scripts/wave-26-1-all-formats-evidence.cjs`): extracts the shipped `app.asar`, overlays the REAL `app.asar.unpacked/node_modules/pdfjs-dist/{standard_fonts,cmaps}` (reproducing the runtime layout), drives David's REAL `createProdSourceLoader()` production funnel (real pdf.js + @napi-rs/canvas + font URLs pinned to the unpacked tree) through `bootstrapExportEngine` against a real pdf-lib text+image 2-page PDF:
 
-| Format | Output | Size | Signature | Content verified |
-|---|---|---|---|---|
-| **xlsx** | `release/wave-26-1-v061-output.xlsx` | 7147 B | `504b0304` (ZIP) | extracted text present |
-| **docx** | `release/wave-26-1-v061-output.docx` | 8699 B | `504b0304` (ZIP) | heading "Phase 6.1 Export Evidence" + "quick brown fox" + page-2 text all present in `word/document.xml` |
-| **pptx** | `release/wave-26-1-v061-output.pptx` | 49920 B | `504b0304` (ZIP) | 2 slides (one per page) |
-| **png** | `release/wave-26-1-v061-output-page1.png` | 5817 B | `89504e47` (PNG) | embedded image rendered correctly; **text glyphs absent** (see follow-up #1) |
+| Format   | Output                                    | Size    | Signature        | Content verified                                                                                         |
+| -------- | ----------------------------------------- | ------- | ---------------- | -------------------------------------------------------------------------------------------------------- |
+| **xlsx** | `release/wave-26-1-v061-output.xlsx`      | 7147 B  | `504b0304` (ZIP) | extracted text present                                                                                   |
+| **docx** | `release/wave-26-1-v061-output.docx`      | 8699 B  | `504b0304` (ZIP) | heading "Phase 6.1 Export Evidence" + "quick brown fox" + page-2 text all present in `word/document.xml` |
+| **pptx** | `release/wave-26-1-v061-output.pptx`      | 49920 B | `504b0304` (ZIP) | 2 slides (one per page)                                                                                  |
+| **png**  | `release/wave-26-1-v061-output-page1.png` | 5817 B  | `89504e47` (PNG) | embedded image rendered correctly; **text glyphs absent** (see follow-up #1)                             |
 
 Machine-readable: `release/wave-26-1-v061-all-formats-evidence.json`. **Composite evidence image (brief-requested path):** `release/wave-6-1-v061-all-formats-evidence.png` — launch screenshot + a summary panel listing all four outputs with sizes + byte sigs marked VALID.
 
@@ -7073,22 +7199,25 @@ Machine-readable: `release/wave-26-1-v061-all-formats-evidence.json`. **Composit
 
 ### Config files changed (Diego-owned only)
 
-| File | Change |
-|---|---|
-| `electron.vite.config.ts` | Removed `emitExportBootstrapCjs()` plugin (fn + array entry + dead fs imports); replaced with a removal-rationale comment block |
-| `electron-builder.yml` | Reversed Phase 4.1.3 pdfjs font/cmap excludes; added asarUnpack for `pdfjs-dist/{package.json,standard_fonts/**,cmaps/**}` |
-| `package.json` | version 0.6.0 -> 0.6.1 |
-| `scripts/wave-26-1-verify-no-dead-bootstrap.mjs` | NEW — asserts bootstrap inlined + no dangling require + no dead sibling |
-| `scripts/wave-26-1-all-formats-evidence.cjs` | NEW — drives all four formats through the packaged engine + unpacked fonts; byte-sig verifies |
-| `scripts/wave-26-1-compose-evidence.ps1` | NEW — composes launch shot + four-format summary into the brief-requested evidence PNG |
+| File                                             | Change                                                                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| `electron.vite.config.ts`                        | Removed `emitExportBootstrapCjs()` plugin (fn + array entry + dead fs imports); replaced with a removal-rationale comment block |
+| `electron-builder.yml`                           | Reversed Phase 4.1.3 pdfjs font/cmap excludes; added asarUnpack for `pdfjs-dist/{package.json,standard_fonts/**,cmaps/**}`      |
+| `package.json`                                   | version 0.6.0 -> 0.6.1                                                                                                          |
+| `scripts/wave-26-1-verify-no-dead-bootstrap.mjs` | NEW — asserts bootstrap inlined + no dangling require + no dead sibling                                                         |
+| `scripts/wave-26-1-all-formats-evidence.cjs`     | NEW — drives all four formats through the packaged engine + unpacked fonts; byte-sig verifies                                   |
+| `scripts/wave-26-1-compose-evidence.ps1`         | NEW — composes launch shot + four-format summary into the brief-requested evidence PNG                                          |
 
 ### L-001 status
+
 **Unchanged.** Diego did not edit `src/main/window-manager.ts`. `enableDragDropFiles: true` remains the Electron default.
 
 ### L-002 status
+
 **Satisfied** with the operator-level screenshot (`release/wave-26-1-v061-launch-shot.png`, six+ UI elements) AND the supplementary process-metadata floor AND the all-four-formats composite (`release/wave-6-1-v061-all-formats-evidence.png`). The pixel evidence also caught the David-domain glyph-render defect (#1) that a process-metadata-only check would have shipped GREEN.
 
 ### Self-improvement log appended to `.learnings/learnings.jsonl`.
+
 Promotion candidate (global JSONL): the **renderer-vs-main asset-path divergence** — when a dependency ships runtime assets (fonts/cmaps/wasm/workers), the RENDERER funnel (vite-plugin-static-copy to `dist/renderer/`) and the MAIN-process funnel (`require.resolve(pkg)` into `node_modules/`) resolve to DIFFERENT paths; packaging must satisfy BOTH, and `file://`-consumed assets in the main path require asarUnpack (un-exclude alone is insufficient — asar virtual paths are not real files). Also: unpack the package's `package.json` whenever the consumer resolves asset dirs via `dirname(require.resolve('pkg/package.json'))`, so require.resolve lands on the unpacked tree.
 
 ---
@@ -7099,40 +7228,40 @@ Promotion candidate (global JSONL): the **renderer-vs-main asset-path divergence
 
 **Deliverables on disk:**
 
-| File | Type | Approx size |
-|---|---|---|
-| `docs/architecture-phase-7.md` | NEW | ~310 lines |
-| `docs/a11y-audit.md` | NEW | ~230 lines |
-| `docs/i18n-strategy.md` | NEW | ~210 lines |
-| `docs/api-contracts.md` §18 | AMEND (additive) | +~270 lines (8 channels + 1 event stream across `update` / `telemetry` / `i18n`) |
-| `docs/data-models.md` §12 | AMEND (additive) | +~150 lines (4 settings keys; NO new table; NO new column) |
-| `docs/ui-spec.md` §16 | AMEND (additive) | +~220 lines (Settings General/About + telemetry debug panel + ARIA tab fixes) |
-| `docs/conventions.md` §18 | AMEND (additive) | +~210 lines (a11y + i18n + telemetry + cross-platform conventions) |
+| File                           | Type             | Approx size                                                                      |
+| ------------------------------ | ---------------- | -------------------------------------------------------------------------------- |
+| `docs/architecture-phase-7.md` | NEW              | ~310 lines                                                                       |
+| `docs/a11y-audit.md`           | NEW              | ~230 lines                                                                       |
+| `docs/i18n-strategy.md`        | NEW              | ~210 lines                                                                       |
+| `docs/api-contracts.md` §18    | AMEND (additive) | +~270 lines (8 channels + 1 event stream across `update` / `telemetry` / `i18n`) |
+| `docs/data-models.md` §12      | AMEND (additive) | +~150 lines (4 settings keys; NO new table; NO new column)                       |
+| `docs/ui-spec.md` §16          | AMEND (additive) | +~220 lines (Settings General/About + telemetry debug panel + ARIA tab fixes)    |
+| `docs/conventions.md` §18      | AMEND (additive) | +~210 lines (a11y + i18n + telemetry + cross-platform conventions)               |
 
 ### Locked-decision encoding evidence
 
-| ID | Decision | Where encoded |
-|---|---|---|
-| P7-L-1 | Cross-platform: configure all, verify Windows only; mac/linux UNVERIFIED | architecture-phase-7.md §2 (build matrix), §6 (native modules), conventions §18.6 |
-| P7-L-2 | Auto-update: electron-updater (MIT) + GitHub provider, publish target PLACEHOLDER, explicit-by-default | architecture-phase-7.md §3, api-contracts §18.1-§18.3, ui-spec §16.1-§16.2 |
-| P7-L-3 | Telemetry: opt-in default OFF, anonymous, no PII, no third-party SDK, no-op ring buffer | architecture-phase-7.md §4, api-contracts §18.4-§18.6, conventions §18.5, data-models §12.4 |
-| P7-L-4 | a11y: WCAG 2.1 AA, deferred ARIA tab fix, Windows Narrator | a11y-audit.md (whole doc), ui-spec §16.5, conventions §18.3 |
-| P7-L-5 | i18n: i18next + react-i18next (MIT), big-bang extraction, es-ES proof locale | i18n-strategy.md (whole doc), conventions §18.4 |
-| P7-L-6 | Trust-floor SIXTH instance — 6 obligations, four-location ratchet | architecture-phase-7.md §8, ui-spec §16.9, conventions §18.1-§18.2 |
-| P7-L-7 | Schema: NO new table; 4 settings keys (telemetry.optIn, i18n.locale, update.channel, update.lastCheckedAt) | data-models.md §12, migration v7 design |
-| P7-L-8 | No new process/window/bundled-binary-copy; native-module rebuild story documented | architecture-phase-7.md §2.1, §6 |
+| ID     | Decision                                                                                                   | Where encoded                                                                               |
+| ------ | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| P7-L-1 | Cross-platform: configure all, verify Windows only; mac/linux UNVERIFIED                                   | architecture-phase-7.md §2 (build matrix), §6 (native modules), conventions §18.6           |
+| P7-L-2 | Auto-update: electron-updater (MIT) + GitHub provider, publish target PLACEHOLDER, explicit-by-default     | architecture-phase-7.md §3, api-contracts §18.1-§18.3, ui-spec §16.1-§16.2                  |
+| P7-L-3 | Telemetry: opt-in default OFF, anonymous, no PII, no third-party SDK, no-op ring buffer                    | architecture-phase-7.md §4, api-contracts §18.4-§18.6, conventions §18.5, data-models §12.4 |
+| P7-L-4 | a11y: WCAG 2.1 AA, deferred ARIA tab fix, Windows Narrator                                                 | a11y-audit.md (whole doc), ui-spec §16.5, conventions §18.3                                 |
+| P7-L-5 | i18n: i18next + react-i18next (MIT), big-bang extraction, es-ES proof locale                               | i18n-strategy.md (whole doc), conventions §18.4                                             |
+| P7-L-6 | Trust-floor SIXTH instance — 6 obligations, four-location ratchet                                          | architecture-phase-7.md §8, ui-spec §16.9, conventions §18.1-§18.2                          |
+| P7-L-7 | Schema: NO new table; 4 settings keys (telemetry.optIn, i18n.locale, update.channel, update.lastCheckedAt) | data-models.md §12, migration v7 design                                                     |
+| P7-L-8 | No new process/window/bundled-binary-copy; native-module rebuild story documented                          | architecture-phase-7.md §2.1, §6                                                            |
 
 ### Library survey
 
-| Library | License | Verdict | Note |
-|---|---|---|---|
-| `electron-updater` | MIT | ADOPT | electron-builder ecosystem; reads `publish` block; GitHub provider; publish target is a documented placeholder |
-| `i18next` | MIT | ADOPT | core engine; ~22 KB min+gz; CLDR plurals; no phone-home |
-| `react-i18next` | MIT | ADOPT | React hooks + Trans component; ~12 KB |
-| `i18next-resources-to-backend` | MIT | ADOPT (optional) | lazy import of locale chunks; ~2 KB |
-| Google Analytics / Sentry / PostHog / Mixpanel / Amplitude | various | **REJECT** | all default ON / opt-out / phone-home; violate the opt-in-default-OFF privacy stance |
-| Hand-rolled telemetry hook + allowlist + no-op ring buffer | n/a | CHOSEN | zero new dependency; default OFF; auditable; nothing leaves the machine in Phase 7 |
-| `date-fns` / `moment` / `numeral` | — | NOT ADDED | `Intl` keyed to `i18n.language` covers Phase 7 (conventions §12.3) |
+| Library                                                    | License | Verdict          | Note                                                                                                           |
+| ---------------------------------------------------------- | ------- | ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| `electron-updater`                                         | MIT     | ADOPT            | electron-builder ecosystem; reads `publish` block; GitHub provider; publish target is a documented placeholder |
+| `i18next`                                                  | MIT     | ADOPT            | core engine; ~22 KB min+gz; CLDR plurals; no phone-home                                                        |
+| `react-i18next`                                            | MIT     | ADOPT            | React hooks + Trans component; ~12 KB                                                                          |
+| `i18next-resources-to-backend`                             | MIT     | ADOPT (optional) | lazy import of locale chunks; ~2 KB                                                                            |
+| Google Analytics / Sentry / PostHog / Mixpanel / Amplitude | various | **REJECT**       | all default ON / opt-out / phone-home; violate the opt-in-default-OFF privacy stance                           |
+| Hand-rolled telemetry hook + allowlist + no-op ring buffer | n/a     | CHOSEN           | zero new dependency; default OFF; auditable; nothing leaves the machine in Phase 7                             |
+| `date-fns` / `moment` / `numeral`                          | —       | NOT ADDED        | `Intl` keyed to `i18n.language` covers Phase 7 (conventions §12.3)                                             |
 
 Bundle impact (renderer initial chunk): i18next stack ~36-50 KB min+gz; non-active locales are lazy code-split chunks (~0 KB until selected). Telemetry adds ZERO dependency.
 
@@ -7155,23 +7284,24 @@ Bundle impact (renderer initial chunk): i18next stack ~36-50 KB min+gz; non-acti
 ### Trust-floor obligations for the Wave 30 Nathan docs
 
 Six obligations (architecture-phase-7.md §8). The four highest-stakes claims Nathan MUST state honestly (conventions §18.2 has the honest/dishonest framing pairs):
+
 1. Telemetry OFF by default; anonymous counts only; nothing leaves the machine in Phase 7.
 2. Auto-update CLIENT is wired; publish target is a placeholder; updates will not function until configured.
 3. macOS/Linux configs are UNVERIFIED on real hardware.
 4. es-ES is a translation SAMPLE, not a complete localization.
 5. a11y is WCAG 2.1 AA for critical paths, with documented gaps (a11y-audit §7).
 6. Code-signing cert is the user's real-world Phase 7.1 step.
-Four-location ratchet: preamble + dedicated section + inline + README known-limitations (all Nathan) + the load-bearing UI placements already specified for Wave 28 Riley (Settings telemetry copy, locale-picker subtext, About update-status notice).
+   Four-location ratchet: preamble + dedicated section + inline + README known-limitations (all Nathan) + the load-bearing UI placements already specified for Wave 28 Riley (Settings telemetry copy, locale-picker subtext, About update-status notice).
 
 ### New risks (Phase 7 implementation)
 
-| Risk | Severity | Note |
-|---|---|---|
-| i18n big-bang extraction is the dominant Wave 28 task (~890 strings across 6 phases of components) | **MEDIUM** | Mechanical but large. **Recommend a sub-split** if Wave 28 also carries Diego's packaging+update+telemetry work + Riley's a11y fixes — see recommendation below. |
-| `better-sqlite3` Node-24 ABI failures (already on the dev host) compound the UNVERIFIED mac/linux native rebuild | **MEDIUM** | Pre-existing (build-report 2026-05-27); Diego's standing recommendation to bump better-sqlite3 to a 12.x covering both ABIs applies. |
-| `@napi-rs/canvas` universal-mac merge must include both arch prebuilds | **LOW-MEDIUM** | UNVERIFIED; electron-builder universal merge is the mechanism. |
-| Restoring `jsx-a11y/aria-proptypes` to `error` could surface latent warnings beyond the three known tab surfaces | **LOW** | Caught at lint-time in Wave 28; the proper tab pattern should clear them. |
-| Auto-update signature verification will refuse bundles until the code-signing cert exists | **LOW (by design)** | Correct security behavior; documented (obligation #6); the cert is the user's Phase 7.1 step. |
+| Risk                                                                                                             | Severity            | Note                                                                                                                                                             |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| i18n big-bang extraction is the dominant Wave 28 task (~890 strings across 6 phases of components)               | **MEDIUM**          | Mechanical but large. **Recommend a sub-split** if Wave 28 also carries Diego's packaging+update+telemetry work + Riley's a11y fixes — see recommendation below. |
+| `better-sqlite3` Node-24 ABI failures (already on the dev host) compound the UNVERIFIED mac/linux native rebuild | **MEDIUM**          | Pre-existing (build-report 2026-05-27); Diego's standing recommendation to bump better-sqlite3 to a 12.x covering both ABIs applies.                             |
+| `@napi-rs/canvas` universal-mac merge must include both arch prebuilds                                           | **LOW-MEDIUM**      | UNVERIFIED; electron-builder universal merge is the mechanism.                                                                                                   |
+| Restoring `jsx-a11y/aria-proptypes` to `error` could surface latent warnings beyond the three known tab surfaces | **LOW**             | Caught at lint-time in Wave 28; the proper tab pattern should clear them.                                                                                        |
+| Auto-update signature verification will refuse bundles until the code-signing cert exists                        | **LOW (by design)** | Correct security behavior; documented (obligation #6); the cert is the user's Phase 7.1 step.                                                                    |
 
 ### Recommendation — is Phase 7 larger than one implementation wave?
 
@@ -7187,12 +7317,15 @@ Four-location ratchet: preamble + dedicated section + inline + README known-limi
 - `.learnings/locked-instructions.md` — append-only via Marcus; NOT touched. **L-001 + L-002 both verified untouched.**
 
 ### L-001 status
+
 **Unchanged.** No `src/main/window-manager.ts` edit; no `enableDragDropFiles` reference that weakens it. conventions §18.7 INCLUDES the L-001 verification grep as the last-verification per the phase-7-plan acceptance criteria. architecture-phase-7.md §2.1 + ui-spec §16.8 both explicitly state L-001 is untouched and not extended.
 
 ### L-002 status
+
 **N/A for this wave** (design-only; no packaging, no binary). L-002 applies to Diego's Wave 29 cross-platform dist:dry-run + the Windows packaging wave. architecture-phase-7.md §2.5 references L-002 as the model for the Phase-7.1 mac/linux verification path (headed-runner screenshot).
 
 ### Self-improvement log
+
 One JSONL entry appended to `.learnings/learnings.jsonl`.
 
 ---
@@ -7203,16 +7336,16 @@ One JSONL entry appended to `.learnings/learnings.jsonl`.
 
 ### Settings-keys-only vs new-table decision
 
-**Settings-keys-only. NO new table.** Per `data-models.md` §12.1 + §12.4 (and Riley's Q-B answer, architecture-phase-7.md §4.3), Phase 7 introduces **zero** new SQLite tables and **zero** new columns. The telemetry event buffer is a renderer-side **in-memory bounded array** (`NoOpRingBufferTransport`, default 500 events) — deliberately NOT persisted, by privacy design (P7-L-3): events must not survive a restart, must not be forensically recoverable from the `.db` file, must not be a tamper surface. Only the opt-in *flag* persists. A `telemetry_events` table would violate the privacy stance; the migration header documents this as a deliberate non-table for the next maintainer. This is the smallest migration in the project — settings seeds only, zero DDL.
+**Settings-keys-only. NO new table.** Per `data-models.md` §12.1 + §12.4 (and Riley's Q-B answer, architecture-phase-7.md §4.3), Phase 7 introduces **zero** new SQLite tables and **zero** new columns. The telemetry event buffer is a renderer-side **in-memory bounded array** (`NoOpRingBufferTransport`, default 500 events) — deliberately NOT persisted, by privacy design (P7-L-3): events must not survive a restart, must not be forensically recoverable from the `.db` file, must not be a tamper surface. Only the opt-in _flag_ persists. A `telemetry_events` table would violate the privacy stance; the migration header documents this as a deliberate non-table for the next maintainer. This is the smallest migration in the project — settings seeds only, zero DDL.
 
 ### Files Ravi created or amended this wave
 
-| Path | Type | LOC | Tests |
-|---|---|---|---|
-| `migrations/0007_phase7_polish.sql` | NEW | 4 INSERT-OR-IGNORE seed rows + ~70 lines of header rationale | exercised via settings-repo test seed assertions |
-| `src/db/types.ts` | EDIT | +~40 (4 new `SettingKey` members + 2 value-type aliases `AppLocale`/`UpdateChannel` + 4 `SettingValue<K>` conditional branches incl. `number \| null` for `update.lastCheckedAt` + 4 `KNOWN_SETTING_KEYS` rows) | covered transitively by settings tests |
-| `src/db/repositories/settings-repo.test.ts` | EDIT | +~85 (new `Phase 7 seeded defaults` describe block, 9 cases) | 22 cases total in the file (13 prior + 9 new Phase-7) |
-| `src/db/repositories/export-jobs-repo.test.ts` | EDIT | +~12 / -2 (retargeted two `MAX(version)` assertions off the hardcoded `6`) | 71 cases (count unchanged; 2 assertions fixed) |
+| Path                                           | Type | LOC                                                                                                                                                                                                             | Tests                                                 |
+| ---------------------------------------------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `migrations/0007_phase7_polish.sql`            | NEW  | 4 INSERT-OR-IGNORE seed rows + ~70 lines of header rationale                                                                                                                                                    | exercised via settings-repo test seed assertions      |
+| `src/db/types.ts`                              | EDIT | +~40 (4 new `SettingKey` members + 2 value-type aliases `AppLocale`/`UpdateChannel` + 4 `SettingValue<K>` conditional branches incl. `number \| null` for `update.lastCheckedAt` + 4 `KNOWN_SETTING_KEYS` rows) | covered transitively by settings tests                |
+| `src/db/repositories/settings-repo.test.ts`    | EDIT | +~85 (new `Phase 7 seeded defaults` describe block, 9 cases)                                                                                                                                                    | 22 cases total in the file (13 prior + 9 new Phase-7) |
+| `src/db/repositories/export-jobs-repo.test.ts` | EDIT | +~12 / -2 (retargeted two `MAX(version)` assertions off the hardcoded `6`)                                                                                                                                      | 71 cases (count unchanged; 2 assertions fixed)        |
 
 **File-count totals:** 1 new (migration) + 3 edits. No new repo or repo-source file — Phase 7 adds no persistent entity beyond the four key-value rows, so the existing `settings-repo.ts` serves them unchanged.
 
@@ -7254,6 +7387,7 @@ These are structurally duplicated across the bridge boundary (legal — conventi
 - `.learnings/locked-instructions.md` — L-001 + L-002 both verified untouched (my wave is db-only, no `window-manager.ts`, no packaging binary).
 
 ### Self-improvement log
+
 One JSONL entry appended to `.learnings/learnings.jsonl`.
 
 ---
@@ -7264,12 +7398,12 @@ One JSONL entry appended to `.learnings/learnings.jsonl`.
 
 ### Channels LIVE vs placeholder
 
-| Channel | Status | Notes |
-|---|---|---|
+| Channel                                               | Status                                | Notes                                                                                                                                                                                                                                                                                       |
+| ----------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `update:check` / `update:download` / `update:install` | **LIVE controller, placeholder feed** | electron-updater integration is fully wired; the GitHub publish target is a documented PLACEHOLDER (Diego Wave 29). When the publish target is a placeholder OR `electron-updater` is not yet installed, every call returns the HONEST `update_not_configured` — NEVER a fake "up-to-date". |
-| `update:onProgress` (event) | **LIVE** | Emits `UpdateProgressEvent` to the active window during a download (mirrors the OCR/export progress-emit pattern). |
-| `telemetry:recordEvent` / `setOptIn` / `getStatus` | **LIVE, fully exercisable** | Hand-rolled, zero new deps. `NoOpRingBufferTransport` (in-memory, default 500, bounded) is the COMPLETE Phase-7 transport — nothing leaves the machine. Debug-panel buffer access via `getStatus { includeBuffer: true }`. |
-| `i18n:setLocale` / `getAvailableLocales` | **LIVE** | Persists the locale via the existing settings repo; returns the static en-US + es-ES descriptor list. The i18next runtime stays in the renderer (Riley 28b); main only persists + exposes the list. |
+| `update:onProgress` (event)                           | **LIVE**                              | Emits `UpdateProgressEvent` to the active window during a download (mirrors the OCR/export progress-emit pattern).                                                                                                                                                                          |
+| `telemetry:recordEvent` / `setOptIn` / `getStatus`    | **LIVE, fully exercisable**           | Hand-rolled, zero new deps. `NoOpRingBufferTransport` (in-memory, default 500, bounded) is the COMPLETE Phase-7 transport — nothing leaves the machine. Debug-panel buffer access via `getStatus { includeBuffer: true }`.                                                                  |
+| `i18n:setLocale` / `getAvailableLocales`              | **LIVE**                              | Persists the locale via the existing settings repo; returns the static en-US + es-ES descriptor list. The i18next runtime stays in the renderer (Riley 28b); main only persists + exposes the list.                                                                                         |
 
 ### Telemetry `.strict()` PII-guard evidence (the headline)
 
@@ -7295,21 +7429,21 @@ The structural PII guard is the `.strict()` zod schema in `src/ipc/handlers/tele
 
 ### Files David created or amended this wave
 
-| Path | Type | Notes |
-|---|---|---|
-| `src/ipc/contracts.ts` | EDIT | §18 type block + 4 `SettingKey` members + `SettingValue` branches + `AppLocale`/`UpdateChannel` + 9 `Channels` entries + `PdfApi.update/telemetry/i18n`. Shipped FIRST. |
-| `src/main/auto-update.ts` | NEW | electron-updater controller (library-injection; runtime-require inside a STATIC-imported factory). |
-| `src/main/telemetry.ts` | NEW | `NoOpRingBufferTransport` + allowlist + `createTelemetryService`. |
-| `src/main/i18n-locales.ts` | NEW | Supported-locale registry (single source of truth). |
-| `src/ipc/handlers/update-check.ts` / `update-download.ts` / `update-install.ts` | NEW | zod-boundary update handlers. |
-| `src/ipc/handlers/telemetry-record-event.ts` / `telemetry-set-opt-in.ts` / `telemetry-get-status.ts` | NEW | telemetry handlers (`.strict()` PII guard in record-event). |
-| `src/ipc/handlers/i18n-set-locale.ts` / `i18n-get-available-locales.ts` | NEW | i18n handlers. |
-| `src/ipc/register.ts` | EDIT | 8 channel registrations + REQUIRED `autoUpdate` + `telemetry` injected options (no optional fallback). |
-| `src/preload/index.ts` | EDIT | `window.pdfApi.update/telemetry/i18n` bridge surface. |
-| `src/main/index.ts` | EDIT | Bootstrap: construct telemetry service (NoOpRingBufferTransport + settings access) + auto-update controller (version/persist/emit/install deps), inject both. |
-| `src/main/db-bridge.ts` | EDIT | Phase-7 keys added to the cross-wave-skew graceful-fallback set. |
-| `src/ipc/handlers/settings.ts` | EDIT | Phase-7 keys in `KNOWN_KEYS` + validation matrix (§12.8). |
-| `*.test.ts` (6 new) | NEW | `auto-update.test.ts` (23), `telemetry.test.ts` (14), `telemetry-record-event.test.ts` (11), `telemetry-set-opt-in.test.ts` (9), `i18n-handlers.test.ts` (9), `update-handlers.test.ts` (12) = 78 new tests. |
+| Path                                                                                                 | Type | Notes                                                                                                                                                                                                        |
+| ---------------------------------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/ipc/contracts.ts`                                                                               | EDIT | §18 type block + 4 `SettingKey` members + `SettingValue` branches + `AppLocale`/`UpdateChannel` + 9 `Channels` entries + `PdfApi.update/telemetry/i18n`. Shipped FIRST.                                      |
+| `src/main/auto-update.ts`                                                                            | NEW  | electron-updater controller (library-injection; runtime-require inside a STATIC-imported factory).                                                                                                           |
+| `src/main/telemetry.ts`                                                                              | NEW  | `NoOpRingBufferTransport` + allowlist + `createTelemetryService`.                                                                                                                                            |
+| `src/main/i18n-locales.ts`                                                                           | NEW  | Supported-locale registry (single source of truth).                                                                                                                                                          |
+| `src/ipc/handlers/update-check.ts` / `update-download.ts` / `update-install.ts`                      | NEW  | zod-boundary update handlers.                                                                                                                                                                                |
+| `src/ipc/handlers/telemetry-record-event.ts` / `telemetry-set-opt-in.ts` / `telemetry-get-status.ts` | NEW  | telemetry handlers (`.strict()` PII guard in record-event).                                                                                                                                                  |
+| `src/ipc/handlers/i18n-set-locale.ts` / `i18n-get-available-locales.ts`                              | NEW  | i18n handlers.                                                                                                                                                                                               |
+| `src/ipc/register.ts`                                                                                | EDIT | 8 channel registrations + REQUIRED `autoUpdate` + `telemetry` injected options (no optional fallback).                                                                                                       |
+| `src/preload/index.ts`                                                                               | EDIT | `window.pdfApi.update/telemetry/i18n` bridge surface.                                                                                                                                                        |
+| `src/main/index.ts`                                                                                  | EDIT | Bootstrap: construct telemetry service (NoOpRingBufferTransport + settings access) + auto-update controller (version/persist/emit/install deps), inject both.                                                |
+| `src/main/db-bridge.ts`                                                                              | EDIT | Phase-7 keys added to the cross-wave-skew graceful-fallback set.                                                                                                                                             |
+| `src/ipc/handlers/settings.ts`                                                                       | EDIT | Phase-7 keys in `KNOWN_KEYS` + validation matrix (§12.8).                                                                                                                                                    |
+| `*.test.ts` (6 new)                                                                                  | NEW  | `auto-update.test.ts` (23), `telemetry.test.ts` (14), `telemetry-record-event.test.ts` (11), `telemetry-set-opt-in.test.ts` (9), `i18n-handlers.test.ts` (9), `update-handlers.test.ts` (12) = 78 new tests. |
 
 ### Diego handoff (Wave 29)
 
@@ -7327,6 +7461,7 @@ The structural PII guard is the `.strict()` zod schema in `src/ipc/handlers/tele
 None. The §18 contract is implemented exactly as specified. One naming note: the brief's "telemetry:getBuffer" is folded into `telemetry:getStatus { includeBuffer: true }` per the api-contracts §18.6 definition (the contract has no separate `getBuffer` channel — the buffer rides on getStatus, which is what Riley locked).
 
 ### David Self-improvement log
+
 One JSONL entry appended to `.learnings/learnings.jsonl`.
 
 ---
@@ -7343,18 +7478,18 @@ The Phase-1 `jsx-a11y/aria-proptypes` workaround was written against **eslint-pl
 
 ### R-1..R-10 completion table
 
-| # | Component | Fix applied | Status |
-|---|---|---|---|
-| **R-1** | `sidebar/index.tsx` | Full WAI-ARIA tab pattern: `role="tablist"` (vertical) + 5 `role="tab"` + `aria-selected` + `aria-controls`/`aria-labelledby` tabpanel + roving tabindex + arrow-key nav (via new `use-tablist-keys` hook). Phase-1 workaround comment + dropped semantics REMOVED. | **CLOSED** |
-| **R-2** | `modals/settings-modal/index.tsx` | Same tab pattern, horizontal orientation (ArrowLeft/Right, Home/End). 4 tabs (General/Files/Export/About — current set; "Editing" tab from §16.1 spec is a CONTENT addition deferred to 28b, not an a11y task). | **CLOSED** |
-| **R-3** | `toolbar/index.tsx` + `toolbar-button.tsx` | `role="toolbar"` already present; ADDED roving tabindex (single Tab stop, arrow-key traversal, disabled-skip) via new `use-roving-toolbar` hook applied to all 30 buttons. Two-branch literal `aria-pressed` workaround COLLAPSED to a clean dynamic boolean; `aria-pressed` now emitted only for toggle buttons (momentary actions like Open/Save correctly omit it). | **CLOSED** |
-| **R-4** | `thumbnail-strip/index.tsx` + `thumbnail-item.tsx` | `role="listbox"` (vertical) + per-item `role="option"` + `aria-selected` + roving tabindex (current page = 0); arrow-key roving moves current page + selection; Home/End jump; Enter/Space select; Delete fires delete-page; Ctrl/Cmd+A select-all. Per-item `id` for focus targeting. | **CLOSED** |
-| **R-5** | `bookmarks-panel/index.tsx` | Navigation rows are NATIVE `<button>`s → activate on Enter AND Space by HTML default (the WCAG 2.1.1 requirement R-5 targets is satisfied structurally; chose native-button robustness over a heavy `role="tree"` roving walker, which exceeded R-5's "cheap" rating and would add 28b churn). `EditModeButton` two-branch `aria-pressed` workaround COLLAPSED to dynamic boolean. | **CLOSED** |
-| **R-6** | `empty-state/index.tsx` | Recents were inert display-only `<li>`s — now focusable native `<button>`s with `aria-label` (filename + relative time), Enter/Space opens via `openDroppedPathThunk(path)` (also makes recents FUNCTIONAL for the first time). Missing files `aria-disabled`. CSS: `.recentItem` made full-width button; added `.recentItemWrap`. | **CLOSED** |
-| **R-7** | `modals/combine-modal/index.tsx` | Empty/unresolved source paths now `aria-invalid` + `aria-describedby` → a `role="note"` error span (`.rowError` spans the full grid row). 3.3.1 Error Identification — no longer color/placeholder-only. | **CLOSED** (SHOULD) |
-| **R-8** | `modals/modal-shell.tsx` + new `use-focus-trap` hook | Standardized focus management on the shared shell ALL modals route through: focus moves in on mount, Tab/Shift+Tab cycle WITHIN (trapped), Esc still escapes (no keyboard trap — 2.1.2), focus RESTORED to trigger on close. `aria-label` → `aria-labelledby` the visible `<h2>` title (APG-preferred). Added optional `role="alertdialog"` (literal-branched because jsx-a11y's `aria-modal` check needs a STATIC role string — genuinely required, unlike the boolean case). | **CLOSED** |
-| **R-9** | `status-bar/index.tsx` | Already had `role="status" aria-live="polite"` on the footer + an `aria-live` export widget = 2 hits. Confirmed-satisfied (4.1.3 Status Messages). No change needed. | **CLOSED (pre-satisfied)** |
-| **R-10** | `modals/settings-modal/` (new Phase-7 controls) | a11y SCAFFOLDING satisfied via R-2 (the About content already lives in the Settings About tab, now with the proper tab pattern). The NEW telemetry-toggle / locale-picker / update controls are DEFERRED to 28b per the brief — they need David's §18 channels (now LIVE) AND i18n strings (28b) before wiring. No new control surface built this wave (correct sequencing). | **a11y-scaffold CLOSED; control-wiring → 28b** |
+| #        | Component                                            | Fix applied                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Status                                         |
+| -------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| **R-1**  | `sidebar/index.tsx`                                  | Full WAI-ARIA tab pattern: `role="tablist"` (vertical) + 5 `role="tab"` + `aria-selected` + `aria-controls`/`aria-labelledby` tabpanel + roving tabindex + arrow-key nav (via new `use-tablist-keys` hook). Phase-1 workaround comment + dropped semantics REMOVED.                                                                                                                                                                                                            | **CLOSED**                                     |
+| **R-2**  | `modals/settings-modal/index.tsx`                    | Same tab pattern, horizontal orientation (ArrowLeft/Right, Home/End). 4 tabs (General/Files/Export/About — current set; "Editing" tab from §16.1 spec is a CONTENT addition deferred to 28b, not an a11y task).                                                                                                                                                                                                                                                                | **CLOSED**                                     |
+| **R-3**  | `toolbar/index.tsx` + `toolbar-button.tsx`           | `role="toolbar"` already present; ADDED roving tabindex (single Tab stop, arrow-key traversal, disabled-skip) via new `use-roving-toolbar` hook applied to all 30 buttons. Two-branch literal `aria-pressed` workaround COLLAPSED to a clean dynamic boolean; `aria-pressed` now emitted only for toggle buttons (momentary actions like Open/Save correctly omit it).                                                                                                         | **CLOSED**                                     |
+| **R-4**  | `thumbnail-strip/index.tsx` + `thumbnail-item.tsx`   | `role="listbox"` (vertical) + per-item `role="option"` + `aria-selected` + roving tabindex (current page = 0); arrow-key roving moves current page + selection; Home/End jump; Enter/Space select; Delete fires delete-page; Ctrl/Cmd+A select-all. Per-item `id` for focus targeting.                                                                                                                                                                                         | **CLOSED**                                     |
+| **R-5**  | `bookmarks-panel/index.tsx`                          | Navigation rows are NATIVE `<button>`s → activate on Enter AND Space by HTML default (the WCAG 2.1.1 requirement R-5 targets is satisfied structurally; chose native-button robustness over a heavy `role="tree"` roving walker, which exceeded R-5's "cheap" rating and would add 28b churn). `EditModeButton` two-branch `aria-pressed` workaround COLLAPSED to dynamic boolean.                                                                                             | **CLOSED**                                     |
+| **R-6**  | `empty-state/index.tsx`                              | Recents were inert display-only `<li>`s — now focusable native `<button>`s with `aria-label` (filename + relative time), Enter/Space opens via `openDroppedPathThunk(path)` (also makes recents FUNCTIONAL for the first time). Missing files `aria-disabled`. CSS: `.recentItem` made full-width button; added `.recentItemWrap`.                                                                                                                                             | **CLOSED**                                     |
+| **R-7**  | `modals/combine-modal/index.tsx`                     | Empty/unresolved source paths now `aria-invalid` + `aria-describedby` → a `role="note"` error span (`.rowError` spans the full grid row). 3.3.1 Error Identification — no longer color/placeholder-only.                                                                                                                                                                                                                                                                       | **CLOSED** (SHOULD)                            |
+| **R-8**  | `modals/modal-shell.tsx` + new `use-focus-trap` hook | Standardized focus management on the shared shell ALL modals route through: focus moves in on mount, Tab/Shift+Tab cycle WITHIN (trapped), Esc still escapes (no keyboard trap — 2.1.2), focus RESTORED to trigger on close. `aria-label` → `aria-labelledby` the visible `<h2>` title (APG-preferred). Added optional `role="alertdialog"` (literal-branched because jsx-a11y's `aria-modal` check needs a STATIC role string — genuinely required, unlike the boolean case). | **CLOSED**                                     |
+| **R-9**  | `status-bar/index.tsx`                               | Already had `role="status" aria-live="polite"` on the footer + an `aria-live` export widget = 2 hits. Confirmed-satisfied (4.1.3 Status Messages). No change needed.                                                                                                                                                                                                                                                                                                           | **CLOSED (pre-satisfied)**                     |
+| **R-10** | `modals/settings-modal/` (new Phase-7 controls)      | a11y SCAFFOLDING satisfied via R-2 (the About content already lives in the Settings About tab, now with the proper tab pattern). The NEW telemetry-toggle / locale-picker / update controls are DEFERRED to 28b per the brief — they need David's §18 channels (now LIVE) AND i18n strings (28b) before wiring. No new control surface built this wave (correct sequencing).                                                                                                   | **a11y-scaffold CLOSED; control-wiring → 28b** |
 
 ### ESLint config change needed from Diego (Wave 29) — the acceptance criterion
 
@@ -7371,11 +7506,11 @@ Also update the now-obsolete comment block at `.eslintrc.cjs:123-130` (it claims
 
 ### New shared infrastructure (all in `src/client/hooks/`)
 
-| File | Purpose |
-|---|---|
-| `use-tablist-keys.ts` | NEW — WAI-ARIA tab roving-tabindex + arrow/Home/End keyboard handler (sidebar vertical, settings horizontal). |
-| `use-focus-trap.ts` | NEW — R-8 modal focus trap + focus-restore. (Note: deliberately does NOT filter by `offsetParent`/visibility — jsdom never computes layout so that filter would empty the focusable list and break the trap in tests.) |
-| `use-roving-toolbar.ts` | NEW — R-3 toolbar single-Tab-stop + arrow traversal (disabled-skip, remembers last-focused). |
+| File                    | Purpose                                                                                                                                                                                                                |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `use-tablist-keys.ts`   | NEW — WAI-ARIA tab roving-tabindex + arrow/Home/End keyboard handler (sidebar vertical, settings horizontal).                                                                                                          |
+| `use-focus-trap.ts`     | NEW — R-8 modal focus trap + focus-restore. (Note: deliberately does NOT filter by `offsetParent`/visibility — jsdom never computes layout so that filter would empty the focusable list and break the trap in tests.) |
+| `use-roving-toolbar.ts` | NEW — R-3 toolbar single-Tab-stop + arrow traversal (disabled-skip, remembers last-focused).                                                                                                                           |
 
 ### Tests (deliverable C) — +29, all green
 
@@ -7414,6 +7549,7 @@ A PRE-EXISTING renderer typecheck failure: David's §18 contract types added `up
 - David's `window.pdfApi.update/telemetry/i18n.*` are LIVE; the Settings General telemetry/locale/update controls + the telemetry-debug-panel + the About update-status area are 28b's to BUILD (a11y scaffolding via the tab pattern is already in place).
 
 ### Riley Self-improvement log
+
 One JSONL entry appended to `.learnings/learnings.jsonl`.
 
 ---
@@ -7435,7 +7571,7 @@ Second half of Phase 7's renderer work: the i18next localization framework + a b
 
 ### B — Big-bang extraction
 
-- **8 en-US namespaces = 482 keys** (test-measured baseline). The ~890 estimate counted every Phase-4-6 modal *step/field*; those are keyed in `modals.json` but their deep component bodies (ocr-run/pades-sign/mail-merge/signature-capture *steps*) are a flagged 28c follow-up — es-ES there falls back to en-US, never a raw key.
+- **8 en-US namespaces = 482 keys** (test-measured baseline). The ~890 estimate counted every Phase-4-6 modal _step/field_; those are keyed in `modals.json` but their deep component bodies (ocr-run/pades-sign/mail-merge/signature-capture _steps_) are a flagged 28c follow-up — es-ES there falls back to en-US, never a raw key.
 - **8 es-ES proof bundles = 70% coverage (339/482)** — high-traffic surface translated; the rest fall back. SAMPLE not complete (trust-floor #4); coverage test asserts <100% on purpose.
 - **Swept components** (hardcoded → `t()`, incl. the 28a aria-labels): sidebar (tab labels + nav/panels labels), toolbar (all 30 buttons + group labels), menu-bar (~50 items + tooltips), status-bar, empty-state (locale-aware relative time via plurals + Intl), toast, error-boundary (extracted `ErrorFallback` fn-component so the class can use `useT`), modal-shell, combine-modal, settings-modal (+ general-tab + about-tab), app.tsx drag-drop toasts.
 
@@ -7473,7 +7609,7 @@ The renderer build is **blocked on the i18next install** this wave (`electron-vi
 
 ### Julian (Wave 29) — audit focus
 
-i18n extraction completeness (the `extraction-regression.test` + i18n-strategy §9 greps; the deep Phase-4-6 modal *step* bodies are a flagged 28c follow-up). Trust-floor honesty at the three load-bearing placements + no forbidden overstated sentences. `as any`: 0 on the t() surface; only the pre-existing comment-justified `api.settings.set` generic cast + the L-001 `File.path` drag cast.
+i18n extraction completeness (the `extraction-regression.test` + i18n-strategy §9 greps; the deep Phase-4-6 modal _step_ bodies are a flagged 28c follow-up). Trust-floor honesty at the three load-bearing placements + no forbidden overstated sentences. `as any`: 0 on the t() surface; only the pre-existing comment-justified `api.settings.set` generic cast + the L-001 `File.path` drag cast.
 
 ### Files I did NOT touch (ownership respected)
 
@@ -7484,6 +7620,7 @@ i18n extraction completeness (the `extraction-regression.test` + i18n-strategy �
 - **L-001:** `window-manager.ts` / `enableDragDropFiles` untouched; `app.tsx` drag-drop `File.path` cast preserved verbatim (only its sibling error-toast strings were i18n-wrapped).
 
 ### Riley Self-improvement log
+
 One JSONL entry appended to `.learnings/learnings.jsonl`.
 
 ---
@@ -7497,6 +7634,7 @@ One JSONL entry appended to `.learnings/learnings.jsonl`.
 **Verdict: GREEN.** Wave 30 (Nathan final docs) UNBLOCKED; the 7-phase roadmap is **implementation-complete** modulo the documented backlog (Phase 5.1 native scanner, Phase 6.2 image-text glyph, Phase 7 28c deep-modal i18n) and one latent HIGH that is a Phase-7.1 close item.
 
 **Headline audit verdicts:**
+
 - **Telemetry privacy — PASS (unconditional).** `.strict()` zod is a true structural PII barrier (test-proven: userId/filePath/docTitle/sub-day-timestamp rejected). Opt-in default OFF; silent no-op gate returns before buffering. No network/disk transport, no PII fields, no phone-home SDK, no payload logging. Migration adds NO `telemetry_events` table (in-memory privacy design intact).
 - **Auto-update safety — PASS.** Placeholder → honest `update_not_configured`, never a fake "up to date". Signature verification surfaces `signature_verification_failed` (not disabled). `autoDownload=false` always; default check-on-launch OFF. `quitAndInstall` returns ok before quitting. (Unsaved-work install gate missing → H-29.1, latent/unreachable with placeholder.)
 - **Trust-floor honesty (6th instance) — PASS.** Zero of the four forbidden FALSE-as-stated sentences anywhere (en-US + es-ES + .tsx). All six HONEST obligation forms present in `trustfloor.json`; three load-bearing UI placements verified live.
@@ -7505,6 +7643,7 @@ One JSONL entry appended to `.learnings/learnings.jsonl`.
 - **Six-ratchet — PASS (6th consecutive wave).** Schema v7 settings-keys-only, no table.
 
 **Build evidence / tooling (runtime-verified, not static-only):**
+
 - Ran Phase-7 vitest: 105 tests / 10 files PASS (telemetry, i18n, update, settings-phase7, auto-update controller) + 24 UI component tests PASS (about-modal, telemetry-debug-panel, sidebar, settings-modal).
 - Ran `eslint src/client` with `jsx-a11y/aria-proptypes` forced to `error` → 0 `aria-proptypes` violations (flip confirmed clean).
 - Confirmed Diego installed `i18next@26.3.0`, `react-i18next@17.0.8`, `electron-updater@6.8.3`, `eslint-plugin-jsx-a11y@6.10.2` (the dep-pending typecheck state is largely resolved).
@@ -7515,6 +7654,7 @@ One JSONL entry appended to `.learnings/learnings.jsonl`.
 **L-001:** PASS (final roadmap-phase verification) — `enableDragDropFiles` not set to false; Phase 7 added no drag-drop entry points.
 
 ### Julian Self-improvement log
+
 One JSONL entry appended to `.learnings/learnings.jsonl`; one structural lesson (structural-PII-guard pattern) promoted to `~/.claude/learnings/global.jsonl`.
 
 ---
@@ -7542,6 +7682,7 @@ Flipped `.eslintrc.cjs` `jsx-a11y/aria-proptypes` warn to **error** + rewrote th
 ### Objective 3 — cross-platform config (configure all, verify Windows only — P7-L-1)
 
 `electron-builder.yml` gained:
+
 - **mac:** dmg + zip, `arch: [universal]`, `category: public.app-category.productivity`, `hardenedRuntime: true`, `gatekeeperAssess: false`. Entitlements + cert deferred to Phase 7.1 (no dangling file ref). Loud UNVERIFIED-ON-REAL-HARDWARE header documenting the native-module rebuild story (better-sqlite3 HIGH / @napi-rs/canvas universal-merge MEDIUM / tesseract.js-core WASM LOW) + the npmRebuild / install-app-deps per-platform compile path (must run ON a mac/linux host; cross-compile from Windows is unsupported).
 - **linux:** AppImage + deb, `category: Office`, `maintainer: PLACEHOLDER`, desktop entry (Name/Comment/MimeType/Categories). Same UNVERIFIED caveats.
 - **publish:** github provider, owner PLACEHOLDER, repo PLACEHOLDER, releaseType release, with a loud comment that updates will not function until configured. David controller reads the emitted `app-update.yml` (owner PLACEHOLDER) and routes to the honest `update_not_configured`.
@@ -7574,15 +7715,15 @@ Artifacts in `release/`: **PDF Viewer & Editor-0.7.0-x64.exe** (NSIS, **135.67 M
 
 ### Objective 7 — L-002 visual verification (the roadmap-closing proof)
 
-Desktop-operator MCP was NOT in this agent tool surface; PowerShell SendKeys threw **Access is denied** (non-interactive shell cannot synthesize foreground input — the prior-learning caveat). **Capture path used: Playwright _electron.launch({ executablePath: <packaged exe>, args: [<bundled app.asar>] })** — drives the REAL packaged renderer over CDP (no OS input synthesis), an L-002-sanctioned method. Scripts: `scripts/wave-29-l002-verify.mjs` + `scripts/wave-29-about-verify.mjs`. **0 page errors** across all runs. Process-metadata floor also passed (4-process tree, MainWindowHandle non-zero, IsWindowVisible).
+Desktop-operator MCP was NOT in this agent tool surface; PowerShell SendKeys threw **Access is denied** (non-interactive shell cannot synthesize foreground input — the prior-learning caveat). **Capture path used: Playwright \_electron.launch({ executablePath: <packaged exe>, args: [<bundled app.asar>] })** — drives the REAL packaged renderer over CDP (no OS input synthesis), an L-002-sanctioned method. Scripts: `scripts/wave-29-l002-verify.mjs` + `scripts/wave-29-about-verify.mjs`. **0 page errors** across all runs. Process-metadata floor also passed (4-process tree, MainWindowHandle non-zero, IsWindowVisible).
 
-| # | Check | Evidence | Result |
-|---|---|---|---|
-| 1 | Open a PDF renders (regression) | `release/wave-29-v070-launch-shot.png` (PrintWindow, 22.8 KB) + `wave-29-v070-pw-launch.png` (Playwright, 30.6 KB) | **PASS** — title bar PDF_Viewer_Editor + native menu (File to Help) + in-renderer menu-bar + full icon toolbar + "Open a PDF to get started" hero + Open-file button + RECENTS list + Ready status bar. Not a white screen. |
-| 2 | Settings to General | `release/wave-29-v070-settings.png` (43.7 KB) | **PASS** — 5-tab strip (General/Files/Export/Editing/About, General active); **Interface language picker** (English (US)); **telemetry checkbox UNCHECKED = DEFAULT OFF**; trust-floor privacy copy inline (Off by default, never document content/file paths, nothing leaves your computer); View-collected-data (debug panel) button; update channel radio group + Check-for-updates button confirmed via Playwright. |
-| 3 | Switch language to es-ES | `release/wave-29-v070-es-locale.png` (46.3 KB) | **PASS — the headline.** Entire UI flips to Spanish live: menu (Archivo/Editar/Insertar/Ver/Herramientas/Ayuda), modal Configuracion, tabs (General/Archivos/Exportacion/Edicion/Acerca de), Tema/Sistema, Idioma de la interfaz Espanol (Espana), locale subtext "muestra de traduccion; algunos textos pueden aparecer en ingles" (trust-floor #4), Privacidad copy, Hecho button, empty-state "Abra un PDF para empezar". Playwright detected 8 visible Spanish strings. **Persists across launches** (next launch came up in Spanish — proves i18n:setLocale persistence). |
-| 4 | Help to About | `release/wave-29-v070-about.png` (43.6 KB) | **PASS** — Acerca de PDF_Viewer_Editor, **Version 0.7.0**, Buscar-actualizaciones-ahora button, acknowledgments naming **i18next / react-i18next / electron-updater (MIT)** + pdf.js/pdf-lib/tesseract.js/docx/exceljs/pptxgenjs/node-signpdf/better-sqlite3. **No fake up-to-date** (0 hits). The update_not_configured placeholder copy renders on-demand after a Check-for-updates click (David design — initial status idle). |
-| 5 | Telemetry debug panel | covered by the Settings View-collected-data button (opt-in OFF, buffer empty by design) | **PASS** (scaffold present; buffer empty because opt-in is OFF) |
+| #   | Check                           | Evidence                                                                                                           | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| --- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Open a PDF renders (regression) | `release/wave-29-v070-launch-shot.png` (PrintWindow, 22.8 KB) + `wave-29-v070-pw-launch.png` (Playwright, 30.6 KB) | **PASS** — title bar PDF_Viewer_Editor + native menu (File to Help) + in-renderer menu-bar + full icon toolbar + "Open a PDF to get started" hero + Open-file button + RECENTS list + Ready status bar. Not a white screen.                                                                                                                                                                                                                                                                                                                                                    |
+| 2   | Settings to General             | `release/wave-29-v070-settings.png` (43.7 KB)                                                                      | **PASS** — 5-tab strip (General/Files/Export/Editing/About, General active); **Interface language picker** (English (US)); **telemetry checkbox UNCHECKED = DEFAULT OFF**; trust-floor privacy copy inline (Off by default, never document content/file paths, nothing leaves your computer); View-collected-data (debug panel) button; update channel radio group + Check-for-updates button confirmed via Playwright.                                                                                                                                                        |
+| 3   | Switch language to es-ES        | `release/wave-29-v070-es-locale.png` (46.3 KB)                                                                     | **PASS — the headline.** Entire UI flips to Spanish live: menu (Archivo/Editar/Insertar/Ver/Herramientas/Ayuda), modal Configuracion, tabs (General/Archivos/Exportacion/Edicion/Acerca de), Tema/Sistema, Idioma de la interfaz Espanol (Espana), locale subtext "muestra de traduccion; algunos textos pueden aparecer en ingles" (trust-floor #4), Privacidad copy, Hecho button, empty-state "Abra un PDF para empezar". Playwright detected 8 visible Spanish strings. **Persists across launches** (next launch came up in Spanish — proves i18n:setLocale persistence). |
+| 4   | Help to About                   | `release/wave-29-v070-about.png` (43.6 KB)                                                                         | **PASS** — Acerca de PDF_Viewer_Editor, **Version 0.7.0**, Buscar-actualizaciones-ahora button, acknowledgments naming **i18next / react-i18next / electron-updater (MIT)** + pdf.js/pdf-lib/tesseract.js/docx/exceljs/pptxgenjs/node-signpdf/better-sqlite3. **No fake up-to-date** (0 hits). The update_not_configured placeholder copy renders on-demand after a Check-for-updates click (David design — initial status idle).                                                                                                                                              |
+| 5   | Telemetry debug panel           | covered by the Settings View-collected-data button (opt-in OFF, buffer empty by design)                            | **PASS** (scaffold present; buffer empty because opt-in is OFF)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 ### Other config landed (Diego domain)
 
@@ -7602,6 +7743,7 @@ Desktop-operator MCP was NOT in this agent tool surface; PowerShell SendKeys thr
 Edited (mine): `package.json`, `electron-builder.yml`, `.eslintrc.cjs`, `.npmrc`, `LICENSES.md`, `package-lock.json`, `scripts/wave-29-*.mjs`, `release/**`, `docs/build-report.md`. **One disclosed cross-boundary line:** `src/client/i18n/index.ts:59` (Riley; emergency unblock, ratification requested). Did NOT touch any other `src/**`, migrations, or other agents docs. **L-001:** window-manager.ts / enableDragDropFiles untouched (verified). **L-002:** SATISFIED — pixel-level screenshots embedded above with descriptions, per the lock.
 
 ### Diego Self-improvement log
+
 One JSONL entry appended to `.learnings/learnings.jsonl`.
 
 ---
@@ -7616,13 +7758,13 @@ This wave closes the documentation for the entire 7-phase roadmap. The docs now 
 
 ### Files I own / edited this wave
 
-| Path | Type | What changed |
-|---|---|---|
-| `README.md` | EDIT | 0.6.x → 0.7.0; new **Platform support** section (Windows VERIFIED / mac+linux CONFIGURED-BUT-UNVERIFIED table); new **Roadmap status** section (Phases 1–7 implementation-complete + the four Phase-7 honesty obligations + the documented-backlog table); full 7-phase feature matrix; install/size/migration deltas; test count ~1718/5; license walk + acknowledgments (electron-updater, i18next, react-i18next, i18next-resources-to-backend — all MIT); status-table rows for architecture-phase-7 / a11y-audit / i18n-strategy; api-reference Phase 7 row |
-| `docs/user-guide.md` | EDIT | Title → 0.7.0; **Phase 7 honesty banner** (top-of-guide preamble — impression #1); **What changed in 0.7.0** + Upgrading-from-0.6.x; **Known limitations** retitled (was "Phase 6") with a Phase-7-partial-features table at the top; **dedicated `## Phase 7 trust floor` section** (the anchor — impression #2; the four obligations + two disclosures + What-IS / What-IS-NOT); five new user-facing sections (Changing the interface language / Telemetry and privacy / Checking for updates / The About modal / Accessibility — each carrying an inline honesty reminder linking back to the anchor — impression #3); 4 new settings rows + a Phase-7 honesty reminder; 3 new troubleshooting entries; version ref in "Filing an issue" → 0.7.0 |
-| `docs/developer-guide.md` | EDIT | Phase 7 quick-reference block at top; six new architecture sections (Auto-update architecture / Telemetry framework w/ the `.strict()` PII-guard exemplar + audit grep suite / i18n framework / a11y patterns / Cross-platform build / Phase 7 IPC channels); **CI lint-debt note** (documents the 46-errors/402-warnings RED state Diego flagged, with a forward note for the parallel lint-sweep); **Structural engineering discipline — the six ratchets** section (added structural-PII-guard as ratchet #6; the trust-floor-held-across-all-7-phases connective tissue); test counts → ~1718/5; release process → Phase-7 auto-update reality; Where-to-learn-more + reading order updated |
-| `docs/api-reference.md` | EDIT | Intro + status-summary updated for Phase 7; three new namespace rows (`update:*` placeholder-feed / `telemetry:*` in-memory / `i18n:*` live); settings row updated; full **Phase 7 channels section** (all 8 channels + the `.strict()` privacy contract + honest per-channel status) + **Phase 7 setting keys and data models** (schema v7 settings-only, the deliberate no-`telemetry_events`-table); cross-references updated |
-| `docs/build-report.md` | APPEND | This Wave 30 — Nathan section |
+| Path                      | Type   | What changed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`               | EDIT   | 0.6.x → 0.7.0; new **Platform support** section (Windows VERIFIED / mac+linux CONFIGURED-BUT-UNVERIFIED table); new **Roadmap status** section (Phases 1–7 implementation-complete + the four Phase-7 honesty obligations + the documented-backlog table); full 7-phase feature matrix; install/size/migration deltas; test count ~1718/5; license walk + acknowledgments (electron-updater, i18next, react-i18next, i18next-resources-to-backend — all MIT); status-table rows for architecture-phase-7 / a11y-audit / i18n-strategy; api-reference Phase 7 row                                                                                                                                                                                     |
+| `docs/user-guide.md`      | EDIT   | Title → 0.7.0; **Phase 7 honesty banner** (top-of-guide preamble — impression #1); **What changed in 0.7.0** + Upgrading-from-0.6.x; **Known limitations** retitled (was "Phase 6") with a Phase-7-partial-features table at the top; **dedicated `## Phase 7 trust floor` section** (the anchor — impression #2; the four obligations + two disclosures + What-IS / What-IS-NOT); five new user-facing sections (Changing the interface language / Telemetry and privacy / Checking for updates / The About modal / Accessibility — each carrying an inline honesty reminder linking back to the anchor — impression #3); 4 new settings rows + a Phase-7 honesty reminder; 3 new troubleshooting entries; version ref in "Filing an issue" → 0.7.0 |
+| `docs/developer-guide.md` | EDIT   | Phase 7 quick-reference block at top; six new architecture sections (Auto-update architecture / Telemetry framework w/ the `.strict()` PII-guard exemplar + audit grep suite / i18n framework / a11y patterns / Cross-platform build / Phase 7 IPC channels); **CI lint-debt note** (documents the 46-errors/402-warnings RED state Diego flagged, with a forward note for the parallel lint-sweep); **Structural engineering discipline — the six ratchets** section (added structural-PII-guard as ratchet #6; the trust-floor-held-across-all-7-phases connective tissue); test counts → ~1718/5; release process → Phase-7 auto-update reality; Where-to-learn-more + reading order updated                                                      |
+| `docs/api-reference.md`   | EDIT   | Intro + status-summary updated for Phase 7; three new namespace rows (`update:*` placeholder-feed / `telemetry:*` in-memory / `i18n:*` live); settings row updated; full **Phase 7 channels section** (all 8 channels + the `.strict()` privacy contract + honest per-channel status) + **Phase 7 setting keys and data models** (schema v7 settings-only, the deliberate no-`telemetry_events`-table); cross-references updated                                                                                                                                                                                                                                                                                                                     |
+| `docs/build-report.md`    | APPEND | This Wave 30 — Nathan section                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 ### Trust-floor placement evidence — the SIXTH instance (three-location pattern held)
 
@@ -7634,7 +7776,7 @@ The trust-floor honesty pattern is now proven across **all seven phases** (H-3 �
 4. **README front-door** — the **Roadmap status** "Phase 7 — the four honesty obligations" bullets mirror the user-guide preamble.
 5. **(UI surfaces, built Wave 28b)** — the docs reference, not duplicate, the load-bearing point-of-action placements (Settings telemetry privacy copy, locale-picker subtext, About update-status notice).
 
-**Forbidden FALSE-as-stated sentences avoided (verified):** none of "auto-updates from GitHub", "available in Spanish", "collects analytics", or "cross-platform Windows/Mac/Linux"-as-verified appears anywhere in the four docs. Every capability claim is paired with its honest state — telemetry "records anonymous counts to an in-memory buffer; nothing leaves your machine"; update "the update *client* is wired… the channel is a placeholder"; locale "a translation sample, ~70%, the rest fall back to English"; platform "Windows VERIFIED; macOS + Linux CONFIGURED BUT UNVERIFIED".
+**Forbidden FALSE-as-stated sentences avoided (verified):** none of "auto-updates from GitHub", "available in Spanish", "collects analytics", or "cross-platform Windows/Mac/Linux"-as-verified appears anywhere in the four docs. Every capability claim is paired with its honest state — telemetry "records anonymous counts to an in-memory buffer; nothing leaves your machine"; update "the update _client_ is wired… the channel is a placeholder"; locale "a translation sample, ~70%, the rest fall back to English"; platform "Windows VERIFIED; macOS + Linux CONFIGURED BUT UNVERIFIED".
 
 ### Cross-checks against Julian's Wave 29 honest backlog
 
@@ -7653,6 +7795,7 @@ The trust-floor honesty pattern is now proven across **all seven phases** (H-3 �
 - `.learnings/locked-instructions.md` — L-001 + L-002 verified untouched (docs-only wave; no `window-manager.ts`, no packaging binary, no source). Append-only via Marcus.
 
 ### Nathan Self-improvement log
+
 One JSONL entry appended to `.learnings/learnings.jsonl`; the trust-floor-held-across-all-7-phases capstone is a candidate for `~/.claude/learnings/global.jsonl`.
 
 ---
@@ -7663,11 +7806,11 @@ One JSONL entry appended to `.learnings/learnings.jsonl`; the trust-floor-held-a
 
 ### Before → after lint counts
 
-| Metric | Before (Diego Wave 29 baseline) | After sweep | Method |
-|---|---|---|---|
-| **Errors** | 46 | **0** | mostly auto-fix + targeted manual |
-| **Warnings** | 402 | **0** | auto-fix (import/order bulk) + manual |
-| **Total problems** | 448 | **0** | — |
+| Metric             | Before (Diego Wave 29 baseline) | After sweep | Method                                |
+| ------------------ | ------------------------------- | ----------- | ------------------------------------- |
+| **Errors**         | 46                              | **0**       | mostly auto-fix + targeted manual     |
+| **Warnings**       | 402                             | **0**       | auto-fix (import/order bulk) + manual |
+| **Total problems** | 448                             | **0**       | —                                     |
 
 Baseline error breakdown (re-measured, matched Diego's flag exactly): 25 `consistent-type-imports`, 13 `no-unused-vars`, 4 `no-explicit-any` (warn), 388 `import/order` (warn), 8 `import/no-duplicates` (warn), 2 each `no-control-regex` / `prefer-const` / `no-irregular-whitespace` / `exhaustive-deps` (warn), 1 each `jsx-a11y/no-static-element-interactions` / `no-var-requires`.
 
@@ -7683,14 +7826,14 @@ Baseline error breakdown (re-measured, matched Diego's flag exactly): 25 `consis
 
 Each is a single `eslint-disable-next-line <rule> -- <reason>` (or JSX equivalent), NOT a blanket file/rule disable:
 
-| File:line | Rule | Reason |
-|---|---|---|
-| `src/main/security/path-sanitizer.ts` (CONTROL_CHAR_RE) | `no-control-regex` | regex EXISTS to reject ASCII control chars in IPC paths; removing them defeats the security check |
-| `src/main/security/path-sanitizer.ts` (SUSPICIOUS_UNICODE_RE) | `no-irregular-whitespace` | the literal zero-width/bidi/BOM code points in the char class ARE the search targets (TR36 visual-spoofing) |
-| `src/main/pdf-ops/mail-merge-runner.ts` (INVALID_FILENAME_CHARS) | `no-control-regex` | strips filesystem-invalid chars incl. control chars from generated filenames — intentional |
-| `src/client/components/annotation-layer/index.tsx` (startAuthor deps) | `react-hooks/exhaustive-deps` | `commitAnnotation` is a render-scope closure; including it breaks memoization — matches sibling `onEnd` disable already in-file |
-| `src/client/components/bookmarks-panel/index.tsx` (refresh effect) | `react-hooks/exhaustive-deps` | effect intentionally keys on stable `doc?.fileHash`, not whole `doc` (avoids re-firing on every in-memory mutation) |
-| `src/client/components/{modals/export-modal, sidebar/exports-panel, status-bar/export-progress}/*.test.tsx`, `state/slices/document-selectors.test.ts` (4 sites) | `no-explicit-any` | test-only `as any` casts on mock `pdfApi` / partial RootState; repositioned the existing disables to the actual `as any` line (they were off by N lines) |
+| File:line                                                                                                                                                        | Rule                          | Reason                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/main/security/path-sanitizer.ts` (CONTROL_CHAR_RE)                                                                                                          | `no-control-regex`            | regex EXISTS to reject ASCII control chars in IPC paths; removing them defeats the security check                                                        |
+| `src/main/security/path-sanitizer.ts` (SUSPICIOUS_UNICODE_RE)                                                                                                    | `no-irregular-whitespace`     | the literal zero-width/bidi/BOM code points in the char class ARE the search targets (TR36 visual-spoofing)                                              |
+| `src/main/pdf-ops/mail-merge-runner.ts` (INVALID_FILENAME_CHARS)                                                                                                 | `no-control-regex`            | strips filesystem-invalid chars incl. control chars from generated filenames — intentional                                                               |
+| `src/client/components/annotation-layer/index.tsx` (startAuthor deps)                                                                                            | `react-hooks/exhaustive-deps` | `commitAnnotation` is a render-scope closure; including it breaks memoization — matches sibling `onEnd` disable already in-file                          |
+| `src/client/components/bookmarks-panel/index.tsx` (refresh effect)                                                                                               | `react-hooks/exhaustive-deps` | effect intentionally keys on stable `doc?.fileHash`, not whole `doc` (avoids re-firing on every in-memory mutation)                                      |
+| `src/client/components/{modals/export-modal, sidebar/exports-panel, status-bar/export-progress}/*.test.tsx`, `state/slices/document-selectors.test.ts` (4 sites) | `no-explicit-any`             | test-only `as any` casts on mock `pdfApi` / partial RootState; repositioned the existing disables to the actual `as any` line (they were off by N lines) |
 
 Note: four of the `no-explicit-any` disables already existed in source but were **mis-positioned** (placed before the opening `{` of a multi-line object, so they covered the wrong line — the violation lands on the closing `} as any`). Repositioning them was the mechanical fix; no `any` was added or removed.
 
@@ -7700,8 +7843,8 @@ Note: four of the `no-explicit-any` disables already existed in source but were 
 
 ### Needs-logic/design-change items DEFERRED to owning agents (1)
 
-| File:line | Rule | Owner | What's needed (NOT a mechanical fix) |
-|---|---|---|---|
+| File:line                                                                        | Rule                                      | Owner                           | What's needed (NOT a mechanical fix)                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/client/components/annotation-layer/index.tsx:167` (`<div>` drawing surface) | `jsx-a11y/no-static-element-interactions` | **Riley (front-end-architect)** | The pointer-driven annotation drawing surface has mouse handlers but no ARIA role / keyboard-equivalent authoring path. Giving it a correct role + tab/keyboard support is an **a11y design decision**, not a mechanical lint fix. CI-green is currently held by a scoped `eslint-disable-next-line` with a DEFERRED-to-Riley comment at the element; Riley should replace the suppression with a real a11y implementation in a Phase-7.1 a11y pass. |
 
 ### Verification (no behavior change)
@@ -7727,19 +7870,19 @@ This debt re-accumulated silently because nothing fails fast on lint before merg
 
 ### Fix 1 — better-sqlite3 Node-24 ABI skew (the recurring blocker, hit Waves 13/21/24/25/28a/30)
 
-**Resolution: Option A (Node-20 enforcement + a loud guard) as the primary, durable path; Option C (a non-destructive cache-prebuild escape hatch) for Node-24-only hosts.** Both were necessary because this host has **only Node 24 installed** (no Node 20, no nvm/fnm/volta — verified), so I cannot make Node 20 the *running* version here, but I can ENFORCE it as the contract and make the skew loud + recoverable.
+**Resolution: Option A (Node-20 enforcement + a loud guard) as the primary, durable path; Option C (a non-destructive cache-prebuild escape hatch) for Node-24-only hosts.** Both were necessary because this host has **only Node 24 installed** (no Node 20, no nvm/fnm/volta — verified), so I cannot make Node 20 the _running_ version here, but I can ENFORCE it as the contract and make the skew loud + recoverable.
 
-**Why not Option C alone / a from-source rebuild:** prior waves proved the from-source path is a dead end AND dangerous on this host — `node-gyp 9.4.1` + Python 3.14 (no `distutils`) + MSBuild exit 1 fails the compile, and a prior wave's failed rebuild *deleted the working Electron-ABI binding*. There is also **no clean `better-sqlite3@11.10.0` node-v137 prebuild anywhere** (the npm cache holds only a cross-major `v12.9.0-node-v137` binary). So the guard explicitly **never compiles** and the escape hatch is **non-destructive** (backs up before swapping, restores on failure).
+**Why not Option C alone / a from-source rebuild:** prior waves proved the from-source path is a dead end AND dangerous on this host — `node-gyp 9.4.1` + Python 3.14 (no `distutils`) + MSBuild exit 1 fails the compile, and a prior wave's failed rebuild _deleted the working Electron-ABI binding_. There is also **no clean `better-sqlite3@11.10.0` node-v137 prebuild anywhere** (the npm cache holds only a cross-major `v12.9.0-node-v137` binary). So the guard explicitly **never compiles** and the escape hatch is **non-destructive** (backs up before swapping, restores on failure).
 
 **What landed (Diego-owned files only):**
 
-| File | Change |
-|---|---|
-| `package.json` | `engines.node` tightened `">=20.10.0"` → `">=20.10.0 <21"` (now emits a loud `npm warn EBADENGINE` on Node 24 — verified). New scripts: `check:node`, `pretest` (runs the guard `--strict` before every `npm test`), `rebuild:node`, `rebuild:electron`. |
-| `scripts/check-node.mjs` | NEW. Pre-test guard. If the host Node can't load better-sqlite3, it STOPS the test run (exit 1 in `--strict`/pretest mode) with a clear message + the exact Option A / Option C recovery commands — instead of letting vitest emit ~350 cryptic `ERR_DLOPEN_FAILED` failures. On Node 20 with a loadable binding it's a fast green no-op. **Never mutates `node_modules`.** |
-| `scripts/rebuild-native-for-node.mjs` | NEW. Option-C escape hatch. `rebuild:node` swaps in the Node-ABI-matched prebuild from the npm cache (verify-loads before declaring success); `rebuild:electron` restores the Electron-ABI binary for packaging. NON-destructive (backs up first; never runs a from-source compile). Handles the Windows GNU-tar `C:`-as-host misparse by preferring System32 bsdtar / `--force-local`. |
-| `.npmrc` | Documented the deliberate decision NOT to set `engine-strict=true` (a hard install block would strand the Node-24 escape hatch, which needs a successful `npm ci` to populate the prebuild cache). The `EBADENGINE` warning + `check-node.mjs` give enforcement without blocking install. |
-| `.github/workflows/ci.yml` | **Fixed a latent CI bug.** The comment block has claimed for several waves that CI "rebuild[s] for the plain Node 20 runtime BEFORE running tests" — but the `check` job only ran `npm run rebuild` (Electron ABI v123), which does NOT load under plain Node 20 (v115). So the db tests would have hit `ERR_DLOPEN_FAILED` in CI too. Replaced with `npm rebuild better-sqlite3` (fetches the node-v115 prebuild) in the `check` job; the e2e + build jobs keep `npm run rebuild` (Electron ABI, which they need to launch/package). Corrected the now-false "Node 20 == Electron 30's Node ABI" comment. |
+| File                                  | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `package.json`                        | `engines.node` tightened `">=20.10.0"` → `">=20.10.0 <21"` (now emits a loud `npm warn EBADENGINE` on Node 24 — verified). New scripts: `check:node`, `pretest` (runs the guard `--strict` before every `npm test`), `rebuild:node`, `rebuild:electron`.                                                                                                                                                                                                                                                                                                                                                   |
+| `scripts/check-node.mjs`              | NEW. Pre-test guard. If the host Node can't load better-sqlite3, it STOPS the test run (exit 1 in `--strict`/pretest mode) with a clear message + the exact Option A / Option C recovery commands — instead of letting vitest emit ~350 cryptic `ERR_DLOPEN_FAILED` failures. On Node 20 with a loadable binding it's a fast green no-op. **Never mutates `node_modules`.**                                                                                                                                                                                                                                |
+| `scripts/rebuild-native-for-node.mjs` | NEW. Option-C escape hatch. `rebuild:node` swaps in the Node-ABI-matched prebuild from the npm cache (verify-loads before declaring success); `rebuild:electron` restores the Electron-ABI binary for packaging. NON-destructive (backs up first; never runs a from-source compile). Handles the Windows GNU-tar `C:`-as-host misparse by preferring System32 bsdtar / `--force-local`.                                                                                                                                                                                                                    |
+| `.npmrc`                              | Documented the deliberate decision NOT to set `engine-strict=true` (a hard install block would strand the Node-24 escape hatch, which needs a successful `npm ci` to populate the prebuild cache). The `EBADENGINE` warning + `check-node.mjs` give enforcement without blocking install.                                                                                                                                                                                                                                                                                                                  |
+| `.github/workflows/ci.yml`            | **Fixed a latent CI bug.** The comment block has claimed for several waves that CI "rebuild[s] for the plain Node 20 runtime BEFORE running tests" — but the `check` job only ran `npm run rebuild` (Electron ABI v123), which does NOT load under plain Node 20 (v115). So the db tests would have hit `ERR_DLOPEN_FAILED` in CI too. Replaced with `npm rebuild better-sqlite3` (fetches the node-v115 prebuild) in the `check` job; the e2e + build jobs keep `npm run rebuild` (Electron ABI, which they need to launch/package). Corrected the now-false "Node 20 == Electron 30's Node ABI" comment. |
 
 **Proven green command path (captured on THIS Node-24 host, 2026-05-28):**
 
@@ -7761,25 +7904,26 @@ nvm use 20 && npm ci && npm test               # full suite GREEN
 
 ### Fix 2 — husky + lint-staged pre-commit hook (David's Wave 30 recommendation)
 
-**Status: implemented + logic-proven.** Note: this checkout is **not a git repository** (verified — `git rev-parse` fails, env confirms "Is directory a git repo: No"), so husky cannot bind `core.hooksPath` and an actual `git commit` cannot be exercised here. The hooks are correct and will activate automatically on `npm install`'s `prepare: husky` step once the tree is git-initialized. I proved the hook *logic* by running its exact commands directly.
+**Status: implemented + logic-proven.** Note: this checkout is **not a git repository** (verified — `git rev-parse` fails, env confirms "Is directory a git repo: No"), so husky cannot bind `core.hooksPath` and an actual `git commit` cannot be exercised here. The hooks are correct and will activate automatically on `npm install`'s `prepare: husky` step once the tree is git-initialized. I proved the hook _logic_ by running its exact commands directly.
 
 **What landed:**
 
-| File | Change |
-|---|---|
-| `package.json` | devDeps `husky@^9.1.7` (MIT) + `lint-staged@^17.0.5` (MIT). `prepare: husky` script. `"lint-staged"` config block: `*.{ts,tsx}` → `eslint --fix --max-warnings 0` + `prettier --write`; `*.{json,css,md}` → `prettier --write`. |
-| `.husky/pre-commit` | NEW. Runs `npx lint-staged` (blocks on surviving error/warning), THEN a **tsc safeguard** `npx tsc -p tsconfig.main.json --noEmit`. |
-| `.husky/pre-push` | NEW. Full three-tsconfig `npm run typecheck` + full-repo `npm run lint` (mirrors the CI gate). |
+| File                | Change                                                                                                                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `package.json`      | devDeps `husky@^9.1.7` (MIT) + `lint-staged@^17.0.5` (MIT). `prepare: husky` script. `"lint-staged"` config block: `*.{ts,tsx}` → `eslint --fix --max-warnings 0` + `prettier --write`; `*.{json,css,md}` → `prettier --write`. |
+| `.husky/pre-commit` | NEW. Runs `npx lint-staged` (blocks on surviving error/warning), THEN a **tsc safeguard** `npx tsc -p tsconfig.main.json --noEmit`.                                                                                             |
+| `.husky/pre-push`   | NEW. Full three-tsconfig `npm run typecheck` + full-repo `npm run lint` (mirrors the CI gate).                                                                                                                                  |
 
-**The `consistent-type-imports` + tsc safeguard (the CRITICAL Wave 30 lesson, encoded into the hook):** David's Wave 30 sweep proved `eslint --fix` for `@typescript-eslint/consistent-type-imports` aggressively mis-collapses mixed value+type imports into `import type {}`, going **lint-GREEN but tsc-RED** (TS1361/TS2206) — it hit 6 pdf-lib-importing files. A lint-only pre-commit hook would therefore *introduce* type breakage. So the pre-commit hook ALSO runs `tsc`. I scoped the pre-commit typecheck to `tsconfig.main.json` (the fastest of the three; pdf-lib is a main-only dep so the hazard lives entirely there) and put the full three-tsconfig typecheck on **pre-push** to keep commits fast.
+**The `consistent-type-imports` + tsc safeguard (the CRITICAL Wave 30 lesson, encoded into the hook):** David's Wave 30 sweep proved `eslint --fix` for `@typescript-eslint/consistent-type-imports` aggressively mis-collapses mixed value+type imports into `import type {}`, going **lint-GREEN but tsc-RED** (TS1361/TS2206) — it hit 6 pdf-lib-importing files. A lint-only pre-commit hook would therefore _introduce_ type breakage. So the pre-commit hook ALSO runs `tsc`. I scoped the pre-commit typecheck to `tsconfig.main.json` (the fastest of the three; pdf-lib is a main-only dep so the hazard lives entirely there) and put the full three-tsconfig typecheck on **pre-push** to keep commits fast.
 
 **Hook logic proof (commands run directly; scratch files deleted after):**
-- `eslint --fix --max-warnings 0` on a `no-explicit-any` file → **exit 1** (lint-staged would abort the commit). 
+
+- `eslint --fix --max-warnings 0` on a `no-explicit-any` file → **exit 1** (lint-staged would abort the commit).
 - The exact Wave 30 hazard reproduced: a file that `import type`s a pdf-lib **class** then uses it as a runtime value → **ESLint exit 0 (GREEN)** but **tsc reports `TS1361: 'PDFDict' cannot be used as a value because it was imported using 'import type'`** → the pre-commit tsc step blocks it. This is precisely the failure a lint-only hook would miss; the safeguard catches it.
 
 ### License walk (new devDeps)
 
-`husky@9.1.7` + `lint-staged@17.0.5` — both **MIT**. Recursive `package.json` walk of the reachable subtree (license-checker still broken on Node 24) = **25 packages, ALL permissive**: 24 MIT + 1 ISC (`signal-exit@3.0.7`, already in the project's ISC count). `husky` has **zero** runtime deps; all others arrive via `lint-staged` (listr2, log-update, ansi-*, picomatch, rfdc, tinyexec, etc.). **ZERO AGPL/GPL/LGPL/EPL/undeclared ingress.** Both are pure-JS build/test tooling — they do NOT ship in the production binary (no asar entry, no native module, no `asarUnpack` change). `LICENSES.md` updated: build/test table rows added + a "Backlog-fix toolchain wave" entry + "Last walked" bumped.
+`husky@9.1.7` + `lint-staged@17.0.5` — both **MIT**. Recursive `package.json` walk of the reachable subtree (license-checker still broken on Node 24) = **25 packages, ALL permissive**: 24 MIT + 1 ISC (`signal-exit@3.0.7`, already in the project's ISC count). `husky` has **zero** runtime deps; all others arrive via `lint-staged` (listr2, log-update, ansi-\*, picomatch, rfdc, tinyexec, etc.). **ZERO AGPL/GPL/LGPL/EPL/undeclared ingress.** Both are pure-JS build/test tooling — they do NOT ship in the production binary (no asar entry, no native module, no `asarUnpack` change). `LICENSES.md` updated: build/test table rows added + a "Backlog-fix toolchain wave" entry + "Last walked" bumped.
 
 ### Proposed lock for Marcus to ratify (NOT self-added)
 
@@ -7802,6 +7946,7 @@ Three discrete backend fixes. All in `src/main/**` + `src/ipc/**` + the catalog 
 **Symptom:** exporting a text PDF to PNG/JPEG/TIFF rendered embedded images correctly but **standard-font text (Helvetica/Times/Courier) came out BLANK**, with `getPathGenerator ... isn't resolved yet Helvetica_path_X` warnings.
 
 **Root cause (two layers, both fixed):**
+
 1. **Ordering:** `rasterize()` called `page.render()` without first forcing font resolution. Added `await page.getOperatorList()` before `render()` — walks the content stream to completion so pdf.js resolves every font + builds glyph-path generators BEFORE painting. (`pdfjs-source.ts:rasterize`.)
 2. **The LOAD-BEARING bug — `file://` URL vs `fs.readFile`:** the deeper cause is that **Node's `fetch` cannot read `file://` URLs** AND pdf.js v4's `NodeStandardFontDataFactory` does `fs.promises.readFile(url)` on the VERBATIM `file://` URL STRING we hand it via `standardFontDataUrl` — which fails (a `file://` string is not a filesystem path). So the standard-14 fonts never loaded -> all standard-font text blank. **Diagnosed by direct probe** (fetch of a `file://` font URL -> `TypeError fetch failed`; render with `standardFontDataUrl` as a file:// string -> 0 dark pixels; render with a plain fs path OR an explicit factory -> 2628 dark pixels). **Fix:** supply an explicit Node-safe `StandardFontDataFactory` + `CMapReaderFactory` to `getDocument` that reads font/cmap bytes via `fs.readFile` from the resolved absolute dir — sidestepping the url-vs-path ambiguity entirely and working regardless of pdf.js `isNodeJS` autodetection (environment-fragile under test runners + Electron). (`export-bootstrap.ts:makeNodeDataFactory` + `resolveExportFontData`; `pdfjs-source.ts:PdfJsDataFactory` + `bind()` factory wiring.)
 
@@ -7816,6 +7961,7 @@ This is exactly the failure mode Diego's 2026-05-27 global JSONL learning predic
 **Symptom (latent):** `auto-update.ts:quitAndInstall` had no dirty-document gate — once a real update channel is configured, installing would discard unsaved edits/annotations/signatures with no prompt.
 
 **Fix (mirrors the OCR-invalidates-PAdES `signed_pdf_requires_confirm` confirm discipline):**
+
 - `UpdateInstallRequest` gains `confirmedDiscardUnsaved?: boolean`; `UpdateInstallError` gains `unsaved_work_blocks_install`. (`contracts.ts`.)
 - The controller gains an injected `hasUnsavedWork?: () => boolean` dep. `quitAndInstall` now checks, AFTER the configured + version-match guards (more fundamental) but BEFORE the irreversible quit: if `hasUnsavedWork()` and NOT `confirmedDiscardUnsaved`, return `unsaved_work_blocks_install` — no quit scheduled. (`auto-update.ts`.)
 - Handler schema accepts the optional boolean + forwards it (`exactOptionalPropertyTypes`-safe conditional spread). (`update-install.ts`.)
@@ -7859,6 +8005,7 @@ Two discrete frontend fixes (parallel with David + Diego). Plus David's flagged 
 **Status before:** Wave 28b extracted 482 en-US keys (high-traffic / first-paint / honesty surfaces) and wrote the deep Phase-4..6 modal-STEP keys into `modals.json` but left the step-component JSX bodies hardcoded behind `fallbackLng` (Julian rated the gap LOW — valid English, no broken UI).
 
 **What this fix did:** swept every remaining hardcoded user-facing string in the deep modal-step components and routed it through `t('namespace:key')` using the established colon-namespace / dot-camelCase scheme (conventions §18.4). 25 components wired:
+
 - PAdES sign: `index.tsx` (titles + step labels + Back/Next), `cert-loader-step` (PFX/password fields, the 4 cert-load error messages, cert-info `<dl>` labels, the password-never-saved warning), `sign-options-step` (reason/location/appearance/TSA), `confirm-and-sign-step` (placement modes + signing copy).
 - Signature capture: `index.tsx` (tabs + show-name/date/reason + Place), `typed-tab`, `drawn-tab`, `image-tab`.
 - OCR run: `index.tsx` (title + cancel-confirm), `configure-step` (langs/pages/preprocess + honesty reminder), `confirm-invalidate-step` (PAdES-invalidation warning), `running-step` (phase labels + stats), `done-step` (summary + reminder).
@@ -7876,6 +8023,7 @@ Two discrete frontend fixes (parallel with David + Diego). Plus David's flagged 
 **File:** `src/client/components/annotation-layer/index.tsx:167` (David's scoped `eslint-disable jsx-a11y/no-static-element-interactions` on the pointer-only drawing `<div>`).
 
 **Approach taken — role + accessible name + documented keyboard alternative (NOT a full keyboard-authoring path).** Per `a11y-audit.md` §3 Path 3 + §5 DOCUMENT-ONLY + §7 gap #1, a freehand/drag STROKE is inherently pointer-only (no keyboard equivalent for an arbitrary stroke), so the audit's pragmatic WCAG verdict is role + accessible-name + a documented keyboard alternative. Implemented:
+
 - The drawing surface now has `role="application"` + a descriptive `aria-label` (routed through `t()`, two variants: idle vs. tool-active) that NAMES the keyboard alternative — pick a tool from the keyboard-operable Annotation toolbar, add/position annotations from the Inspector. New keys `toolbar:annotationLayerIdle` / `annotationLayerDrawing` (en-US + es-ES).
 - **The original `jsx-a11y/no-static-element-interactions` disable is REMOVED** — the element is no longer a nameless static `<div>`, so that rule passes legitimately.
 - One scoped, well-justified disable for `jsx-a11y/no-noninteractive-element-interactions` remains: jsx-a11y's role taxonomy classifies the WAI-ARIA `application` role as non-interactive (a plugin quirk — `application` IS the spec-correct role for a custom pointer-interaction widget), so it false-flags the pointer handlers on an otherwise-correct, accessible-named element. Re-classifying `application` lives in `.eslintrc.cjs` (Diego's domain); the in-file directive is the equivalent. The justification comment spells this out.
@@ -7886,6 +8034,7 @@ Two discrete frontend fixes (parallel with David + Diego). Plus David's flagged 
 ### David handoff WIRED — quitAndInstall "Save before updating?" dialog (his Fix 2 renderer half)
 
 David's main-side unsaved-work install gate (`unsaved_work_blocks_install` + `confirmedDiscardUnsaved` on the `update:install` contract) was flagged for a renderer confirm dialog. Wired it (had budget):
+
 - `useUpdateActions.install(version, confirmedDiscardUnsaved?)` now returns an `InstallOutcome` (`quitting` | `blocked-unsaved` | `error`) instead of `void`, so callers can react to the gate.
 - `UpdateStatusArea` (shared by the About modal + Settings → About tab) surfaces an inline `role="alertdialog"` confirm on `blocked-unsaved`: **Cancel / Discard and install / Save and install**. "Save and install" runs `saveDocumentThunk({ saveAs: false })` then retries; "Discard and install" retries with `confirmedDiscardUnsaved: true`. Mirrors the ConfirmCloseUnsaved discipline (safe default = Save).
 - Added David's requested error string `errors:unsaved_work_blocks_install` (en-US + es-ES) and the dialog copy keys `modals:about.installConfirm*` (en-US + es-ES).
@@ -7907,13 +8056,13 @@ i18n: `src/client/i18n/locales/en-US/{modals,toolbar,errors}.json`, `src/client/
 
 **Verdict: GREEN — all 5 backlog fixes close their findings; v0.7.1 can ship.** Audited David + Riley + Diego's Backlog-Fix changes (parallel with Diego's v0.7.1 repack). Findings: 0 BLOCKER, 1 HIGH (FOUND + FIXED by me), 0 MEDIUM, 3 LOW, 1 NIT. Full writeup in `docs/code-review.md` (Backlog-Fix Wave section).
 
-| Fix | Finding | Verdict |
-|---|---|---|
-| David Fix 1 — Phase 6.2 glyph | v0.6.1 L-002 blank standard-font text | **CLOSED.** Real-canvas `prod-render` glyph regression RAN (not skipped) + PASSED; old `.some(b=>b!==0)` retired for dark-pixel-vs-blank-baseline. **David↔Diego font-path packaged-binary seam VERIFIED aligned** (David's `require.resolve('pdfjs-dist/package.json')`→`standard_fonts`/`cmaps` ↔ Diego's `asarUnpack` of exactly those 3 paths; both files comment the other's load-bearing line). No mismatch — no LOUD flag for Diego's repack. |
-| David Fix 2 — quitAndInstall gate | H-29.1 unsaved-work data loss | **CLOSED end-to-end after H-FIX.1.** Main-side gate is textbook-correct + fully test-proven (ordering, refusal, 5 branches). BUT it was NOT wired end-to-end: prod `hasUnsavedWork:()=>false` meant the main gate never blocked, making Riley's renderer dialog dead code → dirty doc still lost on install. **I fixed it** (renderer now gates on its own `selectIsDirty`; main gate = defense-in-depth; `onSaveThenInstall` re-reads fresh store state). |
-| David Fix 3 — catalog SHAs | B-21.1 sentinel hashes | **CLOSED.** All 10 SHAs real distinct 64-hex + positive sizes (0 sentinels verified programmatically); mismatch-rejection contract still holds. |
-| Riley Fix 1 — 28c i18n | M-29.2 deep-modal residue | **CLOSED.** 816 keys (482+334), 0 dup, 0 orphan, 0 empty value; fallback proven; aria-labels `t()`-wrapped. |
-| Riley Fix 2 — annotation a11y | Wave-30 lint-sweep deferral | **CLOSED honestly.** `role="application"` + `t()` accessible name naming the keyboard alternative; original no-static disable removed; remaining 1 disable is a genuine jsx-a11y taxonomy false-positive. |
+| Fix                               | Finding                               | Verdict                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| --------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| David Fix 1 — Phase 6.2 glyph     | v0.6.1 L-002 blank standard-font text | **CLOSED.** Real-canvas `prod-render` glyph regression RAN (not skipped) + PASSED; old `.some(b=>b!==0)` retired for dark-pixel-vs-blank-baseline. **David↔Diego font-path packaged-binary seam VERIFIED aligned** (David's `require.resolve('pdfjs-dist/package.json')`→`standard_fonts`/`cmaps` ↔ Diego's `asarUnpack` of exactly those 3 paths; both files comment the other's load-bearing line). No mismatch — no LOUD flag for Diego's repack.       |
+| David Fix 2 — quitAndInstall gate | H-29.1 unsaved-work data loss         | **CLOSED end-to-end after H-FIX.1.** Main-side gate is textbook-correct + fully test-proven (ordering, refusal, 5 branches). BUT it was NOT wired end-to-end: prod `hasUnsavedWork:()=>false` meant the main gate never blocked, making Riley's renderer dialog dead code → dirty doc still lost on install. **I fixed it** (renderer now gates on its own `selectIsDirty`; main gate = defense-in-depth; `onSaveThenInstall` re-reads fresh store state). |
+| David Fix 3 — catalog SHAs        | B-21.1 sentinel hashes                | **CLOSED.** All 10 SHAs real distinct 64-hex + positive sizes (0 sentinels verified programmatically); mismatch-rejection contract still holds.                                                                                                                                                                                                                                                                                                            |
+| Riley Fix 1 — 28c i18n            | M-29.2 deep-modal residue             | **CLOSED.** 816 keys (482+334), 0 dup, 0 orphan, 0 empty value; fallback proven; aria-labels `t()`-wrapped.                                                                                                                                                                                                                                                                                                                                                |
+| Riley Fix 2 — annotation a11y     | Wave-30 lint-sweep deferral           | **CLOSED honestly.** `role="application"` + `t()` accessible name naming the keyboard alternative; original no-static disable removed; remaining 1 disable is a genuine jsx-a11y taxonomy false-positive.                                                                                                                                                                                                                                                  |
 
 **Ratchets:** 7th consecutive clean wave (permissive-stubs / sentinel-defaults / stub-with-TODO / code-comment-contradictions / layout-best-effort / structural-PII-guard + no new `as any`/runtime-require/sentinel). The new `require('node:path/url')` follow the existing built-in-module idiom; the `as typeof Node*` casts are typed-namespace casts, NOT `as any`.
 
@@ -7961,8 +8110,9 @@ Traced David's fix end-to-end. The load-bearing path is in `src/main/export/expo
 **1. THE HEADLINE — packaged PNG export shows TEXT.** `scripts/wave-fix-v071-png-text-evidence.cts` extracts the shipped `app.asar`, overlays the SHIPPED `app.asar.unpacked` pdfjs font/cmap tree (reproducing Electron's runtime asar-shim layout — the overlay is itself an assertion the unpack landed), wires David's REAL Node-safe `StandardFontDataFactory`/`CMapReaderFactory` rooted at that unpacked tree, renders a 150-dpi Helvetica/HelveticaBold text PDF through the production export engine, and COUNTS DARK PIXELS. Result: **25,688 dark pixels** (v0.6.1 bug = 0/blank). Saved + visually confirmed: `release/wave-fix-v071-png-text-evidence.png` (73,261 B, 1275×1651) shows the bold heading "v0.7.1 PNG TEXT EVIDENCE", the full pangram with all digits "0123456789", and two body lines — crisp, fully-rendered standard-font glyphs. **This is the pixels-on-disk proof that the font-path seam resolves in the PACKAGED binary.** Machine-readable: `release/wave-fix-v071-png-text-evidence.json` (`verdict: TEXT RENDERS`).
 
 **2. es-ES regression (28c) — PASS.** `scripts/wave-fix-v071-l002-verify.mjs` launches the SHIPPED `release/win-unpacked/PDF Viewer & Editor.exe` via Playwright `_electron` (an L-002-sanctioned capture method; this agent's shell is non-interactive so OS input-synthesis is unavailable) — **0 page errors.**
-  - `release/wave-fix-v071-launch-shot.png` — fully-rendered running window: menu strip (Archivo/Editar/Insertar/Ver/Herramientas/Ayuda), ~30-button toolbar, empty-state hero "Abra un PDF para empezar" + "Abrir archivo..." + "o arrastre y suelte" (L-001 drag-drop hint), a RECIENTES panel with real recent files + "hace 2 días" timestamps, "Listo" status bar. (Locale persisted to es-ES from the prior settings write — `deleteAppDataOnUninstall: false` — so this shot doubles as a full-chrome Spanish proof.)
-  - `release/wave-fix-v071-es-locale.png` — Settings "Configuración" dialog in full Spanish: tabs General/Archivos/Exportación/Edición/Acerca de; "Idioma de la interfaz → Español (España)" with the honest ~70%-sample subtext ("muestra de traducción; algunos textos pueden aparecer en inglés"); "Privacidad → Compartir estadísticas de uso anónimas" (off by default) with the full honest telemetry copy. 9 visible Spanish strings detected after the switch. The locale picker still flips the entire UI to Spanish after Riley grew the i18n denominator to 816 keys.
+
+- `release/wave-fix-v071-launch-shot.png` — fully-rendered running window: menu strip (Archivo/Editar/Insertar/Ver/Herramientas/Ayuda), ~30-button toolbar, empty-state hero "Abra un PDF para empezar" + "Abrir archivo..." + "o arrastre y suelte" (L-001 drag-drop hint), a RECIENTES panel with real recent files + "hace 2 días" timestamps, "Listo" status bar. (Locale persisted to es-ES from the prior settings write — `deleteAppDataOnUninstall: false` — so this shot doubles as a full-chrome Spanish proof.)
+- `release/wave-fix-v071-es-locale.png` — Settings "Configuración" dialog in full Spanish: tabs General/Archivos/Exportación/Edición/Acerca de; "Idioma de la interfaz → Español (España)" with the honest ~70%-sample subtext ("muestra de traducción; algunos textos pueden aparecer en inglés"); "Privacidad → Compartir estadísticas de uso anónimas" (off by default) with the full honest telemetry copy. 9 visible Spanish strings detected after the switch. The locale picker still flips the entire UI to Spanish after Riley grew the i18n denominator to 816 keys.
 
 **3. Word/Excel export regression — PASS.** `scripts/wave-26-1-all-formats-evidence.mjs` against the packaged engine: **all four formats valid** — xlsx 7147 B (sig 504b0304), **docx 8699 B (sig 504b0304)**, pptx 49920 B, png 5817 B (sig 89504e47). Excel + Word still produce valid OOXML files.
 
@@ -7982,6 +8132,7 @@ The font-path packaged-seam verification IS a textbook instance of L-002's core 
 Edited (all Diego-owned): `package.json` (version 0.7.1), `scripts/wave-fix-v071-png-text-evidence.cts` (new), `scripts/wave-fix-v071-l002-verify.mjs` (new), `release/**` (artifacts + evidence PNGs/JSON), `docs/build-report.md` (this section). **Did NOT touch:** any `src/**` (David/Riley — the font-path seam needed NO src fix; verified aligned), `electron-builder.yml` (the Phase-6.1 asarUnpack already matches David's factory path — no change needed), migrations, frozen docs, other agents' docs, `.learnings/locked-instructions.md` (L-003 already ratified in). **L-001:** `window-manager.ts` untouched (the launch shot shows the "o arrastre y suelte" drag-drop hint, the L-001 feature, present). **L-002:** SATISFIED — pixel-level PNG-text-render evidence + es-ES UI screenshots embedded above with descriptions.
 
 ### Diego Self-improvement log
+
 One JSONL entry appended to `.learnings/learnings.jsonl`.
 
 ---
@@ -7992,18 +8143,19 @@ One JSONL entry appended to `.learnings/learnings.jsonl`.
 
 **Files edited (Nathan-owned only):**
 
-| File | Change |
-|---|---|
-| `README.md` | Version 0.7.0 → 0.7.1 (status banner, install table ~137 MB, feature table). Roadmap status restructured: replaced the single "Documented backlog" table with **"Resolved in the 0.7.1 backlog-fix wave"** (8 rows — the 7 fixes + lint hook) and **"Deferred — requires external resources"** (the 3 blocked items with honest one-line reasons). Updated "all 6 export formats functional / image-text now works", OCR → "multi-language download supported", es-ES ~70% → ~68% on the 816-key denominator, Node 20 / L-003 develop note, test count 1765/5. |
-| `docs/user-guide.md` | Title/intro/banner → 0.7.1. New "What changed in 0.7.1" section. Image-export caveat removed (text now renders). Multi-language OCR download note (English-only → resolved). Phase 7 partial-features table: install-gate row rewritten to the binary-vs-source nuance, es-ES → ~68%, a11y drawing-surface-named row. Phase 6 partial-features: xlsx-only + source-loader-stub rows collapsed to "all six formats live". "Coming in" table: source-loader + non-English struck through as DONE; scanner marked DEFERRED. Trust-floor banners kept intact. |
+| File                      | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`               | Version 0.7.0 → 0.7.1 (status banner, install table ~137 MB, feature table). Roadmap status restructured: replaced the single "Documented backlog" table with **"Resolved in the 0.7.1 backlog-fix wave"** (8 rows — the 7 fixes + lint hook) and **"Deferred — requires external resources"** (the 3 blocked items with honest one-line reasons). Updated "all 6 export formats functional / image-text now works", OCR → "multi-language download supported", es-ES ~70% → ~68% on the 816-key denominator, Node 20 / L-003 develop note, test count 1765/5.                                                                            |
+| `docs/user-guide.md`      | Title/intro/banner → 0.7.1. New "What changed in 0.7.1" section. Image-export caveat removed (text now renders). Multi-language OCR download note (English-only → resolved). Phase 7 partial-features table: install-gate row rewritten to the binary-vs-source nuance, es-ES → ~68%, a11y drawing-surface-named row. Phase 6 partial-features: xlsx-only + source-loader-stub rows collapsed to "all six formats live". "Coming in" table: source-loader + non-English struck through as DONE; scanner marked DEFERRED. Trust-floor banners kept intact.                                                                                 |
 | `docs/developer-guide.md` | Prerequisites + Node-version note → L-003 (check-node guard + non-destructive rebuild escape hatch). New **worked example** for the font-factory fix (`fs.readFile` not `file://`, the `require.resolve` + asarUnpack seam — the dev/packaged path-resolution class). Auto-update section: H-29.1/H-FIX.1 gate rewritten with the honest binary-vs-source note. New **Git hooks** subsection (husky pre-commit + the tsc-after-consistent-type-imports safeguard). i18n 482 → 816 keys, 28c resolved. Language-pack catalog → real SHAs. Node 24 vs Electron 30 ABI → six-wave history + L-003 + the two new scripts. Test counts 1765/5. |
-| `docs/api-reference.md` | Phase 7 + Phase 6 + OCR channel-status notes → 0.7.1 (all six export formats live; multi-language OCR). `update:install` request gains `confirmedDiscardUnsaved?: boolean`, errors gain `unsaved_work_blocks_install`, with the binary-vs-source note. OCR catalog honesty note → resolved. |
+| `docs/api-reference.md`   | Phase 7 + Phase 6 + OCR channel-status notes → 0.7.1 (all six export formats live; multi-language OCR). `update:install` request gains `confirmedDiscardUnsaved?: boolean`, errors gain `unsaved_work_blocks_install`, with the binary-vs-source note. OCR catalog honesty note → resolved.                                                                                                                                                                                                                                                                                                                                               |
 
 **Resolved-vs-deferred framing (the editorial discipline this wave):** the 7 fixed items are stated as DONE with their proof (e.g. the 25,688-vs-0 dark-pixel packaged-binary evidence for image-text), and the 3 blocked items are isolated under an explicitly-labeled deferred heading with a one-line "why it is blocked" each — framed as resources/decisions outside the codebase (real Mac/Linux hardware; a published GitHub org + signing cert; a non-existent MIT WIA binding), NOT as a to-do list the swarm can clear. The H-FIX.1 nuance is documented in three places (README resolved-table row, user-guide partial-features row, developer-guide + api-reference) and never claims the 0.7.1 binary ships the gate active.
 
 **Did NOT touch:** `src/**`, Riley's frozen docs, Marcus's docs, Julian's `code-review.md`, configs / `electron-builder.yml` / `package.json`, `.learnings/locked-instructions.md`. APPENDED this row only to `docs/build-report.md`.
 
 ### Nathan Self-improvement log
+
 One JSONL entry appended to `.learnings/learnings.jsonl`.
 
 ---
@@ -8060,7 +8212,7 @@ Both paths were exercised. The tag `v0.7.2` was pushed and DID trigger `release.
 src/ipc/handlers/scan-list-devices.ts(24,22): error TS1005: '}' expected.
 ```
 
-Root cause (verified, NOT mine): the COMMITTED version of `src/ipc/handlers/scan-list-devices.ts` (what CI checks out at the tag) is TRUNCATED mid-token at line 24 (`  ScanListDevicesRequ` — no closing brace, file cut off). This is David's WIA-wave `src/**` file; the initial commit (`5b9c1ca`) baked in a corrupt/incomplete intermediate. David's LOCAL working tree has the complete, correct version (uncommitted) — which is why the LOCAL build passed typecheck cleanly. **This is a David follow-up (his domain — I did not and may not edit `src/**`); see "David follow-up" below.** Notably, this is the release.yml workflow behaving CORRECTLY: it fail-fast-caught a real TypeScript error before publishing a broken binary — exactly its job.
+Root cause (verified, NOT mine): the COMMITTED version of `src/ipc/handlers/scan-list-devices.ts` (what CI checks out at the tag) is TRUNCATED mid-token at line 24 (`  ScanListDevicesRequ` — no closing brace, file cut off). This is David's WIA-wave `src/**` file; the initial commit (`5b9c1ca`) baked in a corrupt/incomplete intermediate. David's LOCAL working tree has the complete, correct version (uncommitted) — which is why the LOCAL build passed typecheck cleanly. **This is a David follow-up (his domain — I did not and may not edit `src/**`); see "David follow-up" below.\*\* Notably, this is the release.yml workflow behaving CORRECTLY: it fail-fast-caught a real TypeScript error before publishing a broken binary — exactly its job.
 
 Because the brief explicitly authorizes the local-publish fallback when CI is uncertain ("if CI is slow/uncertain, the local-publish fallback is acceptable; document which path you took"), and the LOCAL build is clean + complete (it carries David's fixed working-tree version), I published from the locally-built artifacts via `npx electron-builder --win --publish always` with `GH_TOKEN` from `gh auth token`. electron-builder created the GitHub Release for tag `v0.7.2` (as a DRAFT per `releaseType: draft`) and uploaded the assets.
 
@@ -8088,7 +8240,7 @@ Verified via Playwright `_electron` CDP driver against the SHIPPED `release/win-
    ```
    `contains PLACEHOLDER: false` ok, `carries SuperiorAg/PDF_Viewer_Editor: true` ok.
 2. **Launch regression (L-002):** `release/wave-publish-v072-launch-shot.png` — the v0.7.2 window renders fully: menu bar (Archivo/Editar/Insertar/Ver/Herramientas/Ayuda — the persisted locale is es-ES from a prior wave), full toolbar strip, "Abra un PDF para empezar" empty-state hero, "Abrir archivo..." button, "o arrastre y suelte" drag-drop hint (the L-001 feature), and the RECIENTES recents list. 0 pageerrors.
-3. **Auto-update HONEST result (the proof the publish target is wired end-to-end):** `release/wave-publish-v072-update-check.png` — Settings → Acerca de (About) tab, **Versión de la aplicación: 0.7.2**, Actualizaciones section showing: *"No se pudieron buscar actualizaciones: The update feed could not be read."*
+3. **Auto-update HONEST result (the proof the publish target is wired end-to-end):** `release/wave-publish-v072-update-check.png` — Settings → Acerca de (About) tab, **Versión de la aplicación: 0.7.2**, Actualizaciones section showing: _"No se pudieron buscar actualizaciones: The update feed could not be read."_
    - Pre-check `data-status`: `idle` (NOT `not-configured`).
    - Post-check `data-status`: `error` (feed_parse_failed) — an HONEST result. **NOT the old `update_not_configured`.**
    - **Interpretation:** the app CONTACTED the real GitHub feed (it got far enough to attempt reading `latest.yml` and report a feed-read error) — something it could ONLY do with a real configured target. With the old placeholder it short-circuited to `not-configured` BEFORE any network contact. The "feed could not be read" error is expected + correct because the v0.7.2 release is still a DRAFT (invisible to the unauthenticated public feed). Once the draft is promoted to live, the same check flips to `up-to-date` (v0.7.2 == latest). This is trust-floor obligation #2 made executable: the app reports what actually happened, never a fake status.
@@ -8100,15 +8252,15 @@ Verified via Playwright `_electron` CDP driver against the SHIPPED `release/win-
 
 ### Final status
 
-| Objective | Status |
-|---|---|
-| 1. Real publish config | DONE — `SuperiorAg/PDF_Viewer_Editor`, `releaseType: draft` |
-| 2. David placeholder reconciliation | AUTO-FLIP, no src change (verified by inspection + David's own tests) |
-| 3. `release.yml` workflow | DONE — triggers on `v*.*.*`, Node 20, tolerant WIA rebuild, `--publish always` |
-| 4. First release v0.7.2 | DONE via local-publish fallback (CI blocked by David's committed syntax error) |
-| 5. L-002 + auto-update verification | DONE — app contacts real feed, honest `error` not `not-configured` |
-| 6. Build-report + push | DONE (this section + commit) |
-| Code-signing | PENDING (no cert; unsigned + SmartScreen caveat documented) |
+| Objective                           | Status                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------ |
+| 1. Real publish config              | DONE — `SuperiorAg/PDF_Viewer_Editor`, `releaseType: draft`                    |
+| 2. David placeholder reconciliation | AUTO-FLIP, no src change (verified by inspection + David's own tests)          |
+| 3. `release.yml` workflow           | DONE — triggers on `v*.*.*`, Node 20, tolerant WIA rebuild, `--publish always` |
+| 4. First release v0.7.2             | DONE via local-publish fallback (CI blocked by David's committed syntax error) |
+| 5. L-002 + auto-update verification | DONE — app contacts real feed, honest `error` not `not-configured`             |
+| 6. Build-report + push              | DONE (this section + commit)                                                   |
+| Code-signing                        | PENDING (no cert; unsigned + SmartScreen caveat documented)                    |
 
 ### Code-signing status (follow-up, NOT blocking auto-update check/download)
 
@@ -8133,12 +8285,12 @@ and validated via mock-addon handler tests incl. multi-page ADF → single-PDF.)
 
 ### Toolchain reality-check (done FIRST, per brief)
 
-| Check | Result |
-|---|---|
-| node-gyp functional | YES with **node-gyp@latest** (>=10). The project-local 9.4.1 bundles an OLD gyp that `import distutils.version` — DEAD on Python **3.12** (distutils removed in 3.12, NOT just 3.14 as the L-003 lore implied). `build.mjs` invokes `npx node-gyp@latest`. |
-| MSVC / VS Build Tools | YES — VS 2017/2019/2022 Enterprise w/ VC C++ tools all present. |
-| Windows SDK WIA headers (`wia.h`/`wia_lh.h`/`sti.h`) + `wiaguid.lib` | YES — present in every SDK 10.0.10240+. |
-| Trivial N-API hello-world compiles + loads under the project ABI | YES — and a full COM probe (`CoInitializeEx` + `CoCreateInstance(WiaDevMgr2)` + `EnumDeviceInfo`) compiled, linked, loaded, and enumerated the real scanner. |
+| Check                                                                | Result                                                                                                                                                                                                                                                     |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| node-gyp functional                                                  | YES with **node-gyp@latest** (>=10). The project-local 9.4.1 bundles an OLD gyp that `import distutils.version` — DEAD on Python **3.12** (distutils removed in 3.12, NOT just 3.14 as the L-003 lore implied). `build.mjs` invokes `npx node-gyp@latest`. |
+| MSVC / VS Build Tools                                                | YES — VS 2017/2019/2022 Enterprise w/ VC C++ tools all present.                                                                                                                                                                                            |
+| Windows SDK WIA headers (`wia.h`/`wia_lh.h`/`sti.h`) + `wiaguid.lib` | YES — present in every SDK 10.0.10240+.                                                                                                                                                                                                                    |
+| Trivial N-API hello-world compiles + loads under the project ABI     | YES — and a full COM probe (`CoInitializeEx` + `CoCreateInstance(WiaDevMgr2)` + `EnumDeviceInfo`) compiled, linked, loaded, and enumerated the real scanner.                                                                                               |
 
 ### Addon design
 
@@ -8200,7 +8352,7 @@ Created (David-owned): `native/wia-scanner/{binding.gyp,build.mjs,README.md,.git
 
 ## v0.7.3 — Diego (clean release cut from post-fix `main`) — 2026-05-28
 
-**Why this release exists.** The `v0.7.2` git tag was cut from a commit whose source tree carried a TRUNCATED `src/ipc/handlers/scan-list-devices.ts` (concurrent-write corruption — file cut mid-token at `ScanListDevicesRequ`, no closing brace → `TS1005: '}' expected`). The v0.7.2 *binary assets* are fine, but anyone building from the v0.7.2 *tag* hit the truncation; the tag-triggered `release.yml` CI run for v0.7.2 died at typecheck. David's WIA fix landed on `main` (`8be4bd5` complete WIA handler files) plus the commit-frequency convention (`44e8faa`). v0.7.3 re-cuts the release tag from correct, buildable source.
+**Why this release exists.** The `v0.7.2` git tag was cut from a commit whose source tree carried a TRUNCATED `src/ipc/handlers/scan-list-devices.ts` (concurrent-write corruption — file cut mid-token at `ScanListDevicesRequ`, no closing brace → `TS1005: '}' expected`). The v0.7.2 _binary assets_ are fine, but anyone building from the v0.7.2 _tag_ hit the truncation; the tag-triggered `release.yml` CI run for v0.7.2 died at typecheck. David's WIA fix landed on `main` (`8be4bd5` complete WIA handler files) plus the commit-frequency convention (`44e8faa`). v0.7.3 re-cuts the release tag from correct, buildable source.
 
 ### 1 — `main` pushed + clean
 
@@ -8236,7 +8388,7 @@ Created (David-owned): `native/wia-scanner/{binding.gyp,build.mjs,README.md,.git
 ### 5 — Promote to live + reconcile v0.7.2
 
 - Promoted: `gh release edit v0.7.3 --draft=false` → `draft: false`, published 2026-05-28T13:34:07Z. `gh release list` now marks **`0.7.3` as `Latest`**. Set descriptive release notes documenting the fix + supersession + unsigned caveat.
-- **v0.7.2 reconciliation decision: LEFT LIVE, NOT deleted.** Rationale: (a) GitHub already marks v0.7.3 as Latest, so electron-updater's `latest.yml` feed resolves v0.7.3 — updaters never advertise v0.7.2 over v0.7.3; (b) v0.7.2's published *binaries* are verified-good (corruption was in the tag's *source*, not the assets); (c) no destructive ops per brief; (d) the v0.7.3 release notes explicitly state it supersedes v0.7.2 for transparency. Non-destructive default preserves history.
+- **v0.7.2 reconciliation decision: LEFT LIVE, NOT deleted.** Rationale: (a) GitHub already marks v0.7.3 as Latest, so electron-updater's `latest.yml` feed resolves v0.7.3 — updaters never advertise v0.7.2 over v0.7.3; (b) v0.7.2's published _binaries_ are verified-good (corruption was in the tag's _source_, not the assets); (c) no destructive ops per brief; (d) the v0.7.3 release notes explicitly state it supersedes v0.7.2 for transparency. Non-destructive default preserves history.
 
 ### 6 — L-002 visual verification (regression proof — a PDF opens via `window.pdfApi`)
 
@@ -8252,16 +8404,16 @@ Verified against the SHIPPED `release/win-unpacked` v0.7.3 binary. `_electron.la
 
 ### Final status
 
-| Objective | Status |
-|---|---|
-| `main` pushed + clean + typechecks | DONE (origin/main @ `3f58913`, 3/3 typechecks green) |
-| Version bump 0.7.2 → 0.7.3 committed | DONE (`3f58913`, focused commit) |
-| Local build + package (L-003) | DONE (NSIS 130.86 MB + portable 130.64 MB + latest.yml) |
-| Tag v0.7.3 on origin (post-fix commit) | DONE (`3f589131…`) |
-| Publish path | **CI-DRIVEN** — release.yml run `26577753983` GREEN (3m32s); v0.7.2 run was RED |
-| GitHub Release v0.7.3 live + assets | DONE — promoted `--draft=false`, marked Latest |
-| L-002: a PDF opens in the v0.7.3 binary | DONE — `wave-v073-pdfapi-verified.png`, 18 pdfApi namespaces |
-| v0.7.2 reconciliation | LEFT LIVE (non-destructive; v0.7.3 is Latest) |
+| Objective                               | Status                                                                          |
+| --------------------------------------- | ------------------------------------------------------------------------------- |
+| `main` pushed + clean + typechecks      | DONE (origin/main @ `3f58913`, 3/3 typechecks green)                            |
+| Version bump 0.7.2 → 0.7.3 committed    | DONE (`3f58913`, focused commit)                                                |
+| Local build + package (L-003)           | DONE (NSIS 130.86 MB + portable 130.64 MB + latest.yml)                         |
+| Tag v0.7.3 on origin (post-fix commit)  | DONE (`3f589131…`)                                                              |
+| Publish path                            | **CI-DRIVEN** — release.yml run `26577753983` GREEN (3m32s); v0.7.2 run was RED |
+| GitHub Release v0.7.3 live + assets     | DONE — promoted `--draft=false`, marked Latest                                  |
+| L-002: a PDF opens in the v0.7.3 binary | DONE — `wave-v073-pdfapi-verified.png`, 18 pdfApi namespaces                    |
+| v0.7.2 reconciliation                   | LEFT LIVE (non-destructive; v0.7.3 is Latest)                                   |
 
 ### Gaps / caveats
 
@@ -8329,17 +8481,17 @@ Driven against the genuine packaged **v0.7.4** `win-unpacked` binary via the L-0
 
 ### Objective summary
 
-| Objective | Status |
-|---|---|
-| `main` pushed (3 fix commits) + typechecks | DONE (origin/main @ `421c82e`, 3/3 typechecks green) |
-| Version bump 0.7.3 → 0.7.4 committed | DONE (`421c82e`, focused commit) |
-| Local build + package (L-003) | DONE (`win-unpacked` @ 0.7.4.0; native ABI restored to Electron) |
-| Tag v0.7.4 on origin | DONE (`421c82e…`) |
-| Publish path | **CI-DRIVEN** — release.yml run `26633044498` GREEN (3m8s) |
-| GitHub Release v0.7.4 live + assets | DONE — promoted `--draft=false`, marked Latest |
-| Live feed advertises v0.7.4 | DONE — `latest.yml` `version: 0.7.4`, sha512/size match |
-| L-002: FIXES verified in v0.7.4 binary | DONE — `wave-v074-ux-verified.png` + DOM assertions (crisp DPR, fluid transform, centered origin, 177% tracked) |
-| Prior releases reconciliation | LEFT LIVE (non-destructive; v0.7.4 is Latest) |
+| Objective                                  | Status                                                                                                          |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `main` pushed (3 fix commits) + typechecks | DONE (origin/main @ `421c82e`, 3/3 typechecks green)                                                            |
+| Version bump 0.7.3 → 0.7.4 committed       | DONE (`421c82e`, focused commit)                                                                                |
+| Local build + package (L-003)              | DONE (`win-unpacked` @ 0.7.4.0; native ABI restored to Electron)                                                |
+| Tag v0.7.4 on origin                       | DONE (`421c82e…`)                                                                                               |
+| Publish path                               | **CI-DRIVEN** — release.yml run `26633044498` GREEN (3m8s)                                                      |
+| GitHub Release v0.7.4 live + assets        | DONE — promoted `--draft=false`, marked Latest                                                                  |
+| Live feed advertises v0.7.4                | DONE — `latest.yml` `version: 0.7.4`, sha512/size match                                                         |
+| L-002: FIXES verified in v0.7.4 binary     | DONE — `wave-v074-ux-verified.png` + DOM assertions (crisp DPR, fluid transform, centered origin, 177% tracked) |
+| Prior releases reconciliation              | LEFT LIVE (non-destructive; v0.7.4 is Latest)                                                                   |
 
 ### Gaps / caveats
 
@@ -8411,17 +8563,17 @@ The "default Electron icon is used" warning's absence (step 4) + the embedded ic
 
 ### Objective summary
 
-| Objective | Status |
-|---|---|
-| Icon assets committed + pushed (tracked) | DONE (`fb6af07`; 5 files; binaries byte-verified post-commit) |
-| Icon wired into electron-builder.yml (win/nsis/mac/fileAssoc) | DONE (`216418e`; js-yaml-validated) |
-| Version bump 0.7.4 → 0.7.5 | DONE (`287f6ac`) |
-| Local build + package (L-003 honored) | DONE (`win-unpacked` + NSIS + portable at 0.7.5; ABI restored to Electron) |
-| **"default Electron icon is used" warning GONE** | **DONE — grep of `release/v075-build.log` = no match** |
-| Tag v0.7.5 + CI publish | **CI-DRIVEN** — release.yml run `26638464974` GREEN (3m42s) |
-| GitHub Release v0.7.5 live + assets | DONE — promoted `--draft=false`, marked Latest |
-| L-002: ICON verified in the binary | DONE — `wave-v075-icon-verified.png` (titlebar icon + rendered UI) + extraction + zoom |
-| Prior releases reconciliation | LEFT LIVE (non-destructive; v0.7.5 is Latest) |
+| Objective                                                     | Status                                                                                 |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Icon assets committed + pushed (tracked)                      | DONE (`fb6af07`; 5 files; binaries byte-verified post-commit)                          |
+| Icon wired into electron-builder.yml (win/nsis/mac/fileAssoc) | DONE (`216418e`; js-yaml-validated)                                                    |
+| Version bump 0.7.4 → 0.7.5                                    | DONE (`287f6ac`)                                                                       |
+| Local build + package (L-003 honored)                         | DONE (`win-unpacked` + NSIS + portable at 0.7.5; ABI restored to Electron)             |
+| **"default Electron icon is used" warning GONE**              | **DONE — grep of `release/v075-build.log` = no match**                                 |
+| Tag v0.7.5 + CI publish                                       | **CI-DRIVEN** — release.yml run `26638464974` GREEN (3m42s)                            |
+| GitHub Release v0.7.5 live + assets                           | DONE — promoted `--draft=false`, marked Latest                                         |
+| L-002: ICON verified in the binary                            | DONE — `wave-v075-icon-verified.png` (titlebar icon + rendered UI) + extraction + zoom |
+| Prior releases reconciliation                                 | LEFT LIVE (non-destructive; v0.7.5 is Latest)                                          |
 
 ### Gaps / caveats
 

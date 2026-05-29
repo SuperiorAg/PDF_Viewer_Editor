@@ -10,21 +10,21 @@
 
 ## 0. The Phase-1 promise this fulfills
 
-`conventions.md §11` (Phase 1) said: *"Out of scope for Phase 1. All strings hard-coded English. Phase 7 introduces an i18n framework (`react-i18next` or similar)."* This document is that framework's design. It also resolves the §11 hint that strings *"may"* live in co-located `.strings.ts` files — in practice they did not, so Phase 7 extracts directly from JSX (§3).
+`conventions.md §11` (Phase 1) said: _"Out of scope for Phase 1. All strings hard-coded English. Phase 7 introduces an i18n framework (`react-i18next` or similar)."_ This document is that framework's design. It also resolves the §11 hint that strings _"may"_ live in co-located `.strings.ts` files — in practice they did not, so Phase 7 extracts directly from JSX (§3).
 
 ---
 
 ## 1. Library choice + rationale
 
-| Library | License | Role | Why |
-|---|---|---|---|
-| `i18next` | MIT | core engine (interpolation, plurals, namespaces, fallback) | de-facto standard; framework-agnostic core; rich plural + format support; no telemetry, no phone-home |
-| `react-i18next` | MIT | React bindings (`useTranslation`, `<Trans>`, `Suspense` integration) | first-class React hooks; `<Trans>` handles embedded markup (links, bold) without string concatenation |
-| `i18next-resources-to-backend` | MIT | lazy `import()` backend for locale chunks | lets non-active locales be Vite code-split chunks (zero initial-bundle cost) |
+| Library                        | License | Role                                                                 | Why                                                                                                   |
+| ------------------------------ | ------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `i18next`                      | MIT     | core engine (interpolation, plurals, namespaces, fallback)           | de-facto standard; framework-agnostic core; rich plural + format support; no telemetry, no phone-home |
+| `react-i18next`                | MIT     | React bindings (`useTranslation`, `<Trans>`, `Suspense` integration) | first-class React hooks; `<Trans>` handles embedded markup (links, bold) without string concatenation |
+| `i18next-resources-to-backend` | MIT     | lazy `import()` backend for locale chunks                            | lets non-active locales be Vite code-split chunks (zero initial-bundle cost)                          |
 
 **License verification:** all three are MIT (`i18next/i18next`, `i18next/react-i18next`, `i18next/i18next-resources-to-backend`). No AGPL, no commercial SDK — clears the project's permissive-OSS-only policy (`CLAUDE.md`).
 
-**Bundle impact:** i18next core ≈ 22 KB min+gz; react-i18next ≈ 12 KB; resources-to-backend ≈ 2 KB. Total ≈ **36-50 KB** added to the renderer initial chunk. The **en-US** resource bundle is part of the initial chunk (the app must render *something* immediately); **es-ES** (and any future locale) is a lazy `import()` code-split chunk that loads only when selected. So adding the proof locale costs ~0 KB to users who never switch to it.
+**Bundle impact:** i18next core ≈ 22 KB min+gz; react-i18next ≈ 12 KB; resources-to-backend ≈ 2 KB. Total ≈ **36-50 KB** added to the renderer initial chunk. The **en-US** resource bundle is part of the initial chunk (the app must render _something_ immediately); **es-ES** (and any future locale) is a lazy `import()` code-split chunk that loads only when selected. So adding the proof locale costs ~0 KB to users who never switch to it.
 
 **Rejected alternatives:** `react-intl` / FormatJS (heavier, ICU-message-syntax-only, larger bundle, more ceremony for the same outcome); `lingui` (compile-step macro complexity not worth it for ~1000 strings); hand-rolled (loses plural/format/fallback machinery i18next gives for free).
 
@@ -43,18 +43,21 @@ import enUSCommon from './locales/en-US/common.json';
 // ...the other en-US namespaces eagerly imported...
 
 void i18n
-  .use(resourcesToBackend((language: string, namespace: string) =>
-    // Vite code-splits this dynamic import per (language, namespace) — non-en-US chunks lazy.
-    import(`./locales/${language}/${namespace}.json`),
-  ))
+  .use(
+    resourcesToBackend(
+      (language: string, namespace: string) =>
+        // Vite code-splits this dynamic import per (language, namespace) — non-en-US chunks lazy.
+        import(`./locales/${language}/${namespace}.json`),
+    ),
+  )
   .use(initReactI18next)
   .init({
-    lng: undefined,                 // set from settings 'i18n.locale' at bootstrap (see §7)
-    fallbackLng: 'en-US',           // missing key / locale → English (never a raw key on screen)
+    lng: undefined, // set from settings 'i18n.locale' at bootstrap (see §7)
+    fallbackLng: 'en-US', // missing key / locale → English (never a raw key on screen)
     supportedLngs: ['en-US', 'es-ES'],
     ns: ['common', 'toolbar', 'menu', 'sidebar', 'modals', 'settings', 'errors', 'trustfloor'],
     defaultNS: 'common',
-    interpolation: { escapeValue: false },   // React already escapes
+    interpolation: { escapeValue: false }, // React already escapes
     returnNull: false,
     // en-US resources pre-loaded so first paint is synchronous; other locales fetched by backend.
     partialBundledLanguages: true,
@@ -83,24 +86,25 @@ The locale is read from the existing `settings` store (`i18n.locale`, default `'
 
 **~800-1200 user-facing strings.** Derivation:
 
-| Surface | Approx strings |
-|---|---|
-| Toolbar buttons + tooltips (Phases 1-6, 5 groups, ~30 buttons) | ~60 |
-| Menu bar (File/Edit/Insert/View/Tools/Help + items) | ~70 |
-| Sidebar tabs + panel labels + empty states (Thumbnails/Bookmarks/Forms/Exports) | ~80 |
-| Modals (combine, settings, confirm-close, export-engine, export, OCR, PAdES sign, mail-merge, form-designer, about) — titles + bodies + buttons + field labels | ~250 |
-| Settings (every label + subtext across General/Files/Export/Editing/About + Phase-7 additions) | ~90 |
-| Status bar + toasts + inline statuses | ~50 |
-| Error messages (every `Result` error → user-facing message; conventions §5.4) | ~120 |
-| Trust-floor + known-limitations copy (Phase 4 PAdES + Phase 5 OCR + Phase 6 export + Phase 7) — multi-sentence | ~90 |
-| Annotation properties, inspector, page metadata, form-field labels | ~80 |
-| **Total estimate** | **~890** (round to ~800-1200 with growth) |
+| Surface                                                                                                                                                        | Approx strings                            |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| Toolbar buttons + tooltips (Phases 1-6, 5 groups, ~30 buttons)                                                                                                 | ~60                                       |
+| Menu bar (File/Edit/Insert/View/Tools/Help + items)                                                                                                            | ~70                                       |
+| Sidebar tabs + panel labels + empty states (Thumbnails/Bookmarks/Forms/Exports)                                                                                | ~80                                       |
+| Modals (combine, settings, confirm-close, export-engine, export, OCR, PAdES sign, mail-merge, form-designer, about) — titles + bodies + buttons + field labels | ~250                                      |
+| Settings (every label + subtext across General/Files/Export/Editing/About + Phase-7 additions)                                                                 | ~90                                       |
+| Status bar + toasts + inline statuses                                                                                                                          | ~50                                       |
+| Error messages (every `Result` error → user-facing message; conventions §5.4)                                                                                  | ~120                                      |
+| Trust-floor + known-limitations copy (Phase 4 PAdES + Phase 5 OCR + Phase 6 export + Phase 7) — multi-sentence                                                 | ~90                                       |
+| Annotation properties, inspector, page metadata, form-field labels                                                                                             | ~80                                       |
+| **Total estimate**                                                                                                                                             | **~890** (round to ~800-1200 with growth) |
 
 This is **large but mechanical**. Budget it as the dominant Wave 28 renderer task (see §8 risk on whether it fits one wave).
 
 ### 3.3 Extraction mechanics
 
 For each component:
+
 1. Identify every user-facing literal (JSX text, `aria-label`, `title`, `placeholder`, toast/error strings, button labels).
 2. Replace with `t('namespace.key')` (or `<Trans i18nKey="..." />` if the string has embedded markup like a link or bold).
 3. Add the key + English value to the matching `en-US/<namespace>.json`.
@@ -199,7 +203,7 @@ i18next's plural suffix handling:
 ```
 
 ```ts
-t('sidebar.pageCount', { count: n });   // "1 page" / "5 pages"
+t('sidebar.pageCount', { count: n }); // "1 page" / "5 pages"
 ```
 
 es-ES uses the same one/other forms. Languages with more plural categories (e.g. Polish, Arabic) would add `_few` / `_many` keys — handled automatically by i18next's CLDR plural rules when such a locale is added.
@@ -209,10 +213,14 @@ es-ES uses the same one/other forms. Languages with more plural categories (e.g.
 Use the platform `Intl` API (no extra dependency — conventions §12 already prefers `Intl.DateTimeFormat`), wired through i18next's `format` interpolation:
 
 ```ts
-i18n.init({ interpolation: { /* ... */ } });
+i18n.init({
+  interpolation: {
+    /* ... */
+  },
+});
 // formatting helper bound to the active locale:
 const fmtDate = (ms: number) => new Intl.DateTimeFormat(i18n.language).format(new Date(ms));
-const fmtNum  = (n: number)  => new Intl.NumberFormat(i18n.language).format(n);
+const fmtNum = (n: number) => new Intl.NumberFormat(i18n.language).format(n);
 ```
 
 Recents "5 hr ago", export "7147 B → 7.1 KB", file sizes, page counts all route through `Intl` keyed to `i18n.language`. **No `date-fns` / `numeral` dependency added** (conventions §12.3: add date-fns only if a real need surfaces; Intl covers Phase 7).
@@ -223,7 +231,7 @@ Right-to-left languages (Arabic, Hebrew) are **out of scope for Phase 7** (no RT
 
 - RTL requires `dir="rtl"` on the document root keyed to the locale, plus CSS logical properties (`margin-inline-start` not `margin-left`) across the renderer.
 - The toolbar/sidebar/inspector layout would need mirroring.
-- This is a **non-trivial layout pass**, not a string-table addition — explicitly deferred. The Phase-7 framework does not block it (i18next supports RTL locales natively); the *CSS layout* work is the deferred part.
+- This is a **non-trivial layout pass**, not a string-table addition — explicitly deferred. The Phase-7 framework does not block it (i18next supports RTL locales natively); the _CSS layout_ work is the deferred part.
 
 ---
 

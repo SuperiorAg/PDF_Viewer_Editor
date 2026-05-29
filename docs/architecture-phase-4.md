@@ -31,15 +31,15 @@ Each section below describes the architectural delta. Phase 1/2/3 chapters that 
 
 ## 1. Locked decisions encoded (Wave 15 self-check)
 
-| ID | Decision | Encoded where in this doc | Cross-ref |
-|---|---|---|---|
-| **P4-L-1** | Cert NEVER persisted. PFX bytes + password live in main-process memory for the signing op only; both zeroed in a `finally` block. | §4.2 (cert/password lifecycle), §11 (L-001 cross-check + new convention §15) | `signature-engine.md §4` |
-| **P4-L-2** | TSA disabled by default. No default service. User-configured URL; validation on save attempt. | §4.5 (TSA trust model + Settings), §10.4 (Settings additions) | `signature-engine.md §6` |
-| **P4-L-3** | PAdES library: `node-signpdf` is the **recommended primary**, with `node-forge` + `pkijs` as the documented manual-ASN.1 fallback. Both MIT. | §3.1 (library inventory delta), §4.3 (engine pluggability) | `signature-engine.md §3` |
-| **P4-L-4** | Signature appearance = standard PDF widget annotation with `AP` appearance stream showing typed name + drawn image + date + reason. Configurable per signature. | §4.4 (appearance composition), `ui-spec.md` Phase-4 amendment §13.4 (sign modal) | `signature-engine.md §5` |
-| **P4-L-5** | Annotation toolset scope = rectangle, ellipse, polygon, arrow, callout, line-measure, polyline-measure. Explicitly NOT layers, advanced fill patterns, or a full vector editor. | §5 (annotation toolset additions) | `ui-spec.md` Phase-4 amendment §13.5 |
-| **P4-L-6** | Schema v4 = `signature_audit_log` table with `signed_by_fingerprint`, `signed_at`, `doc_hash`, `sig_bytes_offset`, `sig_bytes_length`, etc. | §6 (schema v4) | `data-models.md` Phase-4 amendment §9 |
-| **P4-L-7** | Phase 4 fills the Phase-3 `/Sig` placeholder. Phase 3's form-engine §3.7 + architecture-phase-3.md §8 already author the placeholder; Phase 4 extends `FormFieldValue { type: 'signature' }` to carry a non-null `SignaturePayload`. | §8 (placeholder fill handoff), `data-models.md` Phase-4 amendment §9.2 | `form-engine.md §3.7`, `architecture-phase-3.md §8` |
+| ID         | Decision                                                                                                                                                                                                                             | Encoded where in this doc                                                        | Cross-ref                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- | --------------------------------------------------- |
+| **P4-L-1** | Cert NEVER persisted. PFX bytes + password live in main-process memory for the signing op only; both zeroed in a `finally` block.                                                                                                    | §4.2 (cert/password lifecycle), §11 (L-001 cross-check + new convention §15)     | `signature-engine.md §4`                            |
+| **P4-L-2** | TSA disabled by default. No default service. User-configured URL; validation on save attempt.                                                                                                                                        | §4.5 (TSA trust model + Settings), §10.4 (Settings additions)                    | `signature-engine.md §6`                            |
+| **P4-L-3** | PAdES library: `node-signpdf` is the **recommended primary**, with `node-forge` + `pkijs` as the documented manual-ASN.1 fallback. Both MIT.                                                                                         | §3.1 (library inventory delta), §4.3 (engine pluggability)                       | `signature-engine.md §3`                            |
+| **P4-L-4** | Signature appearance = standard PDF widget annotation with `AP` appearance stream showing typed name + drawn image + date + reason. Configurable per signature.                                                                      | §4.4 (appearance composition), `ui-spec.md` Phase-4 amendment §13.4 (sign modal) | `signature-engine.md §5`                            |
+| **P4-L-5** | Annotation toolset scope = rectangle, ellipse, polygon, arrow, callout, line-measure, polyline-measure. Explicitly NOT layers, advanced fill patterns, or a full vector editor.                                                      | §5 (annotation toolset additions)                                                | `ui-spec.md` Phase-4 amendment §13.5                |
+| **P4-L-6** | Schema v4 = `signature_audit_log` table with `signed_by_fingerprint`, `signed_at`, `doc_hash`, `sig_bytes_offset`, `sig_bytes_length`, etc.                                                                                          | §6 (schema v4)                                                                   | `data-models.md` Phase-4 amendment §9               |
+| **P4-L-7** | Phase 4 fills the Phase-3 `/Sig` placeholder. Phase 3's form-engine §3.7 + architecture-phase-3.md §8 already author the placeholder; Phase 4 extends `FormFieldValue { type: 'signature' }` to carry a non-null `SignaturePayload`. | §8 (placeholder fill handoff), `data-models.md` Phase-4 amendment §9.2           | `form-engine.md §3.7`, `architecture-phase-3.md §8` |
 
 **Cross-check against the Wave 11 placeholder design:** verified at `form-engine.md §3.7` (`createSignaturePlaceholder` writes `/FT /Sig` + widget with `/V` intentionally absent) and `architecture-phase-3.md §8` ("Phase 4 will fill the placeholder by computing a `/ByteRange` over the unsigned PDF bytes, embedding a PKCS#7 envelope in the `/V` entry, and writing an appearance stream"). The placeholder IS in place; no Wave 11.5 amendment to `form-engine.md` is required.
 
@@ -165,18 +165,18 @@ These two corollaries are equally important as the existing `no Uint8Array in re
 
 11 new channels (full spec in `api-contracts.md §14`):
 
-| Channel | Purpose | Stream events? |
-|---|---|---|
-| `signatures:certLoad` | Load a PFX file + password into main memory; return opaque `CertHandle`. Cert bytes + password are zeroed before this call returns (only the parsed-but-encrypted bytes + private-key handle stay in memory keyed by the handle). | no |
-| `signatures:certRelease` | Explicitly zero + release a `CertHandle`. Idempotent. | no |
-| `signatures:applyVisual` | Apply a visual signature (typed/drawn/image) to a placeholder field OR freeform position. Returns the `EditOperation` to push to dirtyOps. | no |
-| `signatures:applyPades` | Apply a PAdES cryptographic signature. Long-running (TSA hop if enabled). Returns the signed bytes path + the `EditOperation` (kind: `pades-signed`) + audit log row. | no (synchronous; TSA timeout ≤ 30s) |
-| `signatures:requestTimestamp` | Standalone TSA request (used by `applyPades` internally; also exposed for "test TSA URL" Settings affordance). | no |
-| `signatures:verify` | Verify a signature applied by THIS app (reads `signature_audit_log` and re-hashes the doc bytes). NOT a third-party signature verifier. | no |
-| `signatures:listAudit` | List rows from `signature_audit_log` (optionally filtered by file hash). | no |
-| `annotations:addShape` | Author a shape / line / callout / measure annotation. Returns the `EditOperation` (kind: `annot-add` with one of the new subtypes). | no |
-| `annotations:setMeasureCalibration` | Persist a per-document calibration (e.g. "120 pixels on screen = 1 inch in the printed drawing"). | no |
-| `annotations:getMeasureCalibration` | Read the per-document calibration. | no |
+| Channel                             | Purpose                                                                                                                                                                                                                           | Stream events?                      |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `signatures:certLoad`               | Load a PFX file + password into main memory; return opaque `CertHandle`. Cert bytes + password are zeroed before this call returns (only the parsed-but-encrypted bytes + private-key handle stay in memory keyed by the handle). | no                                  |
+| `signatures:certRelease`            | Explicitly zero + release a `CertHandle`. Idempotent.                                                                                                                                                                             | no                                  |
+| `signatures:applyVisual`            | Apply a visual signature (typed/drawn/image) to a placeholder field OR freeform position. Returns the `EditOperation` to push to dirtyOps.                                                                                        | no                                  |
+| `signatures:applyPades`             | Apply a PAdES cryptographic signature. Long-running (TSA hop if enabled). Returns the signed bytes path + the `EditOperation` (kind: `pades-signed`) + audit log row.                                                             | no (synchronous; TSA timeout ≤ 30s) |
+| `signatures:requestTimestamp`       | Standalone TSA request (used by `applyPades` internally; also exposed for "test TSA URL" Settings affordance).                                                                                                                    | no                                  |
+| `signatures:verify`                 | Verify a signature applied by THIS app (reads `signature_audit_log` and re-hashes the doc bytes). NOT a third-party signature verifier.                                                                                           | no                                  |
+| `signatures:listAudit`              | List rows from `signature_audit_log` (optionally filtered by file hash).                                                                                                                                                          | no                                  |
+| `annotations:addShape`              | Author a shape / line / callout / measure annotation. Returns the `EditOperation` (kind: `annot-add` with one of the new subtypes).                                                                                               | no                                  |
+| `annotations:setMeasureCalibration` | Persist a per-document calibration (e.g. "120 pixels on screen = 1 inch in the printed drawing").                                                                                                                                 | no                                  |
+| `annotations:getMeasureCalibration` | Read the per-document calibration.                                                                                                                                                                                                | no                                  |
 
 Plus zero new event streams (all Phase 4 IPC is synchronous-with-timeout; no progress streaming needed). The Phase 1/2/3 surface (`api-contracts.md §1-§13`) remains FROZEN. No existing channel's contract changes.
 
@@ -196,12 +196,12 @@ The `zod` dependency is already in the project (Phase 1+); no new dep.
 
 ### 3.1 New runtime dependencies
 
-| Library | Version | License | Process | Purpose |
-|---|---|---|---|---|
-| `node-signpdf` | 3.x (current at Wave 15 dispatch) | MIT | Main | Primary PAdES library. Handles byte-range placeholder, hash, CMS sign, embed. Built on top of `node-forge`. **Recommended primary** — see `signature-engine.md §3.2` for the rationale. |
-| `node-forge` | 1.3.x | (BSD-3-Clause OR GPL-2.0); we exercise the BSD arm | Main | PKCS#7 / CMS / X.509 / PFX parsing + signing primitives. Already a transitive dep of `node-signpdf`; pinned directly so the fallback path (manual ASN.1) can use it without version skew. |
-| `pkijs` | 3.x | MIT | Main | Higher-level ASN.1 + PKI helpers; used ONLY in the manual fallback path (`pades-signature-manual.ts`). Ships in the bundle so the fallback is available without a follow-up install; ESLint `no-restricted-imports` keeps it out of the primary path. Build-time toggle `PADES_ENGINE=manual` selects it; default toggle is `signpdf`. |
-| `asn1js` | 3.x | BSD-3-Clause | Main | Transitive of `pkijs`. Pinned for the same fallback reason. |
+| Library        | Version                           | License                                            | Process | Purpose                                                                                                                                                                                                                                                                                                                                |
+| -------------- | --------------------------------- | -------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node-signpdf` | 3.x (current at Wave 15 dispatch) | MIT                                                | Main    | Primary PAdES library. Handles byte-range placeholder, hash, CMS sign, embed. Built on top of `node-forge`. **Recommended primary** — see `signature-engine.md §3.2` for the rationale.                                                                                                                                                |
+| `node-forge`   | 1.3.x                             | (BSD-3-Clause OR GPL-2.0); we exercise the BSD arm | Main    | PKCS#7 / CMS / X.509 / PFX parsing + signing primitives. Already a transitive dep of `node-signpdf`; pinned directly so the fallback path (manual ASN.1) can use it without version skew.                                                                                                                                              |
+| `pkijs`        | 3.x                               | MIT                                                | Main    | Higher-level ASN.1 + PKI helpers; used ONLY in the manual fallback path (`pades-signature-manual.ts`). Ships in the bundle so the fallback is available without a follow-up install; ESLint `no-restricted-imports` keeps it out of the primary path. Build-time toggle `PADES_ENGINE=manual` selects it; default toggle is `signpdf`. |
+| `asn1js`       | 3.x                               | BSD-3-Clause                                       | Main    | Transitive of `pkijs`. Pinned for the same fallback reason.                                                                                                                                                                                                                                                                            |
 
 **License verification (Wave 15, against npm registry 2026-05-26):**
 
@@ -215,6 +215,7 @@ All four are PERMISSIVE. None are AGPL. None are commercial. Compliant with proj
 **Diego's Wave 17 packaging note:** the transitive subtree from `node-signpdf` brings ~30 additional packages (mostly small crypto utilities). Per the Wave 13 lesson (dev-ops global JSONL entry, 2026-05-22), allocate license-walk budget for the full subtree and surface UNKNOWN entries in LICENSES.md follow-ups.
 
 **Explicitly NOT added (locked decision P4-L-1 / scope):**
+
 - PDFTron / Apryse signing SDK (commercial)
 - Foxit signing SDK (commercial)
 - Adobe Sign API (cloud service; out-of-scope)
@@ -223,19 +224,19 @@ All four are PERMISSIVE. None are AGPL. None are commercial. Compliant with proj
 
 ### 3.2 Existing libraries — extended use
 
-| Library | New Phase 4 use |
-|---|---|
-| `pdf-lib` | Continues to author annotation dicts via the existing `field-dict-authoring`-style pattern for the 7 new annotation subtypes. Also used to compute the page-content offset where `signature-engine.ts` will inject the signature dict (the dict itself is authored by hand because pdf-lib has no `addSignature` helper). |
-| `better-sqlite3` | Schema v4 migration `0004_phase4_signatures.sql` adds `signature_audit_log` table. See §6 + `data-models.md §9`. |
-| `zod` | New schemas for 11 IPC channels in §2.5; the `CertLoadRequest` schema has the password-discipline pattern documented in §2.6. |
+| Library          | New Phase 4 use                                                                                                                                                                                                                                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pdf-lib`        | Continues to author annotation dicts via the existing `field-dict-authoring`-style pattern for the 7 new annotation subtypes. Also used to compute the page-content offset where `signature-engine.ts` will inject the signature dict (the dict itself is authored by hand because pdf-lib has no `addSignature` helper). |
+| `better-sqlite3` | Schema v4 migration `0004_phase4_signatures.sql` adds `signature_audit_log` table. See §6 + `data-models.md §9`.                                                                                                                                                                                                          |
+| `zod`            | New schemas for 11 IPC channels in §2.5; the `CertLoadRequest` schema has the password-discipline pattern documented in §2.6.                                                                                                                                                                                             |
 
 ### 3.3 Phase 5+ libraries (NOT added in Phase 4)
 
-| Library | Phase | Purpose |
-|---|---|---|
-| `tesseract.js` | 5 | OCR (was Phase 5 already) |
-| `docx` / `pptxgenjs` / `exceljs`-extended | 6 | Office export (exceljs already pulled forward to Phase 3) |
-| Twain / WIA bindings | 5 | Scanner integration |
+| Library                                   | Phase | Purpose                                                   |
+| ----------------------------------------- | ----- | --------------------------------------------------------- |
+| `tesseract.js`                            | 5     | OCR (was Phase 5 already)                                 |
+| `docx` / `pptxgenjs` / `exceljs`-extended | 6     | Office export (exceljs already pulled forward to Phase 3) |
+| Twain / WIA bindings                      | 5     | Scanner integration                                       |
 
 ---
 
@@ -275,33 +276,48 @@ The orchestrator's signature is:
 export async function applySignature(input: ApplySignatureInput): Promise<ApplySignatureResult>;
 
 type ApplySignatureInput =
-  | { kind: 'visual'; bytes: Uint8Array; placement: SignaturePlacement; appearance: VisualAppearanceSpec }
-  | { kind: 'pades'; bytes: Uint8Array; placement: SignaturePlacement; certHandle: CertHandle;
-      appearance: PadesAppearanceSpec; tsaUrl: string | null; reason?: string; location?: string }
+  | {
+      kind: 'visual';
+      bytes: Uint8Array;
+      placement: SignaturePlacement;
+      appearance: VisualAppearanceSpec;
+    }
+  | {
+      kind: 'pades';
+      bytes: Uint8Array;
+      placement: SignaturePlacement;
+      certHandle: CertHandle;
+      appearance: PadesAppearanceSpec;
+      tsaUrl: string | null;
+      reason?: string;
+      location?: string;
+    };
 ```
 
 ### 4.2 Cert + password lifecycle (the CRITICAL risk per P4-L-1)
 
 The full lifecycle is documented at `signature-engine.md §4`. Summary table:
 
-| Phase | Lives in | Lifecycle |
-|---|---|---|
-| 1. User picks PFX file in renderer | `File` object (browser-level) | Renderer reads bytes via `FileReader.readAsArrayBuffer`; immediately ships to main via IPC. Renderer's `ArrayBuffer` reference is dropped (set the `file` state to `null` after dispatch). |
-| 2. Password collected | React state in `<input type="password">` | Renderer dispatches `certLoad({ pfxBytes, password })`; the React state holding the password is set to `''` BEFORE awaiting the IPC promise (so even if the IPC takes a network hop, the renderer doesn't hold it). |
-| 3. Main receives | Buffer (`pfxBytes`) + Buffer (`password`) | `signatures:certLoad` handler converts the JS string to a `Buffer` via `Buffer.from(password, 'utf-8')`, then sets the local string var to `''`. **The password as a JS string lives for fewer than 10 lines of synchronous handler code.** |
-| 4. Cert parsed | `forge.pkcs12.pkcs12FromAsn1(...)` produces a parsed structure containing the private key | The pfx Buffer is `pfx.fill(0)`'d AFTER the parse succeeds. The password Buffer is `password.fill(0)`'d in the SAME synchronous block. Both happen BEFORE the function returns the cert handle to the IPC layer. |
-| 5. Cert stored under handle | `Map<CertHandle, ParsedCertEntry>` in `cert-store.ts` | `ParsedCertEntry` has `{ x509: forge.pki.Certificate; privateKeyPem: string; fingerprint: string; loadedAt: number }`. The PEM is encrypted-at-rest? **No** — it lives in process memory; we accept the V8 heap is in-memory secret as the security floor. The user's threat model is "an attacker who can read process memory while the modal is open"; defending past that requires HSM / OS-keychain integration which Phase 4 explicitly defers. The PEM is overwritten on release. |
-| 6. Sign operation uses cert handle | `signatures:applyPades({ certHandle, ... })` | Handler reads from the store map by handle; never accepts cert bytes again. |
-| 7. After sign succeeds OR modal closes | `cert-store.releaseHandle(handle)` | Zeroes the PEM string (overwrites the `privateKeyPem` field with `''.padStart(originalLength, '\0')`), zeroes the fingerprint, deletes the map entry, then suggests a `gc()` if `--expose-gc` is set (dev-only; production silently relies on V8's eventual collection). |
-| 8. Modal force-close (Esc / X) | Same as step 7 via `signatures:certRelease` IPC | Renderer's modal `useEffect` cleanup fires `releaseCertThunk(handle)` so the cert doesn't survive the modal. |
+| Phase                                  | Lives in                                                                                  | Lifecycle                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| -------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. User picks PFX file in renderer     | `File` object (browser-level)                                                             | Renderer reads bytes via `FileReader.readAsArrayBuffer`; immediately ships to main via IPC. Renderer's `ArrayBuffer` reference is dropped (set the `file` state to `null` after dispatch).                                                                                                                                                                                                                                                                                              |
+| 2. Password collected                  | React state in `<input type="password">`                                                  | Renderer dispatches `certLoad({ pfxBytes, password })`; the React state holding the password is set to `''` BEFORE awaiting the IPC promise (so even if the IPC takes a network hop, the renderer doesn't hold it).                                                                                                                                                                                                                                                                     |
+| 3. Main receives                       | Buffer (`pfxBytes`) + Buffer (`password`)                                                 | `signatures:certLoad` handler converts the JS string to a `Buffer` via `Buffer.from(password, 'utf-8')`, then sets the local string var to `''`. **The password as a JS string lives for fewer than 10 lines of synchronous handler code.**                                                                                                                                                                                                                                             |
+| 4. Cert parsed                         | `forge.pkcs12.pkcs12FromAsn1(...)` produces a parsed structure containing the private key | The pfx Buffer is `pfx.fill(0)`'d AFTER the parse succeeds. The password Buffer is `password.fill(0)`'d in the SAME synchronous block. Both happen BEFORE the function returns the cert handle to the IPC layer.                                                                                                                                                                                                                                                                        |
+| 5. Cert stored under handle            | `Map<CertHandle, ParsedCertEntry>` in `cert-store.ts`                                     | `ParsedCertEntry` has `{ x509: forge.pki.Certificate; privateKeyPem: string; fingerprint: string; loadedAt: number }`. The PEM is encrypted-at-rest? **No** — it lives in process memory; we accept the V8 heap is in-memory secret as the security floor. The user's threat model is "an attacker who can read process memory while the modal is open"; defending past that requires HSM / OS-keychain integration which Phase 4 explicitly defers. The PEM is overwritten on release. |
+| 6. Sign operation uses cert handle     | `signatures:applyPades({ certHandle, ... })`                                              | Handler reads from the store map by handle; never accepts cert bytes again.                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 7. After sign succeeds OR modal closes | `cert-store.releaseHandle(handle)`                                                        | Zeroes the PEM string (overwrites the `privateKeyPem` field with `''.padStart(originalLength, '\0')`), zeroes the fingerprint, deletes the map entry, then suggests a `gc()` if `--expose-gc` is set (dev-only; production silently relies on V8's eventual collection).                                                                                                                                                                                                                |
+| 8. Modal force-close (Esc / X)         | Same as step 7 via `signatures:certRelease` IPC                                           | Renderer's modal `useEffect` cleanup fires `releaseCertThunk(handle)` so the cert doesn't survive the modal.                                                                                                                                                                                                                                                                                                                                                                            |
 
 **Try/finally discipline:** the `applyPades` handler wraps the entire sign sequence in a `try { ... } finally { releaseHandle(certHandle) }` if `autoRelease: true` is set in the request (default `true` for the single-shot flow; renderer can pass `false` if it wants to sign multiple times with the same cert in one modal session, but the modal cleanup STILL fires releaseHandle on dismiss).
 
 **What V8 makes hard:**
+
 - JS strings are immutable; `password.fill(0)` is not directly possible on a string. That's why step 3 converts to Buffer at the EARLIEST opportunity and lets the original string fall out of scope. The string CAN linger in V8's heap until next collection — we accept this 1-2 second window as the security floor.
 - V8 may intern short strings; we don't rely on `password.padStart(n, '\0')` patching the underlying memory. The Buffer wrapping is the load-bearing mechanism.
 
 **Wave 17 Julian audit checklist (this section):**
+
 - [ ] Every reference to `password` as a string in `cert-store.ts` is shorter than 5 lines of synchronous code from input to Buffer-wrap.
 - [ ] Every reference to `pfx` as a Buffer is `.fill(0)`-ed in a `finally` block of the parse function.
 - [ ] No console.log / log.info / log.debug / log.error contains `password`, `pfx`, `cert.privateKey*`, or `privateKeyPem` substrings. ESLint custom rule candidate.
@@ -313,16 +329,16 @@ The full lifecycle is documented at `signature-engine.md §4`. Summary table:
 
 Locked decision P4-L-3: `node-signpdf` is the recommended primary. Rationale documented in `signature-engine.md §3.2`:
 
-| Concern | `node-signpdf` (primary) | `node-forge` + `pkijs` (manual fallback) |
-|---|---|---|
-| Lines of code (David's estimate) | ~200 LOC engine | ~600 LOC engine |
-| Byte-range arithmetic | Handled internally with a known-good algorithm | Hand-rolled; we'd own the off-by-one risk |
-| Maintenance | Active GitHub repo (last commit 2025); 1.4k stars; multiple known bugs all closed | node-forge active; pkijs active; we'd combine them ourselves |
-| RFC 3161 timestamping | NOT built-in; we write `tsa-client.ts` regardless of primary or fallback | Same — we write the TSA hook ourselves |
-| Multi-signature workflows | Supported (incremental update pattern) | Same machinery; we'd implement |
-| Custom appearance streams | Pass-through; we author the appearance OURSELVES and signpdf embeds | Pass-through; same |
-| Acrobat Reader DC verification | Verified by external testers in node-signpdf's CI | Would have to verify ourselves |
-| **Verdict** | **Primary** — less code, known-good, faster Wave 16 ship | Fallback — full control, defensive option |
+| Concern                          | `node-signpdf` (primary)                                                          | `node-forge` + `pkijs` (manual fallback)                     |
+| -------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Lines of code (David's estimate) | ~200 LOC engine                                                                   | ~600 LOC engine                                              |
+| Byte-range arithmetic            | Handled internally with a known-good algorithm                                    | Hand-rolled; we'd own the off-by-one risk                    |
+| Maintenance                      | Active GitHub repo (last commit 2025); 1.4k stars; multiple known bugs all closed | node-forge active; pkijs active; we'd combine them ourselves |
+| RFC 3161 timestamping            | NOT built-in; we write `tsa-client.ts` regardless of primary or fallback          | Same — we write the TSA hook ourselves                       |
+| Multi-signature workflows        | Supported (incremental update pattern)                                            | Same machinery; we'd implement                               |
+| Custom appearance streams        | Pass-through; we author the appearance OURSELVES and signpdf embeds               | Pass-through; same                                           |
+| Acrobat Reader DC verification   | Verified by external testers in node-signpdf's CI                                 | Would have to verify ourselves                               |
+| **Verdict**                      | **Primary** — less code, known-good, faster Wave 16 ship                          | Fallback — full control, defensive option                    |
 
 **Ship strategy:** primary path is wired by default; fallback is BEHIND a build-time toggle and a runtime Settings switch (Phase 4.1 if user demand). Both engines satisfy the SAME external contract (`applySignature(input) → result`).
 
@@ -344,6 +360,7 @@ The PDF widget annotation that visually represents the signature has an `AP` (ap
 ```
 
 User controls per-signature (in the sign modal):
+
 - Whether to show the typed name (default yes if Typed tab)
 - Whether to show the drawn glyph (default yes if Drawn tab)
 - Whether to show the date (default yes; Settings can change default)
@@ -359,6 +376,7 @@ Implementation detail in `signature-engine.md §5`.
 **Default state:** TSA disabled. The Settings dialog ships with the `signatures.tsaUrl` field empty AND `signatures.tsaEnabled = false`. A user who wants timestamping must explicitly configure both.
 
 **Validation:**
+
 - At Save in Settings: zod validates URL shape (https, no userinfo, no fragment, no query beyond a small set). Renderer offers a **"Test TSA URL"** button that fires `signatures:requestTimestamp` with a known small payload; on success, the button turns green and the URL is acceptable.
 - At sign time: if `tsaUrl` is configured AND `tsaEnabled` is true, the engine attempts the TSA hop. Failure modes:
   - HTTP error (4xx/5xx) — `tsa_http_error` — Sign FAILS with a specific error; user can disable TSA and re-sign.
@@ -382,36 +400,37 @@ Phase 4 adds FIVE new `EditOperation` variants (full list in `data-models.md` Ph
 type EditOperation =
   // ...Phase 1 + 2 + 3 variants...
 
-  | { kind: 'signature-visual-place';
+  | {
+      kind: 'signature-visual-place';
       meta: EditMeta;
-      placement: SignaturePlacement;        // see signature-engine.md §2.3
-      appearance: VisualAppearanceSpec;     // image bytes via the existing image-overlay path
-      placeholderFieldName: string | null;  // non-null when placing onto a Phase-3 /Sig field
+      placement: SignaturePlacement; // see signature-engine.md §2.3
+      appearance: VisualAppearanceSpec; // image bytes via the existing image-overlay path
+      placeholderFieldName: string | null; // non-null when placing onto a Phase-3 /Sig field
     }
-  | { kind: 'signature-pades-applied';
+  | {
+      kind: 'signature-pades-applied';
       meta: EditMeta;
       placement: SignaturePlacement;
-      certFingerprint: string;              // not the cert itself!
+      certFingerprint: string; // not the cert itself!
       signerSubjectCN: string;
-      signedAt: number;                     // ms epoch from the engine
+      signedAt: number; // ms epoch from the engine
       tsaUrl: string | null;
-      auditLogRowId: number;                // SQLite row id from signature_audit_log
+      auditLogRowId: number; // SQLite row id from signature_audit_log
       placeholderFieldName: string | null;
     }
-  | { kind: 'annot-add-shape';
+  | {
+      kind: 'annot-add-shape';
       meta: EditMeta;
-      annotation: ShapeAnnotationModel;     // subtype = Square | Circle | Polygon | PolyLine | Line | FreeText (callout flavor)
+      annotation: ShapeAnnotationModel; // subtype = Square | Circle | Polygon | PolyLine | Line | FreeText (callout flavor)
     }
-  | { kind: 'annot-edit-shape';
+  | {
+      kind: 'annot-edit-shape';
       meta: EditMeta;
       id: string;
       before: Partial<ShapeAnnotationModel>;
       after: Partial<ShapeAnnotationModel>;
     }
-  | { kind: 'annot-delete-shape';
-      meta: EditMeta;
-      before: ShapeAnnotationModel;
-    };
+  | { kind: 'annot-delete-shape'; meta: EditMeta; before: ShapeAnnotationModel };
 ```
 
 The shape ops are intentionally NEW variants (not extensions of the Phase 1 `annot-*` ops) because the shape annotations carry additional fields (`borderWidth`, `borderStyle`, `points`, `measureCalibration`) that the Phase 1 `AnnotationModel` doesn't have. The shape inverse table (`data-models.md §9.3.1`) mirrors the Phase 1 pattern.
@@ -453,6 +472,7 @@ The `replay()` function (`edit-replay-engine.md §3`, extended Phase 3 with step
 The shape annotations themselves are emitted by the regular `step 4: emitAnnots` (Phase 1 / Phase 2 pipeline) — each new subtype gets a `case` branch in `emit-annotations.ts` (David's Wave 16 work). The pipeline already handles the Square/Circle/Line subtypes that Phase 1's `data-models.md §3.4` table flagged as "Phase 4 — Native pdf-lib support"; Wave 16 just unblocks the toolbar buttons and adds polygon/polyline/callout.
 
 **One new `ReplayError` variant** (`signature-engine.md §7`):
+
 - `'signature_widget_missing'` — Phase 4 `pades-signed` op refers to a placeholder field that's no longer in the document (e.g. removed via undo of `form-design-remove`). Replay aborts; user is shown a recovery toast.
 
 The existing `op_apply_failed` covers everything else.
@@ -474,31 +494,31 @@ Rationale: Phase 4's signing surface is a natural place to harden the global JS-
 
 Phase 4 adds SEVEN new annotation tools. Each maps to an existing ISO 32000 subtype:
 
-| Tool | PDF subtype | Notes |
-|---|---|---|
-| Rectangle | `/Square` | pdf-lib native support (Phase 1 `data-models.md §3.4` table flagged Phase 4) |
-| Ellipse / Circle | `/Circle` | Same as Square |
-| Polygon | `/Polygon` | `Vertices` array of [x, y, x, y, ...]; pdf-lib does NOT have a native helper — manual dict via the existing `annotations.ts` pattern (David's Phase 2 file) |
-| Arrow | `/Line` with `/LE [ Square ButtArrow ]` line-ending styles | Same as Line |
-| Callout | `/FreeText` with `/IT FreeTextCallout` + `/CL` callout-line array | Extends Phase 1 FreeText pattern |
-| Line-measure | `/Line` with `/Measure` dict | pdf-lib has the line helper; measure dict is hand-authored |
-| Polyline-measure | `/PolyLine` with `/Measure` dict | Same pattern as polygon; manual dict |
+| Tool             | PDF subtype                                                       | Notes                                                                                                                                                       |
+| ---------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rectangle        | `/Square`                                                         | pdf-lib native support (Phase 1 `data-models.md §3.4` table flagged Phase 4)                                                                                |
+| Ellipse / Circle | `/Circle`                                                         | Same as Square                                                                                                                                              |
+| Polygon          | `/Polygon`                                                        | `Vertices` array of [x, y, x, y, ...]; pdf-lib does NOT have a native helper — manual dict via the existing `annotations.ts` pattern (David's Phase 2 file) |
+| Arrow            | `/Line` with `/LE [ Square ButtArrow ]` line-ending styles        | Same as Line                                                                                                                                                |
+| Callout          | `/FreeText` with `/IT FreeTextCallout` + `/CL` callout-line array | Extends Phase 1 FreeText pattern                                                                                                                            |
+| Line-measure     | `/Line` with `/Measure` dict                                      | pdf-lib has the line helper; measure dict is hand-authored                                                                                                  |
+| Polyline-measure | `/PolyLine` with `/Measure` dict                                  | Same pattern as polygon; manual dict                                                                                                                        |
 
 **Toolbar grouping:** the existing annotation toolbar group (Phase 1: H/S/T; Phase 2: U/K/F) gets a new "Shapes" submenu with the 7 tools. The shape toolbar group activates a tool, then a click-drag on the canvas creates the annotation. Calibration is a separate Tools menu item (one calibration per document; stored in `measure_calibration` per-handle in main memory + serialized into the PDF's `/Measure` dict on save).
 
 **Properties pane (Inspector) — new fields:**
 
-| Field | Tools | Type |
-|---|---|---|
-| Border weight | rect/circle/polygon/line/arrow/callout/polyline | number, 0.25..10 pt |
-| Border style | rect/circle/polygon/line/arrow/callout/polyline | solid / dashed / dotted (PDF `/BS /S` values D/D/D with `/D` array) |
-| Fill color | rect/circle/polygon | RgbColor + opacity |
-| Fill enabled | rect/circle/polygon | bool |
-| Line end style | line/arrow | start + end picks from Butt/OpenArrow/ClosedArrow/None |
-| Measure unit | line-measure / polyline-measure | `'inch' \| 'cm' \| 'mm' \| 'pt' \| 'px' \| 'custom'` |
-| Measure scale | line-measure / polyline-measure | number; "1 page-unit = N <unit>" |
-| Callout text | callout | string (multi-line) |
-| Callout pointer | callout | screen-point of the callout arrow tip (PDF user-space) |
+| Field           | Tools                                           | Type                                                                |
+| --------------- | ----------------------------------------------- | ------------------------------------------------------------------- |
+| Border weight   | rect/circle/polygon/line/arrow/callout/polyline | number, 0.25..10 pt                                                 |
+| Border style    | rect/circle/polygon/line/arrow/callout/polyline | solid / dashed / dotted (PDF `/BS /S` values D/D/D with `/D` array) |
+| Fill color      | rect/circle/polygon                             | RgbColor + opacity                                                  |
+| Fill enabled    | rect/circle/polygon                             | bool                                                                |
+| Line end style  | line/arrow                                      | start + end picks from Butt/OpenArrow/ClosedArrow/None              |
+| Measure unit    | line-measure / polyline-measure                 | `'inch' \| 'cm' \| 'mm' \| 'pt' \| 'px' \| 'custom'`                |
+| Measure scale   | line-measure / polyline-measure                 | number; "1 page-unit = N <unit>"                                    |
+| Callout text    | callout                                         | string (multi-line)                                                 |
+| Callout pointer | callout                                         | screen-point of the callout arrow tip (PDF user-space)              |
 
 **Annotation summary panel** (sidebar tab — new in Phase 4):
 
@@ -583,7 +603,7 @@ interface SignatureAuditRepo {
   listByPreSignDocHash(preSignDocHash: string): SignatureAuditRow[];
   listAll(limit?: number, offset?: number): SignatureAuditRow[];
   getByFingerprintRange(fp: string, since?: number, until?: number): SignatureAuditRow[];
-  delete(id: number): boolean;  // for the undo-pades flow
+  delete(id: number): boolean; // for the undo-pades flow
 }
 ```
 
@@ -616,6 +636,7 @@ Per architecture-phase-3.md §8, Phase 3 emits placeholder `/Sig` fields with:
 3. **Freeform signature (no placeholder)** — `placement: { mode: 'freeform', pageIndex, rect }`. Engine authors a NEW `/Sig` field dict + widget annotation at the rect, then proceeds as if it were a placeholder. The audit log row has `field_name = NULL`.
 
 **Forward-compatibility:**
+
 - `FormFieldValue.{ type: 'signature' }` extends from Phase 3 `value: null` to Phase 4 `value: SignaturePayload | null`. `null` means "placeholder, not yet signed" (current state Phase 3); non-null means "signed in Phase 4" with the payload carrying the audit-log row id + cert fingerprint. Type defined in `data-models.md` Phase-4 amendment §9.2.
 - `forms:detect`'s response includes signed fields with their `SignaturePayload` populated, so a doc opened with prior Phase-4 signatures shows them correctly in the Forms sidebar (as locked "Signed" rows).
 - The form-engine's `fillForm` (`form-engine.md §3.2.1`) signature-value case currently no-ops (Phase 3); Phase 4 extends it to call into `applySignature` when the value is non-null.
@@ -626,15 +647,15 @@ Per architecture-phase-3.md §8, Phase 3 emits placeholder `/Sig` fields with:
 
 Each of the 7 risks from the phase plan, addressed in the design:
 
-| # | Risk | Severity | Mitigation in this design |
-|---|---|---|---|
-| 1 | **Cert/password handling leak** | CRITICAL | §4.2 + `signature-engine.md §4` define the full lifecycle. Conventions §15 (new) bakes the discipline into reviewable code. Wave 17 Julian audit checklist provided (§4.2). No persist. Buffer-wrap immediately. `finally` cleanup. Test coverage requires real PFX fixtures with REAL passwords that are zeroed (not stub passwords). |
-| 2 | **PAdES library selection** | HIGH | §4.3 + `signature-engine.md §3`. Recommend `node-signpdf` primary; ship `node-forge`+`pkijs` fallback at the same time so Phase 4.1 toggle is a switch flip, not a rewrite. License audit (§3.1) done. |
-| 3 | **Byte-range correctness** | HIGH | `signature-engine.md §3.3` walks the byte-range algorithm step-by-step. Round-trip tests against a reference reader (Acrobat Reader DC + node-signpdf's own verifier). Wave 16 fixture corpus includes 5+ known-good signed PDFs to round-trip against. |
-| 4 | **TSA URL trust** | HIGH | §4.5 + `signature-engine.md §6`. Default OFF; user-provided URL; no shipped default service. Validation pings on Settings save. Fail-loud on TSA failures (no silent fallback to no-TSA). |
-| 5 | **Signature appearance interop** | MEDIUM | §4.4 + `signature-engine.md §5`. Standard `/AP /N` widget appearance. Wave 16 fixture corpus includes verifying against Acrobat Reader DC + Edge PDF viewer + Foxit Reader. Default appearance composition is small and predictable. |
-| 6 | **Annotation toolset scope creep** | MEDIUM | §5 enumerates the exact 7 tools. `ui-spec.md` Phase-4 amendment §13.5 (Riley Wave 15) keeps the toolbar scope tight. NOT: layers, advanced fill patterns, vector editor. The new conventions §15.3 row reaffirms the scope fence. |
-| 7 | **Signed-doc audit log scope** | LOW | §6 keeps the table single-purpose: "show me what I signed and when". No multi-user fields, no notarization data, no remote-server schemas. Phase 4.5+ can extend if user demand. |
+| #   | Risk                               | Severity | Mitigation in this design                                                                                                                                                                                                                                                                                                              |
+| --- | ---------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Cert/password handling leak**    | CRITICAL | §4.2 + `signature-engine.md §4` define the full lifecycle. Conventions §15 (new) bakes the discipline into reviewable code. Wave 17 Julian audit checklist provided (§4.2). No persist. Buffer-wrap immediately. `finally` cleanup. Test coverage requires real PFX fixtures with REAL passwords that are zeroed (not stub passwords). |
+| 2   | **PAdES library selection**        | HIGH     | §4.3 + `signature-engine.md §3`. Recommend `node-signpdf` primary; ship `node-forge`+`pkijs` fallback at the same time so Phase 4.1 toggle is a switch flip, not a rewrite. License audit (§3.1) done.                                                                                                                                 |
+| 3   | **Byte-range correctness**         | HIGH     | `signature-engine.md §3.3` walks the byte-range algorithm step-by-step. Round-trip tests against a reference reader (Acrobat Reader DC + node-signpdf's own verifier). Wave 16 fixture corpus includes 5+ known-good signed PDFs to round-trip against.                                                                                |
+| 4   | **TSA URL trust**                  | HIGH     | §4.5 + `signature-engine.md §6`. Default OFF; user-provided URL; no shipped default service. Validation pings on Settings save. Fail-loud on TSA failures (no silent fallback to no-TSA).                                                                                                                                              |
+| 5   | **Signature appearance interop**   | MEDIUM   | §4.4 + `signature-engine.md §5`. Standard `/AP /N` widget appearance. Wave 16 fixture corpus includes verifying against Acrobat Reader DC + Edge PDF viewer + Foxit Reader. Default appearance composition is small and predictable.                                                                                                   |
+| 6   | **Annotation toolset scope creep** | MEDIUM   | §5 enumerates the exact 7 tools. `ui-spec.md` Phase-4 amendment §13.5 (Riley Wave 15) keeps the toolbar scope tight. NOT: layers, advanced fill patterns, vector editor. The new conventions §15.3 row reaffirms the scope fence.                                                                                                      |
+| 7   | **Signed-doc audit log scope**     | LOW      | §6 keeps the table single-purpose: "show me what I signed and when". No multi-user fields, no notarization data, no remote-server schemas. Phase 4.5+ can extend if user demand.                                                                                                                                                       |
 
 ### 8.1 Additional risks Riley uncovered during Wave 15 design
 
@@ -679,13 +700,13 @@ These are NOT in the original 7-risk register; flagged here for Wave 16 awarenes
 
 ### 9.3 Phase 5+
 
-| Phase | Feature | Extension point |
-|---|---|---|
-| 5 | OCR-then-sign workflow | `applySignature` accepts a freshly-OCR'd doc; no engine change |
-| 5 | Sign on scanned doc | Same |
-| 6 | Office export of signed doc | Office export drops signatures (lossy); user-guide warns. PDF format only preserves them. |
-| 7 | Localization of audit log subject CN | Subject CN may be non-ASCII; renderer respects user locale for display |
-| 7 | macOS / Linux PFX integration | OS-keychain integration unblocks |
+| Phase | Feature                              | Extension point                                                                           |
+| ----- | ------------------------------------ | ----------------------------------------------------------------------------------------- |
+| 5     | OCR-then-sign workflow               | `applySignature` accepts a freshly-OCR'd doc; no engine change                            |
+| 5     | Sign on scanned doc                  | Same                                                                                      |
+| 6     | Office export of signed doc          | Office export drops signatures (lossy); user-guide warns. PDF format only preserves them. |
+| 7     | Localization of audit log subject CN | Subject CN may be non-ASCII; renderer respects user locale for display                    |
+| 7     | macOS / Linux PFX integration        | OS-keychain integration unblocks                                                          |
 
 ---
 
@@ -695,39 +716,39 @@ Phase 4 closes some Phase 3 boundaries and introduces new ones. Per the H-3 less
 
 ### 10.1 Boundaries Phase 4 closes
 
-| Phase 3 limitation | Phase 4 reality | Doc update target |
-|---|---|---|
-| "Signature placeholders — signing arrives Phase 4" | Visual + PAdES live | user-guide.md (Nathan Wave 18); release-notes; Forms sidebar surface change |
-| "Square / Circle / Line annotations — Phase 4" | LIVE | data-models.md Phase-4 amendment §9.5 (existing table updated; new rows for Polygon/PolyLine/FreeText-callout) |
-| H-3.1 / M-13.5-1 replay-engine JS-strip residual | CLOSED (§4.8) | code-review.md Wave 17 audit will verify; build-report Wave 16 status |
+| Phase 3 limitation                                 | Phase 4 reality     | Doc update target                                                                                              |
+| -------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------- |
+| "Signature placeholders — signing arrives Phase 4" | Visual + PAdES live | user-guide.md (Nathan Wave 18); release-notes; Forms sidebar surface change                                    |
+| "Square / Circle / Line annotations — Phase 4"     | LIVE                | data-models.md Phase-4 amendment §9.5 (existing table updated; new rows for Polygon/PolyLine/FreeText-callout) |
+| H-3.1 / M-13.5-1 replay-engine JS-strip residual   | CLOSED (§4.8)       | code-review.md Wave 17 audit will verify; build-report Wave 16 status                                          |
 
 ### 10.2 New Phase-4 boundaries
 
-| Boundary | Description | Where to surface |
-|---|---|---|
-| Cert revocation NOT checked | Phase 4 signs with whatever cert the user provides. CRL/OCSP checks are Phase 4.1+. A user can sign with a revoked cert and the audit log will record it as if valid. | user-guide §Signing + sign-modal tooltip near the "Cert info" display |
-| Trust list NOT managed | We trust the system trust store at HTTPS-handshake time (for TSA). User-installed CAs are honored; we don't ship our own trust list. | user-guide §Settings → TSA |
-| Audit log is local + tamper-vulnerable | The audit log lives in the local SQLite DB and offers NO tamper-evidence. Any process with write access to the DB can forge entries. We document this explicitly. | user-guide §Signing → "What the audit log is and isn't" |
-| Third-party signature verification NOT supported | Phase 4 only verifies signatures THIS app applied (via `signature_audit_log` lookup). External signatures are displayed but not validated. | UI: Forms sidebar shows third-party signed fields as locked + tooltip "Signature applied by another tool — verification unavailable in Phase 4" |
-| Multi-signer workflow NOT supported | Signing a doc with two different signatures creates two separate signed files in Phase 4. The "first signature covers everything" + "second signature covers everything-up-to-second" pattern (incremental update PAdES) is Phase 4.5+. | user-guide; release-notes |
-| Sign while form fields are dirty | If the user has uncommitted form fill values when they click Sign, the signature applies to the BYTES-AT-SIGN-TIME (after auto-commit of form values). Documented because users may expect the dirty values to be excluded from the signature. | sign modal tooltip near the Sign button |
-| Cert PEM lingers in V8 heap | R-W15-A: there's a 1-2 second window after cert release where the cert PEM may be in V8's pre-GC heap. Phase 4.1 may switch to Buffer-only storage. | conventions.md §15 + user-guide §Signing → "About security" (Nathan) |
-| Visual signature is NOT cryptographic | A visual signature looks like a signature but has no PKI binding. Users who need legal effect must use PAdES. | sign modal makes the distinction loud (two clearly-labeled buttons); user-guide §Signing → "Visual vs cryptographic" |
-| Sign modal supports ONE cert at a time | Multi-cert workflows (corp + personal) are Phase 4.5+. Phase 4 allows one CertLoad per modal session. | sign modal copy + user-guide |
+| Boundary                                         | Description                                                                                                                                                                                                                                    | Where to surface                                                                                                                                |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cert revocation NOT checked                      | Phase 4 signs with whatever cert the user provides. CRL/OCSP checks are Phase 4.1+. A user can sign with a revoked cert and the audit log will record it as if valid.                                                                          | user-guide §Signing + sign-modal tooltip near the "Cert info" display                                                                           |
+| Trust list NOT managed                           | We trust the system trust store at HTTPS-handshake time (for TSA). User-installed CAs are honored; we don't ship our own trust list.                                                                                                           | user-guide §Settings → TSA                                                                                                                      |
+| Audit log is local + tamper-vulnerable           | The audit log lives in the local SQLite DB and offers NO tamper-evidence. Any process with write access to the DB can forge entries. We document this explicitly.                                                                              | user-guide §Signing → "What the audit log is and isn't"                                                                                         |
+| Third-party signature verification NOT supported | Phase 4 only verifies signatures THIS app applied (via `signature_audit_log` lookup). External signatures are displayed but not validated.                                                                                                     | UI: Forms sidebar shows third-party signed fields as locked + tooltip "Signature applied by another tool — verification unavailable in Phase 4" |
+| Multi-signer workflow NOT supported              | Signing a doc with two different signatures creates two separate signed files in Phase 4. The "first signature covers everything" + "second signature covers everything-up-to-second" pattern (incremental update PAdES) is Phase 4.5+.        | user-guide; release-notes                                                                                                                       |
+| Sign while form fields are dirty                 | If the user has uncommitted form fill values when they click Sign, the signature applies to the BYTES-AT-SIGN-TIME (after auto-commit of form values). Documented because users may expect the dirty values to be excluded from the signature. | sign modal tooltip near the Sign button                                                                                                         |
+| Cert PEM lingers in V8 heap                      | R-W15-A: there's a 1-2 second window after cert release where the cert PEM may be in V8's pre-GC heap. Phase 4.1 may switch to Buffer-only storage.                                                                                            | conventions.md §15 + user-guide §Signing → "About security" (Nathan)                                                                            |
+| Visual signature is NOT cryptographic            | A visual signature looks like a signature but has no PKI binding. Users who need legal effect must use PAdES.                                                                                                                                  | sign modal makes the distinction loud (two clearly-labeled buttons); user-guide §Signing → "Visual vs cryptographic"                            |
+| Sign modal supports ONE cert at a time           | Multi-cert workflows (corp + personal) are Phase 4.5+. Phase 4 allows one CertLoad per modal session.                                                                                                                                          | sign modal copy + user-guide                                                                                                                    |
 
 ### 10.3 Round-trip fidelity matrix delta
 
 Extends `edit-replay-engine.md §12`, Phase 2 Phase 3 matrices:
 
-| PDF feature in source | Phase 3 behavior | Phase 4 behavior |
-|---|---|---|
-| Existing PAdES signature `/V Contents <...>` | Partial — placeholder preserved, signed `/V` dropped | **STILL DROPPED on resave that mutates content** — once a PAdES signature is broken by content change, it cannot be re-validated. Phase 4 ADDS: if the user attempts to Save a doc with an existing third-party signature, a confirmation modal warns "Saving will invalidate the existing signature by Jane Doe (2026-01-15)." User can Cancel, Save (invalidate), or Sign Anew (cover the new bytes). |
-| PAdES signature with TSA token | Same — dropped on resave that mutates content | Same — but the audit log records the signature was invalidated by save (for our own signatures) |
-| Square / Circle / Line subtypes | N/A (Phase 1 stubbed) | Native pdf-lib support; lossless round-trip |
-| Polygon / PolyLine | N/A | Manual dict authoring; lossless round-trip (golden-bytes-tested) |
-| FreeText callout (`/IT FreeTextCallout`) | N/A | Manual dict authoring; preserves `/CL` callout-line + `/IT` |
-| Measure annotations (`/Line` with `/Measure`) | N/A | Manual dict authoring; calibration round-trips via `/Measure` dict |
-| Document-level JS (`/Names /JavaScript`) | STRIPPED (form-bearing saves only — H-3.1 residual M-13.5-1) | **STRIPPED ON EVERY SAVE PATH** (§4.8 above) |
+| PDF feature in source                         | Phase 3 behavior                                             | Phase 4 behavior                                                                                                                                                                                                                                                                                                                                                                                        |
+| --------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Existing PAdES signature `/V Contents <...>`  | Partial — placeholder preserved, signed `/V` dropped         | **STILL DROPPED on resave that mutates content** — once a PAdES signature is broken by content change, it cannot be re-validated. Phase 4 ADDS: if the user attempts to Save a doc with an existing third-party signature, a confirmation modal warns "Saving will invalidate the existing signature by Jane Doe (2026-01-15)." User can Cancel, Save (invalidate), or Sign Anew (cover the new bytes). |
+| PAdES signature with TSA token                | Same — dropped on resave that mutates content                | Same — but the audit log records the signature was invalidated by save (for our own signatures)                                                                                                                                                                                                                                                                                                         |
+| Square / Circle / Line subtypes               | N/A (Phase 1 stubbed)                                        | Native pdf-lib support; lossless round-trip                                                                                                                                                                                                                                                                                                                                                             |
+| Polygon / PolyLine                            | N/A                                                          | Manual dict authoring; lossless round-trip (golden-bytes-tested)                                                                                                                                                                                                                                                                                                                                        |
+| FreeText callout (`/IT FreeTextCallout`)      | N/A                                                          | Manual dict authoring; preserves `/CL` callout-line + `/IT`                                                                                                                                                                                                                                                                                                                                             |
+| Measure annotations (`/Line` with `/Measure`) | N/A                                                          | Manual dict authoring; calibration round-trips via `/Measure` dict                                                                                                                                                                                                                                                                                                                                      |
+| Document-level JS (`/Names /JavaScript`)      | STRIPPED (form-bearing saves only — H-3.1 residual M-13.5-1) | **STRIPPED ON EVERY SAVE PATH** (§4.8 above)                                                                                                                                                                                                                                                                                                                                                            |
 
 ---
 

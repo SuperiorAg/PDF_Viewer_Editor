@@ -33,27 +33,27 @@ Phase 1-6 chapters that aren't amended remain authoritative. **No `src/main/**`,
 
 ## 1. Locked decisions encoded (Wave 27 self-check)
 
-| ID | Decision | Encoded where | Cross-ref |
-|---|---|---|---|
-| **P7-L-1** | **Cross-platform: configure all, verify Windows only.** `electron-builder.yml` gains `mac` (dmg, universal) + `linux` (AppImage, deb) targets. The CI matrix exercises **Windows packaging only**. Configs are correct + reusable; mac/linux verification is deferred to a future **Phase 7.1** once hosts exist. Docs state UNVERIFIED loudly. | §2 (build matrix), §6 (native-module story) | `phase-7-plan.md` risk #3; roadmap Out-of-scope |
-| **P7-L-2** | **Auto-update: electron-updater (MIT) + GitHub releases provider, publish target is a PLACEHOLDER.** Full flow designed (check → notify → download → quit-and-install) but the `publish` block is a documented placeholder; updates do not function until a real release channel is configured. Update check is **explicit by default** + opt-in "check on launch" (default OFF). Never auto-downloads unless the channel setting allows it. | §3 (auto-update flow) | `data-models.md §12`; `api-contracts.md §18`; `ui-spec.md §16` |
-| **P7-L-3** | **Telemetry: opt-in, default OFF, anonymous, no PII, no third-party SDK.** Client-side event hook + **explicit event-name allowlist** (counts only — no document content, no file paths, no user identity). Transport is a **no-op local ring buffer** (Q-B); no endpoint ships. The framework + opt-in UI + allowlist are the deliverable. Real transport = Phase 7.1. | §4 (telemetry architecture) | `conventions.md §18`; `data-models.md §12`; `api-contracts.md §18`; `ui-spec.md §16` |
-| **P7-L-4** | **a11y: WCAG 2.1 AA target.** Audit all critical paths; fix the deferred Phase-1 ARIA tab patterns; keyboard nav for every critical path; Windows Narrator as the test SR. Restore `jsx-a11y/aria-proptypes` to `error` from `warn`. | §5 (a11y plan) | `a11y-audit.md`; `ui-spec.md §16`; `conventions.md §18`; `code-review.md` LOW (sidebar/index.tsx:11-16) |
-| **P7-L-5** | **i18n: i18next + react-i18next (MIT).** en-US baseline extracted from six phases of hardcoded strings (big-bang) + ONE proof locale (es-ES). Lazy-load locale bundles. String extraction is a large-but-mechanical Wave 28 task. | §7 (i18n architecture) | `i18n-strategy.md`; `conventions.md §18`; `ui-spec.md §16` |
-| **P7-L-6** | **Trust-floor honesty obligations (SIXTH instance — the project's strongest pattern, after H-3 + Phase 3 forms + Phase 4 PAdES + Phase 5 OCR + Phase 6 export).** Six Phase-7 obligations enumerated §8 — surface at four locations per the proven ratchet. The four highest-stakes claims: telemetry-OFF-by-default; update-publish-target-is-placeholder; mac/linux-UNVERIFIED; proof-locale-is-a-sample-not-complete. | §8 (trust-floor) | `conventions.md §18`; `ui-spec.md §16`; README + user-guide (Wave 30 Nathan) |
-| **P7-L-7** | **Schema delta: NO new table; THREE new `settings` keys + ZERO new in-memory model.** Telemetry opt-in, selected locale, update channel, last-update-check timestamp all fold into the existing `settings` key-value store (keys `telemetry.*`, `i18n.*`, `update.*`). Forward-only migration v7. No Phase 1-6 table touched. | §9 (schema v7), `data-models.md §12` | `data-models.md §12` |
-| **P7-L-8** | **No new process, no new window, no new bundled binary requiring a copy step.** electron-updater + i18next + react-i18next are pure-JS; the locale bundles are JSON lazy-imported by the renderer (Vite code-split chunks). No native module added. The mac/linux native-module story (§6) is about **rebuilding existing** native deps per-platform, not adding new ones. | §2.1, §6 | `phase-7-plan.md` acceptance criteria |
+| ID         | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                     | Encoded where                               | Cross-ref                                                                                               |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **P7-L-1** | **Cross-platform: configure all, verify Windows only.** `electron-builder.yml` gains `mac` (dmg, universal) + `linux` (AppImage, deb) targets. The CI matrix exercises **Windows packaging only**. Configs are correct + reusable; mac/linux verification is deferred to a future **Phase 7.1** once hosts exist. Docs state UNVERIFIED loudly.                                                                                              | §2 (build matrix), §6 (native-module story) | `phase-7-plan.md` risk #3; roadmap Out-of-scope                                                         |
+| **P7-L-2** | **Auto-update: electron-updater (MIT) + GitHub releases provider, publish target is a PLACEHOLDER.** Full flow designed (check → notify → download → quit-and-install) but the `publish` block is a documented placeholder; updates do not function until a real release channel is configured. Update check is **explicit by default** + opt-in "check on launch" (default OFF). Never auto-downloads unless the channel setting allows it. | §3 (auto-update flow)                       | `data-models.md §12`; `api-contracts.md §18`; `ui-spec.md §16`                                          |
+| **P7-L-3** | **Telemetry: opt-in, default OFF, anonymous, no PII, no third-party SDK.** Client-side event hook + **explicit event-name allowlist** (counts only — no document content, no file paths, no user identity). Transport is a **no-op local ring buffer** (Q-B); no endpoint ships. The framework + opt-in UI + allowlist are the deliverable. Real transport = Phase 7.1.                                                                      | §4 (telemetry architecture)                 | `conventions.md §18`; `data-models.md §12`; `api-contracts.md §18`; `ui-spec.md §16`                    |
+| **P7-L-4** | **a11y: WCAG 2.1 AA target.** Audit all critical paths; fix the deferred Phase-1 ARIA tab patterns; keyboard nav for every critical path; Windows Narrator as the test SR. Restore `jsx-a11y/aria-proptypes` to `error` from `warn`.                                                                                                                                                                                                         | §5 (a11y plan)                              | `a11y-audit.md`; `ui-spec.md §16`; `conventions.md §18`; `code-review.md` LOW (sidebar/index.tsx:11-16) |
+| **P7-L-5** | **i18n: i18next + react-i18next (MIT).** en-US baseline extracted from six phases of hardcoded strings (big-bang) + ONE proof locale (es-ES). Lazy-load locale bundles. String extraction is a large-but-mechanical Wave 28 task.                                                                                                                                                                                                            | §7 (i18n architecture)                      | `i18n-strategy.md`; `conventions.md §18`; `ui-spec.md §16`                                              |
+| **P7-L-6** | **Trust-floor honesty obligations (SIXTH instance — the project's strongest pattern, after H-3 + Phase 3 forms + Phase 4 PAdES + Phase 5 OCR + Phase 6 export).** Six Phase-7 obligations enumerated §8 — surface at four locations per the proven ratchet. The four highest-stakes claims: telemetry-OFF-by-default; update-publish-target-is-placeholder; mac/linux-UNVERIFIED; proof-locale-is-a-sample-not-complete.                     | §8 (trust-floor)                            | `conventions.md §18`; `ui-spec.md §16`; README + user-guide (Wave 30 Nathan)                            |
+| **P7-L-7** | **Schema delta: NO new table; THREE new `settings` keys + ZERO new in-memory model.** Telemetry opt-in, selected locale, update channel, last-update-check timestamp all fold into the existing `settings` key-value store (keys `telemetry.*`, `i18n.*`, `update.*`). Forward-only migration v7. No Phase 1-6 table touched.                                                                                                                | §9 (schema v7), `data-models.md §12`        | `data-models.md §12`                                                                                    |
+| **P7-L-8** | **No new process, no new window, no new bundled binary requiring a copy step.** electron-updater + i18next + react-i18next are pure-JS; the locale bundles are JSON lazy-imported by the renderer (Vite code-split chunks). No native module added. The mac/linux native-module story (§6) is about **rebuilding existing** native deps per-platform, not adding new ones.                                                                   | §2.1, §6                                    | `phase-7-plan.md` acceptance criteria                                                                   |
 
 **Cross-check against the sentinel-default lesson (global JSONL 2026-05-26, four-times-bitten):** Phase 7 uses **nullable + late-init** for `UpdateState.availableVersion: string | null` (null until a check returns an update), `UpdateState.lastCheckedAt: number | null` (null until first check), and `TelemetryStatus.lastEventAt: number | null`. No sentinel `''` / `0` / `-1`. See §3.3 and §4.4.
 
-**Cross-check against the stub-shipped-with-TODO lesson (global JSONL 2026-05-27, Wave 18 + reaffirmed P5-L-2, P6 §17.4):** Phase 7 has TWO honest, *intentional* placeholders that are NOT the stub anti-pattern, and the distinction is load-bearing:
+**Cross-check against the stub-shipped-with-TODO lesson (global JSONL 2026-05-27, Wave 18 + reaffirmed P5-L-2, P6 §17.4):** Phase 7 has TWO honest, _intentional_ placeholders that are NOT the stub anti-pattern, and the distinction is load-bearing:
 
-- The **telemetry transport** is a real, fully-wired `NoOpRingBufferTransport` — it is the *complete* Phase 7 implementation, exercisable end-to-end via the debug panel. It is not an optional dep with a sentinel fallback; it is the shipped transport. Phase 7.1 swaps it for a network transport *behind the same `TelemetryTransport` interface*. The interface field is **required** (`transport: TelemetryTransport`), never optional. See §4.3.
-- The **auto-update publish target** is a documented configuration placeholder in `electron-builder.yml` (`publish: { provider: github, owner: PLACEHOLDER, repo: PLACEHOLDER }`). This is honest config that produces a working *client*; it is not a code stub that silently returns success. The update controller's "no publish target configured" path returns an explicit `Result<never, 'update_not_configured'>`, NOT a fake "up to date" — see §3.4. This is the anti-stub discipline applied to config.
+- The **telemetry transport** is a real, fully-wired `NoOpRingBufferTransport` — it is the _complete_ Phase 7 implementation, exercisable end-to-end via the debug panel. It is not an optional dep with a sentinel fallback; it is the shipped transport. Phase 7.1 swaps it for a network transport _behind the same `TelemetryTransport` interface_. The interface field is **required** (`transport: TelemetryTransport`), never optional. See §4.3.
+- The **auto-update publish target** is a documented configuration placeholder in `electron-builder.yml` (`publish: { provider: github, owner: PLACEHOLDER, repo: PLACEHOLDER }`). This is honest config that produces a working _client_; it is not a code stub that silently returns success. The update controller's "no publish target configured" path returns an explicit `Result<never, 'update_not_configured'>`, NOT a fake "up to date" — see §3.4. This is the anti-stub discipline applied to config.
 
 **Cross-check against the as-any / code-comment-contradiction lesson (Julian Wave 21 H-21.1, P6 §17.5):** The i18n migration touches every renderer component. The risk is a translator helper typed as `any` to escape i18next's key-typing. Phase 7 generates a **typed key union** from `en-US.json` (`i18next` augmentation module; see `i18n-strategy.md §6`) so `t('toolbar.open')` is type-checked. NO `as any` on `t()` calls. Conventions §18.4 codifies.
 
-**Cross-check against the renderer-vs-main asset-path divergence lesson (global JSONL 2026-05-27, Phase 6.1 promotion candidate):** Phase 7's locale JSON bundles are **renderer-only** assets, lazy-imported by Vite (`import('./locales/es-ES/...')` becomes a code-split chunk under `dist/renderer/`). They do NOT go through a main-process `require.resolve` path, so the divergence does not bite. The native-module rebuild story (§6) is the place that *does* interact with packaging, and it is documented as the riskiest part of the unverified configs.
+**Cross-check against the renderer-vs-main asset-path divergence lesson (global JSONL 2026-05-27, Phase 6.1 promotion candidate):** Phase 7's locale JSON bundles are **renderer-only** assets, lazy-imported by Vite (`import('./locales/es-ES/...')` becomes a code-split chunk under `dist/renderer/`). They do NOT go through a main-process `require.resolve` path, so the divergence does not bite. The native-module rebuild story (§6) is the place that _does_ interact with packaging, and it is documented as the riskiest part of the unverified configs.
 
 ---
 
@@ -61,7 +61,7 @@ Phase 1-6 chapters that aren't amended remain authoritative. **No `src/main/**`,
 
 ### 2.1 No new processes, no new windows, no new bundled assets
 
-Phase 7 adds **no new BrowserWindow**, **no new long-lived OS process**, and **no new native binary copy step**. The update controller runs in the existing main process; i18next runs in the existing renderer; locale bundles are renderer code-split chunks. Diego's packaging config is the only file that grows a new *target*.
+Phase 7 adds **no new BrowserWindow**, **no new long-lived OS process**, and **no new native binary copy step**. The update controller runs in the existing main process; i18next runs in the existing renderer; locale bundles are renderer code-split chunks. Diego's packaging config is the only file that grows a new _target_.
 
 **L-001 cross-check:** `enableDragDropFiles: true` on the main BrowserWindow is untouched. Phase 7 introduces no new file-picker channels and no drag-drop entry points. The mac/linux targets package the SAME `BrowserWindow` factory; the drag-drop `File.path` reliance is a renderer concern that the cross-platform config does not alter. **Phase 7 does not weaken or extend L-001.** (Note for Phase 7.1 verification: Electron's `File.path` is available on macOS and Linux too, so L-001's mechanism is cross-platform-safe in principle — but this is UNVERIFIED until a real host runs it.)
 
@@ -69,13 +69,13 @@ Phase 7 adds **no new BrowserWindow**, **no new long-lived OS process**, and **n
 
 `electron-builder.yml` (Diego owns) gains `mac` + `linux` blocks alongside the existing `win` block:
 
-| Platform | Targets | Arch | CI builds? | Verified? |
-|---|---|---|---|---|
-| Windows | `nsis` (installer) + `portable` | x64 | **YES** (test-of-record) | YES (L-002 screenshot every packaging wave) |
-| macOS | `dmg` | universal (x64 + arm64) | **NO** (config-only) | **NO — UNVERIFIED** |
-| Linux | `AppImage` + `deb` | x64 | **NO** (config-only) | **NO — UNVERIFIED** |
+| Platform | Targets                         | Arch                    | CI builds?               | Verified?                                   |
+| -------- | ------------------------------- | ----------------------- | ------------------------ | ------------------------------------------- |
+| Windows  | `nsis` (installer) + `portable` | x64                     | **YES** (test-of-record) | YES (L-002 screenshot every packaging wave) |
+| macOS    | `dmg`                           | universal (x64 + arm64) | **NO** (config-only)     | **NO — UNVERIFIED**                         |
+| Linux    | `AppImage` + `deb`              | x64                     | **NO** (config-only)     | **NO — UNVERIFIED**                         |
 
-The CI matrix (`.github/workflows/ci.yml`, Diego) keeps a **single `windows-latest` packaging job**. Diego may add `macos-latest` / `ubuntu-latest` *typecheck + unit-test* jobs (cheap, no packaging) if useful, but the `dist` packaging step runs on Windows only. The locked decision is explicit: configs are ready-to-use, awaiting hosts.
+The CI matrix (`.github/workflows/ci.yml`, Diego) keeps a **single `windows-latest` packaging job**. Diego may add `macos-latest` / `ubuntu-latest` _typecheck + unit-test_ jobs (cheap, no packaging) if useful, but the `dist` packaging step runs on Windows only. The locked decision is explicit: configs are ready-to-use, awaiting hosts.
 
 ### 2.3 macOS config shape (design intent for Diego)
 
@@ -84,11 +84,11 @@ The CI matrix (`.github/workflows/ci.yml`, Diego) keeps a **single `windows-late
 mac:
   target:
     - target: dmg
-      arch: [universal]          # universal binary intent (x64 + arm64 merged)
+      arch: [universal] # universal binary intent (x64 + arm64 merged)
   category: public.app-category.productivity
-  hardenedRuntime: true          # required for notarization (Phase 7.1 step)
-  gatekeeperAssess: false        # we are not notarizing in Phase 7
-  entitlements: build/entitlements.mac.plist   # NEW file Diego authors (file-access entitlements)
+  hardenedRuntime: true # required for notarization (Phase 7.1 step)
+  gatekeeperAssess: false # we are not notarizing in Phase 7
+  entitlements: build/entitlements.mac.plist # NEW file Diego authors (file-access entitlements)
   # NOTE: code-signing + notarization deferred to Phase 7.1 (cert acquisition is real-world;
   #       Diego documents the workflow in docs/code-signing-workflow.md). An UNSIGNED dmg
   #       will trigger Gatekeeper quarantine on the user's machine — documented limitation.
@@ -103,7 +103,7 @@ linux:
     - AppImage
     - deb
   category: Office
-  maintainer: PLACEHOLDER <placeholder@example.com>   # honest placeholder until publish
+  maintainer: PLACEHOLDER <placeholder@example.com> # honest placeholder until publish
   desktop:
     Name: PDF_Viewer_Editor
     Comment: View, edit, annotate, sign, and export PDFs
@@ -132,7 +132,7 @@ Documented rationale (so a future maintainer does not "fix" this by enabling cro
 # electron-builder.yml — publish block (Diego authors in Wave 28)
 publish:
   provider: github
-  owner: PLACEHOLDER        # repo not published yet
+  owner: PLACEHOLDER # repo not published yet
   repo: PLACEHOLDER
   releaseType: release
 ```
@@ -143,16 +143,23 @@ Because `owner`/`repo` are placeholders, electron-updater's `checkForUpdates()` 
 
 ```ts
 // src/client/state/slices/update-slice.ts (Riley Wave 28) — design shape
-type UpdateChannel = 'manual' | 'check-on-launch';   // 'manual' = explicit only (DEFAULT)
+type UpdateChannel = 'manual' | 'check-on-launch'; // 'manual' = explicit only (DEFAULT)
 
 interface UpdateState {
-  channel: UpdateChannel;                  // mirrors settings 'update.channel'; DEFAULT 'manual'
-  status: 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'up-to-date'
-        | 'error' | 'not-configured';
-  availableVersion: string | null;         // null until a check returns an update (NO sentinel '')
-  downloadProgressPercent: number | null;  // null unless status === 'downloading'
-  lastCheckedAt: number | null;            // null until first check (NO sentinel 0)
-  errorMessage: string | null;             // null unless status === 'error'
+  channel: UpdateChannel; // mirrors settings 'update.channel'; DEFAULT 'manual'
+  status:
+    | 'idle'
+    | 'checking'
+    | 'available'
+    | 'downloading'
+    | 'downloaded'
+    | 'up-to-date'
+    | 'error'
+    | 'not-configured';
+  availableVersion: string | null; // null until a check returns an update (NO sentinel '')
+  downloadProgressPercent: number | null; // null unless status === 'downloading'
+  lastCheckedAt: number | null; // null until first check (NO sentinel 0)
+  errorMessage: string | null; // null unless status === 'error'
 }
 ```
 
@@ -186,7 +193,7 @@ interface UpdateState {
 
 ### 3.5 Signature-verification dependency (carried from phase-7-plan risk #1)
 
-electron-updater verifies the update bundle's code-signature before applying it (on Windows: Authenticode; on mac: notarization/signature). **Until the code-signing cert is acquired (Diego documents the workflow in `docs/code-signing-workflow.md`, Phase 7.1), auto-update will refuse to apply downloaded bundles on a properly-configured production channel.** This is correct security behavior and is documented as a trust-floor obligation, not a bug. The Phase 7 deliverable is the wired *client*; the cert + publish target are the user's real-world Phase 7.1 steps.
+electron-updater verifies the update bundle's code-signature before applying it (on Windows: Authenticode; on mac: notarization/signature). **Until the code-signing cert is acquired (Diego documents the workflow in `docs/code-signing-workflow.md`, Phase 7.1), auto-update will refuse to apply downloaded bundles on a properly-configured production channel.** This is correct security behavior and is documented as a trust-floor obligation, not a bug. The Phase 7 deliverable is the wired _client_; the cert + publish target are the user's real-world Phase 7.1 steps.
 
 ---
 
@@ -227,8 +234,8 @@ export type TelemetryEventName =
 // sub-day resolution (day-bucketed only, to defeat session fingerprinting).
 export interface TelemetryEvent {
   name: TelemetryEventName;
-  count: 1;                          // always 1 per call; aggregation is the transport's job
-  dayBucket: string;                 // 'YYYY-MM-DD' — coarse; never a precise timestamp
+  count: 1; // always 1 per call; aggregation is the transport's job
+  dayBucket: string; // 'YYYY-MM-DD' — coarse; never a precise timestamp
 }
 ```
 
@@ -237,8 +244,8 @@ export interface TelemetryEvent {
 ```ts
 // src/client/telemetry/telemetry-transport.ts (Riley Wave 28) — design shape
 export interface TelemetryTransport {
-  record(event: TelemetryEvent): void;     // called only when opt-in is TRUE
-  snapshot(): readonly TelemetryEvent[];   // for the debug panel
+  record(event: TelemetryEvent): void; // called only when opt-in is TRUE
+  snapshot(): readonly TelemetryEvent[]; // for the debug panel
   clear(): void;
 }
 
@@ -255,15 +262,19 @@ The telemetry hook takes a **required** `transport: TelemetryTransport` (no opti
 ```ts
 // src/client/telemetry/use-telemetry.ts (Riley Wave 28) — design shape
 export function useTelemetry() {
-  const optedIn = useAppSelector((s) => s.settings['telemetry.optIn']);   // DEFAULT false
-  return useCallback((name: TelemetryEventName) => {
-    if (!optedIn) return;                                  // hard gate; no event when OFF
-    if (!TELEMETRY_ALLOWLIST.has(name)) {                  // belt-and-suspenders
-      if (import.meta.env.DEV) console.warn(`telemetry: dropped non-allowlisted '${name}'`);
-      return;
-    }
-    transport.record({ name, count: 1, dayBucket: toDayBucket(Date.now()) });
-  }, [optedIn]);
+  const optedIn = useAppSelector((s) => s.settings['telemetry.optIn']); // DEFAULT false
+  return useCallback(
+    (name: TelemetryEventName) => {
+      if (!optedIn) return; // hard gate; no event when OFF
+      if (!TELEMETRY_ALLOWLIST.has(name)) {
+        // belt-and-suspenders
+        if (import.meta.env.DEV) console.warn(`telemetry: dropped non-allowlisted '${name}'`);
+        return;
+      }
+      transport.record({ name, count: 1, dayBucket: toDayBucket(Date.now()) });
+    },
+    [optedIn],
+  );
 }
 ```
 
@@ -271,13 +282,13 @@ export function useTelemetry() {
 
 ### 4.5 Library survey (why no third-party SDK)
 
-| Candidate | Verdict | Reason |
-|---|---|---|
-| Google Analytics / GA4 | **REJECTED** | Phones home by default; sends to Google; cookie/identity surface; defaults ON once initialized. |
-| Sentry | **REJECTED** | Auto-sends crash + breadcrumb data by default; captures stack traces that may include file paths / doc content; opt-out model, not opt-in. |
-| PostHog / Mixpanel / Amplitude | **REJECTED** | All assume a network endpoint + identity; overkill for anonymous counts; opt-out culture. |
-| `electron-telemetry` style wrappers | **REJECTED** | Thin wrappers over the above; same defaults-ON problem. |
-| **Hand-rolled hook + allowlist + no-op transport** | **CHOSEN** | Zero new dependency; default OFF; auditable; nothing leaves the machine in Phase 7; Phase 7.1 can add a self-hosted transport behind the interface. |
+| Candidate                                          | Verdict      | Reason                                                                                                                                              |
+| -------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Google Analytics / GA4                             | **REJECTED** | Phones home by default; sends to Google; cookie/identity surface; defaults ON once initialized.                                                     |
+| Sentry                                             | **REJECTED** | Auto-sends crash + breadcrumb data by default; captures stack traces that may include file paths / doc content; opt-out model, not opt-in.          |
+| PostHog / Mixpanel / Amplitude                     | **REJECTED** | All assume a network endpoint + identity; overkill for anonymous counts; opt-out culture.                                                           |
+| `electron-telemetry` style wrappers                | **REJECTED** | Thin wrappers over the above; same defaults-ON problem.                                                                                             |
+| **Hand-rolled hook + allowlist + no-op transport** | **CHOSEN**   | Zero new dependency; default OFF; auditable; nothing leaves the machine in Phase 7; Phase 7.1 can add a self-hosted transport behind the interface. |
 
 The chosen approach adds **no new dependency** — it is ~3 small renderer modules + 1 settings key + 1 IPC trio (to persist the opt-in + expose the buffer for the debug panel).
 
@@ -303,11 +314,11 @@ Wave 28 implements the **proper ARIA tab pattern** and **restores `jsx-a11y/aria
 
 ### 5.3 Remediation priority (Q-D)
 
-| Tier | Critical paths | Phase 7 verdict |
-|---|---|---|
-| **MUST (Wave 28)** | open · render/navigate · annotate · save · the deferred ARIA tab patterns (sidebar + settings + toolbar) | the walking-skeleton core; ships in Wave 28 |
-| **SHOULD (Wave 28 if budget; else 7.1)** | fill form · sign · OCR · export | ranked: forms > export > OCR > sign |
-| **DOCUMENT-ONLY (defer to 7.1)** | canvas annotation freehand drawing via keyboard (inherently pointer-centric); full Narrator narration of per-page render | documented as known a11y gaps in `a11y-audit.md §7` |
+| Tier                                     | Critical paths                                                                                                           | Phase 7 verdict                                     |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------- |
+| **MUST (Wave 28)**                       | open · render/navigate · annotate · save · the deferred ARIA tab patterns (sidebar + settings + toolbar)                 | the walking-skeleton core; ships in Wave 28         |
+| **SHOULD (Wave 28 if budget; else 7.1)** | fill form · sign · OCR · export                                                                                          | ranked: forms > export > OCR > sign                 |
+| **DOCUMENT-ONLY (defer to 7.1)**         | canvas annotation freehand drawing via keyboard (inherently pointer-centric); full Narrator narration of per-page render | documented as known a11y gaps in `a11y-audit.md §7` |
 
 See §8 obligation and `a11y-audit.md` for the full inventory of eight critical paths.
 
@@ -315,13 +326,13 @@ See §8 obligation and `a11y-audit.md` for the full inventory of eight critical 
 
 ## 6. Cross-platform native-module story (Q-E) — the riskiest part of the unverified configs
 
-The project ships THREE native / platform-specific binary dependencies. On Windows they are verified every packaging wave (L-002). On mac/linux they are UNVERIFIED. This section documents how the configs *intend* to handle them, and flags the precise risk.
+The project ships THREE native / platform-specific binary dependencies. On Windows they are verified every packaging wave (L-002). On mac/linux they are UNVERIFIED. This section documents how the configs _intend_ to handle them, and flags the precise risk.
 
-| Native dep | What it is | Cross-platform handling | Risk on mac/linux |
-|---|---|---|---|
-| `better-sqlite3` | N-API native addon (SQLite). Used by Ravi's `src/db`. | electron-builder runs `electron-rebuild` (via `@electron/rebuild`, invoked by `app/install-app-deps`) to compile the addon against the **target platform + Electron ABI**. Per-platform prebuilds or from-source compile. | **HIGH.** The build-report already records `better-sqlite3` Node-24 ABI recovery failures on the dev host (2026-05-27). A from-source compile on a mac/linux CI runner needs the platform toolchain (Xcode CLT / build-essential). If the rebuild fails, the DB layer crashes on launch → white-screen app. This is exactly the class of defect a config-only ship cannot catch. |
-| `@napi-rs/canvas` | Prebuilt N-API canvas (Skia). Used by the main-process raster pipeline (Phase 4.1 metadata + Phase 5 OCR + Phase 6 image export). | `@napi-rs/canvas` ships **per-platform prebuilt `.node` binaries** (darwin-x64, darwin-arm64, linux-x64-gnu, win32-x64-msvc). electron-builder bundles the matching prebuild for the target. | **MEDIUM.** Prebuilds usually "just work" but the universal-mac target needs BOTH darwin-x64 AND darwin-arm64 `.node` files merged into the universal app. electron-builder's universal merge must include both — UNVERIFIED. linux-musl (Alpine) is NOT targeted (deb/AppImage are glibc). |
-| `tesseract.js-core` | WASM (not a native `.node`) + the `.traineddata` language packs. Used by Phase 5 OCR. | WASM is platform-agnostic; the language packs are data files copied via the existing Phase 5 `extraResources` step. No per-platform rebuild needed. | **LOW.** WASM runs the same everywhere. The only cross-platform concern is the asar-unpack path for the tessdata (already solved on Windows; the SAME `asarUnpack` glob applies to mac/linux). |
+| Native dep          | What it is                                                                                                                        | Cross-platform handling                                                                                                                                                                                                   | Risk on mac/linux                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `better-sqlite3`    | N-API native addon (SQLite). Used by Ravi's `src/db`.                                                                             | electron-builder runs `electron-rebuild` (via `@electron/rebuild`, invoked by `app/install-app-deps`) to compile the addon against the **target platform + Electron ABI**. Per-platform prebuilds or from-source compile. | **HIGH.** The build-report already records `better-sqlite3` Node-24 ABI recovery failures on the dev host (2026-05-27). A from-source compile on a mac/linux CI runner needs the platform toolchain (Xcode CLT / build-essential). If the rebuild fails, the DB layer crashes on launch → white-screen app. This is exactly the class of defect a config-only ship cannot catch. |
+| `@napi-rs/canvas`   | Prebuilt N-API canvas (Skia). Used by the main-process raster pipeline (Phase 4.1 metadata + Phase 5 OCR + Phase 6 image export). | `@napi-rs/canvas` ships **per-platform prebuilt `.node` binaries** (darwin-x64, darwin-arm64, linux-x64-gnu, win32-x64-msvc). electron-builder bundles the matching prebuild for the target.                              | **MEDIUM.** Prebuilds usually "just work" but the universal-mac target needs BOTH darwin-x64 AND darwin-arm64 `.node` files merged into the universal app. electron-builder's universal merge must include both — UNVERIFIED. linux-musl (Alpine) is NOT targeted (deb/AppImage are glibc).                                                                                      |
+| `tesseract.js-core` | WASM (not a native `.node`) + the `.traineddata` language packs. Used by Phase 5 OCR.                                             | WASM is platform-agnostic; the language packs are data files copied via the existing Phase 5 `extraResources` step. No per-platform rebuild needed.                                                                       | **LOW.** WASM runs the same everywhere. The only cross-platform concern is the asar-unpack path for the tessdata (already solved on Windows; the SAME `asarUnpack` glob applies to mac/linux).                                                                                                                                                                                   |
 
 **Q-E answer summarized:** electron-builder's per-platform rebuild (`better-sqlite3`) + per-platform prebuild bundling (`@napi-rs/canvas`) is the mechanism. The **universal-mac merge of `@napi-rs/canvas`** and the **from-source `better-sqlite3` rebuild on the target toolchain** are the two failure modes most likely to make an UNVERIFIED mac/linux binary crash on launch. The configs declare the intent; Phase 7.1 verification on a real host + an L-002-equivalent screenshot is the only thing that proves they work. **Documenting this risk is itself a trust-floor obligation** (§8 obligation #3).
 
@@ -381,7 +392,7 @@ The `i18next.d.ts` augmentation makes `t('toolbar.open')` type-checked against `
 Per the proven five-times pattern (H-3 + Phase 3 forms + Phase 4 PAdES + Phase 5 OCR + Phase 6 export), Phase 7 introduces the **sixth instance** — and it is the one with the most claims a careless agent could overstate. The six Phase-7 obligations:
 
 1. **Telemetry is OFF by default.** "When enabled it sends anonymous feature-usage counts only — never document content, file paths, or any personal information. In Phase 7 nothing leaves your machine at all (the transport is a local buffer you can inspect)."
-2. **Auto-update publish target is a placeholder.** "Auto-update checks GitHub releases; the publish target is a placeholder until the project is published — updates will not function until a real release channel is configured. The update *client* is wired and ready."
+2. **Auto-update publish target is a placeholder.** "Auto-update checks GitHub releases; the publish target is a placeholder until the project is published — updates will not function until a real release channel is configured. The update _client_ is wired and ready."
 3. **macOS and Linux builds are UNVERIFIED.** "macOS and Linux builds are configured but UNVERIFIED — they are produced by the build config but have not been tested on real hardware. Native modules (database, canvas) may fail to load on these platforms until a maintainer verifies on a real host (Phase 7.1)."
 4. **The proof locale is a sample, not a complete localization.** "Spanish (es-ES) is a translation sample to prove the localization framework works — some strings may remain in English. It is not a complete professional translation."
 5. **Accessibility is audited to WCAG 2.1 AA for critical paths, with documented gaps.** "Keyboard navigation and screen-reader (Windows Narrator) support cover the critical paths. Freehand annotation drawing and some canvas interactions remain pointer-centric — documented as known gaps."
@@ -406,12 +417,12 @@ The UI surfaces (Wave 28) are where the user reads the honesty at the moment of 
 
 Full DDL + per-key rationale in [`data-models.md §12`](data-models.md). Summary: migration v7 (`migrations/0007_phase7_polish.sql`, Ravi Wave 28) adds NO new table and NO new column on any existing table. It seeds (via `INSERT OR IGNORE INTO settings`) the Phase-7 setting keys:
 
-| Key | Type | Default | Obligation |
-|---|---|---|---|
-| `telemetry.optIn` | `boolean` | **`false`** | #1 — default OFF |
-| `i18n.locale` | `'en-US' \| 'es-ES'` | `'en-US'` | #4 — baseline |
-| `update.channel` | `'manual' \| 'check-on-launch'` | **`'manual'`** | #2 — no auto-check against placeholder |
-| `update.lastCheckedAt` | `number \| null` | `null` | nullable + late-init |
+| Key                    | Type                            | Default        | Obligation                             |
+| ---------------------- | ------------------------------- | -------------- | -------------------------------------- |
+| `telemetry.optIn`      | `boolean`                       | **`false`**    | #1 — default OFF                       |
+| `i18n.locale`          | `'en-US' \| 'es-ES'`            | `'en-US'`      | #4 — baseline                          |
+| `update.channel`       | `'manual' \| 'check-on-launch'` | **`'manual'`** | #2 — no auto-check against placeholder |
+| `update.lastCheckedAt` | `number \| null`                | `null`         | nullable + late-init                   |
 
 (Four keys; the brief's "three new settings" counts the three behavioral toggles plus the nullable timestamp.) The `EditOperation` union is FROZEN — Phase 7 produces no edit. The in-memory document model is unchanged.
 

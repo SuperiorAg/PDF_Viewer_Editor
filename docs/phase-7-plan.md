@@ -25,21 +25,21 @@
 
 ## Wave structure
 
-| Wave | Owner | Mode |
-|---|---|---|
-| 27 | Riley | solo (architecture + a11y audit plan + i18n string extraction) |
-| 28 | Diego + Riley | parallel (Diego: packaging configs + auto-update + telemetry hook; Riley: a11y fixes + i18n wiring) |
-| 29 | Diego + Julian | parallel (Diego: cross-platform dist:dry-run + cert-acquisition docs; Julian: final security review across Phases 5-7) |
-| 30 | Nathan | solo (final docs sweep + screenshots if operator-skill smoke runs cleanly) |
+| Wave | Owner          | Mode                                                                                                                   |
+| ---- | -------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 27   | Riley          | solo (architecture + a11y audit plan + i18n string extraction)                                                         |
+| 28   | Diego + Riley  | parallel (Diego: packaging configs + auto-update + telemetry hook; Riley: a11y fixes + i18n wiring)                    |
+| 29   | Diego + Julian | parallel (Diego: cross-platform dist:dry-run + cert-acquisition docs; Julian: final security review across Phases 5-7) |
+| 30   | Nathan         | solo (final docs sweep + screenshots if operator-skill smoke runs cleanly)                                             |
 
 ## File ownership
 
-| Owner | Files |
-|---|---|
-| Riley (27 + 28) | `docs/architecture-phase-7.md` (NEW — short doc; mostly amendments), `docs/i18n-strategy.md` (NEW), `docs/accessibility-audit.md` (NEW), `src/client/i18n/` (NEW directory; en-US.json + locale loader), all renderer components touched for ARIA + i18n string extraction |
+| Owner           | Files                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Riley (27 + 28) | `docs/architecture-phase-7.md` (NEW — short doc; mostly amendments), `docs/i18n-strategy.md` (NEW), `docs/accessibility-audit.md` (NEW), `src/client/i18n/` (NEW directory; en-US.json + locale loader), all renderer components touched for ARIA + i18n string extraction                                                                                                                                                      |
 | Diego (28 + 29) | `electron-builder.yml` (mac + linux targets), `.github/workflows/ci.yml` (matrix expansion or doc-only deferral), `electron-builder-updater` integration in main process via main IPC handler `app:checkForUpdates`, telemetry-hook in main + renderer (no backend), `package.json` deps (electron-updater MIT, i18next MIT), `docs/code-signing-workflow.md` (NEW — how to acquire + apply a cert; non-engineer documentation) |
-| Julian (29) | `docs/code-review.md` final section — security review of Phases 5/6/7 deltas, especially auto-update (signature verification of update bundles) and telemetry (no PII leakage) |
-| Nathan (30) | docs updates, screenshots if operator-skill smoke runs cleanly, `docs/phase-7-release-notes.md` |
+| Julian (29)     | `docs/code-review.md` final section — security review of Phases 5/6/7 deltas, especially auto-update (signature verification of update bundles) and telemetry (no PII leakage)                                                                                                                                                                                                                                                  |
+| Nathan (30)     | docs updates, screenshots if operator-skill smoke runs cleanly, `docs/phase-7-release-notes.md`                                                                                                                                                                                                                                                                                                                                 |
 
 ## Risk register
 

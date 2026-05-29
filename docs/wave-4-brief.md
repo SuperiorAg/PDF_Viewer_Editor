@@ -46,6 +46,7 @@ If any of those fail, Marcus drafts a Wave 3.6 and does NOT dispatch Nathan.
 ### 2.1 README.md (root)
 
 Sections required:
+
 - **What this is** — Phase-1 walking-skeleton PDF viewer + light editor for Windows desktop. One paragraph.
 - **Install** — link to release artifacts (the NSIS installer and the portable .exe) once Diego provides them; for now, link to the `release/` directory contents and explain.
 - **Quick start** — five-step "open a PDF and save it" walkthrough using screenshots from Marcus's operator-skill smoke run (or placeholder text until screenshots land).
@@ -61,6 +62,7 @@ Keep under 150 lines. The README is the front door; not the dump-everything page
 Reference for developers extending the IPC surface. Source: `docs/api-contracts.md` is the spec, this doc is the **friendlier reference** — channel-by-channel, with example renderer + main usage, and error-variant decision tree.
 
 Cover all 23 channels (David's Wave-2 count) + the 4 `window:*` channels documented in `api-contracts.md` §10. For each:
+
 - Channel name + ICN
 - Request shape (link to TS type)
 - Response shape
@@ -74,6 +76,7 @@ This doc has overlap with `api-contracts.md` by design — `api-contracts.md` is
 ### 2.3 docs/developer-guide.md
 
 The hands-on operating manual. Sections:
+
 - **Prerequisites** — Node 20 LTS (NOT 24 — the `better-sqlite3` ABI workaround Diego documented in `build-report.md`), Windows for full builds, Linux/macOS okay for partial. Reference Diego's Issue D-1 verbatim.
 - **First-time setup** — `npm install` flags (`--ignore-scripts` on Node 24 hosts), `postinstall` behaviour, what `electron-builder install-app-deps` does.
 - **Development loop** — `npm run dev`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run dist:win`.

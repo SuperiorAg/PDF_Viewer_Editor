@@ -11,6 +11,7 @@ This document is the **only** source of cross-cutting code conventions. Repo-lev
 ## 0. Inheritance
 
 These conventions apply on top of:
+
 - `d:\Projects\PDF_Viewer_Editor\CLAUDE.md` — project-level commit format, modularization rule, security floor, no-AGPL policy. **Read first.**
 - `d:\Projects\CLAUDE.md` — swarm rules (file ownership, wave order).
 
@@ -31,7 +32,7 @@ In any conflict, this file is the resolver for **code style**; CLAUDE.md is the 
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "strict": true,                           // implies all the below
+    "strict": true, // implies all the below
     "noImplicitAny": true,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
@@ -39,7 +40,7 @@ In any conflict, this file is the resolver for **code style**; CLAUDE.md is the 
     "strictPropertyInitialization": true,
     "noImplicitThis": true,
     "alwaysStrict": true,
-    "noUncheckedIndexedAccess": true,         // mandatory; catches `array[i]` undefined bugs
+    "noUncheckedIndexedAccess": true, // mandatory; catches `array[i]` undefined bugs
     "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
@@ -53,13 +54,13 @@ In any conflict, this file is the resolver for **code style**; CLAUDE.md is the 
     "useDefineForClassFields": true,
     "verbatimModuleSyntax": true,
     "paths": {
-      "@main/*":     ["src/main/*"],
-      "@preload/*":  ["src/preload/*"],
-      "@client/*":   ["src/client/*"],
-      "@ipc/*":      ["src/ipc/*"],
-      "@db/*":       ["src/db/*"]
-    }
-  }
+      "@main/*": ["src/main/*"],
+      "@preload/*": ["src/preload/*"],
+      "@client/*": ["src/client/*"],
+      "@ipc/*": ["src/ipc/*"],
+      "@db/*": ["src/db/*"],
+    },
+  },
 }
 ```
 
@@ -90,13 +91,20 @@ Same rule as `any`. Acceptable casts: `as const` (no risk), `as Type` after a ru
 ```ts
 function applyOp(state: DocumentModel, op: EditOperation): DocumentModel {
   switch (op.kind) {
-    case 'reorder':      return applyReorder(state, op);
-    case 'insert':       return applyInsert(state, op);
-    case 'delete':       return applyDelete(state, op);
-    case 'rotate':       return applyRotate(state, op);
-    case 'annot-add':    return applyAnnotAdd(state, op);
-    case 'annot-edit':   return applyAnnotEdit(state, op);
-    case 'annot-delete': return applyAnnotDelete(state, op);
+    case 'reorder':
+      return applyReorder(state, op);
+    case 'insert':
+      return applyInsert(state, op);
+    case 'delete':
+      return applyDelete(state, op);
+    case 'rotate':
+      return applyRotate(state, op);
+    case 'annot-add':
+      return applyAnnotAdd(state, op);
+    case 'annot-edit':
+      return applyAnnotEdit(state, op);
+    case 'annot-delete':
+      return applyAnnotDelete(state, op);
     default: {
       const _exhaustive: never = op;
       throw new Error(`Unhandled op: ${JSON.stringify(_exhaustive)}`);
@@ -122,7 +130,7 @@ Compile-time check via the `never` assertion ensures new variants don't silently
     "ecmaVersion": 2022,
     "sourceType": "module",
     "project": ["./tsconfig.main.json", "./tsconfig.renderer.json"],
-    "ecmaFeatures": { "jsx": true }
+    "ecmaFeatures": { "jsx": true },
   },
   "plugins": ["@typescript-eslint", "react", "react-hooks", "import"],
   "extends": [
@@ -133,7 +141,7 @@ Compile-time check via the `never` assertion ensures new variants don't silently
     "plugin:react/jsx-runtime",
     "plugin:react-hooks/recommended",
     "plugin:import/typescript",
-    "prettier"
+    "prettier",
   ],
   "rules": {
     "@typescript-eslint/no-explicit-any": "error",
@@ -144,21 +152,33 @@ Compile-time check via the `never` assertion ensures new variants don't silently
     "@typescript-eslint/no-misused-promises": "error",
     "no-eval": "error",
     "no-implied-eval": "error",
-    "no-restricted-imports": ["error", { "patterns": ["electron"] }],   // renderer must NOT import electron directly
-    "import/order": ["error", {
-      "groups": ["builtin", "external", "internal", "parent", "sibling", "index", "object", "type"],
-      "newlines-between": "always",
-      "alphabetize": { "order": "asc" }
-    }],
+    "no-restricted-imports": ["error", { "patterns": ["electron"] }], // renderer must NOT import electron directly
+    "import/order": [
+      "error",
+      {
+        "groups": [
+          "builtin",
+          "external",
+          "internal",
+          "parent",
+          "sibling",
+          "index",
+          "object",
+          "type",
+        ],
+        "newlines-between": "always",
+        "alphabetize": { "order": "asc" },
+      },
+    ],
     "react/prop-types": "off",
-    "react/react-in-jsx-scope": "off"
+    "react/react-in-jsx-scope": "off",
   },
   "overrides": [
     {
       "files": ["src/main/**", "src/preload/**", "src/db/**"],
-      "rules": { "no-restricted-imports": "off" }
-    }
-  ]
+      "rules": { "no-restricted-imports": "off" },
+    },
+  ],
 }
 ```
 
@@ -178,7 +198,7 @@ Compile-time check via the `never` assertion ensures new variants don't silently
   "bracketSpacing": true,
   "bracketSameLine": false,
   "arrowParens": "always",
-  "endOfLine": "lf"
+  "endOfLine": "lf",
 }
 ```
 
@@ -340,6 +360,7 @@ scripts/                    # Diego
 Per `CLAUDE.md`: "If a code file exceeds 200 lines of code, consider modularizing it."
 
 Applied judgment:
+
 - React component .tsx files: hard limit 200 lines (extract subcomponents or hooks)
 - Slice files: soft limit 200 lines; if exceeded, split selectors / inverses into their dedicated files (done by default in 3.3)
 - Service files (e.g. `pdf-render.ts`): soft limit 200; split by concern (worker setup vs page rendering vs viewport math) if exceeded
@@ -387,8 +408,12 @@ export type Result<T, E extends string> =
   | { ok: true; value: T }
   | { ok: false; error: E; message: string; details?: Record<string, unknown> };
 
-export const ok    = <T>(value: T): Result<T, never> => ({ ok: true, value });
-export const fail  = <E extends string>(error: E, message: string, details?: Record<string, unknown>): Result<never, E> => ({ ok: false, error, message, details });
+export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
+export const fail = <E extends string>(
+  error: E,
+  message: string,
+  details?: Record<string, unknown>,
+): Result<never, E> => ({ ok: false, error, message, details });
 ```
 
 Every IPC handler returns a `Result`. Callers MUST check `ok` before accessing `value` — TS exhaustiveness enforces.
@@ -518,8 +543,8 @@ export const selectPage = createSelector(
 ```
 
 **Why this matters.** Reselect 5 (shipped via `@reduxjs/toolkit@2.2`) memoizes
-`createSelector` results using `weakMapMemoize` by default, keyed by *argument
-identity*. The cache lives on the selector instance. As long as the selector is
+`createSelector` results using `weakMapMemoize` by default, keyed by _argument
+identity_. The cache lives on the selector instance. As long as the selector is
 declared once at module scope and called with `(state, ...args)`, every unique
 arg pair gets its own cached output, and identical arg pairs return the same
 reference — so `react-redux`'s `===` equality check stays stable and `useSelector`
@@ -602,7 +627,9 @@ import type { Middleware } from '@reduxjs/toolkit';
 
 export const historyMiddleware: Middleware = (store) => (next) => (action) => {
   const isUndoable =
-    typeof action === 'object' && action !== null && 'meta' in action &&
+    typeof action === 'object' &&
+    action !== null &&
+    'meta' in action &&
     (action as { meta?: { undoable?: boolean } }).meta?.undoable === true;
   if (isUndoable) {
     // compute inverse from prevState before next(action)
@@ -746,11 +773,7 @@ This contract is what makes the engine testable with golden-bytes fixtures (`edi
 import type { PDFDocument } from 'pdf-lib';
 import type { ReplayContext } from './replay-engine';
 
-export function applyTextReplace(
-  doc: PDFDocument,
-  ctx: ReplayContext,
-  op: TextReplaceOp,
-): void {
+export function applyTextReplace(doc: PDFDocument, ctx: ReplayContext, op: TextReplaceOp): void {
   const located = resolveObjectId(doc, op.objectId);
   if (!located) throw new ReplayError('text_span_not_found', { objectId: op.objectId });
 
@@ -764,7 +787,9 @@ export function applyTextReplace(
 
   const newWidth = run.font.widthOfTextAtSize(op.newText, run.fontSize);
   if (newWidth > run.boundingRect.width) {
-    ctx.warnings.push(`Text replace at ${op.objectId} clips: ${newWidth - run.boundingRect.width}pt overflow`);
+    ctx.warnings.push(
+      `Text replace at ${op.objectId} clips: ${newWidth - run.boundingRect.width}pt overflow`,
+    );
   }
 
   mutateContentStream(page, contentStreamIndex, run, op.newText);
@@ -777,7 +802,7 @@ export function applyTextReplace(
 ```ts
 // ❌ WRONG — engine op handler that does FS I/O
 export function applyImageInsert(doc: PDFDocument, ctx: ReplayContext, op: ImageInsertOp): void {
-  const imageBytes = await fs.readFile(op.image.sourcePath);  // ❌ FS read from inside engine
+  const imageBytes = await fs.readFile(op.image.sourcePath); // ❌ FS read from inside engine
   const embedded = await doc.embedPng(imageBytes);
   // ...
 }
@@ -820,7 +845,10 @@ For any handler that writes a file based on engine output: **temp-in-same-direct
 
 ```ts
 // src/ipc/handlers/fs-write-pdf.ts
-async function writeAtomic(destPath: string, bytes: Uint8Array): Promise<Result<void, 'fs_write_failed'>> {
+async function writeAtomic(
+  destPath: string,
+  bytes: Uint8Array,
+): Promise<Result<void, 'fs_write_failed'>> {
   const dir = path.dirname(destPath);
   const name = path.basename(destPath);
   const tempPath = path.join(dir, `.${name}.tmp-${process.pid}-${Date.now()}`);
@@ -830,7 +858,7 @@ async function writeAtomic(destPath: string, bytes: Uint8Array): Promise<Result<
     await fs.rename(tempPath, destPath);
     return ok(undefined);
   } catch (e) {
-    await fs.unlink(tempPath).catch(() => {});  // best-effort
+    await fs.unlink(tempPath).catch(() => {}); // best-effort
     return fail('fs_write_failed', (e as Error).message, { tempPath });
   }
 }
@@ -840,7 +868,7 @@ async function writeAtomic(destPath: string, bytes: Uint8Array): Promise<Result<
 
 ```ts
 // ❌ WRONG — direct write
-await fs.writeFile(destPath, bytes);  // If write fails midway, destination is corrupt.
+await fs.writeFile(destPath, bytes); // If write fails midway, destination is corrupt.
 ```
 
 The user-facing contract is "save either fully succeeds or the file is untouched." Direct write breaks that contract.
@@ -849,13 +877,13 @@ The user-facing contract is "save either fully succeeds or the file is untouched
 
 `src/main/pdf-ops/document-store.ts` is the single source of truth for "what bytes do we have for this handle." Phase-2 ADDS the bytes-retention slot to OpenDocument; preserves the Phase-1 handle-lifecycle contract.
 
-| Event | Required action |
-|---|---|
-| Open succeeds | `setBytes(handle, freshBytes)` |
-| Save succeeds | `setBytes(handle, newBytes)` — refresh source-of-truth |
-| Close | `releaseHandle(handle)` — frees bytes + metadata |
-| Export | **NO bytes update** — exported file is separate from open handle |
-| Print | **NO bytes update** — print is a one-shot output, not a save |
+| Event         | Required action                                                  |
+| ------------- | ---------------------------------------------------------------- |
+| Open succeeds | `setBytes(handle, freshBytes)`                                   |
+| Save succeeds | `setBytes(handle, newBytes)` — refresh source-of-truth           |
+| Close         | `releaseHandle(handle)` — frees bytes + metadata                 |
+| Export        | **NO bytes update** — exported file is separate from open handle |
+| Print         | **NO bytes update** — print is a one-shot output, not a save     |
 
 The lifecycle is enforced by code review; no runtime assertion in Phase 2 (single-document keeps it tractable). Phase 5 multi-document may add invariant checks.
 
@@ -889,12 +917,12 @@ Phase 3 introduces a third state-management pattern alongside the Phase 1 dirtyO
 
 ### 14.1 The three patterns side-by-side
 
-| Pattern | Phase | Storage | Saves through | Undo behavior |
-|---|---|---|---|---|
-| Document mutations (page reorder, annotations, text replace, image overlay) | 1 + 2 | `dirtyOps[]` (per-op accumulation) | `replay()` engine | Per-op undo via inverse middleware |
-| Bookmarks | 1 + 2 | SQLite (`user_bookmarks` table) | Direct IPC; engine NOT invoked | Per-op undo via custom inverse on bookmarks slice |
-| Form-fill values | 3 | `formsSlice.values` (transient) → batched into ONE `form-commit` op at commit boundary | `replay()` engine (step 3.6) | Whole-form undo via the inverse of the single `form-commit` op |
-| Form-design ops (add/remove/edit field) | 3 | `dirtyOps[]` (per-op) — same as Pattern 1 | `replay()` engine (step 3.6) | Per-op undo |
+| Pattern                                                                     | Phase | Storage                                                                                | Saves through                  | Undo behavior                                                  |
+| --------------------------------------------------------------------------- | ----- | -------------------------------------------------------------------------------------- | ------------------------------ | -------------------------------------------------------------- |
+| Document mutations (page reorder, annotations, text replace, image overlay) | 1 + 2 | `dirtyOps[]` (per-op accumulation)                                                     | `replay()` engine              | Per-op undo via inverse middleware                             |
+| Bookmarks                                                                   | 1 + 2 | SQLite (`user_bookmarks` table)                                                        | Direct IPC; engine NOT invoked | Per-op undo via custom inverse on bookmarks slice              |
+| Form-fill values                                                            | 3     | `formsSlice.values` (transient) → batched into ONE `form-commit` op at commit boundary | `replay()` engine (step 3.6)   | Whole-form undo via the inverse of the single `form-commit` op |
+| Form-design ops (add/remove/edit field)                                     | 3     | `dirtyOps[]` (per-op) — same as Pattern 1                                              | `replay()` engine (step 3.6)   | Per-op undo                                                    |
 
 The Phase 3 split — form-fill is Pattern 3 (commit-batched), form-design is Pattern 1 (per-op) — reflects the semantic difference: filling a form is one editorial act; authoring fields is many. `architecture-phase-3.md §5` documents the rationale in depth.
 
@@ -933,11 +961,12 @@ export const commitFormThunk = createAsyncThunk(
 
     dispatch(applyEdit(op));
     dispatch(formsSlice.actions.markCommitted(fieldValues));
-  }
+  },
 );
 ```
 
 **Trigger paths:**
+
 1. **Auto on Save** — `saveDocumentThunk` calls `commitFormThunk` BEFORE firing `fs:writePdf`.
 2. **Manual** — "Commit form values" button in the Forms sidebar (visible only when uncommitted differences exist).
 3. **Auto on close** — `ConfirmCloseUnsavedModal` (ui-spec §9.3) treats uncommitted values as unsaved changes, prompting Save (which commits) or Discard.
@@ -1089,7 +1118,7 @@ export async function handleCertLoad(req: unknown): Promise<SignaturesCertLoadRe
   if (!parsed.success) return fail('invalid_payload', parsed.error.message);
 
   // (2) Buffer-wrap at the EARLIEST synchronous point.
-  const pfxBuf = Buffer.from(parsed.data.pfxBytes);             // copy bytes into mutable Buffer
+  const pfxBuf = Buffer.from(parsed.data.pfxBytes); // copy bytes into mutable Buffer
   const passwordBuf = Buffer.from(parsed.data.password, 'utf-8'); // copy password into mutable Buffer
 
   // (3) Overwrite renderer-side and parsed-side references.
@@ -1139,9 +1168,9 @@ export function loadCert(
 
 ```ts
 // ❌ WRONG — any of these log a password
-log.info('certLoad', { password: parsed.data.password });            // explicit
-log.debug('certLoad', { req });                                       // includes password
-console.log(parsed.data);                                             // includes password
+log.info('certLoad', { password: parsed.data.password }); // explicit
+log.debug('certLoad', { req }); // includes password
+console.log(parsed.data); // includes password
 log.error('certLoad failed', { req: parsed.data, error: e.message }); // includes password
 log.info(`certLoad with password length ${parsed.data.password.length}`); // length is a side-channel
 ```
@@ -1178,9 +1207,9 @@ import { writeFile, unlink } from 'node:fs/promises';
 const tempPath = path.join(os.tmpdir(), `cert-${randomUUID()}.pfx`);
 await writeFile(tempPath, pfxBytes);
 try {
-  const parsed = forge.pkcs12.parse(tempPath, passwordString);  // hypothetical
+  const parsed = forge.pkcs12.parse(tempPath, passwordString); // hypothetical
 } finally {
-  await unlink(tempPath);  // unlink doesn't zero the underlying disk blocks
+  await unlink(tempPath); // unlink doesn't zero the underlying disk blocks
 }
 ```
 
@@ -1193,7 +1222,7 @@ try {
 electronStore.set('cert.lastUsed', pfxBytes);
 electronStore.set('cert.password', password);
 db.prepare('INSERT INTO certs (bytes, pwd) VALUES (?, ?)').run(pfxBytes, password);
-settings.set('lastCertPath', '/path/to/cert.pfx');  // even path leaks where the cert lives
+settings.set('lastCertPath', '/path/to/cert.pfx'); // even path leaks where the cert lives
 ```
 
 **Right form:** the audit log (`signature_audit_log`) records the FINGERPRINT (a hash) only; never the cert bytes, never the password, never the private key. Path is intentionally not recorded.
@@ -1205,13 +1234,13 @@ settings.set('lastCertPath', '/path/to/cert.pfx');  // even path leaks where the
 return ok({
   handle: certHandle,
   // ...
-  password: parsed.data.password,   // ❌ for any debugging reason
+  password: parsed.data.password, // ❌ for any debugging reason
 });
 
 // ❌ ALSO WRONG — sending the PFX bytes back
 return ok({
   handle: certHandle,
-  pfxBytes,  // ❌ "so the renderer can show a download link"
+  pfxBytes, // ❌ "so the renderer can show a download link"
 });
 ```
 
@@ -1224,7 +1253,9 @@ return ok({
 test('PAdES sign happy path', () => {
   const result = applyPades({
     bytes,
-    certEntry: { /* fake cert object */ },  // ❌ does not exercise loadCert
+    certEntry: {
+      /* fake cert object */
+    }, // ❌ does not exercise loadCert
     placement,
     tsaUrl: null,
     // ...
@@ -1291,6 +1322,7 @@ For honesty with downstream users (documented in user-guide §Signing → "About
 - We do NOT manage a trust list of CAs; we trust the OS trust store for TSA verification.
 
 What we DO promise:
+
 - No password / PFX written to any disk file we control.
 - No password / PFX echoed over IPC or logged.
 - Buffer-wrap discipline within ≤5 lines of input.
@@ -1417,7 +1449,7 @@ Per the 2026-05-27 global JSONL lesson (Nathan Wave 18) + the third-strike of th
 ```ts
 // ✓ Correct (Phase 5 pattern)
 export interface RegisterOcrOptions {
-  ocrPool: OcrWorkerPool;          // REQUIRED — no `?`, no default
+  ocrPool: OcrWorkerPool; // REQUIRED — no `?`, no default
   languagePacks: LanguagePackManager;
   jobsRepo: OcrJobsRepo;
   resultsRepo: OcrResultsRepo;
@@ -1426,7 +1458,7 @@ export interface RegisterOcrOptions {
 
 // ❌ Wrong (the anti-pattern that bit Phase 1-4.1)
 export interface RegisterOcrOptions {
-  ocrPool?: OcrWorkerPool;          // ❌ optional
+  ocrPool?: OcrWorkerPool; // ❌ optional
   // If absent, falls back to a stub that returns OcrPageResult { words: [], confidence: 0 }
   // ...
 }
@@ -1444,12 +1476,12 @@ interface OcrPageResult {
 }
 
 interface OcrJobSummary {
-  pageResults: OcrPageResult[] | null;   // NULL until job completes; consumers handle nullable
+  pageResults: OcrPageResult[] | null; // NULL until job completes; consumers handle nullable
 }
 
 // ❌ Wrong (the anti-pattern)
 interface OcrJobSummary {
-  pageResults: OcrPageResult[];           // empty array as "not yet OCR'd" sentinel — silently confused with "OCR'd zero words"
+  pageResults: OcrPageResult[]; // empty array as "not yet OCR'd" sentinel — silently confused with "OCR'd zero words"
 }
 ```
 
@@ -1473,15 +1505,19 @@ return <OcrConfidenceOverlay results={job.pageResults} />;
 interface OcrWord {
   text: string;
   confidence: number;
-  imgRect: { x0: number; y0: number; x1: number; y1: number };  // set at recognition time
-  pdfRect: PdfRect | null;                                       // set AFTER searchable-pdf-builder transforms
+  imgRect: { x0: number; y0: number; x1: number; y1: number }; // set at recognition time
+  pdfRect: PdfRect | null; // set AFTER searchable-pdf-builder transforms
 }
 ```
 
 NOT a sentinel `{ x: 0, y: 0, width: 0, height: 0 }`. The renderer's confidence overlay reads `pdfRect` and short-circuits if null:
 
 ```tsx
-{words.filter(w => w.pdfRect !== null).map(w => <ConfidenceBox rect={w.pdfRect!} text={w.text} conf={w.confidence} />)}
+{
+  words
+    .filter((w) => w.pdfRect !== null)
+    .map((w) => <ConfidenceBox rect={w.pdfRect!} text={w.text} conf={w.confidence} />);
+}
 ```
 
 ### 16.4 Confidence threshold convention
@@ -1525,7 +1561,7 @@ WHERE id IN (SELECT id FROM signature_audit_log
 
 ```ts
 // ❌ WRONG — renderer-side tesseract.js instantiation
-import { createWorker } from 'tesseract.js';   // never in src/client/
+import { createWorker } from 'tesseract.js'; // never in src/client/
 
 const worker = await createWorker('eng');
 ```
@@ -1539,7 +1575,7 @@ const worker = await createWorker('eng');
 for (const page of pages) {
   const worker = await createWorker(lang);
   const result = await worker.recognize(page);
-  await worker.terminate();    // back to zero; next page re-inits
+  await worker.terminate(); // back to zero; next page re-inits
 }
 ```
 
@@ -1551,7 +1587,7 @@ for (const page of pages) {
 // ❌ WRONG — sending rasterized bitmap data to the renderer
 return ok({
   pageResult,
-  rasterPreview: rasterBytes,   // ❌ violates bytes-stay-in-main corollary
+  rasterPreview: rasterBytes, // ❌ violates bytes-stay-in-main corollary
 });
 ```
 
@@ -1584,13 +1620,15 @@ function getOcrResult(handle: DocumentHandle): OcrJobSummary {
 ```ts
 // ❌ WRONG — optional dep with stub fallback
 export function registerOcrHandlers(opts: { ocrPool?: OcrWorkerPool }) {
-  const pool = opts.ocrPool ?? createStubPool();  // ❌ Wave 20 may forget to wire; tests still pass
+  const pool = opts.ocrPool ?? createStubPool(); // ❌ Wave 20 may forget to wire; tests still pass
   // ...
 }
 
 function createStubPool(): OcrWorkerPool {
   return {
-    acquire: async () => { throw new Error('TODO: wire real pool in Wave 20.1'); },
+    acquire: async () => {
+      throw new Error('TODO: wire real pool in Wave 20.1');
+    },
     releaseAll: async () => {},
     status: () => [],
   };
@@ -1605,7 +1643,7 @@ function createStubPool(): OcrWorkerPool {
 // ❌ WRONG — runs OCR without checking signatures
 async function handleOcrRunOnDocument(req) {
   const parsed = validate(req);
-  return runOcrEngine(parsed.data, doc);   // ❌ no signature pre-flight
+  return runOcrEngine(parsed.data, doc); // ❌ no signature pre-flight
 }
 ```
 
@@ -1689,6 +1727,7 @@ For honesty with downstream users (documented in user-guide §OCR → "About OCR
 - We do NOT preserve original signed-PDF bytes after OCR (Phase 4 invalidation discipline applies; user is shown the confirm).
 
 What we DO promise:
+
 - Per-word confidence is preserved in `ocr_results.words_json` regardless of the rendering threshold.
 - Workers are torn down on `app.before-quit`.
 - Language packs are SHA-256-verified at download.
@@ -1748,7 +1787,7 @@ Phase 6 extends conventions §10 (renderer never holds doc bytes) with TWO new c
 2. **Output `outputPath` is stripped to basename + dirHint at the IPC boundary.** The renderer-facing DTO (`ExportJobRowDto`) has NO `outputPath` field. Instead, the boundary translator produces:
    - `outputBasename: path.basename(outputPath)` — for display in the sidebar row
    - `outputDirHint: path.basename(path.dirname(outputPath))` — for the "in folder ~ Downloads" UX hint
-   The full absolute path remains in main; the renderer dispatches `dialog.showItemInFolder` via a new IPC call (or reuses the existing one from Phase 1) by passing the `jobId`, NOT the path. See §17.8 grep.
+     The full absolute path remains in main; the renderer dispatches `dialog.showItemInFolder` via a new IPC call (or reuses the existing one from Phase 1) by passing the `jobId`, NOT the path. See §17.8 grep.
 
 #### The shape of a correct export IPC handler
 
@@ -1826,11 +1865,11 @@ Per the 2026-05-27 global JSONL lesson (Nathan Wave 18) + the reaffirmation in P
 ```ts
 // ✓ Correct (Phase 6 pattern)
 export interface RegisterExportOptions {
-  layoutExtractor: LayoutExtractor;       // REQUIRED — no `?`, no default
+  layoutExtractor: LayoutExtractor; // REQUIRED — no `?`, no default
   tableDetector: TableDetector;
   imageExtractor: ImageExtractor;
   writers: {
-    docx: DocxWriter;                     // all four writers REQUIRED
+    docx: DocxWriter; // all four writers REQUIRED
     xlsx: XlsxWriter;
     pptx: PptxWriter;
     image: ImageWriter;
@@ -1841,7 +1880,7 @@ export interface RegisterExportOptions {
 
 // ❌ Wrong (the anti-pattern that bit Phase 1-4.1)
 export interface RegisterExportOptions {
-  writers?: { docx?: DocxWriter; /* ... */ };       // optional + stub fallback = silent broken-default
+  writers?: { docx?: DocxWriter /* ... */ }; // optional + stub fallback = silent broken-default
 }
 ```
 
@@ -1862,7 +1901,7 @@ The renderer's selectors pattern-match on null; sentinel-defaults are banned at 
 
 Per the code-comment-contradiction anti-pattern from Julian's Wave 21 H-21.1 finding (global JSONL 2026-05-27 entry), Phase 6 STRUCTURALLY bans the pattern at the writer layer.
 
-**Rule: NO `as any` and NO `@ts-ignore` in `src/main/export/writers/**`.**
+**Rule: NO `as any` and NO `@ts-ignore` in `src/main/export/writers/**`.\*\*
 
 Why this matters: `docx`, `exceljs`, `pptxgenjs` all have first-party TypeScript types. If a writer hits a "this option does not exist" TypeScript error, the type system is correctly refusing a non-API path — silencing it with `as any` produces the same silent-drop defect class as the Phase 5 H-21.1 `renderMode: 3 as any` bug.
 
@@ -1908,24 +1947,24 @@ Per `conventions.md §13.6` golden-bytes pattern (Phase 5 searchable-pdf-builder
 
 Per the audit-pattern convention from Phase 5 §16.8, Wave 25 Julian runs these checks. False positives are acceptable; false negatives are not.
 
-| Check | Grep | Expected |
-|---|---|---|
-| No `as any` in writers | `grep -rn 'as any' src/main/export/writers/` | ZERO matches |
-| No `@ts-ignore` in writers | `grep -rn '@ts-ignore' src/main/export/writers/` | ZERO matches |
-| Source-doc not mutated by export | `grep -rn 'doc\\.save\\|pdfLibDoc\\.save\\|PDFDocument\\.save' src/main/export/` | ZERO matches (writers compose NEW buffers, never resave source) |
-| No signature_audit_log writes from export | `grep -rn 'signatureAuditLogRepo\\|signature_audit_log' src/main/export/` | ZERO matches |
-| No edit_history writes from export | `grep -rn 'editHistoryRepo\\|edit_history' src/main/export/` | ZERO matches |
-| No outputPath in renderer DTOs | `grep -rn 'outputPath:' src/client/types/` | ZERO matches (only `outputBasename` + `outputDirHint`) |
-| Required-on-interface writer deps | `grep -A 8 'interface RegisterExportOptions' src/main/export/export-engine.ts` | all four writers REQUIRED |
-| Single-funnel — only writer modules import format libs | `grep -rn "from 'docx'" src/` | ONE file: `docx-writer.ts` |
-|   | `grep -rn "from 'pptxgenjs'" src/` | ONE file: `pptx-writer.ts` |
-| exceljs WRITE side does not contaminate Phase 3 READ side | `grep -rn "from 'exceljs'" src/` | TWO files: Phase 3 mail-merge.ts (read) + Phase 6 xlsx-writer.ts (write); no third |
-| Atomic write pattern in export-engine | `grep -rn '\\.export-temp' src/main/export/` | ONE match in export-engine.ts |
-| LayoutRect is nullable everywhere | manual scan: `grep -rn 'LayoutRect' src/main/export/` followed by typecheck | every consumer pattern-matches on null |
-| Per-format limitations panel mounted in modal | `grep -rn 'PerFormatLimitationsPanel' src/client/components/modals/export-modal/` | NON-ZERO matches |
-| Trust-floor obligations surface in conventions §17.3 | `grep -n 'trust.floor\\|honesty' docs/conventions.md` | NON-ZERO matches |
-| Settings keys default-seeded via INSERT OR IGNORE | `grep -A 2 'INSERT OR IGNORE INTO settings' migrations/0006_phase6_export.sql` | 17 setting keys |
-| zod validates qualityTier as enum (no optional) | `grep -B 2 -A 2 'qualityTier:' src/ipc/handlers/export-to-*.ts` | every handler uses `z.enum([...])` without `.optional()` |
+| Check                                                     | Grep                                                                              | Expected                                                                           |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------- | --------------------------------------------------------------- |
+| No `as any` in writers                                    | `grep -rn 'as any' src/main/export/writers/`                                      | ZERO matches                                                                       |
+| No `@ts-ignore` in writers                                | `grep -rn '@ts-ignore' src/main/export/writers/`                                  | ZERO matches                                                                       |
+| Source-doc not mutated by export                          | `grep -rn 'doc\\.save\\                                                           | pdfLibDoc\\.save\\                                                                 | PDFDocument\\.save' src/main/export/` | ZERO matches (writers compose NEW buffers, never resave source) |
+| No signature_audit_log writes from export                 | `grep -rn 'signatureAuditLogRepo\\                                                | signature_audit_log' src/main/export/`                                             | ZERO matches                          |
+| No edit_history writes from export                        | `grep -rn 'editHistoryRepo\\                                                      | edit_history' src/main/export/`                                                    | ZERO matches                          |
+| No outputPath in renderer DTOs                            | `grep -rn 'outputPath:' src/client/types/`                                        | ZERO matches (only `outputBasename` + `outputDirHint`)                             |
+| Required-on-interface writer deps                         | `grep -A 8 'interface RegisterExportOptions' src/main/export/export-engine.ts`    | all four writers REQUIRED                                                          |
+| Single-funnel — only writer modules import format libs    | `grep -rn "from 'docx'" src/`                                                     | ONE file: `docx-writer.ts`                                                         |
+|                                                           | `grep -rn "from 'pptxgenjs'" src/`                                                | ONE file: `pptx-writer.ts`                                                         |
+| exceljs WRITE side does not contaminate Phase 3 READ side | `grep -rn "from 'exceljs'" src/`                                                  | TWO files: Phase 3 mail-merge.ts (read) + Phase 6 xlsx-writer.ts (write); no third |
+| Atomic write pattern in export-engine                     | `grep -rn '\\.export-temp' src/main/export/`                                      | ONE match in export-engine.ts                                                      |
+| LayoutRect is nullable everywhere                         | manual scan: `grep -rn 'LayoutRect' src/main/export/` followed by typecheck       | every consumer pattern-matches on null                                             |
+| Per-format limitations panel mounted in modal             | `grep -rn 'PerFormatLimitationsPanel' src/client/components/modals/export-modal/` | NON-ZERO matches                                                                   |
+| Trust-floor obligations surface in conventions §17.3      | `grep -n 'trust.floor\\                                                           | honesty' docs/conventions.md`                                                      | NON-ZERO matches                      |
+| Settings keys default-seeded via INSERT OR IGNORE         | `grep -A 2 'INSERT OR IGNORE INTO settings' migrations/0006_phase6_export.sql`    | 17 setting keys                                                                    |
+| zod validates qualityTier as enum (no optional)           | `grep -B 2 -A 2 'qualityTier:' src/ipc/handlers/export-to-*.ts`                   | every handler uses `z.enum([...])` without `.optional()`                           |
 
 ### 17.9 Anti-patterns enumerated
 
@@ -1951,6 +1990,7 @@ For symmetry with Phase 5's §16.9:
 - We do NOT preserve PDF metadata (author/subject/keywords) in the exported file — Phase 6.2 candidate.
 
 What we DO promise:
+
 - Export reads from source without mutation.
 - Output writes atomically (.export-temp + rename); cancel cleans up partial output.
 - All four output formats are valid per their respective OOXML / image-format specs.
@@ -2028,8 +2068,12 @@ Every renderer change in Wave 28+ MUST satisfy:
 ```tsx
 // ❌ WRONG — the Phase-1 workaround that dropped tab semantics to silence jsx-a11y/aria-proptypes
 <div className="tabs">
-  <div className={active === 'pages' ? 'tab active' : 'tab'} onClick={() => set('pages')}>Pages</div>
-  <div className={active === 'marks' ? 'tab active' : 'tab'} onClick={() => set('marks')}>Bookmarks</div>
+  <div className={active === 'pages' ? 'tab active' : 'tab'} onClick={() => set('pages')}>
+    Pages
+  </div>
+  <div className={active === 'marks' ? 'tab active' : 'tab'} onClick={() => set('marks')}>
+    Bookmarks
+  </div>
 </div>
 ```
 
@@ -2037,9 +2081,15 @@ Every renderer change in Wave 28+ MUST satisfy:
 // ✓ RIGHT — the proper ARIA tab pattern (a11y-audit §4)
 <div role="tablist" aria-label={t('sidebar.panelsLabel')} aria-orientation="vertical">
   {tabs.map((tab) => (
-    <button role="tab" key={tab.id} id={`tab-${tab.id}`}
-      aria-selected={tab.id === active} aria-controls={`panel-${tab.id}`}
-      tabIndex={tab.id === active ? 0 : -1} onKeyDown={onTabKeyDown}>
+    <button
+      role="tab"
+      key={tab.id}
+      id={`tab-${tab.id}`}
+      aria-selected={tab.id === active}
+      aria-controls={`panel-${tab.id}`}
+      tabIndex={tab.id === active ? 0 : -1}
+      onKeyDown={onTabKeyDown}
+    >
       {t(tab.labelKey)}
     </button>
   ))}
@@ -2060,11 +2110,11 @@ Every renderer change in Wave 28+ MUST satisfy:
 
 ```tsx
 // ❌ WRONG — hardcoded string + cast to escape key typing
-<button aria-label="Open">{'Open' as any}</button>
+<button aria-label="Open">{'Open' as any}</button>;
 toast.error('Failed to read file');
 
 // ✓ RIGHT
-<button aria-label={t('toolbar.open')}>{t('toolbar.open')}</button>
+<button aria-label={t('toolbar.open')}>{t('toolbar.open')}</button>;
 toast.error(t('errors.fs_read_failed'));
 ```
 
@@ -2082,21 +2132,22 @@ toast.error(t('errors.fs_read_failed'));
 
 ```ts
 // ❌ WRONG — PII in a telemetry event
-telemetry.record({ name: 'doc.open', filePath: doc.path });        // file path = PII
+telemetry.record({ name: 'doc.open', filePath: doc.path }); // file path = PII
 telemetry.record({ name: 'feature.export.docx', docTitle: title }); // doc content
-log.info('telemetry', { event });                                   // logging the payload
+log.info('telemetry', { event }); // logging the payload
 
 // ❌ WRONG — third-party SDK that defaults ON / phones home
-import * as Sentry from '@sentry/electron'; Sentry.init({ dsn });
+import * as Sentry from '@sentry/electron';
+Sentry.init({ dsn });
 
 // ❌ WRONG — optional transport with a stub fallback
 function useTelemetry(transport?: TelemetryTransport) {
-  const t = transport ?? noopThatSilentlyDoesNothing;  // stub-shipped-with-TODO defect class
+  const t = transport ?? noopThatSilentlyDoesNothing; // stub-shipped-with-TODO defect class
 }
 
 // ✓ RIGHT
-const record = useTelemetry();              // transport injected, REQUIRED, opt-in gated inside
-record('feature.export.docx');              // name only; hook adds count + dayBucket
+const record = useTelemetry(); // transport injected, REQUIRED, opt-in gated inside
+record('feature.export.docx'); // name only; hook adds count + dayBucket
 ```
 
 ### 18.6 Cross-platform config discipline (Diego Wave 28)

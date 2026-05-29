@@ -24,15 +24,15 @@ Each section below describes the architectural deltas. Phase-1 + Phase-2 chapter
 
 ## 1. Locked decisions encoded (Wave 11 self-check)
 
-| ID | Decision | Encoded where in this doc |
-|---|---|---|
-| **P3-L-1** | Permissive OSS only (no iText AGPL, no commercial SDKs) | §3.1 (library inventory delta), §6 (mail-merge dependencies) |
-| **P3-L-2** | No JavaScript form actions in Phase 3 (security + scope) | §4 (form-state model), §11 (Phase 3.1 deferral) |
-| **P3-L-3** | Forms persist as standard ISO 32000 AcroForms — no sidecar | §4.5 (round-trip), §10 (fidelity boundary) |
-| **P3-L-4** | Schema v3 for `form_templates` table | §7 (schema delta), `data-models.md §8` |
-| **P3-L-5** | CSV via `csv-parse` (MIT); Excel via `exceljs` (MIT) reused from Phase 6 plan | §3.1, §6.1 |
-| **P3-L-6** | Mail-merge output: folder of N PDFs OR single concatenated PDF (user picks) | §6.3 (wizard step 4), `form-engine.md §6.4` |
-| **P3-L-7** | Form-fill ops integrate into `EditOperation` discriminated union (Riley's call) — HYBRID model with explicit commit boundary | §5 (the headline architectural decision) |
+| ID         | Decision                                                                                                                     | Encoded where in this doc                                    |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| **P3-L-1** | Permissive OSS only (no iText AGPL, no commercial SDKs)                                                                      | §3.1 (library inventory delta), §6 (mail-merge dependencies) |
+| **P3-L-2** | No JavaScript form actions in Phase 3 (security + scope)                                                                     | §4 (form-state model), §11 (Phase 3.1 deferral)              |
+| **P3-L-3** | Forms persist as standard ISO 32000 AcroForms — no sidecar                                                                   | §4.5 (round-trip), §10 (fidelity boundary)                   |
+| **P3-L-4** | Schema v3 for `form_templates` table                                                                                         | §7 (schema delta), `data-models.md §8`                       |
+| **P3-L-5** | CSV via `csv-parse` (MIT); Excel via `exceljs` (MIT) reused from Phase 6 plan                                                | §3.1, §6.1                                                   |
+| **P3-L-6** | Mail-merge output: folder of N PDFs OR single concatenated PDF (user picks)                                                  | §6.3 (wizard step 4), `form-engine.md §6.4`                  |
+| **P3-L-7** | Form-fill ops integrate into `EditOperation` discriminated union (Riley's call) — HYBRID model with explicit commit boundary | §5 (the headline architectural decision)                     |
 
 ---
 
@@ -103,22 +103,22 @@ Conventions §10 still holds: **renderer never holds `Uint8Array` of document by
 
 9 new channels (full spec in `api-contracts.md` §13):
 
-| Channel | Purpose | Stream events? |
-|---|---|---|
-| `forms:detect` | Detect AcroForm fields in the open document; return `FormFieldDefinition[]` | no |
-| `forms:fill` | Apply a single per-field fill value; returns an EditOperation per §5 | no |
-| `forms:flatten` | Flatten all form fields to static page content; standalone op (also bundled into export) | no |
-| `forms:designAdd` | Author a new form field at a page+rect with a type | no |
-| `forms:designRemove` | Remove a field (authored OR detected) from the document | no |
-| `forms:listTemplates` | List saved form templates (db query) | no |
-| `forms:saveTemplate` | Save the current field set as a reusable template | no |
-| `forms:loadTemplate` | Load a template; apply the fields to the current document | no |
-| `forms:runMailMerge` | Execute a mail-merge job; stream `mail-merge:progress` events | **yes** (event stream) |
+| Channel               | Purpose                                                                                  | Stream events?         |
+| --------------------- | ---------------------------------------------------------------------------------------- | ---------------------- |
+| `forms:detect`        | Detect AcroForm fields in the open document; return `FormFieldDefinition[]`              | no                     |
+| `forms:fill`          | Apply a single per-field fill value; returns an EditOperation per §5                     | no                     |
+| `forms:flatten`       | Flatten all form fields to static page content; standalone op (also bundled into export) | no                     |
+| `forms:designAdd`     | Author a new form field at a page+rect with a type                                       | no                     |
+| `forms:designRemove`  | Remove a field (authored OR detected) from the document                                  | no                     |
+| `forms:listTemplates` | List saved form templates (db query)                                                     | no                     |
+| `forms:saveTemplate`  | Save the current field set as a reusable template                                        | no                     |
+| `forms:loadTemplate`  | Load a template; apply the fields to the current document                                | no                     |
+| `forms:runMailMerge`  | Execute a mail-merge job; stream `mail-merge:progress` events                            | **yes** (event stream) |
 
 Plus one event stream:
 
-| Event | Purpose |
-|---|---|
+| Event                 | Purpose                                                                                                  |
+| --------------------- | -------------------------------------------------------------------------------------------------------- |
 | `mail-merge:progress` | Streams `{ jobId, phase, percent, currentRow, totalRows }` from main to renderer during a mail-merge run |
 
 The Phase-1 + Phase-2 surface (§1-§12 of `api-contracts.md`) remains frozen. No existing channel's contract changes.
@@ -129,14 +129,15 @@ The Phase-1 + Phase-2 surface (§1-§12 of `api-contracts.md`) remains frozen. N
 
 ### 3.1 New runtime dependencies
 
-| Library | Version | License | Process | Purpose |
-|---|---|---|---|---|
-| `csv-parse` | 5.x | MIT | Main | Stream-based CSV parser; supports header detection, custom delimiters, quoted fields, BOM handling |
-| `exceljs` | 4.x | MIT | Main | XLSX + XLS read; sheet iteration. **Reused from Phase 6 plan**, pulled forward to Phase 3. |
+| Library     | Version | License | Process | Purpose                                                                                            |
+| ----------- | ------- | ------- | ------- | -------------------------------------------------------------------------------------------------- |
+| `csv-parse` | 5.x     | MIT     | Main    | Stream-based CSV parser; supports header detection, custom delimiters, quoted fields, BOM handling |
+| `exceljs`   | 4.x     | MIT     | Main    | XLSX + XLS read; sheet iteration. **Reused from Phase 6 plan**, pulled forward to Phase 3.         |
 
 No new renderer-side libraries. The form designer uses existing React + dnd-kit + the Phase-1 coord system.
 
 **Explicitly NOT added (locked decision P3-L-1):**
+
 - iText / iText 7 (AGPL or commercial dual-license — license-policy fail)
 - PDFTron / Apryse forms SDK (commercial)
 - pdf-lib-form-builder (no such package on npm at Phase 3 dispatch; the name appeared in Phase 3 plan §risk-register as a fallback; verified not-published 2026-05-22)
@@ -144,19 +145,19 @@ No new renderer-side libraries. The form designer uses existing React + dnd-kit 
 
 ### 3.2 Existing libraries — extended use
 
-| Library | New Phase 3 use |
-|---|---|
-| `pdf-lib` | Form-field CREATE via `form.createTextField()` / `createCheckBox()` / `createDropdown()` / `createOptionList()` / `createRadioGroup()` / `createButton()`. Form FILL via `field.setText()` / `checkBox.check()` / `dropdown.select()` / `radioGroup.select()`. Form FLATTEN via `form.flatten()`. See §4.2 for the CREATE-boundary verdict. |
-| `better-sqlite3` | Schema v3 migration `0003_phase3_forms.sql` adds `form_templates` table. See §7. |
-| `zod` | New schemas for the 9 IPC channels in §2.5 |
+| Library          | New Phase 3 use                                                                                                                                                                                                                                                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pdf-lib`        | Form-field CREATE via `form.createTextField()` / `createCheckBox()` / `createDropdown()` / `createOptionList()` / `createRadioGroup()` / `createButton()`. Form FILL via `field.setText()` / `checkBox.check()` / `dropdown.select()` / `radioGroup.select()`. Form FLATTEN via `form.flatten()`. See §4.2 for the CREATE-boundary verdict. |
+| `better-sqlite3` | Schema v3 migration `0003_phase3_forms.sql` adds `form_templates` table. See §7.                                                                                                                                                                                                                                                            |
+| `zod`            | New schemas for the 9 IPC channels in §2.5                                                                                                                                                                                                                                                                                                  |
 
 ### 3.3 Phase-4+ libraries (NOT added in Phase 3)
 
-| Library | Phase | Purpose |
-|---|---|---|
-| `node-forge` | 4 | Signature dictionary creation (PKCS#7); only the placeholder field is authored in Phase 3, see §8 |
-| `tesseract.js` | 5 | OCR |
-| `docx` / `pptxgenjs` | 6 | Office export |
+| Library              | Phase | Purpose                                                                                           |
+| -------------------- | ----- | ------------------------------------------------------------------------------------------------- |
+| `node-forge`         | 4     | Signature dictionary creation (PKCS#7); only the placeholder field is authored in Phase 3, see §8 |
+| `tesseract.js`       | 5     | OCR                                                                                               |
+| `docx` / `pptxgenjs` | 6     | Office export                                                                                     |
 
 ---
 
@@ -171,10 +172,10 @@ No new renderer-side libraries. The form designer uses existing React + dnd-kit 
 type FormFieldType =
   | 'text'
   | 'checkbox'
-  | 'radio'      // a radio GROUP; individual radio buttons live in the options array
-  | 'dropdown'   // single-select combo
-  | 'signature'  // placeholder only; signing is Phase 4
-  | 'date';      // text field with date-format hint + locale-aware renderer
+  | 'radio' // a radio GROUP; individual radio buttons live in the options array
+  | 'dropdown' // single-select combo
+  | 'signature' // placeholder only; signing is Phase 4
+  | 'date'; // text field with date-format hint + locale-aware renderer
 
 interface FormFieldDefinition {
   /** Unique within document. AcroForm field name (period-separated for nested fields). */
@@ -217,19 +218,19 @@ type FormFieldValue =
 
 Researched 2026-05-22 against pdf-lib 1.17.x.
 
-| Capability | pdf-lib native support | Phase 3 path |
-|---|---|---|
-| **READ** existing AcroForm fields | YES — `doc.getForm()` → `PDFForm`; `form.getFields()` enumerates `PDFTextField` / `PDFCheckBox` / `PDFDropdown` / `PDFRadioGroup` / `PDFOptionList` / `PDFButton`. Iterates via accept-visitor pattern. | Use `form.getFields()` directly. See `form-engine.md §4.1`. |
-| **FILL** values into existing fields | YES — `textField.setText(value)`, `checkBox.check() / .uncheck()`, `dropdown.select(option)`, `radioGroup.select(option)`. Appearance streams are regenerated by `updateFieldAppearances(font)` on save unless suppressed. | Use the high-level fill helpers. See `form-engine.md §4.2`. |
-| **FLATTEN** form fields to static page content | YES — `form.flatten()`. Removes widget annotations + AcroForm dictionary; bakes appearance into page content streams. **Irreversible** within the same `PDFDocument` instance (caller works on a fresh load to retain originals). | Use `form.flatten()` directly. See `form-engine.md §5`. |
-| **CREATE** text field | YES — `form.createTextField(name)` returns `PDFTextField`. Then `textField.addToPage(page, { x, y, width, height, font?, fontSize?, borderColor?, backgroundColor? })`. Appearance stream is auto-generated. | Use `createTextField` + `addToPage`. See `form-engine.md §3.4`. |
-| **CREATE** checkbox | YES — `form.createCheckBox(name).addToPage(page, {...})`. Default state can be set via `checkBox.check()` before `addToPage`. | Use `createCheckBox`. |
-| **CREATE** radio group | YES — `form.createRadioGroup(name)` then `.addOptionToPage(label, page, {...})` for each radio button. The group manages mutual exclusion. | Use `createRadioGroup`. |
-| **CREATE** dropdown (combo box) | YES — `form.createDropdown(name)` then `dropdown.addOptions([...])` then `.addToPage(page, {...})`. | Use `createDropdown`. |
-| **CREATE** list box | YES — `form.createOptionList(name)`. Phase 3 does NOT expose this as a distinct type (dropdown covers the common case); flagged for Phase 3.1 if demand surfaces. | N/A Phase 3 |
-| **CREATE** push-button | YES — `form.createButton(name)`. Used in PDFs for JavaScript-action triggers. **Phase 3 does NOT expose** (locked decision P3-L-2 forbids JS actions). | N/A Phase 3 |
-| **CREATE** signature field | **NO** native helper. pdf-lib has no `createSignatureField`. The PDF spec calls this a `/Sig` field type, which has a unique field-flag + appearance-stream contract. | **Manual-PDFDict authorship.** See `form-engine.md §3.6` for the dict template + Phase-3 placeholder approach. |
-| **CREATE** date field | **NO** distinct date helper — PDF treats dates as text fields with formatting hints stored in JS action callbacks. Phase 3 forbids JS actions (P3-L-2). | **Hybrid:** create a text field via `createTextField`, set a date-format hint in `/TU` (tooltip), and render the date picker UI in the renderer. Stored value is ISO-8601 in `/V`. The PDF will display the string verbatim if opened in Acrobat (Acrobat shows a text input, not a date picker; this is the honest fidelity trade-off — see §10 fidelity matrix). |
+| Capability                                     | pdf-lib native support                                                                                                                                                                                                            | Phase 3 path                                                                                                                                                                                                                                                                                                                                                       |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **READ** existing AcroForm fields              | YES — `doc.getForm()` → `PDFForm`; `form.getFields()` enumerates `PDFTextField` / `PDFCheckBox` / `PDFDropdown` / `PDFRadioGroup` / `PDFOptionList` / `PDFButton`. Iterates via accept-visitor pattern.                           | Use `form.getFields()` directly. See `form-engine.md §4.1`.                                                                                                                                                                                                                                                                                                        |
+| **FILL** values into existing fields           | YES — `textField.setText(value)`, `checkBox.check() / .uncheck()`, `dropdown.select(option)`, `radioGroup.select(option)`. Appearance streams are regenerated by `updateFieldAppearances(font)` on save unless suppressed.        | Use the high-level fill helpers. See `form-engine.md §4.2`.                                                                                                                                                                                                                                                                                                        |
+| **FLATTEN** form fields to static page content | YES — `form.flatten()`. Removes widget annotations + AcroForm dictionary; bakes appearance into page content streams. **Irreversible** within the same `PDFDocument` instance (caller works on a fresh load to retain originals). | Use `form.flatten()` directly. See `form-engine.md §5`.                                                                                                                                                                                                                                                                                                            |
+| **CREATE** text field                          | YES — `form.createTextField(name)` returns `PDFTextField`. Then `textField.addToPage(page, { x, y, width, height, font?, fontSize?, borderColor?, backgroundColor? })`. Appearance stream is auto-generated.                      | Use `createTextField` + `addToPage`. See `form-engine.md §3.4`.                                                                                                                                                                                                                                                                                                    |
+| **CREATE** checkbox                            | YES — `form.createCheckBox(name).addToPage(page, {...})`. Default state can be set via `checkBox.check()` before `addToPage`.                                                                                                     | Use `createCheckBox`.                                                                                                                                                                                                                                                                                                                                              |
+| **CREATE** radio group                         | YES — `form.createRadioGroup(name)` then `.addOptionToPage(label, page, {...})` for each radio button. The group manages mutual exclusion.                                                                                        | Use `createRadioGroup`.                                                                                                                                                                                                                                                                                                                                            |
+| **CREATE** dropdown (combo box)                | YES — `form.createDropdown(name)` then `dropdown.addOptions([...])` then `.addToPage(page, {...})`.                                                                                                                               | Use `createDropdown`.                                                                                                                                                                                                                                                                                                                                              |
+| **CREATE** list box                            | YES — `form.createOptionList(name)`. Phase 3 does NOT expose this as a distinct type (dropdown covers the common case); flagged for Phase 3.1 if demand surfaces.                                                                 | N/A Phase 3                                                                                                                                                                                                                                                                                                                                                        |
+| **CREATE** push-button                         | YES — `form.createButton(name)`. Used in PDFs for JavaScript-action triggers. **Phase 3 does NOT expose** (locked decision P3-L-2 forbids JS actions).                                                                            | N/A Phase 3                                                                                                                                                                                                                                                                                                                                                        |
+| **CREATE** signature field                     | **NO** native helper. pdf-lib has no `createSignatureField`. The PDF spec calls this a `/Sig` field type, which has a unique field-flag + appearance-stream contract.                                                             | **Manual-PDFDict authorship.** See `form-engine.md §3.6` for the dict template + Phase-3 placeholder approach.                                                                                                                                                                                                                                                     |
+| **CREATE** date field                          | **NO** distinct date helper — PDF treats dates as text fields with formatting hints stored in JS action callbacks. Phase 3 forbids JS actions (P3-L-2).                                                                           | **Hybrid:** create a text field via `createTextField`, set a date-format hint in `/TU` (tooltip), and render the date picker UI in the renderer. Stored value is ISO-8601 in `/V`. The PDF will display the string verbatim if opened in Acrobat (Acrobat shows a text input, not a date picker; this is the honest fidelity trade-off — see §10 fidelity matrix). |
 
 **Verdict (Wave 11): `native-supported with one manual-dict gap`.**
 
@@ -261,6 +262,7 @@ interface FormsState {
 ```
 
 Selectors (`forms-selectors.ts`):
+
 - `selectFormFields` — memoized via `createSelector`
 - `selectFormFieldsByPage(pageIndex)` — keyed memoization for the per-page overlay
 - `selectFormValues`
@@ -313,11 +315,13 @@ Cons: requires an explicit "commit" boundary in the UX (auto-commit on save? on 
 **Form FILL values:** live in `formsSlice.values` as transient state. **Commit boundary** = the moment the user clicks Save (or clicks an explicit "Commit form values" button in the Forms sidebar). At commit, `commitFormThunk` reads `formsSlice.values`, computes the diff from `formsSlice.committedValues` (the last-committed snapshot), and dispatches ONE `EditOperation { kind: 'form-commit', meta, fieldValues: { [name]: value }, committedAt }` per commit. This single op carries all changed values for the batch.
 
 **Form DESIGNER ops** (authoring new fields, removing fields, moving fields): use the standard per-op EditOperation pattern, one variant per gesture:
+
 - `form-design-add { meta, fieldDefinition }`
 - `form-design-remove { meta, fieldName, before /* full FormFieldDefinition for inverse */ }`
 - `form-design-edit { meta, fieldName, before, after }` — covers rect changes (move/resize) AND property edits (label, required, options)
 
 **Rationale:**
+
 1. **Aligns with semantic boundaries.** Authoring a field is one editorial act per field; filling 20 values is ONE editorial act (filling the form). The history should respect that distinction. Treating every keystroke as an op is bottom-up; treating every form-commit as an op is top-down — top-down matches the user's mental model.
 2. **Avoids history pollution.** The Wave 8.6 architectural ceiling (~25 MB at maxHistory=100, per Riley's Wave 10 R-10.2 verification) leaves room for thousands of small ops, but the UX cost of "Ctrl+Z unwinds my form one field at a time" is independent of memory. The commit-boundary approach prevents the UX cost.
 3. **Mail-merge bypass.** Mail-merge runs do NOT go through `applyEdit` — they call `forms:runMailMerge` which invokes `mail-merge.ts` directly. Each per-row save produces its own bytes; the renderer never sees the per-row ops. This makes mail-merge perf decoupled from history-middleware overhead (see §6.2 below). Treating form-fill as a normal EditOperation would force mail-merge to bypass the dirtyOps funnel anyway, so the bypass is honest in the design.
@@ -332,23 +336,23 @@ type EditOperation =
   // ...Phase 1 + Phase 2 variants...
 
   // Phase 3:
-  | { kind: 'form-commit';
+  | {
+      kind: 'form-commit';
       meta: EditMeta;
       /** Map of field.name → new value. Only changed values appear. */
       fieldValues: Record<string, FormFieldValue>;
       /** Snapshot of prior committed values for each changed field (undo target). */
       previousValues: Record<string, FormFieldValue | undefined>;
     }
-  | { kind: 'form-design-add';
-      meta: EditMeta;
-      fieldDefinition: FormFieldDefinition;
-    }
-  | { kind: 'form-design-remove';
+  | { kind: 'form-design-add'; meta: EditMeta; fieldDefinition: FormFieldDefinition }
+  | {
+      kind: 'form-design-remove';
       meta: EditMeta;
       fieldName: string;
-      before: FormFieldDefinition;     // for inverse
+      before: FormFieldDefinition; // for inverse
     }
-  | { kind: 'form-design-edit';
+  | {
+      kind: 'form-design-edit';
       meta: EditMeta;
       fieldName: string;
       before: Partial<FormFieldDefinition>;
@@ -358,12 +362,12 @@ type EditOperation =
 
 ### 5.4 Inverse table (extends `data-models.md §7.1.3`)
 
-| Forward | Inverse |
-|---|---|
-| `form-commit { fieldValues, previousValues }` | `form-commit { fieldValues: previousValues, previousValues: fieldValues }` |
-| `form-design-add { fieldDefinition }` | `form-design-remove { fieldName: fieldDefinition.name, before: fieldDefinition }` |
-| `form-design-remove { fieldName, before }` | `form-design-add { fieldDefinition: before }` |
-| `form-design-edit { fieldName, before, after }` | `form-design-edit { fieldName, before: after, after: before }` |
+| Forward                                         | Inverse                                                                           |
+| ----------------------------------------------- | --------------------------------------------------------------------------------- |
+| `form-commit { fieldValues, previousValues }`   | `form-commit { fieldValues: previousValues, previousValues: fieldValues }`        |
+| `form-design-add { fieldDefinition }`           | `form-design-remove { fieldName: fieldDefinition.name, before: fieldDefinition }` |
+| `form-design-remove { fieldName, before }`      | `form-design-add { fieldDefinition: before }`                                     |
+| `form-design-edit { fieldName, before, after }` | `form-design-edit { fieldName, before: after, after: before }`                    |
 
 `form-commit` is symmetric — the inverse swaps `fieldValues` and `previousValues`. This is the same pattern as Phase 2's `annot-edit` (`data-models.md §3.2`).
 
@@ -401,6 +405,7 @@ The `replay()` function (`edit-replay-engine.md §3`) is extended with step 3.6 
 Order matters: design-add → design-edit → design-remove → fill. This way the user can author a field, edit it, then fill it within the same commit. The remove pass runs before fill so a removed field isn't filled (defensive).
 
 Two new `ReplayError` variants (`form-engine.md §7`):
+
 - `'form_field_create_failed'` — pdf-lib refused the create (e.g. duplicate name)
 - `'form_field_not_found'` — fill or edit targets a field that doesn't exist
 - `'form_flatten_failed'` — `form.flatten()` threw
@@ -461,10 +466,10 @@ Progress event shape (api-contracts §13.10):
 interface MailMergeProgressEvent {
   jobId: string;
   phase: 'parsing-data' | 'preparing-template' | 'rendering-row' | 'writing-row' | 'finalizing';
-  currentRow: number;       // 1-based; 0 during parsing-data / preparing-template
-  totalRows: number;        // populated after parsing-data; -1 before
-  percent: number;          // 0-100
-  warnings: string[];       // accumulator; renderer shows the most recent in the modal
+  currentRow: number; // 1-based; 0 during parsing-data / preparing-template
+  totalRows: number; // populated after parsing-data; -1 before
+  percent: number; // 0-100
+  warnings: string[]; // accumulator; renderer shows the most recent in the modal
 }
 ```
 
@@ -477,6 +482,7 @@ Renderer subscribes via `window.pdfApi.events.onMailMergeProgress(handler)` (pre
 **Mappings persist as part of `FormTemplate`** (the saved template, NOT a per-job-only). Each `FormTemplate` row carries `last_column_mappings: Record<columnName, fieldName>` so the next time the user picks that template, the mapping pre-populates from the prior run. If the data source has different columns from the prior run, only the matching columns pre-populate; the rest fall back to auto-detect.
 
 Rationale:
+
 - Auto-detect handles the 80% case where the CSV was authored by someone who knew the form's field names.
 - Persistence across runs covers the power-user case where someone runs the same merge weekly with the same column-naming conventions.
 - Per-job override covers the edge case (typo in the CSV, last-minute column rename).
@@ -494,12 +500,12 @@ The runner architecture explicitly avoids per-row re-parsing of the template. Lo
 
 Risk register table (§risk-register-#2 from phase-3-plan.md) addressed:
 
-| Concern | Mitigation |
-|---|---|
-| N=500 takes minutes | Template-parse-once + per-row sequential = O(N) not O(N²); 500 rows × ~50ms per fill = ~25s, acceptable |
-| Memory growth across rows | Folder mode: constant memory; Concat mode: peak ≈ N × row-bytes, bounded |
-| Renderer freezes | Sequential async with `await Promise.resolve()` yield between rows; progress events stream |
-| Partial-output recovery on crash | Folder mode: rows already written stay on disk; Concat mode: failed run leaves no output (atomic) |
+| Concern                          | Mitigation                                                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| N=500 takes minutes              | Template-parse-once + per-row sequential = O(N) not O(N²); 500 rows × ~50ms per fill = ~25s, acceptable |
+| Memory growth across rows        | Folder mode: constant memory; Concat mode: peak ≈ N × row-bytes, bounded                                |
+| Renderer freezes                 | Sequential async with `await Promise.resolve()` yield between rows; progress events stream              |
+| Partial-output recovery on crash | Folder mode: rows already written stay on disk; Concat mode: failed run leaves no output (atomic)       |
 
 Phase 3.1 (post-ship perf) could move the per-row work to `worker_threads` if real-world reports show pressure on multi-thousand-row jobs.
 
@@ -558,14 +564,16 @@ Considered: extend `user_bookmarks`-style per-file association (templates live k
 // src/db/repositories/form-templates-repo.ts (Ravi Wave 12)
 
 interface FormTemplatesRepo {
-  list(): FormTemplateRow[];                              // ordered by updated_at DESC
+  list(): FormTemplateRow[]; // ordered by updated_at DESC
   get(id: number): FormTemplateRow | null;
   getByName(name: string): FormTemplateRow | null;
-  upsert(row: Omit<FormTemplateRow, 'id' | 'created_at' | 'updated_at'> & {
-    id?: number;
-    created_at?: number;
-    updated_at?: number;
-  }): number;                                              // returns id
+  upsert(
+    row: Omit<FormTemplateRow, 'id' | 'created_at' | 'updated_at'> & {
+      id?: number;
+      created_at?: number;
+      updated_at?: number;
+    },
+  ): number; // returns id
   delete(id: number): boolean;
   updateColumnMappings(id: number, mappings: Record<string, string>): boolean;
 }
@@ -573,9 +581,9 @@ interface FormTemplatesRepo {
 interface FormTemplateRow {
   id: number;
   name: string;
-  fields_json: string;                                     // JSON-encoded FormFieldDefinition[]
+  fields_json: string; // JSON-encoded FormFieldDefinition[]
   source_doc_hash: string | null;
-  last_column_mappings: string | null;                     // JSON-encoded Record<string, string>
+  last_column_mappings: string | null; // JSON-encoded Record<string, string>
   created_at: number;
   updated_at: number;
 }
@@ -594,6 +602,7 @@ Phase 3 authors signature **placeholder** fields. Phase 3 does NOT sign anything
 **Phase 4 will:** fill the placeholder by computing a `/ByteRange` over the unsigned PDF bytes, embedding a PKCS#7 envelope in the `/V` entry, and writing an appearance stream representing the signature image (typeset name, drawn glyph, or imported image). The Phase-4 signing flow is opt-in per document.
 
 **Forward-compatibility:**
+
 - Phase 3 form-template export includes signature-placeholder field definitions, so a template authored in Phase 3 will continue to surface its placeholder when Phase 4 opens the same template.
 - The `FormFieldDefinition.type === 'signature'` value's `FormFieldValue` is always `{ type: 'signature', value: null }` in Phase 3 (`null` value). Phase 4 extends the value union to `{ type: 'signature', value: SignaturePayload }` where `SignaturePayload` carries the PKCS#7 envelope reference.
 - The renderer's fill overlay shows signature placeholders as visual "click to sign" buttons with the Phase 3 placeholder behavior: clicking surfaces a toast "Signing arrives in Phase 4."
@@ -627,13 +636,13 @@ The `field-dict-authoring.ts` template for `/Sig` fields lives in code at Phase 
 
 ### 9.3 Phase 4+
 
-| Phase | Feature | Extension point |
-|---|---|---|
-| 4 | Actual signing (Sig field fill) | `form-engine.ts:fillForm` extended; `sign-engine.ts` NEW; `FormFieldValue { type: 'signature' }` value-union extended |
-| 4 | Square / Circle / Line annotations | (unchanged from Phase 1 extension table) |
-| 5 | OCR overlay (form fields on scanned docs) | OCR pass produces a layer; form-engine can detect overlap |
-| 6 | Office export with forms | `docx` doesn't natively support fillable forms; the Office export will flatten forms first |
-| 7 | Localization | Form labels + button texts pulled from i18n bundle |
+| Phase | Feature                                   | Extension point                                                                                                       |
+| ----- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 4     | Actual signing (Sig field fill)           | `form-engine.ts:fillForm` extended; `sign-engine.ts` NEW; `FormFieldValue { type: 'signature' }` value-union extended |
+| 4     | Square / Circle / Line annotations        | (unchanged from Phase 1 extension table)                                                                              |
+| 5     | OCR overlay (form fields on scanned docs) | OCR pass produces a layer; form-engine can detect overlap                                                             |
+| 6     | Office export with forms                  | `docx` doesn't natively support fillable forms; the Office export will flatten forms first                            |
+| 7     | Localization                              | Form labels + button texts pulled from i18n bundle                                                                    |
 
 ---
 
@@ -643,37 +652,37 @@ Phase 3 closes some Phase 2 boundaries and introduces new ones. Documented loudl
 
 ### 10.1 Boundaries Phase 3 closes
 
-| Phase 2 limitation | Phase 3 reality | Doc update target |
-|---|---|---|
+| Phase 2 limitation                                                                         | Phase 3 reality                                                                                                                                                                                                               | Doc update target                                                                                                             |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | "Form fields: pdf-lib loses appearance streams; pages with forms route to Chromium engine" | Form fields are detected, filled, and preserved through the pdf-lib path. `updateFieldAppearances` regenerates appearance streams from the form's default font. Chromium fallback is no longer the default for AcroForm docs. | Update `architecture-phase-2.md §3.8` heuristic via Phase 3 amendment in api-contracts; update user-guide.md §"Forms" section |
-| "AcroForms detection or filling (Phase 3)" stub | LIVE | `README.md` Phase 3 status; user-guide; release notes |
-| "Form designer (Phase 3)" stub | LIVE | Same |
-| "Mail merge (Phase 3)" stub | LIVE | Same |
+| "AcroForms detection or filling (Phase 3)" stub                                            | LIVE                                                                                                                                                                                                                          | `README.md` Phase 3 status; user-guide; release notes                                                                         |
+| "Form designer (Phase 3)" stub                                                             | LIVE                                                                                                                                                                                                                          | Same                                                                                                                          |
+| "Mail merge (Phase 3)" stub                                                                | LIVE                                                                                                                                                                                                                          | Same                                                                                                                          |
 
 ### 10.2 New Phase-3 boundaries
 
-| Boundary | Description | Where to surface |
-|---|---|---|
-| JS form actions | Stripped silently on save; calculations + JS validators do not run | User-guide Forms section + form-fill overlay tooltip when opened doc has JS actions detected (warning toast) |
-| Date fields in Acrobat round-trip | Authored as text fields with ISO-8601 storage; Acrobat displays as text input, not date picker; the renderer's date-picker affordance is renderer-side only | User-guide Forms section + tooltip on date-field designer affordance |
-| Signature placeholders | Phase 3 places the placeholder; signing arrives Phase 4 | User-guide Forms section + toast on click of placeholder |
-| Excel multi-sheet | Phase 3 reads sheet 1 only; multi-sheet picker is Phase 3.1 | Wizard step 2 warning when XLSX has >1 sheet |
-| Excel formula evaluation | exceljs does NOT evaluate formulas — cell value reads the cached value (if Excel saved it) or the formula string itself. Recommend the user uses paste-as-values in Excel before merge | Wizard step 2 + user-guide Mail Merge section |
-| Calculated form fields | NOT preserved — pdf-lib strips JS actions, calculations do not run on fill | Forms sidebar tooltip when calc-field detected; user-guide |
-| Form templates that reference a deleted field | Loading the template silently skips fields whose definitions are stale (e.g. references a fontFamily that's not in the target doc) | Toast on template load: "Some template fields couldn't be applied (N skipped)" |
-| XFA forms (PDF 1.7 LiveCycle Designer) | NOT supported — Phase 3 detects AcroForm only; XFA-only documents show a banner "Some forms in this document use the XFA format which isn't supported" | Forms sidebar empty state when XFA-only |
+| Boundary                                      | Description                                                                                                                                                                            | Where to surface                                                                                             |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| JS form actions                               | Stripped silently on save; calculations + JS validators do not run                                                                                                                     | User-guide Forms section + form-fill overlay tooltip when opened doc has JS actions detected (warning toast) |
+| Date fields in Acrobat round-trip             | Authored as text fields with ISO-8601 storage; Acrobat displays as text input, not date picker; the renderer's date-picker affordance is renderer-side only                            | User-guide Forms section + tooltip on date-field designer affordance                                         |
+| Signature placeholders                        | Phase 3 places the placeholder; signing arrives Phase 4                                                                                                                                | User-guide Forms section + toast on click of placeholder                                                     |
+| Excel multi-sheet                             | Phase 3 reads sheet 1 only; multi-sheet picker is Phase 3.1                                                                                                                            | Wizard step 2 warning when XLSX has >1 sheet                                                                 |
+| Excel formula evaluation                      | exceljs does NOT evaluate formulas — cell value reads the cached value (if Excel saved it) or the formula string itself. Recommend the user uses paste-as-values in Excel before merge | Wizard step 2 + user-guide Mail Merge section                                                                |
+| Calculated form fields                        | NOT preserved — pdf-lib strips JS actions, calculations do not run on fill                                                                                                             | Forms sidebar tooltip when calc-field detected; user-guide                                                   |
+| Form templates that reference a deleted field | Loading the template silently skips fields whose definitions are stale (e.g. references a fontFamily that's not in the target doc)                                                     | Toast on template load: "Some template fields couldn't be applied (N skipped)"                               |
+| XFA forms (PDF 1.7 LiveCycle Designer)        | NOT supported — Phase 3 detects AcroForm only; XFA-only documents show a banner "Some forms in this document use the XFA format which isn't supported"                                 | Forms sidebar empty state when XFA-only                                                                      |
 
 ### 10.3 Round-trip fidelity matrix delta
 
 Extends `edit-replay-engine.md §12` Phase 2 matrix:
 
-| PDF feature in source | Phase 2 behavior | Phase 3 behavior |
-|---|---|---|
-| AcroForm fields | **No** (pdf-lib drops appearance streams + can drop field values; routed to Chromium) | **YES** — preserved through pdf-lib; values fill correctly; appearance streams regenerated cleanly |
-| AcroForm with JS actions | **No** (stripped silently) | **No** (still stripped — locked decision P3-L-2; same Chromium fallback behavior on heuristic) |
-| Signature fields with existing /V | **No** (pdf-lib drops the signature) | Partial — Phase 3 preserves placeholder fields with `/V` undefined; existing signed `/Sig` fields are still dropped on save (Phase 4 will preserve via byte-range signing) |
-| XFA forms | N/A (Phase 2 didn't surface them at all) | Detected and flagged read-only; not editable or fillable |
-| Form appearance streams (custom /AP) | Lost on save | Regenerated by `updateFieldAppearances` using the form's `/DA` default-appearance string + Helvetica embed (or original font if cached in form) |
+| PDF feature in source                | Phase 2 behavior                                                                      | Phase 3 behavior                                                                                                                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AcroForm fields                      | **No** (pdf-lib drops appearance streams + can drop field values; routed to Chromium) | **YES** — preserved through pdf-lib; values fill correctly; appearance streams regenerated cleanly                                                                         |
+| AcroForm with JS actions             | **No** (stripped silently)                                                            | **No** (still stripped — locked decision P3-L-2; same Chromium fallback behavior on heuristic)                                                                             |
+| Signature fields with existing /V    | **No** (pdf-lib drops the signature)                                                  | Partial — Phase 3 preserves placeholder fields with `/V` undefined; existing signed `/Sig` fields are still dropped on save (Phase 4 will preserve via byte-range signing) |
+| XFA forms                            | N/A (Phase 2 didn't surface them at all)                                              | Detected and flagged read-only; not editable or fillable                                                                                                                   |
+| Form appearance streams (custom /AP) | Lost on save                                                                          | Regenerated by `updateFieldAppearances` using the form's `/DA` default-appearance string + Helvetica embed (or original font if cached in form)                            |
 
 ---
 

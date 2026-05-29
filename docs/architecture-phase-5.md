@@ -31,17 +31,17 @@ Each section below describes the architectural delta. Phase 1/2/3/4 chapters tha
 
 ## 1. Locked decisions encoded (Wave 19 self-check)
 
-| ID | Decision | Encoded where in this doc | Cross-ref |
-|---|---|---|---|
-| **P5-L-1** | OCR library: **`tesseract.js` v7+ (Apache-2.0)** as the primary engine. **`node-tesseract-ocr` (MIT) is documented but NOT shipped** — it requires a system Tesseract binary which contradicts the "double-click install" goal. | §3.1 (library inventory), §4.1 (engine path) | `ocr-engine.md §2` |
-| **P5-L-2** | OCR runs in the **main process**, NOT the renderer. Tesseract.js spawns Web Worker(s) under main's Node runtime via `createWorker`. The renderer never instantiates tesseract.js. | §2.2, §4.2 (worker lifecycle), conventions §16 | `ocr-engine.md §3` |
-| **P5-L-3** | One worker per active language, persisted for the app lifetime, released on `app.before-quit`. No spawn-per-page churn. | §4.2 (worker pool) | `ocr-engine.md §3.4` |
-| **P5-L-4** | Language packs: **ship `eng.traineddata` bundled**; lazy-download additional packs from `https://tessdata.projectnaptha.com/4.0.0_fast/<lang>.traineddata` (the upstream mirror Tesseract.js itself uses) to `app.getPath('userData')/tessdata/`. NO bundle-all. NO CDN-only. | §4.3 (language pack delivery + offline story) | `ocr-engine.md §4` |
-| **P5-L-5** | OCR output format: **text-behind-image** via pdf-lib `/Contents` stream containing `BT/ET` text blocks at the recognized word coordinates, rendering mode **3 (invisible)**. Not `ActualText` + MarkedContent (more complex, no broader reader support for the search use case). | §4.4 (text-behind-image), `ocr-engine.md §5` | `ocr-engine.md §5` |
-| **P5-L-6** | Confidence default: words with `confidence < 60` are "low". Configurable via `ocr.lowConfidenceThreshold`. Default chosen to match Tesseract's own internal "good enough" threshold. | §4.5, ui-spec.md §14.4 overlay, conventions §16.4 | `ocr-engine.md §6` |
-| **P5-L-7** | Job scheduling v1: **modal-driven, blocking** (Q-C). Multi-page docs render a progress bar + cancel button inside the modal. Background-queue + tray-progress is Phase 5.2+. | §4.6 (job lifecycle) | `ocr-engine.md §7` |
-| **P5-L-8** | Native scanner integration: **DEFERRED to Phase 5.1** per Q-E library survey (§7). The menu item ships disabled with a tooltip; the contract reserves `scan:listDevices` / `scan:acquire` channel names so Phase 5.1 is additive, not breaking. | §7 (native-scanner survey + deferral), api-contracts §16.5 | n/a |
-| **P5-L-9** | Schema v5 = three new tables (`ocr_jobs`, `ocr_results`, `language_packs`). Forward-only. No Phase 4 table touched. | §5 (schema v5), data-models.md Phase-5 amendment §10 | `data-models.md §10` |
+| ID          | Decision                                                                                                                                                                                                                                                                                                                                                          | Encoded where in this doc                                        | Cross-ref                                                       |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------- |
+| **P5-L-1**  | OCR library: **`tesseract.js` v7+ (Apache-2.0)** as the primary engine. **`node-tesseract-ocr` (MIT) is documented but NOT shipped** — it requires a system Tesseract binary which contradicts the "double-click install" goal.                                                                                                                                   | §3.1 (library inventory), §4.1 (engine path)                     | `ocr-engine.md §2`                                              |
+| **P5-L-2**  | OCR runs in the **main process**, NOT the renderer. Tesseract.js spawns Web Worker(s) under main's Node runtime via `createWorker`. The renderer never instantiates tesseract.js.                                                                                                                                                                                 | §2.2, §4.2 (worker lifecycle), conventions §16                   | `ocr-engine.md §3`                                              |
+| **P5-L-3**  | One worker per active language, persisted for the app lifetime, released on `app.before-quit`. No spawn-per-page churn.                                                                                                                                                                                                                                           | §4.2 (worker pool)                                               | `ocr-engine.md §3.4`                                            |
+| **P5-L-4**  | Language packs: **ship `eng.traineddata` bundled**; lazy-download additional packs from `https://tessdata.projectnaptha.com/4.0.0_fast/<lang>.traineddata` (the upstream mirror Tesseract.js itself uses) to `app.getPath('userData')/tessdata/`. NO bundle-all. NO CDN-only.                                                                                     | §4.3 (language pack delivery + offline story)                    | `ocr-engine.md §4`                                              |
+| **P5-L-5**  | OCR output format: **text-behind-image** via pdf-lib `/Contents` stream containing `BT/ET` text blocks at the recognized word coordinates, rendering mode **3 (invisible)**. Not `ActualText` + MarkedContent (more complex, no broader reader support for the search use case).                                                                                  | §4.4 (text-behind-image), `ocr-engine.md §5`                     | `ocr-engine.md §5`                                              |
+| **P5-L-6**  | Confidence default: words with `confidence < 60` are "low". Configurable via `ocr.lowConfidenceThreshold`. Default chosen to match Tesseract's own internal "good enough" threshold.                                                                                                                                                                              | §4.5, ui-spec.md §14.4 overlay, conventions §16.4                | `ocr-engine.md §6`                                              |
+| **P5-L-7**  | Job scheduling v1: **modal-driven, blocking** (Q-C). Multi-page docs render a progress bar + cancel button inside the modal. Background-queue + tray-progress is Phase 5.2+.                                                                                                                                                                                      | §4.6 (job lifecycle)                                             | `ocr-engine.md §7`                                              |
+| **P5-L-8**  | Native scanner integration: **DEFERRED to Phase 5.1** per Q-E library survey (§7). The menu item ships disabled with a tooltip; the contract reserves `scan:listDevices` / `scan:acquire` channel names so Phase 5.1 is additive, not breaking.                                                                                                                   | §7 (native-scanner survey + deferral), api-contracts §16.5       | n/a                                                             |
+| **P5-L-9**  | Schema v5 = three new tables (`ocr_jobs`, `ocr_results`, `language_packs`). Forward-only. No Phase 4 table touched.                                                                                                                                                                                                                                               | §5 (schema v5), data-models.md Phase-5 amendment §10             | `data-models.md §10`                                            |
 | **P5-L-10** | **OCR-on-signed-PDF is REJECTED at the engine boundary.** Mirrors Phase 4.1 H-17.3 PAdES-invalidates-on-edit discipline. The OCR modal pre-flight detects existing PAdES signatures and surfaces a hard confirm; if the user proceeds, the signature widget is recorded as invalidated in `signature_audit_log.invalidated_by_ocr_job_id` (new column, additive). | §6 (Phase 4 interaction), data-models.md Phase-5 amendment §10.4 | `architecture-phase-4.md §4.6`, `code-review.md` Wave 17 H-17.3 |
 
 **Cross-check against Phase 4.1 PAdES discipline (H-17.3):** verified at `code-review.md` Wave 17 (Julian's PAdES-replay-on-edit-after-sign abort logic finding) — Phase 5's `ocr:runOnDocument` handler runs the SAME widget-detection pre-flight before mutating bytes. No Phase 4 surface changes; we extend `signature_audit_log` additively with the `invalidated_by_ocr_job_id` nullable column.
@@ -147,17 +147,17 @@ These two corollaries get their own conventions §16 entries with anti-patterns.
 
 9 new channels (full spec in `api-contracts.md §16`):
 
-| Channel | Purpose | Stream events? |
-|---|---|---|
-| `ocr:detectLanguages` | List installed + downloadable packs. Returns `{ installed: LanguagePack[]; downloadable: LanguagePackCatalogEntry[] }`. | no |
-| `ocr:runOnPage` | Run OCR on a single page of the currently-open document. Returns `OcrPageResult`. Short-running (≤30s); no progress events. | no |
-| `ocr:runOnDocument` | Run OCR on a page range. Long-running; emits `ocr:progress` event stream. Returns `{ jobId, summary: OcrJobSummary }` on completion. | yes (`ocr:progress`) |
-| `ocr:cancelJob` | Cancel an in-flight job. Idempotent. The handler tears down the per-job state but does NOT terminate the worker (workers are persistent per §4.2). | no |
-| `ocr:listJobs` | List jobs from `ocr_jobs` table (for debugging + audit). | no |
-| `ocr:languagePackDownload` | Download a pack from the upstream `tessdata_fast` mirror. Emits `ocr:languagePackDownload:progress` events. Returns `{ pack: LanguagePack }`. | yes (`ocr:languagePackDownload:progress`) |
-| `ocr:languagePackRemove` | Remove a previously-downloaded pack. Returns `{ removed: boolean }`. Refuses to remove the bundled `eng` pack. | no |
-| `scan:listDevices` | **Phase 5.1 placeholder.** Returns `Result<never, 'not_implemented_phase_5_1'>`. Contract reserved so Phase 5.1 is additive. | no |
-| `scan:acquire` | **Phase 5.1 placeholder.** Same. | no |
+| Channel                    | Purpose                                                                                                                                            | Stream events?                            |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `ocr:detectLanguages`      | List installed + downloadable packs. Returns `{ installed: LanguagePack[]; downloadable: LanguagePackCatalogEntry[] }`.                            | no                                        |
+| `ocr:runOnPage`            | Run OCR on a single page of the currently-open document. Returns `OcrPageResult`. Short-running (≤30s); no progress events.                        | no                                        |
+| `ocr:runOnDocument`        | Run OCR on a page range. Long-running; emits `ocr:progress` event stream. Returns `{ jobId, summary: OcrJobSummary }` on completion.               | yes (`ocr:progress`)                      |
+| `ocr:cancelJob`            | Cancel an in-flight job. Idempotent. The handler tears down the per-job state but does NOT terminate the worker (workers are persistent per §4.2). | no                                        |
+| `ocr:listJobs`             | List jobs from `ocr_jobs` table (for debugging + audit).                                                                                           | no                                        |
+| `ocr:languagePackDownload` | Download a pack from the upstream `tessdata_fast` mirror. Emits `ocr:languagePackDownload:progress` events. Returns `{ pack: LanguagePack }`.      | yes (`ocr:languagePackDownload:progress`) |
+| `ocr:languagePackRemove`   | Remove a previously-downloaded pack. Returns `{ removed: boolean }`. Refuses to remove the bundled `eng` pack.                                     | no                                        |
+| `scan:listDevices`         | **Phase 5.1 placeholder.** Returns `Result<never, 'not_implemented_phase_5_1'>`. Contract reserved so Phase 5.1 is additive.                       | no                                        |
+| `scan:acquire`             | **Phase 5.1 placeholder.** Same.                                                                                                                   | no                                        |
 
 Plus TWO new event streams (`ocr:progress`, `ocr:languagePackDownload:progress`) following the same `mail-merge:progress` pattern from Phase 3. The Phase 1/2/3/4 surface (`api-contracts.md §1-§15`) remains FROZEN. No existing channel's contract changes.
 
@@ -179,11 +179,11 @@ The `zod` dependency is already in the project; no new dep.
 
 ### 3.1 New runtime dependencies
 
-| Library | Version | License | Process | Purpose |
-|---|---|---|---|---|
-| `tesseract.js` | 7.x (current at Wave 19 dispatch; v7.0.0 published 2025-12-15) | Apache-2.0 | Main | Primary OCR engine. WASM + Web Worker; supports `createWorker(lang, oem, { langPath, gzip, cachePath })` in Node/Electron main since v6+. **Recommended primary** — see `ocr-engine.md §2` rationale. |
-| `tesseract.js-core` | 7.x | Apache-2.0 | Main | Transitive of `tesseract.js`; the actual WASM-bundled Tesseract C++ engine. Pinned in `package.json` so Diego's Wave 21 license walk surfaces it explicitly. |
-| `@tesseract.js-data/eng` | 4.x | Apache-2.0 (data) | Build-time / Main | English `eng.traineddata.gz` data file. Apache-2.0 license applies to the Tesseract trained data per `tessdata`'s own LICENSE. |
+| Library                  | Version                                                        | License           | Process           | Purpose                                                                                                                                                                                               |
+| ------------------------ | -------------------------------------------------------------- | ----------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tesseract.js`           | 7.x (current at Wave 19 dispatch; v7.0.0 published 2025-12-15) | Apache-2.0        | Main              | Primary OCR engine. WASM + Web Worker; supports `createWorker(lang, oem, { langPath, gzip, cachePath })` in Node/Electron main since v6+. **Recommended primary** — see `ocr-engine.md §2` rationale. |
+| `tesseract.js-core`      | 7.x                                                            | Apache-2.0        | Main              | Transitive of `tesseract.js`; the actual WASM-bundled Tesseract C++ engine. Pinned in `package.json` so Diego's Wave 21 license walk surfaces it explicitly.                                          |
+| `@tesseract.js-data/eng` | 4.x                                                            | Apache-2.0 (data) | Build-time / Main | English `eng.traineddata.gz` data file. Apache-2.0 license applies to the Tesseract trained data per `tessdata`'s own LICENSE.                                                                        |
 
 **License verification (Wave 19, against npm registry 2026-05-27):**
 
@@ -195,9 +195,9 @@ All three are PERMISSIVE. None are AGPL. None are commercial. Compliant with pro
 
 **Native binding NOT added (Q-A decision):**
 
-| Library | Version | License | Why NOT primary |
-|---|---|---|---|
-| `node-tesseract-ocr` | 2.2.1 | MIT | Requires a system-installed Tesseract binary (the user has to install Tesseract separately via Chocolatey / winget / manual). Contradicts the "double-click install" goal. MIT license is fine, but the runtime dependency is a UX-breaking install step. Documented in `ocr-engine.md §2.3` as the "perf escape hatch" — if Wave 20 perf testing shows tesseract.js is unacceptably slow (>3 min/page on a typical scan), Phase 5.1 can ship an optional toggle that calls a system Tesseract if available. Not a Phase 5 ship blocker. |
+| Library              | Version | License | Why NOT primary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| -------------------- | ------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node-tesseract-ocr` | 2.2.1   | MIT     | Requires a system-installed Tesseract binary (the user has to install Tesseract separately via Chocolatey / winget / manual). Contradicts the "double-click install" goal. MIT license is fine, but the runtime dependency is a UX-breaking install step. Documented in `ocr-engine.md §2.3` as the "perf escape hatch" — if Wave 20 perf testing shows tesseract.js is unacceptably slow (>3 min/page on a typical scan), Phase 5.1 can ship an optional toggle that calls a system Tesseract if available. Not a Phase 5 ship blocker. |
 
 **Diego's Wave 21 packaging notes (preview):**
 
@@ -216,15 +216,15 @@ All three are PERMISSIVE. None are AGPL. None are commercial. Compliant with pro
 
 ### 3.2 Existing libraries — extended use
 
-| Library | New Phase 5 use |
-|---|---|
-| `pdf-lib` | Authors the text-behind-image `/Contents` stream + invisible-rendering-mode-3 text blocks for searchable-PDF output. The page's existing visual content (scanned image as `/XObject`) is preserved verbatim; we append text-block bytes to `/Contents` and re-encode the page. See `ocr-engine.md §5.3`. |
+| Library                                             | New Phase 5 use                                                                                                                                                                                                                                                                                                    |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pdf-lib`                                           | Authors the text-behind-image `/Contents` stream + invisible-rendering-mode-3 text blocks for searchable-PDF output. The page's existing visual content (scanned image as `/XObject`) is preserved verbatim; we append text-block bytes to `/Contents` and re-encode the page. See `ocr-engine.md §5.3`.           |
 | `pdfjs-dist` (already used by renderer for display) | Rasterizes pages for OCR input when the source PDF is text-bearing but the user is forcing a re-OCR. Reuses the existing main-side pdfjs init (Phase 4.1: `loadPdfMetadata` already imports pdfjs in main). Rendering to `OffscreenCanvas` at the user-chosen DPI (default 300; configurable via `ocr.rasterDpi`). |
-| `better-sqlite3` | Schema v5 migration `0005_phase5_ocr.sql` adds three tables (`ocr_jobs`, `ocr_results`, `language_packs`). See §5 + `data-models.md §10`. |
-| `zod` | New schemas for the 9 IPC channels in §2.5. |
-| `node:worker_threads` (Node built-in) | Tesseract.js uses this under the hood; we don't `require` it directly. Documented for the audit trail. |
-| `node:fs/promises` + `node:crypto` | Language pack download + SHA-256 integrity check. No new deps. |
-| `node:https` (Node built-in) | Language pack download from the tessdata mirror. No new deps. |
+| `better-sqlite3`                                    | Schema v5 migration `0005_phase5_ocr.sql` adds three tables (`ocr_jobs`, `ocr_results`, `language_packs`). See §5 + `data-models.md §10`.                                                                                                                                                                          |
+| `zod`                                               | New schemas for the 9 IPC channels in §2.5.                                                                                                                                                                                                                                                                        |
+| `node:worker_threads` (Node built-in)               | Tesseract.js uses this under the hood; we don't `require` it directly. Documented for the audit trail.                                                                                                                                                                                                             |
+| `node:fs/promises` + `node:crypto`                  | Language pack download + SHA-256 integrity check. No new deps.                                                                                                                                                                                                                                                     |
+| `node:https` (Node built-in)                        | Language pack download from the tessdata mirror. No new deps.                                                                                                                                                                                                                                                      |
 
 ### 3.3 Bundled language pack — build-time asset copy (Diego Wave 21)
 
@@ -234,8 +234,8 @@ Diego adds an `electron-builder.yml extraResources:` entry that copies the bundl
 
 ```yaml
 extraResources:
-  - from: "node_modules/@tesseract.js-data/eng/4.0.0_fast/eng.traineddata.gz"
-    to: "tessdata/eng.traineddata.gz"
+  - from: 'node_modules/@tesseract.js-data/eng/4.0.0_fast/eng.traineddata.gz'
+    to: 'tessdata/eng.traineddata.gz'
 ```
 
 At runtime, `language-pack-manager.ts` resolves the bundled pack at `process.resourcesPath + '/tessdata/eng.traineddata.gz'` (read-only). Downloaded packs live at `app.getPath('userData') + '/tessdata/<lang>.traineddata.gz'` (writable).
@@ -246,10 +246,10 @@ At runtime, `language-pack-manager.ts` resolves the bundled pack at `process.res
 
 ### 3.4 Phase 5.1+ libraries (NOT added in Phase 5)
 
-| Library | Phase | Purpose |
-|---|---|---|
-| Native WIA Node addon | 5.1 | Scanner integration (Q-E deferred) |
-| `node-twain` (ISC) | 5.2 (deferred further) | TWAIN bridge — drivers widely deprecated per Marcus's roadmap decision |
+| Library                    | Phase                       | Purpose                                                                      |
+| -------------------------- | --------------------------- | ---------------------------------------------------------------------------- |
+| Native WIA Node addon      | 5.1                         | Scanner integration (Q-E deferred)                                           |
+| `node-twain` (ISC)         | 5.2 (deferred further)      | TWAIN bridge — drivers widely deprecated per Marcus's roadmap decision       |
 | `node-tesseract-ocr` (MIT) | 5.1 (optional escape hatch) | Perf path if tesseract.js is unacceptable; requires system Tesseract install |
 
 ---
@@ -313,9 +313,9 @@ The `runOcrOnPage` function signature is:
 
 ```ts
 export async function runOcrOnPage(
-  pool: OcrWorkerPool,      // REQUIRED — no default
-  lang: string,              // REQUIRED
-  rasterBytes: Uint8Array,   // REQUIRED
+  pool: OcrWorkerPool, // REQUIRED — no default
+  lang: string, // REQUIRED
+  rasterBytes: Uint8Array, // REQUIRED
   preprocess: PreprocessOptions, // REQUIRED — sparse partial NOT permitted
 ): Promise<OcrPageResult>;
 ```
@@ -330,11 +330,11 @@ Initializing a tesseract.js worker (load WASM + load language data + initialize)
 
 Three states for a language pack:
 
-| State | Where it lives | How it got there |
-|---|---|---|
-| **Bundled** (`eng` only) | `process.resourcesPath/tessdata/eng.traineddata.gz` | Diego's `electron-builder.yml extraResources` (§3.3) |
-| **Downloaded** | `app.getPath('userData')/tessdata/<lang>.traineddata.gz` | `ocr:languagePackDownload` handler |
-| **Missing** | n/a | UI prompts to download; OCR run blocks until downloaded |
+| State                    | Where it lives                                           | How it got there                                        |
+| ------------------------ | -------------------------------------------------------- | ------------------------------------------------------- |
+| **Bundled** (`eng` only) | `process.resourcesPath/tessdata/eng.traineddata.gz`      | Diego's `electron-builder.yml extraResources` (§3.3)    |
+| **Downloaded**           | `app.getPath('userData')/tessdata/<lang>.traineddata.gz` | `ocr:languagePackDownload` handler                      |
+| **Missing**              | n/a                                                      | UI prompts to download; OCR run blocks until downloaded |
 
 The `language-pack-manager.ts` module exposes:
 
@@ -345,7 +345,11 @@ export interface LanguagePackManager {
   /** Resolve a lang code to an absolute file path (bundled OR downloaded). null if not installed. */
   resolve(lang: string): string | null;
   /** Download a pack from the upstream mirror. Verifies SHA-256 against the catalog. */
-  download(lang: string, onProgress: (bytes: number, total: number) => void, signal: AbortSignal): Promise<LanguagePack>;
+  download(
+    lang: string,
+    onProgress: (bytes: number, total: number) => void,
+    signal: AbortSignal,
+  ): Promise<LanguagePack>;
   /** Remove a downloaded pack. Refuses to remove the bundled `eng` pack. */
   remove(lang: string): Promise<{ removed: boolean }>;
 }
@@ -361,18 +365,18 @@ src/main/pdf-ops/language-pack-catalog.json
 
 Each entry: `{ lang: string; displayName: string; sha256: string; sizeBytes: number; url: string }`. URLs all point at `https://tessdata.projectnaptha.com/4.0.0_fast/<lang>.traineddata.gz` (the same mirror tesseract.js itself uses). The catalog is updated at compile time by a Wave 20 build script that fetches the upstream index; for v1 a small (~10-language) seed catalog ships:
 
-| `lang` | Display |
-|---|---|
-| `eng` | English |
-| `spa` | Spanish |
-| `fra` | French |
-| `deu` | German |
-| `por` | Portuguese |
-| `ita` | Italian |
-| `rus` | Russian |
-| `chi_sim` | Chinese (Simplified) |
+| `lang`    | Display               |
+| --------- | --------------------- |
+| `eng`     | English               |
+| `spa`     | Spanish               |
+| `fra`     | French                |
+| `deu`     | German                |
+| `por`     | Portuguese            |
+| `ita`     | Italian               |
+| `rus`     | Russian               |
+| `chi_sim` | Chinese (Simplified)  |
 | `chi_tra` | Chinese (Traditional) |
-| `jpn` | Japanese |
+| `jpn`     | Japanese              |
 
 Adding more = a doc + catalog file edit; no engine change. Phase 5.1 can ship a UI to browse the full upstream catalog (100+ languages).
 
@@ -424,7 +428,7 @@ ET
 
 Font is `/Helvetica` (built-in PDF standard 14 — no font embedding needed). Size is computed from the word's bounding box height. Text is escaped per PDF spec (parens, backslashes). Unicode beyond Latin-1 uses `Tj` with a `<hex>` string + a `/ToUnicode` CMap if needed (the engine ships with a minimal CMap helper; full multi-script handling is Phase 5.1+).
 
-**Phase 5 scope-fence:** Latin-script languages render with the built-in `/Helvetica`. CJK + Cyrillic + Arabic render with positioned hex strings that *are searchable* but may not be visually correct if the user copy-pastes (no font embedding for those glyphs in v1). The user-guide surfaces this honestly (Nathan Wave 22). Phase 5.1 can add proper CJK font embedding if user demand.
+**Phase 5 scope-fence:** Latin-script languages render with the built-in `/Helvetica`. CJK + Cyrillic + Arabic render with positioned hex strings that _are searchable_ but may not be visually correct if the user copy-pastes (no font embedding for those glyphs in v1). The user-guide surfaces this honestly (Nathan Wave 22). Phase 5.1 can add proper CJK font embedding if user demand.
 
 ### 4.5 Confidence reporting (P5-L-6 + nullable + late-init)
 
@@ -493,15 +497,16 @@ Phase 5 adds ONE new `EditOperation` variant (full list in `data-models.md` Phas
 type EditOperation =
   // ...Phase 1-4 variants...
 
-  | { kind: 'ocr-text-behind-applied';
-      meta: EditMeta;
-      jobId: number;                       // FK to ocr_jobs.id
-      pageRange: { start: number; end: number };
-      langs: string[];                     // languages used (multi-lang via Tesseract `eng+fra` syntax)
-      meanConfidence: number;
-      totalWordsRecognized: number;
-      invalidatesSignatures: boolean;      // true if any PAdES widget was present pre-OCR (see §6)
-    };
+  {
+    kind: 'ocr-text-behind-applied';
+    meta: EditMeta;
+    jobId: number; // FK to ocr_jobs.id
+    pageRange: { start: number; end: number };
+    langs: string[]; // languages used (multi-lang via Tesseract `eng+fra` syntax)
+    meanConfidence: number;
+    totalWordsRecognized: number;
+    invalidatesSignatures: boolean; // true if any PAdES widget was present pre-OCR (see §6)
+  };
 ```
 
 The inverse:
@@ -546,6 +551,7 @@ The `replay()` function (`edit-replay-engine.md §3`, extended Phase 3 step 3.6,
 ```
 
 **One new `ReplayError` variant:**
+
 - `'ocr_job_missing'` — the EditOperation references an `ocr_jobs.id` that no longer exists (e.g. DB was edited externally). Replay aborts; user is shown a recovery toast.
 
 The existing `op_apply_failed` covers the rest.
@@ -625,7 +631,14 @@ INSERT INTO schema_migrations (version, applied_at) VALUES (5, strftime('%s', 'n
 interface OcrJobsRepo {
   insert(row: Omit<OcrJobRow, 'id' | 'created_at'> & { created_at?: number }): number;
   get(id: number): OcrJobRow | null;
-  updateStatus(id: number, status: OcrJobStatus, completedAt?: number, meanConfidence?: number, totalWords?: number, errorMessage?: string): boolean;
+  updateStatus(
+    id: number,
+    status: OcrJobStatus,
+    completedAt?: number,
+    meanConfidence?: number,
+    totalWords?: number,
+    errorMessage?: string,
+  ): boolean;
   listByDocHash(docHash: string, limit?: number, offset?: number): OcrJobRow[];
   listByStatus(status: OcrJobStatus, limit?: number, offset?: number): OcrJobRow[];
   delete(id: number): boolean;
@@ -641,7 +654,7 @@ interface LanguagePacksRepo {
   upsert(pack: LanguagePackRow): void;
   list(): LanguagePackRow[];
   get(lang: string): LanguagePackRow | null;
-  remove(lang: string): boolean;     // refuses to remove source='bundled'
+  remove(lang: string): boolean; // refuses to remove source='bundled'
   touchLastUsed(lang: string, when: number): void;
 }
 ```
@@ -688,23 +701,24 @@ Per the locked roadmap decision (2026-05-22) and Q-E in Wave 19's brief, Riley e
 
 ### 7.1 Library survey
 
-| Library | License | Version | Last commit | Stars / Activity | Verdict |
-|---|---|---|---|---|---|
-| `wia` (npm) | MIT | 2.0.0-local.1 | published "over a year ago" | low | **REJECT** — this package is an **IoT cloud SDK** (wia.io); name collides but unrelated. Not a Windows-Image-Acquisition binding. |
-| `node-wia` (npm) | n/a | n/a | n/a | n/a | **REJECT** — does not exist in npm registry (404 on `npm view`). |
-| `wia-scanner` (npm) | n/a | n/a | n/a | n/a | **REJECT** — does not exist in npm registry (404 on `npm view`). |
-| `scanner-wia` (npm) | n/a | n/a | n/a | n/a | **REJECT** — does not exist in npm registry (404 on `npm view`). |
-| `node-imageacquisition` (npm) | n/a | n/a | n/a | n/a | **REJECT** — does not exist. |
-| `sh-navid/NodeWiaScanner` (GitHub) | n/a (no LICENSE file in repo) | n/a (no npm release) | sporadic | low | **REJECT** — uses VBS-script bridging via `cscript`, not a real Node addon. No npm package. License unverified. Not a maturity match for a production app. |
-| `yushulx/docscan4nodejs` (GitHub) | requires Dynamic Web TWAIN Service | commercial | active | medium | **REJECT** — wraps Dynamsoft Web TWAIN Service which is a **commercial product** (commercial license + service fees). License-policy fail. |
-| `node-twain` (npm) | ISC | 0.0.16 | sporadic | low | **REJECT for Phase 5** — TWAIN drivers are widely deprecated per Marcus's roadmap; project policy is WIA-first. License is OK (ISC is permissive). Re-evaluate for Phase 5.2 if WIA-first lands and demand exists. |
-| `scanner-js` (Asprise, npm) | MIT (wrapper) but requires commercial Asprise backend | 2.10.3 | published "over a year ago" | low | **REJECT** — wraps a commercial product; the wrapper is MIT but the backend is paid. |
-| `Dynamsoft Service Client` (npm) | commercial | active | active | medium-high | **REJECT** — commercial license. |
-| Custom Node-API addon over Windows WIA COM (build ourselves) | we'd own the code (MIT) | n/a | n/a | n/a | **OUT OF SCOPE for Phase 5** — building a native C++ Node-API addon wrapping the WIA COM interface is a 1-2-week solo effort (Windows COM, IDispatch, image format conversion). Diego's electron-rebuild CI complexity would double (Phase 5 risk register row 2). The Phase 5 brief explicitly allows deferral to Phase 5.1 if no clean binding exists; ROI does not justify it this wave. |
+| Library                                                      | License                                               | Version              | Last commit                 | Stars / Activity | Verdict                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------------------------------ | ----------------------------------------------------- | -------------------- | --------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `wia` (npm)                                                  | MIT                                                   | 2.0.0-local.1        | published "over a year ago" | low              | **REJECT** — this package is an **IoT cloud SDK** (wia.io); name collides but unrelated. Not a Windows-Image-Acquisition binding.                                                                                                                                                                                                                                                           |
+| `node-wia` (npm)                                             | n/a                                                   | n/a                  | n/a                         | n/a              | **REJECT** — does not exist in npm registry (404 on `npm view`).                                                                                                                                                                                                                                                                                                                            |
+| `wia-scanner` (npm)                                          | n/a                                                   | n/a                  | n/a                         | n/a              | **REJECT** — does not exist in npm registry (404 on `npm view`).                                                                                                                                                                                                                                                                                                                            |
+| `scanner-wia` (npm)                                          | n/a                                                   | n/a                  | n/a                         | n/a              | **REJECT** — does not exist in npm registry (404 on `npm view`).                                                                                                                                                                                                                                                                                                                            |
+| `node-imageacquisition` (npm)                                | n/a                                                   | n/a                  | n/a                         | n/a              | **REJECT** — does not exist.                                                                                                                                                                                                                                                                                                                                                                |
+| `sh-navid/NodeWiaScanner` (GitHub)                           | n/a (no LICENSE file in repo)                         | n/a (no npm release) | sporadic                    | low              | **REJECT** — uses VBS-script bridging via `cscript`, not a real Node addon. No npm package. License unverified. Not a maturity match for a production app.                                                                                                                                                                                                                                  |
+| `yushulx/docscan4nodejs` (GitHub)                            | requires Dynamic Web TWAIN Service                    | commercial           | active                      | medium           | **REJECT** — wraps Dynamsoft Web TWAIN Service which is a **commercial product** (commercial license + service fees). License-policy fail.                                                                                                                                                                                                                                                  |
+| `node-twain` (npm)                                           | ISC                                                   | 0.0.16               | sporadic                    | low              | **REJECT for Phase 5** — TWAIN drivers are widely deprecated per Marcus's roadmap; project policy is WIA-first. License is OK (ISC is permissive). Re-evaluate for Phase 5.2 if WIA-first lands and demand exists.                                                                                                                                                                          |
+| `scanner-js` (Asprise, npm)                                  | MIT (wrapper) but requires commercial Asprise backend | 2.10.3               | published "over a year ago" | low              | **REJECT** — wraps a commercial product; the wrapper is MIT but the backend is paid.                                                                                                                                                                                                                                                                                                        |
+| `Dynamsoft Service Client` (npm)                             | commercial                                            | active               | active                      | medium-high      | **REJECT** — commercial license.                                                                                                                                                                                                                                                                                                                                                            |
+| Custom Node-API addon over Windows WIA COM (build ourselves) | we'd own the code (MIT)                               | n/a                  | n/a                         | n/a              | **OUT OF SCOPE for Phase 5** — building a native C++ Node-API addon wrapping the WIA COM interface is a 1-2-week solo effort (Windows COM, IDispatch, image format conversion). Diego's electron-rebuild CI complexity would double (Phase 5 risk register row 2). The Phase 5 brief explicitly allows deferral to Phase 5.1 if no clean binding exists; ROI does not justify it this wave. |
 
 ### 7.2 Verdict — DEFER to Phase 5.1
 
 **No MIT/Apache-2.0/BSD WIA Node binding exists at the maturity bar this project requires.** Every candidate either:
+
 - Doesn't exist (404 on npm — `node-wia`, `wia-scanner`, etc.)
 - Is unrelated (name collision — `wia` is an IoT SDK)
 - Wraps a commercial product (Dynamsoft, Asprise)
@@ -713,6 +727,7 @@ Per the locked roadmap decision (2026-05-22) and Q-E in Wave 19's brief, Riley e
 **Per the locked roadmap decision: native scanner integration is DEFERRED to Phase 5.1.**
 
 Phase 5 ships with:
+
 - The Tools menu **"Scan from device…" item present but disabled**, tooltip: "Scanner integration arrives in Phase 5.1 (Phase 5 ships file-import + OCR only)".
 - The IPC channels `scan:listDevices` and `scan:acquire` are **defined in the contract** (`api-contracts.md §16.5`) but the handlers return `Result<never, 'not_implemented_phase_5_1'>` (the same pattern Phase 1 used for `app:pickPdfPath`). This means Phase 5.1 is purely additive — David doesn't have to touch `contracts.ts` then, only swap the handler bodies.
 - Phase 5.1's design wave (whenever scheduled) re-runs this survey. If the landscape changed (a viable MIT WIA binding lands), use it. Otherwise, write a Node-API addon wrapping the WIA COM interface ourselves — Diego scopes that as a 1-2-week solo dev-ops wave + CI matrix expansion.
@@ -746,12 +761,12 @@ Per the proven Phase 1 H-3 + Phase 3 forms + Phase 4 PAdES pattern (Nathan Wave 
 
 Per the three-location pattern (Phase 4 PAdES precedent + Nathan Wave 18 lesson):
 
-| Location | Wave 22 (Nathan) owner | What must be present |
-|---|---|---|
-| **Top-of-guide preamble** | `docs/user-guide.md:5-12` (extends Phase 4 preamble additively) | Enumerate all 4 obligations in 4-6 bullets at top of guide. User sees before scrolling. |
-| **Dedicated trust-floor section** | New section "OCR trust floor — what the app does and doesn't promise" in `docs/user-guide.md` | Full enumeration + "What the trust floor IS / IS NOT" sub-sections per Wave 18 pattern. |
+| Location                                    | Wave 22 (Nathan) owner                                                                              | What must be present                                                                       |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| **Top-of-guide preamble**                   | `docs/user-guide.md:5-12` (extends Phase 4 preamble additively)                                     | Enumerate all 4 obligations in 4-6 bullets at top of guide. User sees before scrolling.    |
+| **Dedicated trust-floor section**           | New section "OCR trust floor — what the app does and doesn't promise" in `docs/user-guide.md`       | Full enumeration + "What the trust floor IS / IS NOT" sub-sections per Wave 18 pattern.    |
 | **Inline at every OCR-touching subsection** | Capturing→Running OCR / Reviewing low-confidence words / Saving OCR'd PDF / Re-running OCR sections | "Honesty reminder" callout + direct anchor link back to the dedicated trust-floor section. |
-| **README front-door** | `README.md` Known Limitations section gets the 4 headlines | Same headline bullets as the user-guide preamble. |
+| **README front-door**                       | `README.md` Known Limitations section gets the 4 headlines                                          | Same headline bullets as the user-guide preamble.                                          |
 
 Documented in conventions.md §16.3 so Wave 20 implementation and Wave 22 docs surface them at the trust-floor — three-location ratchet, not buried in an appendix.
 
@@ -765,6 +780,7 @@ For honesty parity with Phase 4 §10.2 disclosures:
 - We do NOT translate. The recognized text is in the source language(s); we don't auto-translate.
 
 What we DO promise:
+
 - Per-word confidence scores surface in the renderer and persist in `ocr_results.words_json`.
 - Language packs are SHA-256-verified at download time against a shipped catalog.
 - Cancellation tears down any partial output (no half-OCR'd file on disk).
@@ -777,13 +793,13 @@ What we DO promise:
 
 Each of the 5 risks from the phase plan, addressed in the design:
 
-| # | Risk | Severity | Mitigation in this design |
-|---|---|---|---|
-| 1 | **No clean MIT WIA binding** | HIGH | §7 survey done; locked decision: DEFER native scanner to Phase 5.1. Menu item ships disabled with tooltip; contract reserves channels for additive Phase 5.1 wire-up. |
-| 2 | **Native module CI complexity** | HIGH | Phase 5 ships ZERO native modules. tesseract.js uses pure WASM + Worker threads. Diego's electron-rebuild remains single-target (better-sqlite3 only). |
-| 3 | **Tesseract.js perf for large PDFs** | MEDIUM | §4.2 (worker pool reuse) + §4.6 (cancellable progress) + UI surfaces estimated time in Step 2. User-guide sets expectations: 200-page scan = ~30 min on typical hardware. Phase 5.1 escape hatch: `node-tesseract-ocr` toggle for users with a system Tesseract install. |
-| 4 | **OCR quality vs source image quality** | MEDIUM | §4.5 (confidence per word) + §8 (trust-floor obligations) + image preprocessing toggles (deskew/denoise/contrast). Confidence overlay lets user spot errors before saving. |
-| 5 | **Language pack distribution** | LOW | §4.3 (bundled `eng` + lazy-download via official upstream + SHA-256 integrity + offline-after-first-use). Catalog file is small (~10 langs seed) and ships in `src/main/pdf-ops/language-pack-catalog.json`. |
+| #   | Risk                                    | Severity | Mitigation in this design                                                                                                                                                                                                                                                |
+| --- | --------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | **No clean MIT WIA binding**            | HIGH     | §7 survey done; locked decision: DEFER native scanner to Phase 5.1. Menu item ships disabled with tooltip; contract reserves channels for additive Phase 5.1 wire-up.                                                                                                    |
+| 2   | **Native module CI complexity**         | HIGH     | Phase 5 ships ZERO native modules. tesseract.js uses pure WASM + Worker threads. Diego's electron-rebuild remains single-target (better-sqlite3 only).                                                                                                                   |
+| 3   | **Tesseract.js perf for large PDFs**    | MEDIUM   | §4.2 (worker pool reuse) + §4.6 (cancellable progress) + UI surfaces estimated time in Step 2. User-guide sets expectations: 200-page scan = ~30 min on typical hardware. Phase 5.1 escape hatch: `node-tesseract-ocr` toggle for users with a system Tesseract install. |
+| 4   | **OCR quality vs source image quality** | MEDIUM   | §4.5 (confidence per word) + §8 (trust-floor obligations) + image preprocessing toggles (deskew/denoise/contrast). Confidence overlay lets user spot errors before saving.                                                                                               |
+| 5   | **Language pack distribution**          | LOW      | §4.3 (bundled `eng` + lazy-download via official upstream + SHA-256 integrity + offline-after-first-use). Catalog file is small (~10 langs seed) and ships in `src/main/pdf-ops/language-pack-catalog.json`.                                                             |
 
 ### 9.1 Additional risks Riley uncovered during Wave 19 design
 
@@ -839,11 +855,11 @@ These are NOT in the original 5-risk register; flagged here for Wave 20 awarenes
 
 ### 10.4 Phase 6+ (Export to Office)
 
-| Phase | Feature | Extension point |
-|---|---|---|
-| 6 | OCR'd PDF → DOCX | Existing OCR'd text becomes the document text; image becomes the background. Cross-references `searchable-pdf-builder.ts`'s word-coordinate output. |
-| 6 | OCR'd PDF → XLSX | Cell detection over OCR'd words via line-grid analysis. Reuses `ocr-results.words_json`. |
-| 7 | OCR a11y output | ActualText + MarkedContent variant of the text-behind-image authorship (Phase 5's pure-text-behind-image is the v1; v2 adds semantic tagging). |
+| Phase | Feature          | Extension point                                                                                                                                     |
+| ----- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 6     | OCR'd PDF → DOCX | Existing OCR'd text becomes the document text; image becomes the background. Cross-references `searchable-pdf-builder.ts`'s word-coordinate output. |
+| 6     | OCR'd PDF → XLSX | Cell detection over OCR'd words via line-grid analysis. Reuses `ocr-results.words_json`.                                                            |
+| 7     | OCR a11y output  | ActualText + MarkedContent variant of the text-behind-image authorship (Phase 5's pure-text-behind-image is the v1; v2 adds semantic tagging).      |
 
 ---
 
@@ -853,37 +869,37 @@ Per the H-3 lesson (third proven instance after Phase 4), documented loudly.
 
 ### 11.1 Boundaries Phase 5 closes
 
-| Phase 4 limitation | Phase 5 reality | Doc update target |
-|---|---|---|
-| "OCR — Phase 5" (annotation summary CSV / Search shows nothing for image-only PDFs) | Live; image-only PDFs become searchable after OCR | user-guide.md (Nathan Wave 22) — Save section + Search section |
-| Scanned image import → only available via drag-drop as a PDF | Phase 5 adds standalone image import (PNG/JPEG/TIFF) directly into the OCR modal | user-guide §OCR (Nathan Wave 22) |
+| Phase 4 limitation                                                                  | Phase 5 reality                                                                  | Doc update target                                              |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| "OCR — Phase 5" (annotation summary CSV / Search shows nothing for image-only PDFs) | Live; image-only PDFs become searchable after OCR                                | user-guide.md (Nathan Wave 22) — Save section + Search section |
+| Scanned image import → only available via drag-drop as a PDF                        | Phase 5 adds standalone image import (PNG/JPEG/TIFF) directly into the OCR modal | user-guide §OCR (Nathan Wave 22)                               |
 
 ### 11.2 New Phase 5 boundaries
 
-| Boundary | Description | Where to surface |
-|---|---|---|
-| OCR accuracy ≠ perfect | Per-word confidence; trust-floor obligation #1 | user-guide preamble + OCR section + dedicated trust-floor section + Settings tooltip |
-| No cloud, but does download packs | Trust-floor obligation #2 | user-guide + Settings → Languages |
-| Save commits OCR text to disk | Trust-floor obligation #3 | user-guide §Saving (additive Phase-5 amendment to existing Save warnings) |
-| Re-OCR stacks text layers | Trust-floor obligation #4 | user-guide §OCR + Honesty reminder at the "Run OCR" button tooltip |
-| Native scanner deferred | Tools menu item disabled with tooltip; user-guide explains the workaround (use OS Scan app then drag PDF) | UI: tooltip on disabled menu item + user-guide |
-| Tamper-vulnerable OCR audit | `ocr_jobs` lives in the same SQLite DB as `signature_audit_log`; no tamper-evidence | user-guide §OCR → "About the OCR audit log" (mirrors Phase 4 §10.2 disclosure) |
-| OCR invalidates existing PAdES signature | §6; non-skippable confirm | user-guide §OCR + sign modal cross-reference |
-| Multi-language uses `+`-joined Tesseract syntax (e.g. `eng+spa`) | Language picker UI surfaces this; the engine plumbs it through to tesseract.js verbatim | user-guide §OCR → "Multiple languages on one page" |
-| Latin scripts render with built-in `/Helvetica`; non-Latin renders selectable but may copy-paste oddly without proper font embed | §4.4.3 scope-fence | user-guide §OCR → "About non-Latin scripts" |
-| Tessdata download requires internet on first use of a non-bundled language | §4.3 + R-W19-B | user-guide §OCR → "Adding more languages" |
+| Boundary                                                                                                                         | Description                                                                                               | Where to surface                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| OCR accuracy ≠ perfect                                                                                                           | Per-word confidence; trust-floor obligation #1                                                            | user-guide preamble + OCR section + dedicated trust-floor section + Settings tooltip |
+| No cloud, but does download packs                                                                                                | Trust-floor obligation #2                                                                                 | user-guide + Settings → Languages                                                    |
+| Save commits OCR text to disk                                                                                                    | Trust-floor obligation #3                                                                                 | user-guide §Saving (additive Phase-5 amendment to existing Save warnings)            |
+| Re-OCR stacks text layers                                                                                                        | Trust-floor obligation #4                                                                                 | user-guide §OCR + Honesty reminder at the "Run OCR" button tooltip                   |
+| Native scanner deferred                                                                                                          | Tools menu item disabled with tooltip; user-guide explains the workaround (use OS Scan app then drag PDF) | UI: tooltip on disabled menu item + user-guide                                       |
+| Tamper-vulnerable OCR audit                                                                                                      | `ocr_jobs` lives in the same SQLite DB as `signature_audit_log`; no tamper-evidence                       | user-guide §OCR → "About the OCR audit log" (mirrors Phase 4 §10.2 disclosure)       |
+| OCR invalidates existing PAdES signature                                                                                         | §6; non-skippable confirm                                                                                 | user-guide §OCR + sign modal cross-reference                                         |
+| Multi-language uses `+`-joined Tesseract syntax (e.g. `eng+spa`)                                                                 | Language picker UI surfaces this; the engine plumbs it through to tesseract.js verbatim                   | user-guide §OCR → "Multiple languages on one page"                                   |
+| Latin scripts render with built-in `/Helvetica`; non-Latin renders selectable but may copy-paste oddly without proper font embed | §4.4.3 scope-fence                                                                                        | user-guide §OCR → "About non-Latin scripts"                                          |
+| Tessdata download requires internet on first use of a non-bundled language                                                       | §4.3 + R-W19-B                                                                                            | user-guide §OCR → "Adding more languages"                                            |
 
 ### 11.3 Round-trip fidelity matrix delta
 
 Extends Phase 4 §10.3 round-trip matrix:
 
-| PDF feature in source | Phase 4 behavior | Phase 5 behavior |
-|---|---|---|
-| Existing text layer (from another OCR tool) | Preserved on resave (Phase 4 doesn't mutate non-OCR text) | **STILL PRESERVED**, BUT: re-running our OCR appends a second text layer on top. Trust-floor obligation #4 surfaces this. |
+| PDF feature in source                        | Phase 4 behavior                                                      | Phase 5 behavior                                                                                                                                          |
+| -------------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Existing text layer (from another OCR tool)  | Preserved on resave (Phase 4 doesn't mutate non-OCR text)             | **STILL PRESERVED**, BUT: re-running our OCR appends a second text layer on top. Trust-floor obligation #4 surfaces this.                                 |
 | Existing PAdES signature `/V Contents <...>` | Invalidated on any content-mutating save (Phase 4 already documented) | OCR is a content-mutating save → still invalidated. §6 adds the explicit confirm dialog. Signature_audit_log is updated with `invalidated_by_ocr_job_id`. |
-| Image-only page (no text layer) | Search returns nothing; selectable text is empty | After OCR: search works; selectable text returns the recognized words (visually invisible, behind the image) |
-| Text-bearing page (already has text) | Search works | After OCR: search works on EITHER layer (the original + our added invisible layer). Word duplication may surface to copy-paste consumers — documented. |
-| Document-level JS | Phase 4 §4.8 ensures EVERY save strips it; Phase 5 inherits | Same — `replay-engine.ts` strips before our step 3.9 fires |
+| Image-only page (no text layer)              | Search returns nothing; selectable text is empty                      | After OCR: search works; selectable text returns the recognized words (visually invisible, behind the image)                                              |
+| Text-bearing page (already has text)         | Search works                                                          | After OCR: search works on EITHER layer (the original + our added invisible layer). Word duplication may surface to copy-paste consumers — documented.    |
+| Document-level JS                            | Phase 4 §4.8 ensures EVERY save strips it; Phase 5 inherits           | Same — `replay-engine.ts` strips before our step 3.9 fires                                                                                                |
 
 ---
 

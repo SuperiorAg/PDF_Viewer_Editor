@@ -49,9 +49,7 @@ describe('language-pack-catalog.json (B-21.1 shippability)', () => {
     const eng = catalog.packs.find((p) => p.lang === 'eng');
     expect(eng).toBeDefined();
     expect(eng!.bundled).toBe(true);
-    expect(eng!.sha256).toBe(
-      'ed350f3752f81ee8f38769edc14d92d997dababe23b565c59879372cc46a2468',
-    );
+    expect(eng!.sha256).toBe('ed350f3752f81ee8f38769edc14d92d997dababe23b565c59879372cc46a2468');
   });
 
   it('downloadable packs (non-bundled) all have distinct hashes', () => {

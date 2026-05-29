@@ -67,7 +67,10 @@ async function normalize(
     default: {
       const exhaustive: never = page.format;
       void exhaustive;
-      return fail<ScanToPdfError>('page_decode_failed', `unsupported format ${String(page.format)}`);
+      return fail<ScanToPdfError>(
+        'page_decode_failed',
+        `unsupported format ${String(page.format)}`,
+      );
     }
   }
 }
@@ -87,7 +90,10 @@ export async function composeScanToPdf(
   try {
     doc = await PDFDocument.create();
   } catch (e) {
-    return fail<ScanToPdfError>('pdf_compose_failed', `PDFDocument.create threw: ${(e as Error).message}`);
+    return fail<ScanToPdfError>(
+      'pdf_compose_failed',
+      `PDFDocument.create threw: ${(e as Error).message}`,
+    );
   }
 
   for (let i = 0; i < pages.length; i += 1) {
@@ -102,7 +108,10 @@ export async function composeScanToPdf(
       const page = doc.addPage([width, height]);
       page.drawImage(img, { x: 0, y: 0, width, height });
     } catch (e) {
-      return fail<ScanToPdfError>('pdf_compose_failed', `embed/draw page ${i} threw: ${(e as Error).message}`);
+      return fail<ScanToPdfError>(
+        'pdf_compose_failed',
+        `embed/draw page ${i} threw: ${(e as Error).message}`,
+      );
     }
   }
 

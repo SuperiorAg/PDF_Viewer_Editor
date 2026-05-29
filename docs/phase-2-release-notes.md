@@ -21,24 +21,24 @@ PDF_Viewer_Editor 0.2.0 is the **functional editor** release. Phase 1 was the wa
 
 ## Known limitations in 0.2.0
 
-| Limitation | Ships in |
-|---|---|
-| Text editing is replace-only with the original font (no reflow, no font substitution, no multilang shaping) | Phase 4 |
-| TIFF imports use the first page only (multi-page TIFF extraction is a candidate Phase 2.5 ticket) | Phase 2.5 |
-| Cross-op-chain undo is not compacted (each undo press unwinds one op at a time) | Phase 3 |
-| Bookmarks are scoped to a single file (cross-file navigation not supported) | Phase 5+ |
-| No in-app print preview pane (the OS dialog has its own preview) | Phase 3 |
-| Chromium-engine output bytes are non-deterministic; forms / signatures / embedded JavaScript are flattened in Chromium output | Force `pdf-lib` for deterministic / structure-preserving exports |
-| `pdf:identifyTextSpan` real content-stream walker is stubbed (channel returns `no_text_at_point`; renderer-cached metrics carry the text-edit UX) | Phase 2.5 |
-| `MoveBookmarkResult` `invalid_parent` (parent doesn't exist or belongs to a different file) surfaces on the wire as `invalid_payload` because `api-contracts.md` §12.6 doesn't define a dedicated variant | Phase 2.5 (contract amendment) |
-| File-association installer checkbox works on install; SmartScreen warning still present (binaries unsigned) | Code signing in a later milestone |
-| Find / search within document | Phase 3 |
-| Forms (designer, fill, mail-merge from CSV/Excel) | Phase 3 |
-| Fill & sign (typed/drawn/image signature) | Phase 4 |
-| Scan from TWAIN/WIA + OCR | Phase 5 |
-| Export to Word / Excel / PowerPoint / image | Phase 6 |
-| macOS / Linux builds | Phase 7 |
-| Auto-update | Phase 7 |
+| Limitation                                                                                                                                                                                                | Ships in                                                         |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Text editing is replace-only with the original font (no reflow, no font substitution, no multilang shaping)                                                                                               | Phase 4                                                          |
+| TIFF imports use the first page only (multi-page TIFF extraction is a candidate Phase 2.5 ticket)                                                                                                         | Phase 2.5                                                        |
+| Cross-op-chain undo is not compacted (each undo press unwinds one op at a time)                                                                                                                           | Phase 3                                                          |
+| Bookmarks are scoped to a single file (cross-file navigation not supported)                                                                                                                               | Phase 5+                                                         |
+| No in-app print preview pane (the OS dialog has its own preview)                                                                                                                                          | Phase 3                                                          |
+| Chromium-engine output bytes are non-deterministic; forms / signatures / embedded JavaScript are flattened in Chromium output                                                                             | Force `pdf-lib` for deterministic / structure-preserving exports |
+| `pdf:identifyTextSpan` real content-stream walker is stubbed (channel returns `no_text_at_point`; renderer-cached metrics carry the text-edit UX)                                                         | Phase 2.5                                                        |
+| `MoveBookmarkResult` `invalid_parent` (parent doesn't exist or belongs to a different file) surfaces on the wire as `invalid_payload` because `api-contracts.md` §12.6 doesn't define a dedicated variant | Phase 2.5 (contract amendment)                                   |
+| File-association installer checkbox works on install; SmartScreen warning still present (binaries unsigned)                                                                                               | Code signing in a later milestone                                |
+| Find / search within document                                                                                                                                                                             | Phase 3                                                          |
+| Forms (designer, fill, mail-merge from CSV/Excel)                                                                                                                                                         | Phase 3                                                          |
+| Fill & sign (typed/drawn/image signature)                                                                                                                                                                 | Phase 4                                                          |
+| Scan from TWAIN/WIA + OCR                                                                                                                                                                                 | Phase 5                                                          |
+| Export to Word / Excel / PowerPoint / image                                                                                                                                                               | Phase 6                                                          |
+| macOS / Linux builds                                                                                                                                                                                      | Phase 7                                                          |
+| Auto-update                                                                                                                                                                                               | Phase 7                                                          |
 
 Full per-feature detail: [`user-guide.md` → Known limitations in Phase 2](user-guide.md#known-limitations-in-phase-2).
 

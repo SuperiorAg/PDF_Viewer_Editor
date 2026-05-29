@@ -3,7 +3,7 @@
 **From:** Marcus (orchestration-manager), 2026-05-21
 **Wave 8.5 outcome:** GREEN at engine + bridge + handler + lint surface. All 2 BLOCKERs (B-1 reorder, B-2 insert-original/image) + HIGH H-1 (`MoveBookmarkResult` end-to-end) + HIGH H-2 (ESLint `no-restricted-imports` for `src/ipc/contracts`) closed at source. The H-3 walking-skeleton fidelity boundary is RETIRED at the engine + handler integration level (`h3-retirement.test.ts` passes).
 **Wave 9 agent:** Nathan (documentation-expert) — runs in PARALLEL with Julian's Phase 2 re-audit (zero file overlap; Julian writes `docs/code-review.md`, Nathan owns the user-facing doc surface).
-**Sequential prereq:** Wave 8.5 closure verified on disk (per the Wave 8.5 build-report status rows). Wave 9 dispatch happens regardless of Julian's re-audit outcome — Nathan's deliverables document what Phase 2 *ships*, not what Julian *blessed*. If Julian re-audit produces a Wave 9.5 finding that contradicts a Nathan doc, the doc is amended in Wave 9.5 (cheap; one editor's pass).
+**Sequential prereq:** Wave 8.5 closure verified on disk (per the Wave 8.5 build-report status rows). Wave 9 dispatch happens regardless of Julian's re-audit outcome — Nathan's deliverables document what Phase 2 _ships_, not what Julian _blessed_. If Julian re-audit produces a Wave 9.5 finding that contradicts a Nathan doc, the doc is amended in Wave 9.5 (cheap; one editor's pass).
 **Phase 2 close:** Wave 9 is the final wave of Phase 2. Nathan's outputs CLOSE the phase.
 
 Nathan reads this brief end-to-end before starting. Then reads, in order:
@@ -28,53 +28,53 @@ The hard constraint from Nathan's Wave 4 brief still applies: **no aspirational 
 
 ### What is now LIVE on disk
 
-| Feature | Status | Channel(s) |
-|---|---|---|
-| Edit-replay engine (`replay()`, 11 op-handlers, fold-then-emit, atomic save, image-cache dedup, byte-stable determinism) | LIVE | `fs:applyEditOps` |
-| Save fidelity (H-3 RETIRED) | LIVE | `fs:save` calls `fs:applyEditOps` directly — no PHASE-1 INLINE block |
-| Print-to-PDF (pdf-lib default engine) | LIVE | `pdf:exportToPdf` (engine: `pdf-lib`) |
-| Print-to-PDF (Chromium fallback engine) | LIVE | `pdf:exportToPdf` (engine: `chromium`) — wired by Diego in Wave 8 via offscreen BrowserWindow + `webContents.printToPDF()` with L-001 security floor preserved |
-| Print to physical printer | LIVE | `pdf:print` — `webContents.print()` dispatch wired by Diego in Wave 8 |
-| Image import as new page | LIVE | `pdf:embedImage` (mode: `new-page`) |
-| Image import as overlay on existing page | LIVE | `pdf:embedImage` (mode: `overlay`) |
-| PNG/JPEG support | LIVE | embedded via pdf-lib `embedPng` / `embedJpg` |
-| TIFF first-page support | LIVE | `utif` decoder (added by Diego in Wave 8) — multi-page TIFF uses first page only |
-| Text editing (replace-only with original font) | LIVE | `pdf:replaceText` + `pdf:identifyTextSpan` |
-| Bookmarks authoring (full CRUD tree, cycle detection, drag-reorder, drag-nest) | LIVE | `bookmarks:listTree`, `bookmarks:move`, `bookmarks:rename` + Phase-1 `bookmarks:create`/`bookmarks:delete` |
-| Undo/redo across all Phase 1 + Phase 2 ops | LIVE | renderer history middleware (`history-middleware.ts`) — re-entrancy flag `meta.__history` |
-| Schema v2 | LIVE | `migrations/0002_phase2_bookmarks.sql` runs on first launch of 0.2.0 |
-| Renderer-gatekeeper boundary | ENFORCED | ESLint `no-restricted-imports` (Wave 8.5 H-2) catches direct imports of `src/ipc/contracts` from `src/client/` |
+| Feature                                                                                                                  | Status   | Channel(s)                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Edit-replay engine (`replay()`, 11 op-handlers, fold-then-emit, atomic save, image-cache dedup, byte-stable determinism) | LIVE     | `fs:applyEditOps`                                                                                                                                              |
+| Save fidelity (H-3 RETIRED)                                                                                              | LIVE     | `fs:save` calls `fs:applyEditOps` directly — no PHASE-1 INLINE block                                                                                           |
+| Print-to-PDF (pdf-lib default engine)                                                                                    | LIVE     | `pdf:exportToPdf` (engine: `pdf-lib`)                                                                                                                          |
+| Print-to-PDF (Chromium fallback engine)                                                                                  | LIVE     | `pdf:exportToPdf` (engine: `chromium`) — wired by Diego in Wave 8 via offscreen BrowserWindow + `webContents.printToPDF()` with L-001 security floor preserved |
+| Print to physical printer                                                                                                | LIVE     | `pdf:print` — `webContents.print()` dispatch wired by Diego in Wave 8                                                                                          |
+| Image import as new page                                                                                                 | LIVE     | `pdf:embedImage` (mode: `new-page`)                                                                                                                            |
+| Image import as overlay on existing page                                                                                 | LIVE     | `pdf:embedImage` (mode: `overlay`)                                                                                                                             |
+| PNG/JPEG support                                                                                                         | LIVE     | embedded via pdf-lib `embedPng` / `embedJpg`                                                                                                                   |
+| TIFF first-page support                                                                                                  | LIVE     | `utif` decoder (added by Diego in Wave 8) — multi-page TIFF uses first page only                                                                               |
+| Text editing (replace-only with original font)                                                                           | LIVE     | `pdf:replaceText` + `pdf:identifyTextSpan`                                                                                                                     |
+| Bookmarks authoring (full CRUD tree, cycle detection, drag-reorder, drag-nest)                                           | LIVE     | `bookmarks:listTree`, `bookmarks:move`, `bookmarks:rename` + Phase-1 `bookmarks:create`/`bookmarks:delete`                                                     |
+| Undo/redo across all Phase 1 + Phase 2 ops                                                                               | LIVE     | renderer history middleware (`history-middleware.ts`) — re-entrancy flag `meta.__history`                                                                      |
+| Schema v2                                                                                                                | LIVE     | `migrations/0002_phase2_bookmarks.sql` runs on first launch of 0.2.0                                                                                           |
+| Renderer-gatekeeper boundary                                                                                             | ENFORCED | ESLint `no-restricted-imports` (Wave 8.5 H-2) catches direct imports of `src/ipc/contracts` from `src/client/`                                                 |
 
 ### What Phase 2 does NOT do (the honest limitations)
 
-| Limitation | Why | Ships in |
-|---|---|---|
-| Text editing requires the original font; no reflow | P2-L-3 lock — multilang shaping is a Phase 4+ effort | Phase 4 (font substitution + reflow) |
-| Missing-glyph rendering returns `missing_glyph` error | Direct consequence of replace-only with original font | Phase 4 |
-| TIFF multi-page imports use first page only | `utif` decoder ships first page; multi-page extraction would be a small Phase 2.5 ticket | Phase 2.5 (potential ticket) |
-| `pdf:identifyTextSpan` scanner returns `no_text_at_point` for hit-testing | Renderer-cached font-metrics work as designed (per architecture-phase-2.md §4.3); real content-stream walker is Phase 2.5 | Phase 2.5 |
-| Cross-op-chain undo of inserts (e.g. undo across a delete→insert→reorder sequence) | History middleware is single-op-inverse; multi-op compaction is Phase 3 scope | Phase 3 |
+| Limitation                                                                                     | Why                                                                                                                                             | Ships in                                                                                            |
+| ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Text editing requires the original font; no reflow                                             | P2-L-3 lock — multilang shaping is a Phase 4+ effort                                                                                            | Phase 4 (font substitution + reflow)                                                                |
+| Missing-glyph rendering returns `missing_glyph` error                                          | Direct consequence of replace-only with original font                                                                                           | Phase 4                                                                                             |
+| TIFF multi-page imports use first page only                                                    | `utif` decoder ships first page; multi-page extraction would be a small Phase 2.5 ticket                                                        | Phase 2.5 (potential ticket)                                                                        |
+| `pdf:identifyTextSpan` scanner returns `no_text_at_point` for hit-testing                      | Renderer-cached font-metrics work as designed (per architecture-phase-2.md §4.3); real content-stream walker is Phase 2.5                       | Phase 2.5                                                                                           |
+| Cross-op-chain undo of inserts (e.g. undo across a delete→insert→reorder sequence)             | History middleware is single-op-inverse; multi-op compaction is Phase 3 scope                                                                   | Phase 3                                                                                             |
 | `invalid_parent` from bookmarks repo maps to IPC `invalid_payload` (no dedicated wire variant) | api-contracts.md §12.6 `BookmarksMoveError` union doesn't include `invalid_parent`; David's Wave 8.5 boundary translation per brief constraints | Phase 2.5 ticket: add `'invalid_parent'` variant to `BookmarksMoveError` + dedicated renderer toast |
-| Bookmarks scope is single-file | parent_id FK is scoped per `fileHash`; cross-file bookmark navigation is Phase 5+ | Phase 5+ |
-| Print preview before dispatch | `pdf:print` dispatches direct via `webContents.print()`; no in-app preview pane | Phase 3 (preview pane + print settings UI) |
-| Forms (fill / design / mail-merge) | Phase 3 scope | Phase 3 |
-| Fill & sign | Phase 4 scope | Phase 4 |
-| Scan + OCR | Phase 5 scope | Phase 5 |
-| Office export (Word / Excel / PowerPoint) | Phase 6 scope | Phase 6 |
-| macOS / Linux packaging | Phase 7 scope | Phase 7 |
-| Auto-update | Phase 7 scope | Phase 7 |
-| Code signing | A later milestone — SmartScreen warning is the cost; Phase 1 README language stays accurate | Later |
+| Bookmarks scope is single-file                                                                 | parent_id FK is scoped per `fileHash`; cross-file bookmark navigation is Phase 5+                                                               | Phase 5+                                                                                            |
+| Print preview before dispatch                                                                  | `pdf:print` dispatches direct via `webContents.print()`; no in-app preview pane                                                                 | Phase 3 (preview pane + print settings UI)                                                          |
+| Forms (fill / design / mail-merge)                                                             | Phase 3 scope                                                                                                                                   | Phase 3                                                                                             |
+| Fill & sign                                                                                    | Phase 4 scope                                                                                                                                   | Phase 4                                                                                             |
+| Scan + OCR                                                                                     | Phase 5 scope                                                                                                                                   | Phase 5                                                                                             |
+| Office export (Word / Excel / PowerPoint)                                                      | Phase 6 scope                                                                                                                                   | Phase 6                                                                                             |
+| macOS / Linux packaging                                                                        | Phase 7 scope                                                                                                                                   | Phase 7                                                                                             |
+| Auto-update                                                                                    | Phase 7 scope                                                                                                                                   | Phase 7                                                                                             |
+| Code signing                                                                                   | A later milestone — SmartScreen warning is the cost; Phase 1 README language stays accurate                                                     | Later                                                                                               |
 
 ### Test counts to cite
 
 Per the Wave 8.5 verification matrix and pre-existing renderer count from Wave 7:
 
-| Suite | Pass count (post Wave 8.5) | Pre-Phase-2 baseline |
-|---|---|---|
-| `src/main` + `src/ipc` (Vitest) | **224/224** in 29 test files (Wave 8.5 added +11 — B-1 reorder ×5, B-2 insert ×6) | 86/86 (pre-Wave 7) |
-| `src/client` (Vitest) | **94/94** in 9 spec files (Wave 7 added +25 — image-import-modal, text-edit-overlay, bookmarks-slice, history-middleware, document-inverses; Wave 8.5 +8 — `document-inverses.test.ts`) | 61/61 (pre-Wave 7) |
-| `src/db` (Vitest) | **37/37** when better-sqlite3 ABI matches the host Node (CI on Node 20 LTS; local dev on Node 24 fails ABI per Diego's Wave 3 lesson) | n/a |
-| Total Phase-2 close | **355/355** when ABI matches | 147 (pre-Wave 7) |
+| Suite                           | Pass count (post Wave 8.5)                                                                                                                                                              | Pre-Phase-2 baseline |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `src/main` + `src/ipc` (Vitest) | **224/224** in 29 test files (Wave 8.5 added +11 — B-1 reorder ×5, B-2 insert ×6)                                                                                                       | 86/86 (pre-Wave 7)   |
+| `src/client` (Vitest)           | **94/94** in 9 spec files (Wave 7 added +25 — image-import-modal, text-edit-overlay, bookmarks-slice, history-middleware, document-inverses; Wave 8.5 +8 — `document-inverses.test.ts`) | 61/61 (pre-Wave 7)   |
+| `src/db` (Vitest)               | **37/37** when better-sqlite3 ABI matches the host Node (CI on Node 20 LTS; local dev on Node 24 fails ABI per Diego's Wave 3 lesson)                                                   | n/a                  |
+| Total Phase-2 close             | **355/355** when ABI matches                                                                                                                                                            | 147 (pre-Wave 7)     |
 
 Nathan cites the test-count numbers but does NOT claim they cover every edge case — the developer guide explicitly notes the Phase 2 test gaps Julian's audit will surface (e.g. cross-op-chain undo not covered; pdf-lib upgrade determinism guarded by the golden-bytes test in `replay-engine.test.ts`).
 
@@ -82,20 +82,21 @@ Nathan cites the test-count numbers but does NOT claim they cover every edge cas
 
 ## Triage of Phase 2 surface to update (per existing doc Nathan owns)
 
-| # | Doc | Phase 1 status | Phase 2 update scope |
-|---|---|---|---|
-| 1 | `README.md` | "0.1.0 walking skeleton" | "0.2.0 functional editor"; retire H-3 limitation language; promote 5 Phase 2 features; add new limitations section |
-| 2 | `docs/user-guide.md` | Phase 1 feature walkthrough w/ "coming soon" toasts | Add 5 NEW sections (Printing, Print to PDF, Importing images, Editing text, Working with bookmarks); rewrite Saving section; rewrite Known Limitations section; update shortcuts table |
-| 3 | `docs/developer-guide.md` | Phase 1 architecture overview | Add edit-replay engine architecture; add "How to add an EditOperation variant" walkthrough; update IPC reference card; update Common Pitfalls (H-1 lesson + H-2 lesson); update test counts |
-| 4 | `docs/api-reference.md` | Phase 1 IPC channel cards | Append Phase 2 channels section (8 channels listed below); add `MoveBookmarkResult` discriminated union with invalid_parent → invalid_payload boundary note |
-| 5 | `LICENSES.md` | Phase 1.1 walk (1 undeclared resolved by `concurrently 9.x`) | Verify `utif@^3.1.0` row Diego added in Wave 8 is present + correctly attributed; re-run a license walk if any other deps surfaced through Phase 2 (probably not — confirm by diff); update "Scan basis" date |
-| 6 | `docs/phase-2-release-notes.md` (NEW) | n/a | One-page user-facing changelog: What's new, Known limitations, Breaking changes (probably none — design was additive), Upgrade notes (recents/settings/bookmarks survive schema v2 migration via `migrations/0002_*.sql`) |
+| #   | Doc                                   | Phase 1 status                                               | Phase 2 update scope                                                                                                                                                                                                      |
+| --- | ------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `README.md`                           | "0.1.0 walking skeleton"                                     | "0.2.0 functional editor"; retire H-3 limitation language; promote 5 Phase 2 features; add new limitations section                                                                                                        |
+| 2   | `docs/user-guide.md`                  | Phase 1 feature walkthrough w/ "coming soon" toasts          | Add 5 NEW sections (Printing, Print to PDF, Importing images, Editing text, Working with bookmarks); rewrite Saving section; rewrite Known Limitations section; update shortcuts table                                    |
+| 3   | `docs/developer-guide.md`             | Phase 1 architecture overview                                | Add edit-replay engine architecture; add "How to add an EditOperation variant" walkthrough; update IPC reference card; update Common Pitfalls (H-1 lesson + H-2 lesson); update test counts                               |
+| 4   | `docs/api-reference.md`               | Phase 1 IPC channel cards                                    | Append Phase 2 channels section (8 channels listed below); add `MoveBookmarkResult` discriminated union with invalid_parent → invalid_payload boundary note                                                               |
+| 5   | `LICENSES.md`                         | Phase 1.1 walk (1 undeclared resolved by `concurrently 9.x`) | Verify `utif@^3.1.0` row Diego added in Wave 8 is present + correctly attributed; re-run a license walk if any other deps surfaced through Phase 2 (probably not — confirm by diff); update "Scan basis" date             |
+| 6   | `docs/phase-2-release-notes.md` (NEW) | n/a                                                          | One-page user-facing changelog: What's new, Known limitations, Breaking changes (probably none — design was additive), Upgrade notes (recents/settings/bookmarks survive schema v2 migration via `migrations/0002_*.sql`) |
 
 ---
 
 ## Nathan — Wave 9 task list (documentation-expert)
 
 **Files Nathan may touch (Phase 2 update):**
+
 - `README.md`
 - `docs/user-guide.md`
 - `docs/developer-guide.md`
@@ -104,6 +105,7 @@ Nathan cites the test-count numbers but does NOT claim they cover every edge cas
 - `docs/phase-2-release-notes.md` (NEW — Nathan creates)
 
 **Files Nathan must NOT touch (frozen / owned by others):**
+
 - Any source under `src/`
 - Any Wave 1 frozen doc: `ARCHITECTURE.md`, `docs/conventions.md`, `docs/api-contracts.md`, `docs/data-models.md`, `docs/ui-spec.md`
 - Any Wave 6 frozen doc: `docs/architecture-phase-2.md`, `docs/edit-replay-engine.md`
@@ -221,10 +223,10 @@ PDF_Viewer_Editor 0.2.0 exports the current document to a new PDF file via **Ctr
 
 ### The two engines
 
-| Engine | When it's picked | What it does |
-|---|---|---|
-| **pdf-lib (default)** | Documents without unauthorable annotations, fewer than ~10 overlay objects per page, no text-replace ops in the edit chain. | Replays the edit chain via the same engine that powers Save, then writes the result through pdf-lib. Byte-stable, fast, deterministic. |
-| **Chromium (fallback)** | Documents with unauthorable annotations, ≥10 overlay objects per page, or text-replace ops in the edit chain. | Renders the document through an offscreen BrowserWindow and uses `webContents.printToPDF()` to write the output. Slower; bytes are not deterministic across runs (Chromium's own bytes-build is non-reproducible). |
+| Engine                  | When it's picked                                                                                                            | What it does                                                                                                                                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **pdf-lib (default)**   | Documents without unauthorable annotations, fewer than ~10 overlay objects per page, no text-replace ops in the edit chain. | Replays the edit chain via the same engine that powers Save, then writes the result through pdf-lib. Byte-stable, fast, deterministic.                                                                             |
+| **Chromium (fallback)** | Documents with unauthorable annotations, ≥10 overlay objects per page, or text-replace ops in the edit chain.               | Renders the document through an offscreen BrowserWindow and uses `webContents.printToPDF()` to write the output. Slower; bytes are not deterministic across runs (Chromium's own bytes-build is non-reproducible). |
 
 You can force a specific engine via **Settings → Export → Default engine** (`pdf-lib` / `chromium` / `auto`). The default is `auto` (heuristic picks).
 
@@ -255,13 +257,13 @@ PDF_Viewer_Editor 0.2.0 imports PNG, JPEG, and TIFF (first page only) images. Tw
 
 ### What formats work
 
-| Format | Status | Notes |
-|---|---|---|
-| PNG (8-bit, 16-bit) | LIVE | Embedded via pdf-lib `embedPng`. |
-| JPEG (baseline, progressive) | LIVE | Embedded via pdf-lib `embedJpg`. |
-| TIFF (single-page) | LIVE | Decoded via [utif](https://github.com/photopea/UTIF.js) (MIT). |
-| TIFF (multi-page) | **First page only** | Only the first frame is decoded. Multi-page TIFF extraction is a Phase 2.5 candidate. |
-| Other formats (BMP, GIF, WebP, HEIC, RAW) | Not supported | Convert to PNG or JPEG before import. |
+| Format                                    | Status              | Notes                                                                                 |
+| ----------------------------------------- | ------------------- | ------------------------------------------------------------------------------------- |
+| PNG (8-bit, 16-bit)                       | LIVE                | Embedded via pdf-lib `embedPng`.                                                      |
+| JPEG (baseline, progressive)              | LIVE                | Embedded via pdf-lib `embedJpg`.                                                      |
+| TIFF (single-page)                        | LIVE                | Decoded via [utif](https://github.com/photopea/UTIF.js) (MIT).                        |
+| TIFF (multi-page)                         | **First page only** | Only the first frame is decoded. Multi-page TIFF extraction is a Phase 2.5 candidate. |
+| Other formats (BMP, GIF, WebP, HEIC, RAW) | Not supported       | Convert to PNG or JPEG before import.                                                 |
 
 ### Limitations
 
@@ -370,17 +372,17 @@ Note explicitly: **the `text-replace` and image overlay variants are PRESENTATIO
 
 Add the 8 Phase 2 channels (cross-link to `docs/api-reference.md` for full request/response detail):
 
-| Channel | Direction | Request | Response | Status |
-|---|---|---|---|---|
-| `fs:applyEditOps` | R → M | `{ handle, ops, originalBytes? }` | `Result<{ savedAt: string }, FsApplyError>` | LIVE |
-| `pdf:embedImage` | R → M | `{ handle, image, mode, page?, geometry? }` | `Result<{ pageIndex, opAppended }, PdfEmbedImageError>` | LIVE |
-| `pdf:replaceText` | R → M | `{ handle, runId, newText }` | `Result<{ opAppended }, PdfReplaceTextError>` | LIVE |
-| `pdf:identifyTextSpan` | R → M | `{ handle, page, point }` | `Result<TextSpanIdentification, PdfIdentifyTextSpanError>` | LIVE (renderer-cached metrics; `no_text_at_point` is the no-hit response) |
-| `pdf:print` | R → M | `{ handle }` | `Result<{ dispatched: true }, PdfPrintError>` | LIVE |
-| `pdf:exportToPdf` | R → M | `{ handle, destPath, engine? }` | `Result<{ engine, reason, destPath, warnings }, PdfExportError>` | LIVE (both engines) |
-| `bookmarks:listTree` | R → M | `{ fileHash }` | `Result<{ tree: BookmarkNode[] }, BookmarksListError>` | LIVE |
-| `bookmarks:move` | R → M | `{ id, newParentId, newSortOrder }` | `Result<{ moved: true }, BookmarksMoveError>` | LIVE |
-| `bookmarks:rename` | R → M | `{ id, newLabel }` | `Result<{ renamed: true }, BookmarksRenameError>` | LIVE |
+| Channel                | Direction | Request                                     | Response                                                         | Status                                                                    |
+| ---------------------- | --------- | ------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `fs:applyEditOps`      | R → M     | `{ handle, ops, originalBytes? }`           | `Result<{ savedAt: string }, FsApplyError>`                      | LIVE                                                                      |
+| `pdf:embedImage`       | R → M     | `{ handle, image, mode, page?, geometry? }` | `Result<{ pageIndex, opAppended }, PdfEmbedImageError>`          | LIVE                                                                      |
+| `pdf:replaceText`      | R → M     | `{ handle, runId, newText }`                | `Result<{ opAppended }, PdfReplaceTextError>`                    | LIVE                                                                      |
+| `pdf:identifyTextSpan` | R → M     | `{ handle, page, point }`                   | `Result<TextSpanIdentification, PdfIdentifyTextSpanError>`       | LIVE (renderer-cached metrics; `no_text_at_point` is the no-hit response) |
+| `pdf:print`            | R → M     | `{ handle }`                                | `Result<{ dispatched: true }, PdfPrintError>`                    | LIVE                                                                      |
+| `pdf:exportToPdf`      | R → M     | `{ handle, destPath, engine? }`             | `Result<{ engine, reason, destPath, warnings }, PdfExportError>` | LIVE (both engines)                                                       |
+| `bookmarks:listTree`   | R → M     | `{ fileHash }`                              | `Result<{ tree: BookmarkNode[] }, BookmarksListError>`           | LIVE                                                                      |
+| `bookmarks:move`       | R → M     | `{ id, newParentId, newSortOrder }`         | `Result<{ moved: true }, BookmarksMoveError>`                    | LIVE                                                                      |
+| `bookmarks:rename`     | R → M     | `{ id, newLabel }`                          | `Result<{ renamed: true }, BookmarksRenameError>`                | LIVE                                                                      |
 
 #### N-9.3.4 — Update Common Pitfalls
 
@@ -395,13 +397,13 @@ Add three new pitfalls based on Phase 2 lessons:
 #### N-9.3.5 — Update test count breakdown
 
 ```markdown
-| Suite | Test count | What's covered |
-|---|---|---|
-| `src/main` + `src/ipc` (Vitest) | 224 | Engine round-trips, all IPC handlers, db-bridge, replay golden bytes, atomic save, security floor (L-001 on both factories), Print/Export adapter dispatch, image-embed pipeline, TIFF graceful-degradation, H-3 retirement smoke (3-page round-trip), all bookmarks CRUD with variant exhaustion. |
-| `src/client` (Vitest) | 94 | Slices + selectors, history middleware (compaction + re-entrancy + 8 inverse cases incl. image-page delete), components (image-import-modal, text-edit-overlay, bookmarks-panel), thunks, gatekeeper boundary. |
-| `src/db` (Vitest) | 37 | Repos against an in-memory better-sqlite3 — settings, recents, bookmarks (full Phase 2 tree CRUD incl. cycle detection). Requires better-sqlite3 ABI matching host Node. |
-| `tests/e2e` (Playwright Electron) | 1 smoke | Launches the app, opens a synthesized PDF, asserts the main window mounts. H-3 retirement smoke also runs as a Vitest integration test for speed. |
-| **Total** | **355** + 1 e2e | |
+| Suite                             | Test count      | What's covered                                                                                                                                                                                                                                                                                     |
+| --------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/main` + `src/ipc` (Vitest)   | 224             | Engine round-trips, all IPC handlers, db-bridge, replay golden bytes, atomic save, security floor (L-001 on both factories), Print/Export adapter dispatch, image-embed pipeline, TIFF graceful-degradation, H-3 retirement smoke (3-page round-trip), all bookmarks CRUD with variant exhaustion. |
+| `src/client` (Vitest)             | 94              | Slices + selectors, history middleware (compaction + re-entrancy + 8 inverse cases incl. image-page delete), components (image-import-modal, text-edit-overlay, bookmarks-panel), thunks, gatekeeper boundary.                                                                                     |
+| `src/db` (Vitest)                 | 37              | Repos against an in-memory better-sqlite3 — settings, recents, bookmarks (full Phase 2 tree CRUD incl. cycle detection). Requires better-sqlite3 ABI matching host Node.                                                                                                                           |
+| `tests/e2e` (Playwright Electron) | 1 smoke         | Launches the app, opens a synthesized PDF, asserts the main window mounts. H-3 retirement smoke also runs as a Vitest integration test for speed.                                                                                                                                                  |
+| **Total**                         | **355** + 1 e2e |                                                                                                                                                                                                                                                                                                    |
 ```
 
 Note explicitly: **Phase 2 test gaps** (cited honestly): no automated cross-op-chain undo coverage; no automated Chromium-engine golden-bytes test (non-deterministic by nature); `pdf:identifyTextSpan` real scanner is Phase 2.5 (the Phase 2 channel returns `no_text_at_point` and renderer-cached metrics carry the UX).
@@ -428,7 +430,7 @@ Append a **"Phase 2 channels"** section at the bottom (do NOT rewrite the Phase 
 
 Add a **subsection on `MoveBookmarkResult`** showing the discriminated union shape AND the **`invalid_parent` → `invalid_payload` IPC boundary translation** David flagged in Wave 8.5. Verbatim from David's status row:
 
-```markdown
+````markdown
 ### `MoveBookmarkResult` (repo-side) → `BookmarksMoveError` (IPC-side)
 
 The `BookmarksRepo.move()` repo method returns `MoveBookmarkResult`:
@@ -440,6 +442,7 @@ type MoveBookmarkResult =
   | { ok: false; error: 'cycle_detected' }
   | { ok: false; error: 'invalid_parent' };
 ```
+````
 
 The IPC `BookmarksMoveError` union (per `api-contracts.md` §12.6) is:
 
@@ -452,7 +455,8 @@ type BookmarksMoveError =
 ```
 
 The handler (`src/ipc/handlers/bookmarks-phase2.ts`) maps repo `'invalid_parent'` → IPC `'invalid_payload'`. The semantic mapping reads as "the parent reference is structurally invalid" — accurate given the IPC contract scope. A dedicated `'invalid_parent'` wire variant is a Phase 2.5 candidate (it would surface a distinct renderer toast).
-```
+
+````
 
 Add a brief paragraph at the top of the Phase 2 section explaining the cross-doc relationship: `api-reference.md` is the **contributor-facing reference card**; `api-contracts.md` §12 is the **architectural / wire-format contract**. The two are kept in sync — when a channel's request/response shape changes, both docs amend.
 
@@ -521,7 +525,7 @@ The Phase 1.1 cleanup (2026-05-21) added the MIT `LICENSE` file at the repo root
 ## What's next
 
 See [`project-roadmap.md`](project-roadmap.md). Phase 3 (forms, find/search, print preview), Phase 4 (text editing with reflow), Phase 5 (scan + OCR + cross-file bookmarks), Phase 6 (Office export), Phase 7 (macOS / Linux / auto-update / code signing).
-```
+````
 
 **Acceptance:** One page, user-facing, honest. Lists what's new, what's still limited, that there are no breaking changes, and what survives the migration.
 

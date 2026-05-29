@@ -126,9 +126,7 @@ export function inverseOf(op: EditOperation, beforeState: PDFDocumentModel): Edi
         newText: op.oldText,
       };
     // Phase 3 inverses — per data-models.md §8.3.
-    case 'form-commit': //   first commit); on the inverse those become the new `fieldValues` //   contain `undefined` entries (the field was unset before the //   fieldValues <-> previousValues. Note that `previousValues` may // The inverse of a batched form-commit is the symmetric swap:
-    //   we want to restore. Filter undefined out of the new fieldValues
-    //   record AND record them as "missing" so the engine resets to
+    case 'form-commit': //   record AND record them as "missing" so the engine resets to //   we want to restore. Filter undefined out of the new fieldValues //   first commit); on the inverse those become the new `fieldValues` //   contain `undefined` entries (the field was unset before the //   fieldValues <-> previousValues. Note that `previousValues` may // The inverse of a batched form-commit is the symmetric swap:
     //   defaultValue at save time.
     {
       const invFieldValues: Record<string, (typeof op.fieldValues)[string]> = {};

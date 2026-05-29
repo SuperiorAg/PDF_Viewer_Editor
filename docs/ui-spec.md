@@ -33,6 +33,7 @@ Single-window desktop app. One window = one document at a time in Phase 1. Archi
 Sidebar and inspector are **collapsible**. Default state: sidebar expanded, inspector collapsed.
 
 Sidebar has two tabs:
+
 - **Thumbnails** (default) — vertical strip of page thumbnails. Drag to reorder. Right-click for page-ops menu (Insert before/after, Delete, Rotate).
 - **Bookmarks** — tree showing native PDF outline (read-only Phase 1) + user-authored bookmarks (CRUD Phase 1).
 
@@ -81,29 +82,29 @@ Component files: `src/client/components/<KebabName>/index.tsx` + co-located styl
 
 ## 3. Toolbar specification
 
-| Button | Icon | Shortcut | Enabled when | Action |
-|---|---|---|---|---|
-| Open | folder-open | Ctrl+O | always | `dialog:openPdf` |
-| Save | floppy | Ctrl+S | document open AND dirtyOps.length > 0 | `fs:writePdf` (existing path) or prompt Save As if never saved |
-| Save As | floppy-arrow | Ctrl+Shift+S | document open | `dialog:saveAs` → `fs:writePdf` |
-| Undo | rotate-left | Ctrl+Z | history.past.length > 0 (Phase 2 wires; Phase 1 disabled) | dispatch `historySlice/undo` |
-| Redo | rotate-right | Ctrl+Y / Ctrl+Shift+Z | history.future.length > 0 (Phase 2 wires; Phase 1 disabled) | dispatch `historySlice/redo` |
-| **Annotation tools group:** | | | | |
-| Highlight (H) | marker | H | document open | set `annotationsSlice/setActiveTool('highlight')` |
-| Sticky note (S) | sticky-note | S | document open | set active tool 'sticky' |
-| Text box (T) | type | T | document open | set active tool 'text' |
-| Underline | underline | — | DISABLED Phase 1 (tooltip: "Phase 2") |
-| Strikethrough | strikethrough | — | DISABLED Phase 1 |
-| Freehand | scribble | — | DISABLED Phase 1 |
-| Rectangle / Circle / Line | shapes | — | DISABLED Phase 1 (tooltip: "Phase 4") |
-| **Page operations menu (▼):** | | | | |
-| Insert blank page | page-plus | — | document open | inserts at current page index +1 |
-| Insert from file… | page-import | — | document open | opens picker; inserts pages from another PDF |
-| Delete page | page-minus | Del (when page selected in thumbnails) | thumbnail selected | dispatches `delete` op |
-| Rotate 90° CW | rotate-cw | Ctrl+R | document open | rotates current page |
-| Rotate 90° CCW | rotate-ccw | Ctrl+Shift+R | document open | rotates current page |
-| **Combine** | layers-merge | — | always | opens CombineModal |
-| **Settings** | gear | Ctrl+, | always | opens SettingsModal |
+| Button                        | Icon          | Shortcut                               | Enabled when                                                | Action                                                         |
+| ----------------------------- | ------------- | -------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------- |
+| Open                          | folder-open   | Ctrl+O                                 | always                                                      | `dialog:openPdf`                                               |
+| Save                          | floppy        | Ctrl+S                                 | document open AND dirtyOps.length > 0                       | `fs:writePdf` (existing path) or prompt Save As if never saved |
+| Save As                       | floppy-arrow  | Ctrl+Shift+S                           | document open                                               | `dialog:saveAs` → `fs:writePdf`                                |
+| Undo                          | rotate-left   | Ctrl+Z                                 | history.past.length > 0 (Phase 2 wires; Phase 1 disabled)   | dispatch `historySlice/undo`                                   |
+| Redo                          | rotate-right  | Ctrl+Y / Ctrl+Shift+Z                  | history.future.length > 0 (Phase 2 wires; Phase 1 disabled) | dispatch `historySlice/redo`                                   |
+| **Annotation tools group:**   |               |                                        |                                                             |                                                                |
+| Highlight (H)                 | marker        | H                                      | document open                                               | set `annotationsSlice/setActiveTool('highlight')`              |
+| Sticky note (S)               | sticky-note   | S                                      | document open                                               | set active tool 'sticky'                                       |
+| Text box (T)                  | type          | T                                      | document open                                               | set active tool 'text'                                         |
+| Underline                     | underline     | —                                      | DISABLED Phase 1 (tooltip: "Phase 2")                       |
+| Strikethrough                 | strikethrough | —                                      | DISABLED Phase 1                                            |
+| Freehand                      | scribble      | —                                      | DISABLED Phase 1                                            |
+| Rectangle / Circle / Line     | shapes        | —                                      | DISABLED Phase 1 (tooltip: "Phase 4")                       |
+| **Page operations menu (▼):** |               |                                        |                                                             |                                                                |
+| Insert blank page             | page-plus     | —                                      | document open                                               | inserts at current page index +1                               |
+| Insert from file…             | page-import   | —                                      | document open                                               | opens picker; inserts pages from another PDF                   |
+| Delete page                   | page-minus    | Del (when page selected in thumbnails) | thumbnail selected                                          | dispatches `delete` op                                         |
+| Rotate 90° CW                 | rotate-cw     | Ctrl+R                                 | document open                                               | rotates current page                                           |
+| Rotate 90° CCW                | rotate-ccw    | Ctrl+Shift+R                           | document open                                               | rotates current page                                           |
+| **Combine**                   | layers-merge  | —                                      | always                                                      | opens CombineModal                                             |
+| **Settings**                  | gear          | Ctrl+,                                 | always                                                      | opens SettingsModal                                            |
 
 Icon set: any permissive-licensed icon library (e.g. **Lucide React**, ISC license, MIT-compatible). Choice locked in `package.json` by Diego in Wave 3.
 
@@ -112,7 +113,9 @@ Icon set: any permissive-licensed icon library (e.g. **Lucide React**, ISC licen
 ## 4. Sidebar — Thumbnails tab
 
 ### 4.1 Layout
+
 Vertical scrollable strip. Each thumbnail shows:
+
 - Page number label (centered below)
 - Active border (2px accent color) on current viewport page
 - Selection check (top-left) on multi-select
@@ -120,22 +123,24 @@ Vertical scrollable strip. Each thumbnail shows:
 
 ### 4.2 Interactions
 
-| Gesture | Result |
-|---|---|
-| Click | Scroll viewer to this page; set as current page |
-| Ctrl+Click | Toggle this page in selection |
-| Shift+Click | Select range from last-clicked to this |
-| Drag thumbnail (vertical) | Reorder page; preview indicator shows insertion line; release dispatches `reorder` op |
-| Right-click | Context menu: Insert before, Insert after, Insert blank, Delete, Rotate CW, Rotate CCW, Copy page (Phase 2), Extract to file (Phase 2) |
-| Del (when selected) | Delete selected pages (confirm if >1) |
+| Gesture                   | Result                                                                                                                                 |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Click                     | Scroll viewer to this page; set as current page                                                                                        |
+| Ctrl+Click                | Toggle this page in selection                                                                                                          |
+| Shift+Click               | Select range from last-clicked to this                                                                                                 |
+| Drag thumbnail (vertical) | Reorder page; preview indicator shows insertion line; release dispatches `reorder` op                                                  |
+| Right-click               | Context menu: Insert before, Insert after, Insert blank, Delete, Rotate CW, Rotate CCW, Copy page (Phase 2), Extract to file (Phase 2) |
+| Del (when selected)       | Delete selected pages (confirm if >1)                                                                                                  |
 
 ### 4.3 Drag-drop from OS
+
 - Dropping a PDF file onto the thumbnail strip prompts: "Insert pages from <filename> at position N?" → confirm → `pdf:combine` with current doc + dropped file with `pageRange` undefined (all pages)
 - Dropping a PDF onto the empty viewer canvas (no document open) opens that file
 - Dropping a PDF onto the canvas of an open document prompts: "Open new document, or insert pages?"
 - Dropping a non-PDF file → toast: "PDF_Viewer_Editor only accepts .pdf files."
 
 ### 4.4 Performance
+
 - Thumbnails rendered lazily as they scroll into view (IntersectionObserver)
 - Thumbnail bitmap cached per page (LRU, max 100 entries by default; configurable via `recents.thumbnailCache` setting in Phase 2)
 - When a page is reordered, the thumbnail bitmap is reused (no re-render needed; the page content didn't change)
@@ -145,19 +150,21 @@ Vertical scrollable strip. Each thumbnail shows:
 ## 5. Sidebar — Bookmarks tab
 
 ### 5.1 Sources merged
+
 1. **Native PDF outline** (from `pdf:getOutline`) — shown as italic, with a small lock icon (read-only Phase 1)
 2. **User-authored bookmarks** (from `bookmarks:list`) — shown as normal, editable
 
 ### 5.2 Interactions
 
-| Gesture | Result |
-|---|---|
-| Click bookmark | Scroll viewer to its page |
-| Right-click user bookmark | Context menu: Rename, Delete |
+| Gesture                        | Result                                                                       |
+| ------------------------------ | ---------------------------------------------------------------------------- |
+| Click bookmark                 | Scroll viewer to its page                                                    |
+| Right-click user bookmark      | Context menu: Rename, Delete                                                 |
 | Right-click any page in viewer | "Add bookmark here" → modal: title (default = "Page N") → `bookmarks:upsert` |
-| Drag user bookmark | Reorder among user bookmarks (Phase 2; Phase 1 inserts append-only) |
+| Drag user bookmark             | Reorder among user bookmarks (Phase 2; Phase 1 inserts append-only)          |
 
 ### 5.3 Empty state
+
 "No bookmarks yet. Right-click any page in the viewer and choose 'Add bookmark' to create one."
 
 ---
@@ -165,6 +172,7 @@ Vertical scrollable strip. Each thumbnail shows:
 ## 6. Main viewer
 
 ### 6.1 Render
+
 - pdf.js viewer fitted to the available space, scroll mode = vertical continuous
 - Zoom levels: `fit-width`, `fit-page`, 50%, 75%, 100%, 125%, 150%, 200%, 400%; Ctrl+Plus / Ctrl+Minus cycles; Ctrl+0 resets to 100%; Ctrl+1 = fit width; Ctrl+2 = fit page
 - Pan: drag with middle mouse button OR with hand tool selected
@@ -172,15 +180,16 @@ Vertical scrollable strip. Each thumbnail shows:
 
 ### 6.2 Annotation interactions (Phase 1)
 
-| Tool | Gesture | Result |
-|---|---|---|
-| Highlight (H) | Click-drag over text | Creates `/Highlight` annotation with QuadPoints derived from text layer hit-testing |
-| Sticky note (S) | Single click | Places a `/Text` annotation at click point; opens contents popover for typing |
-| Text box (T) | Click-drag rectangle | Creates a `/FreeText` annotation; opens contents popover; default font from settings |
+| Tool            | Gesture              | Result                                                                               |
+| --------------- | -------------------- | ------------------------------------------------------------------------------------ |
+| Highlight (H)   | Click-drag over text | Creates `/Highlight` annotation with QuadPoints derived from text layer hit-testing  |
+| Sticky note (S) | Single click         | Places a `/Text` annotation at click point; opens contents popover for typing        |
+| Text box (T)    | Click-drag rectangle | Creates a `/FreeText` annotation; opens contents popover; default font from settings |
 
 After placing, the annotation is selected; the Inspector shows its properties (color, opacity, author, contents).
 
 ### 6.3 Annotation rendering
+
 - Persisted annotations drawn in an HTML overlay on top of the pdf.js canvas (NOT into the canvas itself — keeps them selectable / hit-testable)
 - In-progress annotation (draft) drawn in a separate layer with reduced opacity until released
 - Coordinates converted via `pdf-coords.ts` (data-models.md §3.5)
@@ -192,7 +201,9 @@ After placing, the annotation is selected; the Inspector shows its properties (c
 Right side, collapsible. Two modes:
 
 ### 7.1 Annotation selected
+
 Shows:
+
 - Subtype label ("Highlight" / "Sticky note" / "Text box")
 - Color picker (10 preset swatches + custom hex)
 - Opacity slider (0–100%)
@@ -204,7 +215,9 @@ Shows:
 Live updates as the user adjusts — dispatches `annot-edit` op on commit (e.g. slider mouse-up) to avoid filling the undo stack with intermediate values.
 
 ### 7.2 No annotation selected
+
 Shows:
+
 - Current page metadata: page index, dimensions (width × height in inches and points), rotation
 - Document metadata: title (from PDF info dict), author, page count, file hash (first 8 chars), file size
 - Permissions: print, modify, copy (read from PDF security, if any)
@@ -214,12 +227,15 @@ Shows:
 ## 8. Status bar
 
 Left-aligned:
+
 - `Page X of Y` (current page in viewport)
 
 Center:
+
 - `Zoom: 100%`
 
 Right-aligned:
+
 - `* Modified` (only when dirtyOps.length > 0)
 - `Engine: <chosen>` when an export is in progress or just completed (clickable → reopens ExportEngineDialog)
 - Tiny progress spinner during export
@@ -257,23 +273,28 @@ Right-aligned:
 Sections:
 
 **General**
+
 - Theme: System / Light / Dark (Phase 2 wires UI; Phase 1 disabled "Coming in Phase 2")
 - Recents max items: input (number, 1–200)
 - Confirm before closing unsaved: checkbox
 
 **Files**
+
 - Max file size to open: input (MB, 1–10000)
 - **PDF file association:** read-only label "PDF_Viewer_Editor IS / IS NOT the default PDF viewer" + button "Make default" / "Relinquish default" (calls `app:setDefaultPdfHandler`). Subtext: "Windows may ask you to confirm." See Decision 4.
 
 **Export**
+
 - Default engine: dropdown `Auto (recommended) / pdf-lib / Chromium`
 - Show warnings toast after export: checkbox
 
 **Editing** (Phase 2 wires; Phase 1 mostly disabled)
+
 - Default author for annotations: text input (defaults to OS username)
 - Undo history depth: slider 10–500 (Phase 2)
 
 **About**
+
 - App version, Electron / Chromium / Node versions
 - License notice
 - Link to docs / repo
@@ -322,39 +343,39 @@ The "Auto will choose" preview runs the heuristic synchronously and shows the pr
 
 ## 10. Keyboard shortcuts (complete table)
 
-| Shortcut | Action |
-|---|---|
-| Ctrl+O | Open PDF |
-| Ctrl+S | Save |
-| Ctrl+Shift+S | Save As |
-| Ctrl+W | Close document |
-| Ctrl+Q | Quit app (prompts if unsaved) |
-| Ctrl+Z | Undo (Phase 2) |
-| Ctrl+Y / Ctrl+Shift+Z | Redo (Phase 2) |
-| Ctrl+A | Select all pages in thumbnail strip |
-| Ctrl+Plus / Ctrl+= | Zoom in |
-| Ctrl+Minus | Zoom out |
-| Ctrl+0 | Zoom 100% |
-| Ctrl+1 | Fit width |
-| Ctrl+2 | Fit page |
-| Ctrl+R | Rotate current page 90° CW |
-| Ctrl+Shift+R | Rotate current page 90° CCW |
-| Ctrl+, | Open Settings |
-| Ctrl+F | Find text (Phase 2) — disabled Phase 1 |
-| Ctrl+P | Print to physical printer (Phase 2) — disabled Phase 1 |
-| Ctrl+Shift+P | Export to PDF (Phase 2) — disabled Phase 1 |
-| H | Activate Highlight tool |
-| S | Activate Sticky Note tool |
-| T | Activate Text Box tool |
-| V / Esc | Default cursor tool (deactivate annotation tool) |
-| Del | Delete selected annotation OR selected pages (if focus is in thumbnail strip) |
-| Tab | Cycle Sidebar tabs (Thumbnails ↔ Bookmarks) |
-| F1 | Open in-app help (links to docs/) — Phase 4 stub |
-| F11 | Toggle fullscreen |
-| Ctrl+B | Toggle sidebar |
-| Ctrl+I | Toggle inspector |
-| Page Up / Down | Previous / next page |
-| Home / End | First / last page |
+| Shortcut              | Action                                                                        |
+| --------------------- | ----------------------------------------------------------------------------- |
+| Ctrl+O                | Open PDF                                                                      |
+| Ctrl+S                | Save                                                                          |
+| Ctrl+Shift+S          | Save As                                                                       |
+| Ctrl+W                | Close document                                                                |
+| Ctrl+Q                | Quit app (prompts if unsaved)                                                 |
+| Ctrl+Z                | Undo (Phase 2)                                                                |
+| Ctrl+Y / Ctrl+Shift+Z | Redo (Phase 2)                                                                |
+| Ctrl+A                | Select all pages in thumbnail strip                                           |
+| Ctrl+Plus / Ctrl+=    | Zoom in                                                                       |
+| Ctrl+Minus            | Zoom out                                                                      |
+| Ctrl+0                | Zoom 100%                                                                     |
+| Ctrl+1                | Fit width                                                                     |
+| Ctrl+2                | Fit page                                                                      |
+| Ctrl+R                | Rotate current page 90° CW                                                    |
+| Ctrl+Shift+R          | Rotate current page 90° CCW                                                   |
+| Ctrl+,                | Open Settings                                                                 |
+| Ctrl+F                | Find text (Phase 2) — disabled Phase 1                                        |
+| Ctrl+P                | Print to physical printer (Phase 2) — disabled Phase 1                        |
+| Ctrl+Shift+P          | Export to PDF (Phase 2) — disabled Phase 1                                    |
+| H                     | Activate Highlight tool                                                       |
+| S                     | Activate Sticky Note tool                                                     |
+| T                     | Activate Text Box tool                                                        |
+| V / Esc               | Default cursor tool (deactivate annotation tool)                              |
+| Del                   | Delete selected annotation OR selected pages (if focus is in thumbnail strip) |
+| Tab                   | Cycle Sidebar tabs (Thumbnails ↔ Bookmarks)                                   |
+| F1                    | Open in-app help (links to docs/) — Phase 4 stub                              |
+| F11                   | Toggle fullscreen                                                             |
+| Ctrl+B                | Toggle sidebar                                                                |
+| Ctrl+I                | Toggle inspector                                                              |
+| Page Up / Down        | Previous / next page                                                          |
+| Home / End            | First / last page                                                             |
 
 Shortcuts are configurable in Phase 2; in Phase 1 they are hard-coded but the constants live in `src/client/shortcuts.ts` so Phase 2 swap is mechanical.
 
@@ -362,16 +383,16 @@ Shortcuts are configurable in Phase 2; in Phase 1 they are hard-coded but the co
 
 ## 11. Drag-drop behavior (complete)
 
-| Source | Target | Result |
-|---|---|---|
-| OS file (.pdf) | Window (no document open) | Open file |
-| OS file (.pdf) | Window (document open) | Prompt: "Open in new window" OR "Insert pages here" (Phase 2 may add tabs) — Phase 1 only offers Open replacing current (with unsaved confirm) |
-| OS file (.pdf) | Thumbnail strip | Insert pages at drop position (calls `pdf:combine` with current + dropped) |
-| OS file (non-PDF) | anywhere | Toast: "Only .pdf files supported" |
-| OS file (image) | viewer canvas | Phase 2 stub — Phase 1 shows "Image import: Phase 2" toast |
-| Internal: thumbnail | thumbnail strip | Reorder (dispatches `reorder` op) |
-| Internal: bookmark | bookmark list | Reorder user bookmarks (Phase 2; Phase 1 ignores) |
-| Internal: annotation | another page in thumbnail strip | Move annotation across pages (Phase 2; Phase 1 ignores) |
+| Source               | Target                          | Result                                                                                                                                         |
+| -------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| OS file (.pdf)       | Window (no document open)       | Open file                                                                                                                                      |
+| OS file (.pdf)       | Window (document open)          | Prompt: "Open in new window" OR "Insert pages here" (Phase 2 may add tabs) — Phase 1 only offers Open replacing current (with unsaved confirm) |
+| OS file (.pdf)       | Thumbnail strip                 | Insert pages at drop position (calls `pdf:combine` with current + dropped)                                                                     |
+| OS file (non-PDF)    | anywhere                        | Toast: "Only .pdf files supported"                                                                                                             |
+| OS file (image)      | viewer canvas                   | Phase 2 stub — Phase 1 shows "Image import: Phase 2" toast                                                                                     |
+| Internal: thumbnail  | thumbnail strip                 | Reorder (dispatches `reorder` op)                                                                                                              |
+| Internal: bookmark   | bookmark list                   | Reorder user bookmarks (Phase 2; Phase 1 ignores)                                                                                              |
+| Internal: annotation | another page in thumbnail strip | Move annotation across pages (Phase 2; Phase 1 ignores)                                                                                        |
 
 External drag visual feedback: dashed border on the drop target zone.
 
@@ -384,6 +405,7 @@ Every screen has FOUR mandatory states. UI for each:
 ### 12.1 Empty
 
 **Viewer (no doc open):**
+
 ```
 +-----------------------------------------------------------+
 |                                                           |
@@ -409,36 +431,44 @@ Every screen has FOUR mandatory states. UI for each:
 ### 12.2 Loading
 
 **Document opening:**
+
 - Skeleton placeholders in thumbnail strip (gray rectangles, 5 visible)
 - Spinner over viewer canvas with "Loading document…"
 - Status bar: "Loading X.pdf… 47%"
 - Cancel button (Esc)
 
 **Combine in progress:**
+
 - Modal stays open with progress bar
 - Cannot dismiss
 
 **Export in progress (Phase 2):**
+
 - ProgressToast (lower-right): "Exporting via Chromium… (preparing)" with phase from `pdf:export:progress` events
 
 ### 12.3 Error
 
 **Open failed:**
+
 - Toast (red, dismissible): "Couldn't open document.pdf — file is not a valid PDF."
 - Specific messages per `DialogOpenPdfError` variant
 - Recents stays visible
 
 **Save failed:**
+
 - Modal: "Save failed: <message>". Buttons: "Try Save As", "Cancel".
 - Document stays dirty (not cleared)
 
 **Combine failed:**
+
 - Inline error in CombineModal: "Couldn't combine: <reason>". Files stay listed.
 
 **Export failed (Phase 2):**
+
 - Toast (red): "Export failed: <reason>". If `engine_failed_pdflib`, offer "Retry with Chromium" button.
 
 **Annotation render failed:**
+
 - Annotation shown as a red placeholder rect with tooltip "Annotation failed to render". Document not blocked.
 
 ### 12.4 Populated (normal)
@@ -450,6 +480,7 @@ The reference state. Toolbar enabled per §3; sidebar populated; viewer renderin
 ## 13. Accessibility (Phase 7 audit; floor for Phase 1)
 
 Phase 1 floor:
+
 - All interactive elements reachable by keyboard (Tab order is logical: Toolbar → Sidebar → Viewer → Inspector → Status bar)
 - Focus ring visible on focused element
 - All icon-only buttons have `aria-label`
@@ -465,6 +496,7 @@ Phase 7 will add: screen reader testing (NVDA / JAWS), full keyboard nav of the 
 **Decision: CSS Modules** (no Tailwind, no styled-components).
 
 Rationale:
+
 - CSS Modules give scoped class names + plain CSS files — no runtime cost, no build-time CSS-in-JS overhead
 - Tailwind's utility classes balloon Phase 2's annotation canvas markup with no functional benefit
 - Vite has first-class CSS Modules support (`*.module.css` files)
@@ -493,18 +525,18 @@ ESLint enforces: CSS files match component names; no global styles outside `src/
 
 Add to the toolbar table (§3) as additional rows:
 
-| Button | Icon | Shortcut | Enabled when | Action |
-|---|---|---|---|---|
-| **Undo** | rotate-left | Ctrl+Z | history.past.length > 0 | dispatch `historySlice/undo` — **enabled Phase 2** (was disabled stub Phase 1) |
-| **Redo** | rotate-right | Ctrl+Y / Ctrl+Shift+Z | history.future.length > 0 | dispatch `historySlice/redo` — **enabled Phase 2** |
-| **Underline (U)** | underline | U | document open + text under cursor | set active tool 'underline' — **enabled Phase 2** |
-| **Strikethrough (K)** | strikethrough | K | document open + text under cursor | set active tool 'strikeout' — **enabled Phase 2** |
-| **Freehand (F)** | scribble | F | document open | set active tool 'ink' — **enabled Phase 2** |
-| **Insert Image** | image-plus | Ctrl+I | document open | open `ImageImportModal` |
-| **Text Edit** | type-cursor | E | document open | toggle `text-edit-overlay` mode |
-| **Bookmarks Edit** | bookmark-edit | — | document open | toggle bookmarks-panel editing mode (enables drag-to-reorder + context menus) |
-| **Print** | printer | Ctrl+P | document open | open Electron's OS print dialog via `pdf:print` |
-| **Export to PDF** | file-export | Ctrl+Shift+P | document open | open `ExportEngineDialog` (already exists Phase 1; now wired to real engine) |
+| Button                | Icon          | Shortcut              | Enabled when                      | Action                                                                         |
+| --------------------- | ------------- | --------------------- | --------------------------------- | ------------------------------------------------------------------------------ |
+| **Undo**              | rotate-left   | Ctrl+Z                | history.past.length > 0           | dispatch `historySlice/undo` — **enabled Phase 2** (was disabled stub Phase 1) |
+| **Redo**              | rotate-right  | Ctrl+Y / Ctrl+Shift+Z | history.future.length > 0         | dispatch `historySlice/redo` — **enabled Phase 2**                             |
+| **Underline (U)**     | underline     | U                     | document open + text under cursor | set active tool 'underline' — **enabled Phase 2**                              |
+| **Strikethrough (K)** | strikethrough | K                     | document open + text under cursor | set active tool 'strikeout' — **enabled Phase 2**                              |
+| **Freehand (F)**      | scribble      | F                     | document open                     | set active tool 'ink' — **enabled Phase 2**                                    |
+| **Insert Image**      | image-plus    | Ctrl+I                | document open                     | open `ImageImportModal`                                                        |
+| **Text Edit**         | type-cursor   | E                     | document open                     | toggle `text-edit-overlay` mode                                                |
+| **Bookmarks Edit**    | bookmark-edit | —                     | document open                     | toggle bookmarks-panel editing mode (enables drag-to-reorder + context menus)  |
+| **Print**             | printer       | Ctrl+P                | document open                     | open Electron's OS print dialog via `pdf:print`                                |
+| **Export to PDF**     | file-export   | Ctrl+Shift+P          | document open                     | open `ExportEngineDialog` (already exists Phase 1; now wired to real engine)   |
 
 Phase-1 disabled buttons that were tooltipped "Phase 2": Underline, Strikethrough, Freehand. Phase 2 enables. The shape-tool buttons (Square / Circle / Line) REMAIN disabled with tooltip "Phase 4."
 
@@ -513,24 +545,29 @@ Note `Ctrl+I` is reassigned from "Toggle inspector" (§10) to "Insert Image" in 
 ### 11.2 Menu additions
 
 **File menu:**
+
 - Print… (Ctrl+P) — opens system print dialog
 - Export to PDF… (Ctrl+Shift+P) — opens ExportEngineDialog
 - (Existing File menu items unchanged)
 
 **Edit menu:**
+
 - Undo (Ctrl+Z) — **enabled Phase 2**
 - Redo (Ctrl+Y) — **enabled Phase 2**
 - (Add at top of the menu, before any existing items)
 
 **Insert menu (NEW):**
+
 - Image… (Ctrl+I) — opens ImageImportModal
 - Page from File… — opens existing combine-modal-style picker, inserts pages at current cursor
 - Blank Page — inserts blank page at current cursor
 
 **View menu:**
+
 - Toggle Bookmarks-Edit Mode — toggles the bookmarks panel between read-only display and editing affordances
 
 **Tools menu:**
+
 - Text Edit Mode (E) — toggles `text-edit-overlay`
 
 ### 11.3 ImageImportModal (NEW)
@@ -577,11 +614,13 @@ Phase-1 §9.4 designed `ExportEngineDialog`. Phase 2 keeps that dialog for **Exp
 A new component `src/client/components/text-edit-overlay/` renders over the canvas in text-edit mode.
 
 **Entering text-edit mode:**
+
 - Click toolbar Text Edit button OR press `E`.
 - Cursor changes to text-cursor over text regions.
 - The annotation toolbar (Highlight, Sticky, etc.) is hidden in this mode (mutually exclusive).
 
 **Editing a text run:**
+
 - Click into a text region on the canvas.
 - Renderer fires `pdf:identifyTextSpan({ handle, pageIndex, x, y })`.
 - On success: an inline editor (`<input type="text">` styled to match the original font as best as DOM allows) opens over the run's bounding rect, populated with the current text.
@@ -593,10 +632,12 @@ A new component `src/client/components/text-edit-overlay/` renders over the canv
 - The overlay shows the new text immediately on commit (renderer-side overlay; underlying canvas still shows old text until the next save → refresh cycle).
 
 **Exiting text-edit mode:**
+
 - Press Esc again with no active editor open, OR click the Text Edit toolbar button again, OR pick another tool.
 - The overlay is dismissed; the canvas reverts to standard view (with the overlay-text replacements still showing until next save).
 
 **Visual style:**
+
 - Inline editor has a 1-pt dashed border (color: accent) matching the run's bounding rect.
 - The render of the underlying text is dimmed (50% opacity) within the editor's rect so the user knows they're replacing it.
 - Tooltips position above the editor; if off-screen, below.
@@ -636,10 +677,12 @@ Implementation uses `@dnd-kit/sortable` + `@dnd-kit/core` (already deps Phase 1)
 Cycle detection (preventing a parent being moved under its descendant) lives in the renderer slice before dispatching the IPC call; the main-process repo also re-checks via SQL CTE (api-contracts.md §12.6).
 
 **Empty state (no user bookmarks):**
+
 > No bookmarks yet. Right-click any page in the viewer and choose "Add bookmark" to create one. Switch to Edit Mode to drag, reorder, and nest.
 
 **Confirm-before-delete:** if `editing.confirmDelete` setting is true (default), deleting a bookmark with children prompts:
-> "Delete 'Indemnification' and its 2 sub-bookmarks?  [Cancel] [Delete all]"
+
+> "Delete 'Indemnification' and its 2 sub-bookmarks? [Cancel] [Delete all]"
 
 Single-bookmark deletes (no children) commit without prompt.
 
@@ -649,13 +692,13 @@ Phase 1's `ExportEngineDialog` (§9.4) is reused for the **Export to PDF** flow 
 
 The dialog's "Auto will choose: …" preview text now reflects Phase-2 heuristic signals (architecture-phase-2.md §3.8):
 
-| Signal | Preview text |
-|---|---|
-| AcroForm fields detected | "Chromium — document contains form fields" |
-| Embedded JavaScript | "Chromium — document contains scripted actions" |
-| Encrypted source | (Phase 1) "Chromium — source PDF is encrypted" |
-| Text-replace op queued | "pdf-lib — text edits require original-font fidelity" |
-| Default | "pdf-lib — default engine" |
+| Signal                   | Preview text                                          |
+| ------------------------ | ----------------------------------------------------- |
+| AcroForm fields detected | "Chromium — document contains form fields"            |
+| Embedded JavaScript      | "Chromium — document contains scripted actions"       |
+| Encrypted source         | (Phase 1) "Chromium — source PDF is encrypted"        |
+| Text-replace op queued   | "pdf-lib — text edits require original-font fidelity" |
+| Default                  | "pdf-lib — default engine"                            |
 
 The dialog gains a "Deterministic output" checkbox in the Phase 2 Advanced section (collapsed by default). Bound to the `export.deterministic` setting.
 
@@ -663,20 +706,20 @@ The dialog gains a "Deterministic output" checkbox in the Phase 2 Advanced secti
 
 Reflects Phase 2 changes to §10:
 
-| Shortcut | Action | Phase |
-|---|---|---|
-| Ctrl+Z | Undo | **enabled Phase 2** |
-| Ctrl+Y / Ctrl+Shift+Z | Redo | **enabled Phase 2** |
-| Ctrl+I | Insert Image | **Phase 2 (was Toggle Inspector Phase 1)** |
-| Ctrl+Alt+I | Toggle Inspector | Phase 2 (replaces Ctrl+I) |
-| Ctrl+P | Print to printer | **enabled Phase 2** |
-| Ctrl+Shift+P | Export to PDF | **enabled Phase 2** |
-| E | Text Edit Mode toggle | **Phase 2 (NEW)** |
-| U | Underline tool | **enabled Phase 2** |
-| K | Strikethrough tool | **enabled Phase 2** |
-| F | Freehand tool | **enabled Phase 2** |
-| Ctrl+B | Toggle sidebar | Unchanged |
-| (other Phase 1 shortcuts) | | Unchanged |
+| Shortcut                  | Action                | Phase                                      |
+| ------------------------- | --------------------- | ------------------------------------------ |
+| Ctrl+Z                    | Undo                  | **enabled Phase 2**                        |
+| Ctrl+Y / Ctrl+Shift+Z     | Redo                  | **enabled Phase 2**                        |
+| Ctrl+I                    | Insert Image          | **Phase 2 (was Toggle Inspector Phase 1)** |
+| Ctrl+Alt+I                | Toggle Inspector      | Phase 2 (replaces Ctrl+I)                  |
+| Ctrl+P                    | Print to printer      | **enabled Phase 2**                        |
+| Ctrl+Shift+P              | Export to PDF         | **enabled Phase 2**                        |
+| E                         | Text Edit Mode toggle | **Phase 2 (NEW)**                          |
+| U                         | Underline tool        | **enabled Phase 2**                        |
+| K                         | Strikethrough tool    | **enabled Phase 2**                        |
+| F                         | Freehand tool         | **enabled Phase 2**                        |
+| Ctrl+B                    | Toggle sidebar        | Unchanged                                  |
+| (other Phase 1 shortcuts) |                       | Unchanged                                  |
 
 The `shortcuts.ts` file's `enabledInPhase1: boolean` field becomes `enabledInPhases: number[]` — a list of phases where the shortcut is active. Phase 2 shortcuts have `[2, 3, 4, 5, 6, 7]` etc. (active from Phase 2 onward). The matcher `findShortcutForEvent` now consults the field — closes the Wave 5 Riley observation that the flag was documentation-only.
 
@@ -684,15 +727,15 @@ The `shortcuts.ts` file's `enabledInPhase1: boolean` field becomes `enabledInPha
 
 Extends §11 of the Phase-1 doc:
 
-| Source | Target | Phase 2 result |
-|---|---|---|
-| OS file (image: PNG/JPEG/TIFF) | viewer canvas | **Phase 2:** opens ImageImportModal with file pre-loaded, "Overlay on current page" mode pre-selected with rect derived from drop point |
-| OS file (image) | thumbnail strip | **Phase 2:** opens ImageImportModal with "New page" mode pre-selected, at position derived from drop target (between two thumbnails) |
-| OS file (image) | empty state (no doc open) | **Phase 2:** toast "Open a PDF first, then insert images" — image-only documents are NOT Phase 2 (use Insert Image → New Page in an open doc instead) |
-| OS file (non-PDF, non-image) | anywhere | Toast: "Only .pdf, .png, .jpg/.jpeg, .tif/.tiff files supported" |
-| Internal: bookmark | bookmarks panel (drop within siblings) | **Phase 2:** reorder via `bookmarks:move` |
-| Internal: bookmark | bookmarks panel (drop on another bookmark) | **Phase 2:** re-parent + cycle-check |
-| Internal: annotation | another page in thumbnail strip | **Phase 2 deferred** (Phase 3 maybe) — current Phase 2 keeps annotations bound to their page |
+| Source                         | Target                                     | Phase 2 result                                                                                                                                        |
+| ------------------------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OS file (image: PNG/JPEG/TIFF) | viewer canvas                              | **Phase 2:** opens ImageImportModal with file pre-loaded, "Overlay on current page" mode pre-selected with rect derived from drop point               |
+| OS file (image)                | thumbnail strip                            | **Phase 2:** opens ImageImportModal with "New page" mode pre-selected, at position derived from drop target (between two thumbnails)                  |
+| OS file (image)                | empty state (no doc open)                  | **Phase 2:** toast "Open a PDF first, then insert images" — image-only documents are NOT Phase 2 (use Insert Image → New Page in an open doc instead) |
+| OS file (non-PDF, non-image)   | anywhere                                   | Toast: "Only .pdf, .png, .jpg/.jpeg, .tif/.tiff files supported"                                                                                      |
+| Internal: bookmark             | bookmarks panel (drop within siblings)     | **Phase 2:** reorder via `bookmarks:move`                                                                                                             |
+| Internal: bookmark             | bookmarks panel (drop on another bookmark) | **Phase 2:** re-parent + cycle-check                                                                                                                  |
+| Internal: annotation           | another page in thumbnail strip            | **Phase 2 deferred** (Phase 3 maybe) — current Phase 2 keeps annotations bound to their page                                                          |
 
 L-001 cross-check: image drag-drop EXTENDS the existing PDF drag-drop path (same `File.path` Electron property). The L-001 setting (`enableDragDropFiles: true`) is the dependency for both. **The Phase-2 implementer (Riley Wave 7) MUST NOT touch `window-manager.ts`.**
 
@@ -701,11 +744,13 @@ L-001 cross-check: image drag-drop EXTENDS the existing PDF drag-drop path (same
 Extending §12:
 
 **Loading — Image embed in progress:**
+
 - Modal overlay on the ImageImportModal with spinner: "Embedding image…"
 - For TIFF: phase shown ("Decoding TIFF…", "Embedding into document…")
 - Cancel button (Esc)
 
 **Loading — Export in progress (Phase 2 Live):**
+
 - ProgressToast at lower-right with the new phase values from api-contracts.md §12.8:
   - "Preparing…"
   - "Applying edits…"
@@ -717,24 +762,29 @@ Extending §12:
 - Cancel button — fires `pdf:export:cancel` (new event; David Wave 7 implements)
 
 **Loading — Print job dispatching:**
+
 - Brief spinner overlay on Print button until OS dialog appears
 - After dialog: app returns to normal state immediately (OS handles spooling)
 
 **Error — text-replace missing glyph (inline):**
+
 - Inline tooltip on the text-edit overlay, NOT a toast
 - Red underline under the offending character(s)
 - Commit button disabled
 
 **Error — text-replace will clip (inline):**
+
 - Warning tooltip, NOT an error
 - Commit button stays enabled
 
 **Error — save failed (Phase 2 variants):**
+
 - Toast for `op_apply_failed`, `image_decode_failed`, `text_span_not_found`
 - Modal for `fs_write_failed` with "Try Save As" button
 - Toast for `encrypted_unsupported` with "Try Export to PDF (Chromium)" action
 
 **Populated — text-edit mode active:**
+
 - A persistent banner at the top of the canvas: "Text Edit mode — click any text run to edit. Esc to exit."
 - Cursor changes to text-cursor over text regions
 - Annotation toolbar hidden (replaced by Text Edit toolbar with Cancel button)
@@ -789,29 +839,34 @@ End of Phase-2 UI amendment.
 
 Add to the toolbar table (§3, extended in §11.1) as additional rows:
 
-| Button | Icon | Shortcut | Enabled when | Action |
-|---|---|---|---|---|
-| **Form Designer** | form-edit | Ctrl+Shift+F | document open | toggles form-designer mode (cursor changes; right Inspector shows field-properties; click-to-place activates) |
-| **Mail Merge** | mail-merge | Ctrl+M | document open AND `formsSlice.fields.length > 0` (template has fields) | opens MailMergeModal wizard |
+| Button            | Icon       | Shortcut     | Enabled when                                                           | Action                                                                                                        |
+| ----------------- | ---------- | ------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Form Designer** | form-edit  | Ctrl+Shift+F | document open                                                          | toggles form-designer mode (cursor changes; right Inspector shows field-properties; click-to-place activates) |
+| **Mail Merge**    | mail-merge | Ctrl+M       | document open AND `formsSlice.fields.length > 0` (template has fields) | opens MailMergeModal wizard                                                                                   |
 
 The shape-tool buttons (Square / Circle / Line) REMAIN disabled with tooltip "Phase 4." Phase 3 does NOT enable them.
 
 ### 12.2 Menu additions (Phase 3)
 
 **File menu:**
+
 - (No new items in Phase 3; Save / Save As / Print / Export to PDF remain Phase 2 surfaces with the Phase 3 flatten extension — see §12.7)
 
 **Edit menu:**
+
 - (Unchanged from Phase 2)
 
 **Insert menu:**
+
 - Form Field… → submenu listing Text / Checkbox / Radio / Dropdown / Signature / Date (each opens the designer in "place next field of this type" mode)
 
 **View menu:**
+
 - Toggle Forms Sidebar — focuses the new Forms tab in the sidebar (auto-opens if collapsed)
 - Toggle Form Designer Mode (Ctrl+Shift+F) — same as toolbar Form Designer button
 
 **Tools menu:**
+
 - Mail Merge… (Ctrl+M) — opens MailMergeModal
 - Flatten Forms — runs `forms:flatten` for the open doc (with confirm dialog warning "this is irreversible after save")
 
@@ -840,12 +895,14 @@ Forms tab content:
 ```
 
 **Detection-status banner** at the top of the tab (driven by `forms:detect` response):
+
 - `unknown` (initial) → "Detecting forms…"
 - `none` → "This PDF has no fillable form fields. Switch to Form Designer to add some."
 - `present` → "AcroForm detected: N fields"
 - Plus optional warning rows for `hasJavaScriptActions`, `hasXfaForm`, signed-fields-present
 
 **Field tree** organized by page (collapsible groups). Each field row shows:
+
 - field name + label (label dimmed if same as name)
 - type pill (`[text]`, `[checkbox]`, `[date]`, etc.)
 - edit icon (✏) — opens field properties in the Inspector
@@ -861,18 +918,22 @@ Forms tab content:
 | Tab in the tree | Cycle to next field; the viewer scrolls in lockstep — "cycle through fields" affordance |
 
 **Templates dropdown** (bottom-left of tab):
+
 - Lists saved templates from `forms:listTemplates` (newest first; max 10 shown with "Show all…" link if more)
 - Clicking a template opens a confirmation: "Apply 'X' template? This will add N fields to the current page set."
 - After confirmation, dispatches `loadFormTemplateThunk` which fires N `form-design-add` ops
 
 **Save as template button** (bottom-right):
+
 - Enabled when `formsSlice.fields.some(f => f.origin === 'authored')`
 - Opens a small modal: text input "Template name" + Save / Cancel; fires `forms:saveTemplate`
 
 **Commit form values button** (appears at the top of the tab when uncommitted values exist):
+
 ```
 You have 3 unsaved field values.  [Commit] [Discard]
 ```
+
 - Commit: fires `commitFormThunk` → dispatches `form-commit` EditOperation
 - Discard: clears `formsSlice.values` for fields where they differ from `committedValues` (no history entry)
 
@@ -881,17 +942,21 @@ You have 3 unsaved field values.  [Commit] [Discard]
 Activated via Ctrl+Shift+F or toolbar button. Mutually exclusive with text-edit mode and annotation-tool mode (entering designer mode deactivates all annotation tools).
 
 **Visual cues:**
+
 - Toolbar Form Designer button shows depressed state
 - Cursor changes to crosshair over the canvas
 - A persistent banner at the top of the canvas: "Form Designer — click to place a field. Press Esc to exit."
 - The annotation toolbar (Highlight, Sticky, etc.) is hidden; replaced by a Field-Type Selector toolbar:
+
   ```
   [ Text ▼ ] [ Checkbox ] [ Radio ] [ Dropdown ] [ Signature ] [ Date ] | [Select]
   ```
+
   - Active field-type pill shows accent border
   - "Select" mode (cursor with arrow) — for clicking existing fields to edit their properties
 
 **Placing a field:**
+
 1. User picks a field type from the Field-Type Selector
 2. Cursor becomes crosshair
 3. Click-drag on a page draws a rectangle (PDF user-space rect via `pdf-coords.ts` conversion at IPC boundary, per question E)
@@ -899,12 +964,14 @@ Activated via Ctrl+Shift+F or toolbar button. Mutually exclusive with text-edit 
 5. On success: the field appears in the Forms sidebar AND a widget outline shows on the canvas. Inspector switches to the new field's properties pane.
 
 **Resize / move existing fields (in designer mode):**
+
 - Click a field's widget rect → selected (shows resize handles at corners + edges)
 - Drag handle → resize; fires `forms:designAdd` with `form-design-edit` semantics on the renderer side OR a per-field `editField` IPC if needed (Wave 12 picks)
 - Drag inside the rect → move; same edit-op
 - Del key → remove the selected field (fires `forms:designRemove`)
 
 **Inspector — Form-field properties pane:**
+
 ```
 ┌──── First Name (text) ────────────┐
 │ Name:        [first_name      ]   │   ← read-only after creation (Phase 3)
@@ -919,6 +986,7 @@ Activated via Ctrl+Shift+F or toolbar button. Mutually exclusive with text-edit 
 ```
 
 For radio / dropdown:
+
 ```
 Options:
   [Yes      ] [Yes        ] [×]
@@ -926,9 +994,11 @@ Options:
   [Maybe    ] [Maybe       ] [×]
   [+ Add option]
 ```
+
 (value + label per row; reorder via drag handles in Phase 3.1)
 
 For date:
+
 ```
 ┌──── Date of Hire (date) ──────────┐
 │ Name:        [date_of_hire    ]   │
@@ -944,6 +1014,7 @@ For date:
 ```
 
 For signature:
+
 ```
 ┌──── Signature (signature) ────────┐
 │ Name:        [signature_1     ]   │
@@ -960,6 +1031,7 @@ For signature:
 ```
 
 **Exit designer mode:**
+
 - Press Esc twice (first Esc deselects current field; second exits mode), OR
 - Click toolbar Form Designer button again, OR
 - Switch to annotation tool / text-edit mode (mutually exclusive)
@@ -970,18 +1042,19 @@ For signature:
 
 When `formsSlice.detectionStatus === 'present'` AND `formsSlice.designerMode === false`, the renderer overlays editable form widgets on the canvas. Each widget renders as a React component matching its type:
 
-| Type | Component | Notes |
-|---|---|---|
-| `text` | `<input type="text">` styled to match the run's bounding rect + font | Multi-line text — Phase 3.1 |
-| `checkbox` | `<input type="checkbox">` sized to fit the rect | |
-| `radio` | `<input type="radio" name={groupName}>` per option | Mutually exclusive within a group |
-| `dropdown` | `<select>` with options | |
-| `signature` | "(Click to sign — Phase 4)" placeholder button (disabled) | Tooltip explains Phase 4 arrival |
-| `date` | `<input type="date">` (HTML5 picker, respects `forms.dateLocale` setting) | Stored value normalized to ISO-8601 at IPC boundary |
+| Type        | Component                                                                 | Notes                                               |
+| ----------- | ------------------------------------------------------------------------- | --------------------------------------------------- |
+| `text`      | `<input type="text">` styled to match the run's bounding rect + font      | Multi-line text — Phase 3.1                         |
+| `checkbox`  | `<input type="checkbox">` sized to fit the rect                           |                                                     |
+| `radio`     | `<input type="radio" name={groupName}>` per option                        | Mutually exclusive within a group                   |
+| `dropdown`  | `<select>` with options                                                   |                                                     |
+| `signature` | "(Click to sign — Phase 4)" placeholder button (disabled)                 | Tooltip explains Phase 4 arrival                    |
+| `date`      | `<input type="date">` (HTML5 picker, respects `forms.dateLocale` setting) | Stored value normalized to ISO-8601 at IPC boundary |
 
 **Position:** each widget is positioned in screen-space via the existing `pdf-coords.ts` (Phase 1 module). The conversion is screen-on-render, PDF-user-space-on-store — consistent with Phase 2 patterns. Question E answer: renderer keeps screen-space, converts at IPC boundary.
 
 **Interaction:**
+
 - Click into a field → focus the input, show edit cursor
 - Type / select / check → updates `formsSlice.values` (transient)
 - Tab → cycle to next field (in field order from `forms:detect`)
@@ -989,6 +1062,7 @@ When `formsSlice.detectionStatus === 'present'` AND `formsSlice.designerMode ===
 - Saving (Ctrl+S) auto-commits all uncommitted values before the save fires
 
 **Visual cues:**
+
 - Required fields with missing values show a red asterisk in the field label tooltip
 - Fields with uncommitted changes show a yellow dot in the top-left corner
 - Read-only / signed fields (existing /V on a Sig field) show a lock icon + "Read-only" tooltip
@@ -1115,6 +1189,7 @@ Progress bar updates from `mail-merge:progress` events. Modal is dismissable via
 #### 12.6.6 Completion
 
 On success:
+
 ```
 +--------------------------------------------+
 |  Mail Merge — Complete               [X]   |
@@ -1129,6 +1204,7 @@ On success:
 ```
 
 On cancel:
+
 ```
 ✓ 47 PDFs written before cancellation (folder mode)
 OR
@@ -1169,17 +1245,18 @@ The setting `forms.flattenOnExportDefault` controls the initial state of the che
 
 Reflects Phase 3 additions to §10 / §11.8:
 
-| Shortcut | Action | Phase |
-|---|---|---|
-| Ctrl+Shift+F | Toggle Form Designer mode | **Phase 3 (NEW)** |
-| Ctrl+M | Open Mail Merge wizard | **Phase 3 (NEW)** |
-| F (in designer mode) | Cycle to next field-type in toolbar | **Phase 3 (NEW)** |
-| Esc (in designer mode) | First Esc: deselect field; second Esc: exit designer mode | **Phase 3 (NEW)** |
-| Tab (in forms tab) | Cycle to next field; viewer scrolls in lockstep | **Phase 3 (NEW)** |
-| Del (in designer mode, field selected) | Remove the selected field | **Phase 3 (NEW)** |
-| (other Phase 1 + Phase 2 shortcuts) | | Unchanged |
+| Shortcut                               | Action                                                    | Phase             |
+| -------------------------------------- | --------------------------------------------------------- | ----------------- |
+| Ctrl+Shift+F                           | Toggle Form Designer mode                                 | **Phase 3 (NEW)** |
+| Ctrl+M                                 | Open Mail Merge wizard                                    | **Phase 3 (NEW)** |
+| F (in designer mode)                   | Cycle to next field-type in toolbar                       | **Phase 3 (NEW)** |
+| Esc (in designer mode)                 | First Esc: deselect field; second Esc: exit designer mode | **Phase 3 (NEW)** |
+| Tab (in forms tab)                     | Cycle to next field; viewer scrolls in lockstep           | **Phase 3 (NEW)** |
+| Del (in designer mode, field selected) | Remove the selected field                                 | **Phase 3 (NEW)** |
+| (other Phase 1 + Phase 2 shortcuts)    |                                                           | Unchanged         |
 
 **Conflict check:**
+
 - Ctrl+Shift+F was not used in Phase 1 or Phase 2 (Phase 2 used U/K/F for annotation tools, never Ctrl+Shift+F). Clear.
 - Ctrl+M was not used in Phase 1 or Phase 2. Clear.
 - F-key conflict: Phase 2 assigned F to Freehand tool. Phase 3 designer-mode F (cycle field-type) is mode-scoped — only active while designer mode is on, where annotation tools are hidden. Resolved by mode-exclusivity (the same pattern as Phase 2's text-edit mode hiding the annotation toolbar).
@@ -1191,6 +1268,7 @@ The `shortcuts.ts` module's `enabledInPhases: number[]` field (Phase 2 addition 
 Decision: **the renderer keeps everything in screen-space; conversion to PDF user-space happens at the IPC boundary via `pdf-coords.ts`** (existing Phase 1 module).
 
 Specifically:
+
 - The form-designer overlay draws widget rects in screen-space (pixel coords at current zoom).
 - On commit (release of click-drag), the renderer converts the screen rect → PDF user-space via `screenRectToPdf(rect, page, viewport)`.
 - The `forms:designAdd` payload carries the PDF user-space rect.
@@ -1202,14 +1280,14 @@ This matches Phase 2's annotation pattern (`ARCHITECTURE.md §7.3`) — every co
 
 Extends §11 / §11.9 of the Phase-2 doc:
 
-| Source | Target | Phase 3 result |
-|---|---|---|
-| OS file (CSV: .csv) | MailMergeModal step 2 | Auto-fills the file picker; advances to step 2 preview |
-| OS file (Excel: .xlsx / .xls) | MailMergeModal step 2 | Same |
-| OS file (CSV / Excel) | empty modal / anywhere outside MailMergeModal | Toast: "Drop CSV/Excel into the Mail Merge wizard. Open Tools → Mail Merge first." |
-| OS file (non-supported in any context) | anywhere | Toast: "Only .pdf, .png, .jpg/.jpeg, .tif/.tiff, .csv, .xlsx files supported" |
-| Internal: form field widget | another field (within designer) | **Phase 3 deferred** (z-order reordering) — current Phase 3 places fields in dispatch order |
-| Internal: form template item | open document | Loads the template (alternative to clicking in templates dropdown) |
+| Source                                 | Target                                        | Phase 3 result                                                                              |
+| -------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| OS file (CSV: .csv)                    | MailMergeModal step 2                         | Auto-fills the file picker; advances to step 2 preview                                      |
+| OS file (Excel: .xlsx / .xls)          | MailMergeModal step 2                         | Same                                                                                        |
+| OS file (CSV / Excel)                  | empty modal / anywhere outside MailMergeModal | Toast: "Drop CSV/Excel into the Mail Merge wizard. Open Tools → Mail Merge first."          |
+| OS file (non-supported in any context) | anywhere                                      | Toast: "Only .pdf, .png, .jpg/.jpeg, .tif/.tiff, .csv, .xlsx files supported"               |
+| Internal: form field widget            | another field (within designer)               | **Phase 3 deferred** (z-order reordering) — current Phase 3 places fields in dispatch order |
+| Internal: form template item           | open document                                 | Loads the template (alternative to clicking in templates dropdown)                          |
 
 L-001 cross-check: CSV / Excel drag-drop uses the SAME `File.path` Electron property as PDF drops + image drops (`enableDragDropFiles: true`). Phase 3 EXTENDS the L-001 pathway; does not weaken it. Wave 12 implementer (Riley) MUST NOT touch `src/main/window-manager.ts`.
 
@@ -1218,26 +1296,32 @@ L-001 cross-check: CSV / Excel drag-drop uses the SAME `File.path` Electron prop
 Extending §12 / §11.10:
 
 **Empty — Forms sidebar (no AcroForm + no authored fields):**
+
 > No fillable form fields detected. Switch to Form Designer (Ctrl+Shift+F) to add some, or load a saved template.
 > [Templates ▾]
 
 **Empty — Forms sidebar (XFA-only document):**
+
 > This PDF uses XFA (LiveCycle Designer) forms which aren't editable in Phase 3.
 > Some fields may be visible; they're read-only.
 
 **Loading — Form detection in progress:**
+
 - Forms sidebar shows "Detecting forms…" with spinner for the first ~500ms after document open
 - Most detects are sub-100ms; the spinner is debounced to avoid flicker
 
 **Loading — Mail merge in progress:**
+
 - Modal stays open with progress bar (§12.6.5)
 - Cancel button always enabled
 
 **Loading — Form designer save in progress:**
+
 - ProgressToast at lower-right when `pdf:export` is running with `flattenForms: true`
 - Phase: "Flattening forms…" (sub-phase of finalizing)
 
 **Error — Mail merge row failure:**
+
 - Modal switches to error state:
   ```
   ✗ Mail merge stopped at row 23
@@ -1247,19 +1331,23 @@ Extending §12 / §11.10:
   ```
 
 **Error — Form designer duplicate name:**
+
 - Inspector inline: "A field named 'first_name' already exists. Choose a different name."
 - Save button disabled until name is unique
 
 **Error — Forms detection failed:**
+
 - Forms sidebar status banner: "Couldn't detect forms in this document. The PDF may be malformed."
 - Falls back to manual Form Designer mode
 
 **Populated — Form designer mode:**
+
 - Top-of-canvas banner: "Form Designer — click to place a [text] field. Press Esc to exit."
 - Field-Type Selector toolbar visible (replaces annotation toolbar)
 - Right Inspector shows selected field's properties pane
 
 **Populated — Mail merge wizard step indicators:**
+
 - Step indicator at top shows progress: completed steps in accent color, current in bold, future in dim
 
 ### 12.12 Accessibility additions (Phase 7 floor extends)
@@ -1304,18 +1392,18 @@ End of Phase-3 UI amendment.
 
 Add to the toolbar table (§3, extended in §11.1, §12.1) as additional rows. The shape-tool buttons (Square / Circle / Line) that were DISABLED with "Phase 4" tooltip Phases 1-3 are now **ENABLED**.
 
-| Button | Icon | Shortcut | Enabled when | Action |
-|---|---|---|---|---|
-| **Rectangle (Q)** | square | Q | document open | activate Square shape tool |
-| **Ellipse (C)** | circle | C | document open | activate Circle shape tool |
-| **Polygon (G)** | polygon | G | document open | activate Polygon shape tool |
-| **Arrow / Line (L)** | arrow-right | L | document open | activate Line tool with current `annotations.defaultLineEndStyle` |
-| **Callout (B)** | message-square-arrow-down | B | document open | activate FreeTextCallout tool |
-| **Line measure (M)** | ruler | M | document open | activate Line tool with measure dict using current `MeasureCalibration` |
-| **Polyline measure (Shift+M)** | ruler-multi | Shift+M | document open | activate PolyLine tool with measure dict |
-| **Sign** | signature | Ctrl+Shift+G | document open | opens `SignatureCaptureModal` (typed/drawn/image tabs) |
-| **PAdES Sign** | shield-check | Ctrl+Alt+G | document open AND PFX picker available | opens `PadesSignModal` |
-| **Audit log** | clipboard-check | — | always | opens `SignatureAuditPanel` modal |
+| Button                         | Icon                      | Shortcut     | Enabled when                           | Action                                                                  |
+| ------------------------------ | ------------------------- | ------------ | -------------------------------------- | ----------------------------------------------------------------------- |
+| **Rectangle (Q)**              | square                    | Q            | document open                          | activate Square shape tool                                              |
+| **Ellipse (C)**                | circle                    | C            | document open                          | activate Circle shape tool                                              |
+| **Polygon (G)**                | polygon                   | G            | document open                          | activate Polygon shape tool                                             |
+| **Arrow / Line (L)**           | arrow-right               | L            | document open                          | activate Line tool with current `annotations.defaultLineEndStyle`       |
+| **Callout (B)**                | message-square-arrow-down | B            | document open                          | activate FreeTextCallout tool                                           |
+| **Line measure (M)**           | ruler                     | M            | document open                          | activate Line tool with measure dict using current `MeasureCalibration` |
+| **Polyline measure (Shift+M)** | ruler-multi               | Shift+M      | document open                          | activate PolyLine tool with measure dict                                |
+| **Sign**                       | signature                 | Ctrl+Shift+G | document open                          | opens `SignatureCaptureModal` (typed/drawn/image tabs)                  |
+| **PAdES Sign**                 | shield-check              | Ctrl+Alt+G   | document open AND PFX picker available | opens `PadesSignModal`                                                  |
+| **Audit log**                  | clipboard-check           | —            | always                                 | opens `SignatureAuditPanel` modal                                       |
 
 **Visual vs cryptographic distinction (question E answer):** The toolbar has TWO clearly-labeled buttons — **Sign** (visual; the small typed/drawn/image-based stamp) and **PAdES Sign** (cryptographic; opens the cert + password modal). Both fall under a "Sign" toolbar group with a divider. Rationale: a single button with a sub-menu would hide the cryptographic affordance behind an extra click and risk users who want a real signature accidentally applying a visual one. Two buttons cost a small amount of toolbar real estate; the clarity is worth it.
 
@@ -1324,20 +1412,25 @@ Add to the toolbar table (§3, extended in §11.1, §12.1) as additional rows. T
 ### 13.2 Menu additions (Phase 4)
 
 **File menu:**
+
 - (Unchanged from Phase 3)
 
 **Edit menu:**
+
 - (Unchanged from Phase 3)
 
 **Insert menu:**
+
 - Shape… → submenu listing Rectangle / Ellipse / Polygon / Line / Arrow / Callout / Line Measure / Polyline Measure
 - Signature… → submenu listing **Visual signature…** (opens Capture modal) and **Cryptographic (PAdES)…** (opens PAdES Sign modal)
 
 **View menu:**
+
 - Toggle Annotations Sidebar → focuses the new Annotations summary tab
 - Toggle Signature Audit Panel — opens SignatureAuditPanel
 
 **Tools menu:**
+
 - Calibrate measure… → opens `MeasureCalibrationModal`
 - Sign with PFX… (Ctrl+Alt+G) → opens PadesSignModal
 - Verify my signatures… → opens SignatureAuditPanel with verify column visible
@@ -1375,6 +1468,7 @@ Add to the toolbar table (§3, extended in §11.1, §12.1) as additional rows. T
 **Typed tab:** the renderer renders the name in a hidden `<canvas>` at high DPI using the chosen script font; on Place, exports PNG bytes + dimensions and ships in `VisualAppearanceSource { kind: 'typed', pngBytes, ... }`.
 
 **Drawn tab:**
+
 ```
 | (Drawn tab)                                |
 |  Draw your signature below:                |
@@ -1389,6 +1483,7 @@ Add to the toolbar table (§3, extended in §11.1, §12.1) as additional rows. T
 Pointer events with Catmull-Rom smoothing via `use-signature-canvas.ts` hook. Exports PNG on Place.
 
 **Image tab:**
+
 ```
 | (Image tab)                                |
 |  Choose image: [Browse...]                 |
@@ -1494,6 +1589,7 @@ After capture, the user places the signature onto the canvas. The placement over
 ```
 
 **Step 1 — Load cert:**
+
 - User picks PFX, types password, clicks Load cert
 - Renderer dispatches `loadCertThunk({ pfxBytes, password })` → IPC → main parses PFX, returns handle
 - On success, displays cert info + advances to step 2
@@ -1501,12 +1597,14 @@ After capture, the user places the signature onto the canvas. The placement over
 - On failure (wrong_password, expired, etc.), inline error displayed; user can retry
 
 **Step 2 — Options:**
+
 - Reason / Location text inputs (optional)
 - Appearance checkboxes (defaults from Settings `signatures.defaultShow*`)
 - TSA radio (None / Use configured)
 - The "Use configured TSA" radio is disabled if Settings `signatures.tsaEnabled` is false; tooltip explains "Configure TSA in Settings"
 
 **Step 3 — Sign:**
+
 - Placement radio: onto a placeholder (auto-detected; preselected if exactly one exists) OR freeform
 - Sign button: dispatches `applyPadesThunk` with the cert handle, appearance, TSA URL, placement
 - During the sign, the modal shows a spinner overlay with "Signing… (this may take up to 30 seconds if TSA is enabled)"
@@ -1536,12 +1634,14 @@ Inspector (§7.1) gains a new section for shape annotations:
 ```
 
 For Line / Arrow:
+
 ```
 │ Line start: [ None      ▼ ]            │
 │ Line end:   [ OpenArrow ▼ ]            │
 ```
 
 For Callout:
+
 ```
 │ Text:       [ multi-line textarea ]    │
 │ Font size:  [ 11 ▼ ]                   │
@@ -1549,6 +1649,7 @@ For Callout:
 ```
 
 For Line-measure / Polyline-measure:
+
 ```
 │ Unit:       [ inch ▼ ]                 │
 │ Scale:      [ 1.00 ] per unit          │
@@ -1640,6 +1741,7 @@ After Apply: dispatches `setMeasureCalibrationThunk`. Subsequent line/polyline-m
 Sorted by date desc. Filter by "This document" (matches `doc_hash` of the open file).
 
 **Verify hash** runs `signatures:verify` and shows green/yellow/red:
+
 - ✓ Green: hash matches; signature intact
 - ⚠ Yellow: doc hash drifted (file was modified after signing); pre-sign hash matches
 - ✗ Red: byte-range hash doesn't match; signature is invalid
@@ -1647,6 +1749,7 @@ Sorted by date desc. Filter by "This document" (matches `doc_hash` of the open f
 **Delete row** is a manual override (e.g. for cleaning up test signatures). Confirms first. Does NOT affect the signed bytes in any file.
 
 **Tamper-vulnerability disclaimer** at the bottom of the panel:
+
 > ℹ This is a local log of signatures you've applied with this app. It is NOT a tamper-evident record. For legal-effect signatures, rely on the PAdES signature inside the PDF itself, not on this log.
 
 ### 13.10 Flatten signature widgets (extension to Phase 3 Flatten)
@@ -1670,21 +1773,22 @@ Distinct from "Flatten forms" (which removes ALL widgets including unsigned form
 
 Reflects Phase 4 additions to §10 / §11.8 / §12.8:
 
-| Shortcut | Action | Phase |
-|---|---|---|
-| Q | Activate Square (Rectangle) tool | **Phase 4 (NEW)** |
-| C | Activate Circle (Ellipse) tool | **Phase 4 (NEW)** |
-| G | Activate Polygon tool | **Phase 4 (NEW)** |
-| L | Activate Line / Arrow tool | **Phase 4 (NEW)** |
-| B | Activate Callout tool | **Phase 4 (NEW)** |
-| M | Activate Line-measure tool | **Phase 4 (NEW)** |
-| Shift+M | Activate Polyline-measure tool | **Phase 4 (NEW)** |
-| Ctrl+Shift+G | Sign (visual signature; opens capture modal) | **Phase 4 (NEW)** |
-| Ctrl+Alt+G | PAdES Sign (cryptographic; opens PFX modal) | **Phase 4 (NEW)** |
+| Shortcut                                           | Action                                                               | Phase             |
+| -------------------------------------------------- | -------------------------------------------------------------------- | ----------------- |
+| Q                                                  | Activate Square (Rectangle) tool                                     | **Phase 4 (NEW)** |
+| C                                                  | Activate Circle (Ellipse) tool                                       | **Phase 4 (NEW)** |
+| G                                                  | Activate Polygon tool                                                | **Phase 4 (NEW)** |
+| L                                                  | Activate Line / Arrow tool                                           | **Phase 4 (NEW)** |
+| B                                                  | Activate Callout tool                                                | **Phase 4 (NEW)** |
+| M                                                  | Activate Line-measure tool                                           | **Phase 4 (NEW)** |
+| Shift+M                                            | Activate Polyline-measure tool                                       | **Phase 4 (NEW)** |
+| Ctrl+Shift+G                                       | Sign (visual signature; opens capture modal)                         | **Phase 4 (NEW)** |
+| Ctrl+Alt+G                                         | PAdES Sign (cryptographic; opens PFX modal)                          | **Phase 4 (NEW)** |
 | Tab (in form-fill overlay on a `/Sig` placeholder) | Focus the placeholder; Enter signs visually; Shift+Enter signs PAdES | **Phase 4 (NEW)** |
-| (other Phase 1+2+3 shortcuts) | | Unchanged |
+| (other Phase 1+2+3 shortcuts)                      |                                                                      | Unchanged         |
 
 **Conflict check:**
+
 - Q, C, G, L, B, M were not used in Phase 1/2/3. Clear.
 - Ctrl+Shift+G — F11 fullscreen conflict? No, Ctrl+Shift+G is fresh. Clear.
 - Ctrl+Alt+G — fresh; clear.
@@ -1695,13 +1799,13 @@ The `shortcuts.ts` module's `enabledInPhases: number[]` field extends with `[4, 
 
 Extends §11 / §11.9 / §12.10 from prior phases:
 
-| Source | Target | Phase 4 result |
-|---|---|---|
-| OS file (image: PNG/JPEG) | SignatureCaptureModal (Image tab) | Auto-loads image; previews; ready to Place |
-| OS file (PFX/P12: .pfx, .p12) | PadesSignModal step 1 | Auto-loads PFX into the file input; user types password |
-| OS file (PFX/P12) | anywhere outside PadesSignModal | Toast: "Drop PFX into the PAdES Sign modal. Open Sign → Cryptographic first." |
-| OS file (non-supported in any context) | anywhere | Toast: "Only .pdf, .png, .jpg/.jpeg, .tif/.tiff, .csv, .xlsx, .pfx, .p12 files supported" |
-| Internal: signature placement overlay | another field | Re-snap to the new field |
+| Source                                 | Target                            | Phase 4 result                                                                            |
+| -------------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------- |
+| OS file (image: PNG/JPEG)              | SignatureCaptureModal (Image tab) | Auto-loads image; previews; ready to Place                                                |
+| OS file (PFX/P12: .pfx, .p12)          | PadesSignModal step 1             | Auto-loads PFX into the file input; user types password                                   |
+| OS file (PFX/P12)                      | anywhere outside PadesSignModal   | Toast: "Drop PFX into the PAdES Sign modal. Open Sign → Cryptographic first."             |
+| OS file (non-supported in any context) | anywhere                          | Toast: "Only .pdf, .png, .jpg/.jpeg, .tif/.tiff, .csv, .xlsx, .pfx, .p12 files supported" |
+| Internal: signature placement overlay  | another field                     | Re-snap to the new field                                                                  |
 
 L-001 cross-check: PNG / JPEG / PFX drag-drop uses the SAME `File.path` Electron property as Phase 1+2+3 drops. Phase 4 EXTENDS the L-001 pathway; does not weaken it. Wave 16 implementer (Riley) MUST NOT touch `src/main/window-manager.ts`.
 
@@ -1710,11 +1814,12 @@ L-001 cross-check: PNG / JPEG / PFX drag-drop uses the SAME `File.path` Electron
 Settings dialog (§9.2) gains a new section **Signing** + extends **Annotations**:
 
 **Signing** (NEW section)
+
 - Timestamping (TSA):
   - ☐ Enable RFC 3161 timestamping when signing
-  - URL: [https://...                                ]
+  - URL: [https://... ]
   - Timeout: [30 s]
-  - [Test connection]   (fires signatures:requestTimestamp; reports green/red)
+  - [Test connection] (fires signatures:requestTimestamp; reports green/red)
 - Default appearance:
   - ☑ Show signer name on signed signatures
   - ☑ Show date on signed signatures
@@ -1723,6 +1828,7 @@ Settings dialog (§9.2) gains a new section **Signing** + extends **Annotations*
   - PAdES engine: [signpdf ▼] (signpdf / manual) — Phase 4.1; visible Phase 4 read-only
 
 **Annotations** (extends existing section)
+
 - Default border width: [1 pt ▼]
 - Default border style: [Solid ▼]
 - Default fill enabled: ☐
@@ -1733,30 +1839,37 @@ Settings dialog (§9.2) gains a new section **Signing** + extends **Annotations*
 Extending §12 / §11.10 / §12.11:
 
 **Empty — Annotations sidebar (no annotations):**
+
 > No annotations yet. Use the toolbar to create highlights, shapes, signatures, or callouts.
 
 **Loading — PAdES sign in progress:**
+
 - Modal overlay on PadesSignModal step 3 with spinner: "Signing…"
 - If TSA enabled: "Signing… (contacting TSA)"
 - ESC does NOT cancel mid-TSA (the TSA HTTP request is in-flight; cancel is on best-effort basis Phase 4.1)
 - After completion: modal closes; toast appears
 
 **Error — wrong PFX password:**
+
 - Inline in PadesSignModal step 1: "Wrong password. Try again."
 - Password input cleared; focus returned
 
 **Error — TSA timeout:**
+
 - Inline in PadesSignModal step 3: "Timestamping service didn't respond within 30 seconds. Try without timestamping or check the TSA URL in Settings."
 
 **Error — cert expired:**
+
 - Inline in PadesSignModal step 1: "This certificate is expired (notAfter: 2021-12-31). Choose a different cert."
 - Step 2 button disabled
 
 **Populated — signature audit panel:**
+
 - Listed with date / kind / subject; row click shows details
 - Filter by current doc by default
 
 **Populated — signature placement overlay active:**
+
 - Top-of-canvas banner: "Drag your signature onto a Sign here field, or to any position. Click Apply when done."
 
 ### 13.15 Accessibility additions (Phase 7 floor extends)
@@ -1807,7 +1920,7 @@ End of Phase-4 UI amendment.
 #### 4.1.1.1 Page-dimension measurement flow (Option Y — root-cause centralized)
 
 The `PDFDocumentModel.pages[].width / .height` fields are now authoritative
-*after* `measurePageDimensionsThunk` fires. Previously (Wave 2 .. Phase 4.1)
+_after_ `measurePageDimensionsThunk` fires. Previously (Wave 2 .. Phase 4.1)
 these were hardcoded to US Letter (612×792 pt) by `state/thunks.ts:82-92` at
 document open. Every downstream consumer of `PageModel.width/height` —
 `pdf-coords.ts` (annotation screen↔PDF rect transforms),
@@ -1900,36 +2013,41 @@ End of Phase-4.1.1 UI amendment.
 
 > ### Phase 5 amendment (2026-05-27)
 >
-> §1-§13 + §4.1.1.* above remain authoritative for Phase 1 + Phase 2 + Phase 3 + Phase 4 + Phase 4.1 surfaces. Additions below extend the toolbar, menus, modals, sidebar tabs (confidence overlay layer), shortcut table, and drag-drop matrix. The IA (single-window, sidebar + viewer + inspector + status bar) is preserved. No new BrowserWindow (L-001 unchanged).
+> §1-§13 + §4.1.1.\* above remain authoritative for Phase 1 + Phase 2 + Phase 3 + Phase 4 + Phase 4.1 surfaces. Additions below extend the toolbar, menus, modals, sidebar tabs (confidence overlay layer), shortcut table, and drag-drop matrix. The IA (single-window, sidebar + viewer + inspector + status bar) is preserved. No new BrowserWindow (L-001 unchanged).
 
 ### 14.1 Toolbar additions (Phase 5)
 
 Add to the toolbar table (§3, extended §11.1, §12.1, §13.1) as additional rows. The OCR + scan tooltips spelled out per the trust-floor obligations (§14.10 below).
 
-| Button | Icon | Shortcut | Enabled when | Action |
-|---|---|---|---|---|
-| **Run OCR** | scan-text | Ctrl+Shift+R | document open | opens `OcrRunModal` (Phase 5 file-import + OCR path) |
-| **Toggle confidence overlay** | eye-low | Ctrl+Shift+H | OCR result loaded for current doc | toggles `OcrConfidenceOverlay` visibility |
-| **Scan…** | scanner | — | NEVER in Phase 5 (disabled with tooltip "Scanner integration arrives in Phase 5.1") | Phase 5.1 placeholder |
+| Button                        | Icon      | Shortcut     | Enabled when                                                                        | Action                                               |
+| ----------------------------- | --------- | ------------ | ----------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| **Run OCR**                   | scan-text | Ctrl+Shift+R | document open                                                                       | opens `OcrRunModal` (Phase 5 file-import + OCR path) |
+| **Toggle confidence overlay** | eye-low   | Ctrl+Shift+H | OCR result loaded for current doc                                                   | toggles `OcrConfidenceOverlay` visibility            |
+| **Scan…**                     | scanner   | —            | NEVER in Phase 5 (disabled with tooltip "Scanner integration arrives in Phase 5.1") | Phase 5.1 placeholder                                |
 
 **Toolbar grouping:** the existing groups (Phase 1: file/edit/zoom; Phase 2: insert/text/print; Phase 3: forms/mail-merge; Phase 4: sign/annotation) get a new **OCR group** with a divider. The OCR group contains Run OCR + Confidence overlay + Scan (disabled). Three items; minimal real-estate cost.
 
 ### 14.2 Menu additions (Phase 5)
 
 **File menu:**
+
 - (Unchanged from Phase 4)
 
 **Edit menu:**
+
 - (Unchanged from Phase 4)
 
 **Insert menu:**
+
 - Import image for OCR… (extends the Phase 2 Insert image pattern; this variant opens the OCR modal pre-loaded with the image, not the image-import modal)
 
 **View menu:**
+
 - Toggle Confidence overlay (Ctrl+Shift+H) — toggles the new overlay layer
 - Toggle OCR audit panel — opens `OcrAuditPanel` (Phase 5.2 surface; placeholder modal in Phase 5)
 
 **Tools menu:**
+
 - Run OCR… (Ctrl+Shift+R) — opens `OcrRunModal`
 - Manage language packs… — opens `LanguagePackManagerModal`
 - **Scan from device…** — **DISABLED** in Phase 5; tooltip: "Scanner integration arrives in Phase 5.1. For now, use the OS Scan app then drag the saved PDF into this app to run OCR."
@@ -2124,6 +2242,7 @@ The links open the OCR audit row and the OCR trust-floor user-guide anchor, resp
 Settings dialog (§9.2, §11, §12, §13.13) gains a new section **OCR**:
 
 **OCR** (NEW section)
+
 - Default language: [ English (eng) ▼ ]
 - Low-confidence threshold: [ 60 ] (0–100)
 - Rasterization DPI: [ 300 ] (72–600)
@@ -2137,6 +2256,7 @@ Settings dialog (§9.2, §11, §12, §13.13) gains a new section **OCR**:
 - ☑ Confirm before invalidating signatures with OCR (uncheck = always proceed; can re-enable per session in OCR modal)
 
 **Languages** (NEW section)
+
 - [Manage language packs…] → opens `LanguagePackManagerModal` (§14.5)
 - Disk usage: ~30 MB across 2 installed packs
 
@@ -2144,23 +2264,23 @@ Settings dialog (§9.2, §11, §12, §13.13) gains a new section **OCR**:
 
 Add to the shortcut table (§10, extended §11.8, §12.8, §13.11):
 
-| Shortcut | Action | Enabled when |
-|---|---|---|
-| Ctrl+Shift+R | Open OCR Run modal | document open |
-| Ctrl+Shift+H | Toggle confidence overlay | OCR result loaded for current doc |
-| Esc | Cancel running OCR job (when OCR modal is in step 3) | OCR modal step 3 |
+| Shortcut     | Action                                               | Enabled when                      |
+| ------------ | ---------------------------------------------------- | --------------------------------- |
+| Ctrl+Shift+R | Open OCR Run modal                                   | document open                     |
+| Ctrl+Shift+H | Toggle confidence overlay                            | OCR result loaded for current doc |
+| Esc          | Cancel running OCR job (when OCR modal is in step 3) | OCR modal step 3                  |
 
 ### 14.10 Updated drag-drop matrix (Phase 5)
 
 Add to the drag-drop matrix (§11, extended §11.9, §12.10, §13.12):
 
-| File dropped | Where | Behavior |
-|---|---|---|
+| File dropped                               | Where                          | Behavior                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | OS file (PNG / JPEG / TIFF — raster image) | anywhere outside the OCR modal | **CHANGED Phase 5:** instead of going to ImageImportModal (Phase 2), if no doc is open, opens OcrRunModal pre-loaded with the image as a single-page OCR target. If a doc IS open, the existing Phase 2 ImageImportModal still opens for image-overlay-or-page-insert; the OCR path is via Tools menu. (Toast on ambiguous case: "Drop image: insert into current PDF, or start a new OCR job?") |
-| OS file (PNG/JPEG/TIFF) | OcrRunModal | Auto-loads as the OCR target |
-| OS file (.traineddata.gz) | LanguagePackManagerModal | Imports a sideloaded pack (SHA-256-verified against catalog; rejected if unknown lang or hash mismatch) |
-| OS file (.traineddata.gz) | anywhere else | Toast: "Drop language packs into the Language Packs modal. Tools → Manage language packs." |
-| Internal: any existing Phase 1-4 drop | existing target | Unchanged |
+| OS file (PNG/JPEG/TIFF)                    | OcrRunModal                    | Auto-loads as the OCR target                                                                                                                                                                                                                                                                                                                                                                     |
+| OS file (.traineddata.gz)                  | LanguagePackManagerModal       | Imports a sideloaded pack (SHA-256-verified against catalog; rejected if unknown lang or hash mismatch)                                                                                                                                                                                                                                                                                          |
+| OS file (.traineddata.gz)                  | anywhere else                  | Toast: "Drop language packs into the Language Packs modal. Tools → Manage language packs."                                                                                                                                                                                                                                                                                                       |
+| Internal: any existing Phase 1-4 drop      | existing target                | Unchanged                                                                                                                                                                                                                                                                                                                                                                                        |
 
 L-001 cross-check: PNG / JPEG / TIFF / .traineddata.gz drag-drop uses the SAME `File.path` Electron property as Phase 1-4 drops. Phase 5 EXTENDS the L-001 pathway; does not weaken it. Wave 20 implementer (Riley) MUST NOT touch `src/main/window-manager.ts`.
 
@@ -2169,32 +2289,41 @@ L-001 cross-check: PNG / JPEG / TIFF / .traineddata.gz drag-drop uses the SAME `
 Extending §12 / §11.10 / §12.11 / §13.14:
 
 **Empty — OcrRunModal step 1, no installed languages beyond `eng`:**
+
 > Only English (eng) is installed. Click "Download more…" to add other languages.
 
 **Loading — OCR worker initialization:**
+
 - OcrRunModal step 3 sub-status: "Loading language data… (this takes 2-5 seconds on first use)"
 
 **Loading — Language pack download:**
+
 - LanguagePackManagerModal in-row progress bar with cancel
 - Phases: starting → downloading → verifying → completed
 
 **Error — language pack not installed:**
+
 - Inline in OcrRunModal step 1: "Spanish (spa) is not installed. [Download now]"
 - Step 2 button disabled until installed
 
 **Error — PAdES signature present + invalidate not confirmed:**
+
 - Inline in OcrRunModal step 2 as a non-skippable modal-within-modal (§14.3 step 2 mock)
 
 **Error — language pack integrity failed:**
+
 - Toast in LanguagePackManagerModal: "Download integrity check failed for <lang>. The file was rejected. Try again or use a different network."
 
 **Error — worker watchdog timeout:**
+
 - OcrRunModal step 3 turns red: "Page 12 didn't complete within 60 seconds. The OCR engine has been restarted. [Retry from page 12] [Cancel]"
 
 **Populated — confidence overlay enabled:**
+
 - Above-viewer banner (§14.4): "Orange boxes mark low-confidence words (< 60). Review before saving. [Learn more]"
 
 **Populated — OCR complete:**
+
 - OcrRunModal step 4 (§14.3); toast after Done: "OCR complete. 142 low-confidence words flagged. [Show overlay]"
 
 ### 14.12 Accessibility additions (Phase 7 floor extends)
@@ -2226,14 +2355,14 @@ The four obligations enumerated for Wave 22 (`architecture-phase-5.md §8.1`):
 
 UI surfaces that embed these obligations:
 
-| Surface | Obligation(s) |
-|---|---|
-| OcrRunModal step 1 honesty reminder | #1, #4 |
-| OcrRunModal step 2 sign-invalidate prompt | (Phase 4 obligation #1 — invalidates prior signatures) |
-| OcrConfidenceOverlay above-viewer banner | #1 (low-confidence words may be wrong) |
-| Save modal banner (when OCR has been applied) | #3 (committing to disk) |
-| LanguagePackManagerModal honesty reminder | #2 (cloud-free local; download is the only network call) |
-| Settings → OCR section header subtitle | All four headlines |
+| Surface                                       | Obligation(s)                                            |
+| --------------------------------------------- | -------------------------------------------------------- |
+| OcrRunModal step 1 honesty reminder           | #1, #4                                                   |
+| OcrRunModal step 2 sign-invalidate prompt     | (Phase 4 obligation #1 — invalidates prior signatures)   |
+| OcrConfidenceOverlay above-viewer banner      | #1 (low-confidence words may be wrong)                   |
+| Save modal banner (when OCR has been applied) | #3 (committing to disk)                                  |
+| LanguagePackManagerModal honesty reminder     | #2 (cloud-free local; download is the only network call) |
+| Settings → OCR section header subtitle        | All four headlines                                       |
 
 ### 14.14 Cross-reference checklist (Wave 19 self-verification)
 
@@ -2266,8 +2395,8 @@ End of Phase-5 UI amendment.
 
 Add to the toolbar table (§3, extended §11.1, §12.1, §13.1, §14.1) as additional rows:
 
-| Button | Icon | Shortcut | Enabled when | Action |
-|---|---|---|---|---|
+| Button      | Icon        | Shortcut     | Enabled when  | Action                                            |
+| ----------- | ----------- | ------------ | ------------- | ------------------------------------------------- |
 | **Export…** | file-export | Ctrl+Shift+E | document open | opens `ExportModal` (Phase 6 multi-format picker) |
 
 **Toolbar grouping:** the Phase 5 OCR group gets a new neighbor — an **Export group** with a single button. One item; minimal real-estate cost. Positioned to the right of the Save group (Phase 1) and to the right of the OCR group (Phase 5) — semantically grouped as "produce an output file".
@@ -2275,6 +2404,7 @@ Add to the toolbar table (§3, extended §11.1, §12.1, §13.1, §14.1) as addit
 ### 15.2 Menu additions (Phase 6)
 
 **File menu:**
+
 - **Export to Word…** (Ctrl+Shift+E on a default-format guess) — opens `ExportModal` pre-selected to docx
 - **Export to Excel…** — opens `ExportModal` pre-selected to xlsx
 - **Export to PowerPoint…** — opens `ExportModal` pre-selected to pptx
@@ -2282,13 +2412,15 @@ Add to the toolbar table (§3, extended §11.1, §12.1, §13.1, §14.1) as addit
   - PNG…
   - JPEG…
   - TIFF…
-  Each opens `ExportModal` pre-selected to the chosen image format
+    Each opens `ExportModal` pre-selected to the chosen image format
 - (Phase 1-5 items unchanged)
 
 **View menu:**
+
 - **Show Exports panel** — toggles the new Exports sidebar tab visibility (Phase 6.x; in Phase 6 v1 the tab is always visible alongside Pages / Bookmarks / Forms / Signatures / Annotations / OCR Results)
 
 **Tools menu:**
+
 - (Phase 1-5 items unchanged)
 
 The File menu is the canonical entry — the toolbar's single Export button opens the modal with the user's last-chosen format pre-selected (renderer `export-slice` carries `lastChosenFormat`).
@@ -2356,12 +2488,12 @@ Four-step modal: format → quality + per-format options → confirm + start →
 
 The panel above the Step-2 BACK/START buttons surfaces 4-5 bullets calibrated per the selected format. The bullets are sourced from a static catalog in `export-modal/per-format-limitations.ts` that mirrors the trust-floor obligations enumerated in `architecture-phase-6.md §8.1`. Per-format catalog:
 
-| Format | Limitation bullets |
-|---|---|
-| Word (.docx) | best-effort layout / borderless tables not detected / XFA doesn't export / signed-source-stays-valid / time estimate / Image is rasterized + embedded if layout-preserving |
-| Excel (.xlsx) | best for table-shaped PDFs / borderless tables won't appear / text-only tier dumps all text to one sheet / numeric coercion best-effort / signed-source-stays-valid |
-| PowerPoint (.pptx) | best-effort layout / one slide per page / 16:9 widescreen with letterboxing / borderless tables not detected / time estimate |
-| PNG / JPEG / TIFF | rasterized at chosen DPI / annotations rendered inline / multi-page TIFF bundles into ONE file / large DPI = large files |
+| Format             | Limitation bullets                                                                                                                                                         |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Word (.docx)       | best-effort layout / borderless tables not detected / XFA doesn't export / signed-source-stays-valid / time estimate / Image is rasterized + embedded if layout-preserving |
+| Excel (.xlsx)      | best for table-shaped PDFs / borderless tables won't appear / text-only tier dumps all text to one sheet / numeric coercion best-effort / signed-source-stays-valid        |
+| PowerPoint (.pptx) | best-effort layout / one slide per page / 16:9 widescreen with letterboxing / borderless tables not detected / time estimate                                               |
+| PNG / JPEG / TIFF  | rasterized at chosen DPI / annotations rendered inline / multi-page TIFF bundles into ONE file / large DPI = large files                                                   |
 
 Plus the cross-cutting reminder ("Time estimate: ~5-30 sec per page for layout-preserving; ~0.5 sec per page for text-only") and a link to the user-guide's dedicated trust-floor section (Nathan Wave 26 owns the anchor name).
 
@@ -2450,25 +2582,25 @@ The status bar (existing — Phase 1 §3.5) gains a new section right of the pag
 
 Settings page gains a new "Export" section with three sub-sections (Office defaults / Image defaults / Layout extractor tuning) populated from the 17 settings keys per `data-models.md §11.6`.
 
-| Section | Setting | UI control |
-|---|---|---|
-| Office defaults | Word: default quality tier | radio (text-only / layout-preserving) |
-| Office defaults | Word: default page size | dropdown (letter / a4 / auto) |
-| Office defaults | Word: include annotations by default | checkbox |
-| Office defaults | Excel: default quality tier | radio |
-| Office defaults | Excel: include annotations by default | checkbox |
-| Office defaults | PowerPoint: default quality tier | radio |
-| Office defaults | PowerPoint: include annotations by default | checkbox |
-| Image defaults | Default image format | dropdown (png / jpeg / tiff) |
-| Image defaults | Default DPI | dropdown (72 / 96 / 150 / 200 / 300 / 600) |
-| Image defaults | Default JPEG quality | slider 0.1-1.0 step 0.05 |
-| Image defaults | Default multi-page TIFF bundling | checkbox |
-| Image defaults | Default include annotations in image export | checkbox |
-| Layout extractor | Line clustering ε (pt) | numeric input 0.5-10 step 0.5 — advanced |
-| Layout extractor | Paragraph break ratio | numeric input 1.0-5.0 step 0.1 — advanced |
-| Layout extractor | Heading ratio | numeric input 1.1-3.0 step 0.1 — advanced |
-| Layout extractor | Column gap (pt) | numeric input 10-200 step 5 — advanced |
-| Queue | Max queue size | numeric input 1-200 — advanced |
+| Section          | Setting                                     | UI control                                 |
+| ---------------- | ------------------------------------------- | ------------------------------------------ |
+| Office defaults  | Word: default quality tier                  | radio (text-only / layout-preserving)      |
+| Office defaults  | Word: default page size                     | dropdown (letter / a4 / auto)              |
+| Office defaults  | Word: include annotations by default        | checkbox                                   |
+| Office defaults  | Excel: default quality tier                 | radio                                      |
+| Office defaults  | Excel: include annotations by default       | checkbox                                   |
+| Office defaults  | PowerPoint: default quality tier            | radio                                      |
+| Office defaults  | PowerPoint: include annotations by default  | checkbox                                   |
+| Image defaults   | Default image format                        | dropdown (png / jpeg / tiff)               |
+| Image defaults   | Default DPI                                 | dropdown (72 / 96 / 150 / 200 / 300 / 600) |
+| Image defaults   | Default JPEG quality                        | slider 0.1-1.0 step 0.05                   |
+| Image defaults   | Default multi-page TIFF bundling            | checkbox                                   |
+| Image defaults   | Default include annotations in image export | checkbox                                   |
+| Layout extractor | Line clustering ε (pt)                      | numeric input 0.5-10 step 0.5 — advanced   |
+| Layout extractor | Paragraph break ratio                       | numeric input 1.0-5.0 step 0.1 — advanced  |
+| Layout extractor | Heading ratio                               | numeric input 1.1-3.0 step 0.1 — advanced  |
+| Layout extractor | Column gap (pt)                             | numeric input 10-200 step 5 — advanced     |
+| Queue            | Max queue size                              | numeric input 1-200 — advanced             |
 
 The "Layout extractor" + "Queue" rows are hidden behind a "Show advanced settings" toggle (these are tuning knobs power-users rarely need; defaults match common PDFs).
 
@@ -2484,28 +2616,28 @@ Per Q-E + §4.5 + §15.5 + §15.4:
 
 ### 15.8 Empty / loading / error states
 
-| Component | State | What is shown |
-|---|---|---|
-| ExportModal Step 1 | Initial open | Format picker; last-chosen format pre-selected from `export-slice.lastChosenFormat` |
-| ExportModal Step 2 | Per-format options visible | Format-specific extras + per-format limitations panel |
-| ExportModal Step 4 | Job enqueued | "Queued" toast for 500ms then modal closes |
-| ExportModal re-opened during running job | Run in progress | "Running: page X of Y — [phase]" + Cancel button |
-| Status-bar widget | No job | Hidden |
-| Status-bar widget | Job running | Format / basename / page progress / Cancel |
-| Status-bar widget | Job completed | Brief "Export complete — Open" toast then auto-hides after 5 sec |
-| Status-bar widget | Job failed | "Export failed — Retry" toast (stays visible until clicked / dismissed) |
-| Exports sidebar tab | No exports for current doc | "No exports yet. Use File → Export… to start." empty state |
-| Exports sidebar tab | Job failed `output_path_unwritable` | "Path locked by another process. Close the file in the destination app and Retry." |
-| Exports sidebar tab | Job failed `queue_full` | "Export queue is full (50 jobs). Cancel some queued jobs to add more." |
-| Exports sidebar tab | Job failed `extraction_failed` / `writer_failed` | "Conversion failed: <error_message>. Try the text-only quality tier or contact support." |
+| Component                                | State                                            | What is shown                                                                            |
+| ---------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| ExportModal Step 1                       | Initial open                                     | Format picker; last-chosen format pre-selected from `export-slice.lastChosenFormat`      |
+| ExportModal Step 2                       | Per-format options visible                       | Format-specific extras + per-format limitations panel                                    |
+| ExportModal Step 4                       | Job enqueued                                     | "Queued" toast for 500ms then modal closes                                               |
+| ExportModal re-opened during running job | Run in progress                                  | "Running: page X of Y — [phase]" + Cancel button                                         |
+| Status-bar widget                        | No job                                           | Hidden                                                                                   |
+| Status-bar widget                        | Job running                                      | Format / basename / page progress / Cancel                                               |
+| Status-bar widget                        | Job completed                                    | Brief "Export complete — Open" toast then auto-hides after 5 sec                         |
+| Status-bar widget                        | Job failed                                       | "Export failed — Retry" toast (stays visible until clicked / dismissed)                  |
+| Exports sidebar tab                      | No exports for current doc                       | "No exports yet. Use File → Export… to start." empty state                               |
+| Exports sidebar tab                      | Job failed `output_path_unwritable`              | "Path locked by another process. Close the file in the destination app and Retry."       |
+| Exports sidebar tab                      | Job failed `queue_full`                          | "Export queue is full (50 jobs). Cancel some queued jobs to add more."                   |
+| Exports sidebar tab                      | Job failed `extraction_failed` / `writer_failed` | "Conversion failed: <error_message>. Try the text-only quality tier or contact support." |
 
 ### 15.9 Keyboard shortcuts (Phase 6 additions)
 
 Add to the existing shortcut table (§7, extended §11.7, §12.6, §13.6, §14.9):
 
-| Shortcut | Action | Scope |
-|---|---|---|
-| Ctrl+Shift+E | Open Export modal | document open |
+| Shortcut           | Action                                                     | Scope         |
+| ------------------ | ---------------------------------------------------------- | ------------- |
+| Ctrl+Shift+E       | Open Export modal                                          | document open |
 | Esc (inside modal) | Close modal (Step 1-2 only; Step 3-4 closes after enqueue) | modal focused |
 
 No new global shortcuts; the modal handles its own keyboard nav per existing modal-shortcut conventions.
@@ -2529,24 +2661,24 @@ The ExportModal reuses the Phase 5 OcrRunModal's CSS module pattern + step-bar c
 
 Per the four-times-proven pattern (Phase 1 H-3, Phase 3 forms, Phase 4 PAdES, Phase 5 OCR), with Phase 6 the count rises to FIVE — this is by now the canonical pattern for any feature with capability limitations. Wave 26 Nathan applies it mechanically; Wave 24 Riley wires the UI-side surface as defined here.
 
-| Obligation (per architecture-phase-6.md §8.1) | UI surface this wave defines | Inline text |
-|---|---|---|
-| #1 — Layout-preserving is best-effort | ExportModal Step 2 PerFormatLimitationsPanel | "Layout-preserving is best-effort. Complex multi-column layouts and intricate tables may not convert faithfully." |
-| #2 — Borderless tables not detected | ExportModal Step 2 PerFormatLimitationsPanel (Word + Excel + PPT) | "Borderless tables (no visible grid lines) won't appear in the output. Use the OCR layer first if needed." |
-| #3 — XFA forms do not export | ExportModal Step 2 PerFormatLimitationsPanel + Settings → Export tooltip | "XFA form values don't export. AcroForm values do; flatten via Forms → Flatten on export first if needed." |
-| #4 — Signed-PDF source stays valid; exported file has no signature | ExportModal Step 2 PerFormatLimitationsPanel + Settings → Export tooltip | "Exporting from a signed PDF leaves the source signature intact. The exported file has no signature semantics." |
-| #5 — OCR status determines text fidelity | ExportModal Step 2 PerFormatLimitationsPanel (Word + PPT) | "If the source PDF is image-only and hasn't been OCR'd, the exported Word/PowerPoint output is mostly raster with no selectable text. Run OCR first if needed." |
-| Cross-cutting — duration estimate | ExportModal Step 2 PerFormatLimitationsPanel | "Time estimate: ~5-30 sec per page for layout-preserving; ~0.5 sec per page for text-only." |
+| Obligation (per architecture-phase-6.md §8.1)                      | UI surface this wave defines                                             | Inline text                                                                                                                                                     |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #1 — Layout-preserving is best-effort                              | ExportModal Step 2 PerFormatLimitationsPanel                             | "Layout-preserving is best-effort. Complex multi-column layouts and intricate tables may not convert faithfully."                                               |
+| #2 — Borderless tables not detected                                | ExportModal Step 2 PerFormatLimitationsPanel (Word + Excel + PPT)        | "Borderless tables (no visible grid lines) won't appear in the output. Use the OCR layer first if needed."                                                      |
+| #3 — XFA forms do not export                                       | ExportModal Step 2 PerFormatLimitationsPanel + Settings → Export tooltip | "XFA form values don't export. AcroForm values do; flatten via Forms → Flatten on export first if needed."                                                      |
+| #4 — Signed-PDF source stays valid; exported file has no signature | ExportModal Step 2 PerFormatLimitationsPanel + Settings → Export tooltip | "Exporting from a signed PDF leaves the source signature intact. The exported file has no signature semantics."                                                 |
+| #5 — OCR status determines text fidelity                           | ExportModal Step 2 PerFormatLimitationsPanel (Word + PPT)                | "If the source PDF is image-only and hasn't been OCR'd, the exported Word/PowerPoint output is mostly raster with no selectable text. Run OCR first if needed." |
+| Cross-cutting — duration estimate                                  | ExportModal Step 2 PerFormatLimitationsPanel                             | "Time estimate: ~5-30 sec per page for layout-preserving; ~0.5 sec per page for text-only."                                                                     |
 
 Wave 26 Nathan's targets (the three-location ratchet + README front-door + UI modal = 4-location ratchet for Phase 6):
 
-| Location | Wave 26 (Nathan) target |
-|---|---|
-| Top-of-guide preamble | `docs/user-guide.md` Phase-6 preamble — enumerate all 5 obligations + duration reminder |
-| Dedicated trust-floor section | New section "Export to Office trust floor — what the app does and doesn't promise" |
-| Inline at every export-touching subsection | Each per-format export how-to: "Honesty reminder" callout + anchor link |
-| README front-door | `README.md` Phase 6 Known Limitations with the 5 headlines |
-| ExportModal UI (this wave) | Per-format limitations panel — visible in-modal, not docs-only |
+| Location                                   | Wave 26 (Nathan) target                                                                 |
+| ------------------------------------------ | --------------------------------------------------------------------------------------- |
+| Top-of-guide preamble                      | `docs/user-guide.md` Phase-6 preamble — enumerate all 5 obligations + duration reminder |
+| Dedicated trust-floor section              | New section "Export to Office trust floor — what the app does and doesn't promise"      |
+| Inline at every export-touching subsection | Each per-format export how-to: "Honesty reminder" callout + anchor link                 |
+| README front-door                          | `README.md` Phase 6 Known Limitations with the 5 headlines                              |
+| ExportModal UI (this wave)                 | Per-format limitations panel — visible in-modal, not docs-only                          |
 
 ### 15.14 Cross-reference checklist (Wave 23 self-verification)
 
@@ -2692,11 +2824,11 @@ Driven by `telemetry:getStatus { includeBuffer: true }`. Shows event name + day 
 
 Phase 7 applies the remediation map from `a11y-audit.md §4` to the existing UI. The headline change is the **proper ARIA tab pattern** (replacing the Phase-1 `jsx-a11y/aria-proptypes` workaround) on three surfaces:
 
-| Surface | Phase-1 state | Phase-7 fix |
-|---|---|---|
+| Surface                                                                                 | Phase-1 state                                 | Phase-7 fix                                                                                                        |
+| --------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | **Sidebar tabs** (Thumbnails / Bookmarks / Forms / Exports) — `sidebar/index.tsx:11-16` | tab semantics dropped for the lint workaround | `role="tablist"` (vertical) + `role="tab"` + `aria-selected` + `role="tabpanel"` + roving tabindex + arrow-key nav |
-| **Settings modal tabs** (General / Files / Export / Editing / About) | same workaround | `role="tablist"` (horizontal) + same pattern |
-| **Toolbar** | no `role="toolbar"` | `role="toolbar"` + roving tabindex within groups + arrow-key nav |
+| **Settings modal tabs** (General / Files / Export / Editing / About)                    | same workaround                               | `role="tablist"` (horizontal) + same pattern                                                                       |
+| **Toolbar**                                                                             | no `role="toolbar"`                           | `role="toolbar"` + roving tabindex within groups + arrow-key nav                                                   |
 
 Plus the neighboring deferred fixes (a11y-audit §4 R-4..R-10): thumbnail-strip arrow-key roving + Delete; bookmarks-panel Space activation; empty-state focusable recents; combine-modal `aria-invalid` error; a shared `useFocusTrap` hook on every modal (focus trapped within, Esc escapes, focus returns to trigger on close); `aria-live="polite"` on status-bar widgets.
 
@@ -2718,11 +2850,11 @@ The new Settings/About controls (§16.1-§16.4) are all keyboard + Narrator acce
 
 No new global shortcuts in Phase 7 (the polish phase adds no new commands). The existing `Ctrl+,` (Open Settings) is the entry to all Phase-7 settings UI. The ARIA-tab arrow-key navigation (§16.5) is NOT a global shortcut — it is contextual to the focused tablist.
 
-| Shortcut | Action | Status |
-|---|---|---|
-| Ctrl+, | Open Settings (→ language / telemetry / updates) | Phase 1 (unchanged) |
-| Arrow keys (in a tablist) | Move active tab (sidebar/settings) | **Phase 7 (NEW — contextual)** |
-| Home / End (in a tablist) | First / last tab | **Phase 7 (NEW — contextual)** |
+| Shortcut                  | Action                                           | Status                         |
+| ------------------------- | ------------------------------------------------ | ------------------------------ |
+| Ctrl+,                    | Open Settings (→ language / telemetry / updates) | Phase 1 (unchanged)            |
+| Arrow keys (in a tablist) | Move active tab (sidebar/settings)               | **Phase 7 (NEW — contextual)** |
+| Home / End (in a tablist) | First / last tab                                 | **Phase 7 (NEW — contextual)** |
 
 ### 16.8 Drag-drop behavior — NO additions; L-001 unchanged
 
@@ -2732,14 +2864,14 @@ Phase 7 introduces **no new drag-drop entry points**. The §11 drag-drop matrix 
 
 Per the proven five-times pattern, Phase 7's six obligations (`architecture-phase-7.md §8`) surface at four locations. The **UI placements (Wave 28 Riley)** are the load-bearing point-of-action surfaces:
 
-| Obligation | UI surface (Wave 28 Riley) | Docs surface (Wave 30 Nathan) |
-|---|---|---|
-| #1 telemetry OFF + anonymous | Settings telemetry toggle inline copy (§16.1) + debug panel (§16.4) | user-guide privacy section + README |
-| #2 update publish placeholder | Settings updates inline copy (§16.1) + About status area (§16.2) | user-guide updates section + README known-limitations |
-| #3 mac/linux UNVERIFIED | (no Windows UI surface; install-time concern) | README known-limitations + user-guide install |
-| #4 proof locale = sample | Settings language picker subtext (§16.1) | user-guide language section |
-| #5 a11y AA + known gaps | (About → accessibility note, optional) | user-guide accessibility section (a11y-audit §7) |
-| #6 code-signing = user step | About update status area (§16.2) | code-signing-workflow.md (Diego) + README |
+| Obligation                    | UI surface (Wave 28 Riley)                                          | Docs surface (Wave 30 Nathan)                         |
+| ----------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------- |
+| #1 telemetry OFF + anonymous  | Settings telemetry toggle inline copy (§16.1) + debug panel (§16.4) | user-guide privacy section + README                   |
+| #2 update publish placeholder | Settings updates inline copy (§16.1) + About status area (§16.2)    | user-guide updates section + README known-limitations |
+| #3 mac/linux UNVERIFIED       | (no Windows UI surface; install-time concern)                       | README known-limitations + user-guide install         |
+| #4 proof locale = sample      | Settings language picker subtext (§16.1)                            | user-guide language section                           |
+| #5 a11y AA + known gaps       | (About → accessibility note, optional)                              | user-guide accessibility section (a11y-audit §7)      |
+| #6 code-signing = user step   | About update status area (§16.2)                                    | code-signing-workflow.md (Diego) + README             |
 
 The Settings + About inline copy is where the user reads the honesty at the moment of action — mirroring the Phase 6 `PerFormatLimitationsPanel` load-bearing-UI lesson. Wave 29 Julian's a11y audit confirms this copy is screen-reader-readable (a11y-audit §3 Path 7 + §8.1 grep #8).
 

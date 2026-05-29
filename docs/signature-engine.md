@@ -60,13 +60,13 @@ export type ApplySignatureInput =
       tsaUrl: string | null;
       reason?: string;
       location?: string;
-      placeholderSize?: number;          // override default 16384 hex chars
+      placeholderSize?: number; // override default 16384 hex chars
     };
 
 export interface ApplySignatureOk {
   newBytes: Uint8Array;
   /** EditOperation for the renderer's dirtyOps. */
-  op: EditOperationSerialized;          // kind: 'signature-visual-place' | 'signature-pades-applied'
+  op: EditOperationSerialized; // kind: 'signature-visual-place' | 'signature-pades-applied'
   /** For PAdES, the audit log row (already inserted into SQLite). Null for visual. */
   auditRow: SignatureAuditRow | null;
   warnings: string[];
@@ -103,7 +103,7 @@ export async function applySignature(input: ApplySignatureInput): Promise<ApplyS
 // src/main/pdf-ops/visual-signature.ts (NEW)
 
 export interface ApplyVisualInput {
-  doc: PDFDocument;                       // already loaded by the orchestrator
+  doc: PDFDocument; // already loaded by the orchestrator
   placement: SignaturePlacement;
   appearance: VisualAppearanceSpec;
 }
@@ -113,9 +113,9 @@ export async function applyVisual(input: ApplyVisualInput): Promise<{ warnings: 
 // src/main/pdf-ops/pades-signature.ts (NEW — node-signpdf engine)
 
 export interface ApplyPadesInput {
-  bytes: Uint8Array;                      // serialized bytes WITH appearance widget already applied
+  bytes: Uint8Array; // serialized bytes WITH appearance widget already applied
   placement: SignaturePlacement;
-  certEntry: ParsedCertEntry;             // from cert-store
+  certEntry: ParsedCertEntry; // from cert-store
   tsaUrl: string | null;
   reason?: string;
   location?: string;
@@ -130,12 +130,16 @@ export interface ApplyPadesOk {
   tsaResponseStatus: 'ok' | 'failed' | null;
 }
 
-export async function applyPades(input: ApplyPadesInput): Promise<Result<ApplyPadesOk, ApplySignatureError>>;
+export async function applyPades(
+  input: ApplyPadesInput,
+): Promise<Result<ApplyPadesOk, ApplySignatureError>>;
 
 // src/main/pdf-ops/pades-signature-manual.ts (NEW — node-forge + pkijs fallback)
 // SAME signature as applyPades — drop-in replacement. Selected via env PADES_ENGINE=manual.
 
-export async function applyPadesManual(input: ApplyPadesInput): Promise<Result<ApplyPadesOk, ApplySignatureError>>;
+export async function applyPadesManual(
+  input: ApplyPadesInput,
+): Promise<Result<ApplyPadesOk, ApplySignatureError>>;
 ```
 
 ### 2.3 Shared types (live in `src/ipc/contracts.ts`; full schemas in `api-contracts.md` Phase-4 amendment §14)
@@ -146,45 +150,51 @@ export type SignaturePlacementMode = 'placeholder' | 'freeform';
 export interface SignaturePlacement {
   mode: SignaturePlacementMode;
   // For 'placeholder' mode:
-  fieldName?: string;                     // Phase-3 placeholder field to fill
+  fieldName?: string; // Phase-3 placeholder field to fill
   // For 'freeform' mode:
   pageIndex?: number;
-  rect?: PdfRect;                         // PDF user-space, origin bottom-left
+  rect?: PdfRect; // PDF user-space, origin bottom-left
   rotation?: 0 | 90 | 180 | 270;
 }
 
 export type VisualAppearanceSource =
   | { kind: 'typed'; name: string; fontFamily?: string; fontSize?: number }
   | { kind: 'drawn'; pngBytes: Uint8Array; widthPx: number; heightPx: number }
-  | { kind: 'image'; bytes: Uint8Array; mimeType: 'image/png' | 'image/jpeg'; widthPx: number; heightPx: number };
+  | {
+      kind: 'image';
+      bytes: Uint8Array;
+      mimeType: 'image/png' | 'image/jpeg';
+      widthPx: number;
+      heightPx: number;
+    };
 
 export interface VisualAppearanceSpec {
   source: VisualAppearanceSource;
-  showName: boolean;                      // shown for typed source; default true
-  showDate: boolean;                      // default true; locale per Settings
-  showReason: boolean;                    // default false unless reason non-empty
-  showSubjectCN: boolean;                 // visual-only signatures have no cert; always false here
-  reason?: string;                        // displayed inside the appearance box if showReason
+  showName: boolean; // shown for typed source; default true
+  showDate: boolean; // default true; locale per Settings
+  showReason: boolean; // default false unless reason non-empty
+  showSubjectCN: boolean; // visual-only signatures have no cert; always false here
+  reason?: string; // displayed inside the appearance box if showReason
 }
 
 export interface PadesAppearanceSpec extends VisualAppearanceSpec {
-  showSubjectCN: boolean;                 // default true for PAdES
-  showIssuerCN: boolean;                  // default false
-  showTsaInfo: boolean;                   // default false; "Timestamped by <url>" if true
+  showSubjectCN: boolean; // default true for PAdES
+  showIssuerCN: boolean; // default false
+  showTsaInfo: boolean; // default false; "Timestamped by <url>" if true
 }
 
-export type CertHandle = string;          // opaque UUID v4; valid only while cert-store holds it
+export type CertHandle = string; // opaque UUID v4; valid only while cert-store holds it
 
 export interface ParsedCertEntry {
   // Internal type; NEVER serialized over IPC.
   x509: forge.pki.Certificate;
   privateKey: forge.pki.PrivateKey;
-  privateKeyPem: string;                  // overwritten on release
-  fingerprint: string;                    // SHA-256 hex
+  privateKeyPem: string; // overwritten on release
+  fingerprint: string; // SHA-256 hex
   subjectCN: string;
   issuerCN: string;
-  notBefore: number;                      // ms epoch
-  notAfter: number;                       // ms epoch
+  notBefore: number; // ms epoch
+  notAfter: number; // ms epoch
   loadedAt: number;
   /** Internal counter for autoRelease accounting. */
   refCount: number;
@@ -212,21 +222,22 @@ The pure-modulo-side-effects contract is testable: TSA-mocked tests are determin
 
 ### 3.1 The two candidates
 
-| | `node-signpdf` | `node-forge` + `pkijs` (manual) |
-|---|---|---|
-| License | MIT | BSD-3-Clause-OR-GPL-2.0 (forge) + MIT (pkijs) |
-| Maintenance | Active GitHub, last commit 2025; 1.4k stars | Both active; forge is foundational (5k+ stars); pkijs is the de-facto JS PKI lib |
-| Code we own | ~200 LOC adapter | ~600 LOC engine (CMS construction, byte-range, embedding) |
-| Byte-range correctness | Known-good algorithm | We own the off-by-one risk |
-| RFC 3161 timestamping | Not built-in (we write `tsa-client.ts` either way) | Not built-in (same) |
-| Multi-signature workflows | Supported via incremental update | Same machinery; we implement |
-| Appearance streams | Pass-through (we author appearance OURSELVES; signpdf doesn't touch /AP) | Pass-through (same) |
-| Acrobat Reader DC verification | Externally verified | We'd verify ourselves |
-| Test fixtures | Has its own sample PDFs we can borrow | We build our own |
+|                                | `node-signpdf`                                                           | `node-forge` + `pkijs` (manual)                                                  |
+| ------------------------------ | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| License                        | MIT                                                                      | BSD-3-Clause-OR-GPL-2.0 (forge) + MIT (pkijs)                                    |
+| Maintenance                    | Active GitHub, last commit 2025; 1.4k stars                              | Both active; forge is foundational (5k+ stars); pkijs is the de-facto JS PKI lib |
+| Code we own                    | ~200 LOC adapter                                                         | ~600 LOC engine (CMS construction, byte-range, embedding)                        |
+| Byte-range correctness         | Known-good algorithm                                                     | We own the off-by-one risk                                                       |
+| RFC 3161 timestamping          | Not built-in (we write `tsa-client.ts` either way)                       | Not built-in (same)                                                              |
+| Multi-signature workflows      | Supported via incremental update                                         | Same machinery; we implement                                                     |
+| Appearance streams             | Pass-through (we author appearance OURSELVES; signpdf doesn't touch /AP) | Pass-through (same)                                                              |
+| Acrobat Reader DC verification | Externally verified                                                      | We'd verify ourselves                                                            |
+| Test fixtures                  | Has its own sample PDFs we can borrow                                    | We build our own                                                                 |
 
 ### 3.2 Recommendation: `node-signpdf` as primary
 
 **Rationale:**
+
 1. **Less code, faster ship.** Wave 16 has ~7 days of David+Riley+Ravi capacity; spending 5 of those on byte-range arithmetic is poor risk allocation.
 2. **Known-good byte-range.** The single highest-risk failure mode of a PAdES implementation is byte-range off-by-one, which produces signed-but-invalid PDFs that fail silently in Acrobat. node-signpdf has had this thoroughly debugged in its 2.x and 3.x lines.
 3. **Auditability.** The code surface is small enough that David's Wave 16 test corpus + Julian's Wave 17 audit can read the entire wrapper end-to-end.
@@ -250,12 +261,13 @@ Where:
   a = offset of '<' starting the hex placeholder
   b = a + 1 + 2*placeholderSize + 1 = offset just past '>'
   d = total length of the document
-  
+
 The bytes from offset `a` (inclusive) through offset `b` (exclusive)
 are the placeholder; they are NOT hashed. Everything else IS.
 ```
 
 **node-signpdf's algorithm:**
+
 1. Insert a placeholder `/ByteRange [0 0 0 0]` and `/Contents <00...00>` (16384 zero-hex chars) into the signature dict.
 2. Serialize the PDF; locate the byte offsets of the placeholders.
 3. Replace `/ByteRange [0 0 0 0]` with the computed range `[0, a, b, d-b]` IN PLACE (same byte length — node-signpdf pads with spaces).
@@ -276,7 +288,11 @@ The manual `pades-signature-manual.ts` performs the same algorithm with explicit
 
 ```ts
 // Sketch from pades-signature-manual.ts (David Wave 16)
-function computeByteRange(bytes: Uint8Array, placeholderStart: number, placeholderHexLen: number): [number, number, number, number] {
+function computeByteRange(
+  bytes: Uint8Array,
+  placeholderStart: number,
+  placeholderHexLen: number,
+): [number, number, number, number] {
   // placeholderStart is the offset of the '<' character of /Contents <00...00>
   const placeholderEnd = placeholderStart + 1 + placeholderHexLen + 1; // 1 for '<', N hex chars, 1 for '>'
   return [0, placeholderStart, placeholderEnd, bytes.length - placeholderEnd];
@@ -284,8 +300,8 @@ function computeByteRange(bytes: Uint8Array, placeholderStart: number, placehold
 
 function hashOverRange(bytes: Uint8Array, range: [number, number, number, number]): Uint8Array {
   const hasher = createHash('sha256');
-  hasher.update(bytes.subarray(range[0], range[0] + range[1]));   // bytes 0..a
-  hasher.update(bytes.subarray(range[2], range[2] + range[3]));   // bytes b..d
+  hasher.update(bytes.subarray(range[0], range[0] + range[1])); // bytes 0..a
+  hasher.update(bytes.subarray(range[2], range[2] + range[3])); // bytes b..d
   return hasher.digest();
 }
 ```
@@ -358,7 +374,7 @@ import forge from 'node-forge';
 interface ParsedCertEntry {
   x509: forge.pki.Certificate;
   privateKey: forge.pki.PrivateKey;
-  privateKeyPem: string;                  // mutable; overwritten on release
+  privateKeyPem: string; // mutable; overwritten on release
   fingerprint: string;
   subjectCN: string;
   issuerCN: string;
@@ -396,8 +412,8 @@ export interface CertLoadOk {
  * flag in applyPades (default true).
  */
 export function loadCert(
-  pfxBytes: Buffer,                       // CONSUMED — zeroed before return
-  passwordBuffer: Buffer,                 // CONSUMED — zeroed before return
+  pfxBytes: Buffer, // CONSUMED — zeroed before return
+  passwordBuffer: Buffer, // CONSUMED — zeroed before return
 ): Result<CertLoadOk, CertLoadError> {
   try {
     // Step 1: convert PFX bytes to forge ASN.1
@@ -428,9 +444,11 @@ export function loadCert(
     const privateKey = keyBag.key;
     const privateKeyPem = forge.pki.privateKeyToPem(privateKey);
     const x509 = certBag.cert;
-    const fingerprint = forge.md.sha256.create()
+    const fingerprint = forge.md.sha256
+      .create()
       .update(forge.asn1.toDer(forge.pki.certificateToAsn1(x509)).getBytes())
-      .digest().toHex();
+      .digest()
+      .toHex();
 
     const subjectCN = x509.subject.getField('CN')?.value ?? '';
     const issuerCN = x509.issuer.getField('CN')?.value ?? '';
@@ -537,16 +555,16 @@ export async function handleCertLoad(req: unknown): Promise<CertLoadResponse> {
   // The local `passwordString` is set to '' to drop the JS string reference;
   // the original parsed.data.password reference is also dropped by going out of scope
   // at function return. The Buffer is what loadCert consumes and zeroes.
-  const pfxBuf = Buffer.from(parsed.data.pfxBytes);   // copy bytes into Buffer
+  const pfxBuf = Buffer.from(parsed.data.pfxBytes); // copy bytes into Buffer
   const passwordBuf = Buffer.from(parsed.data.password, 'utf-8');
   // overwrite local strings/refs:
   let passwordString: string = parsed.data.password;
-  passwordString = '';                                 // explicit zero; V8 may intern, see §4.2.3
+  passwordString = ''; // explicit zero; V8 may intern, see §4.2.3
   (parsed.data as { password: string }).password = ''; // overwrite parsed obj field
-  void passwordString;                                 // discard
+  void passwordString; // discard
 
   try {
-    const result = loadCert(pfxBuf, passwordBuf);     // CONSUMES both buffers
+    const result = loadCert(pfxBuf, passwordBuf); // CONSUMES both buffers
     // pfxBuf and passwordBuf are now zeroed; do not re-use them.
     return result;
   } catch (e) {
@@ -647,19 +665,20 @@ Modal close before sign:
 
 ### 4.2.2 Failure recovery — guaranteed zeroing on every path
 
-| Failure | What's left in memory? |
-|---|---|
-| `wrong_password` returned from forge | `passwordBuf` zeroed in finally; `pfxBuf` zeroed in finally. Renderer shows "Wrong password — try again". No cert entry created. |
-| `pfx_decode_failed` (malformed PFX) | Same — both buffers zeroed in finally. No entry created. |
-| Network failure during PFX read (impossible — bytes already in renderer) | N/A |
-| Main process crash mid-load | Crash dump may contain bytes. Mitigated by Wave 17 follow-up (purge crashpad dir on quit). |
-| `applyPades` fails after successful load | `try/finally releaseHandle(handle)` in the handler ensures cleanup. If autoRelease=false (multi-sign session), the modal cleanup fires release on dismiss. |
-| Renderer hot-reload during dev | Main's `app.on('before-quit')` fires releaseAll(); on dev reload the new main process starts with empty store. |
-| User force-kills the app | OS reclaims process memory; no on-disk artifacts because no on-disk writes. |
+| Failure                                                                  | What's left in memory?                                                                                                                                     |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `wrong_password` returned from forge                                     | `passwordBuf` zeroed in finally; `pfxBuf` zeroed in finally. Renderer shows "Wrong password — try again". No cert entry created.                           |
+| `pfx_decode_failed` (malformed PFX)                                      | Same — both buffers zeroed in finally. No entry created.                                                                                                   |
+| Network failure during PFX read (impossible — bytes already in renderer) | N/A                                                                                                                                                        |
+| Main process crash mid-load                                              | Crash dump may contain bytes. Mitigated by Wave 17 follow-up (purge crashpad dir on quit).                                                                 |
+| `applyPades` fails after successful load                                 | `try/finally releaseHandle(handle)` in the handler ensures cleanup. If autoRelease=false (multi-sign session), the modal cleanup fires release on dismiss. |
+| Renderer hot-reload during dev                                           | Main's `app.on('before-quit')` fires releaseAll(); on dev reload the new main process starts with empty store.                                             |
+| User force-kills the app                                                 | OS reclaims process memory; no on-disk artifacts because no on-disk writes.                                                                                |
 
 ### 4.2.3 What V8 makes hard — honest write-up
 
 JS strings are immutable; you can't `password.fill(0)`. The discipline above:
+
 - Converts to `Buffer` at the EARLIEST opportunity (handler line 2).
 - Overwrites the string variables with `''`.
 - Drops the references by scope exit.
@@ -667,12 +686,14 @@ JS strings are immutable; you can't `password.fill(0)`. The discipline above:
 But the original string CAN linger in V8's heap until next GC. Worst case: ~1-2 seconds on a busy Electron main. For our threat model (local desktop attacker who can read process memory while the modal is open), the residual is acceptable because we've narrowed the window to a small synchronous code block.
 
 **What we explicitly do NOT promise:**
+
 - Defending against an attacker with a debugger attached to the process.
 - Defending against a kernel-level memory dump captured during the modal flow.
 - Defending against compromised OS keychain or trust store.
 - "Secure memory" pages (mlock / VirtualLock) for the cert — Phase 4 doesn't attempt this; Phase 4.1+ may add via `node-keytar` for OS-keychain-backed password retrieval.
 
 **What we DO promise:**
+
 - No password written to disk (no log, no .env, no auto-fill, no Electron-Store).
 - No cert bytes written to disk (no log, no temp file, no swap dump that we trigger).
 - No password reflected back over IPC.
@@ -747,7 +768,7 @@ Composes the appearance stream (`/AP /N` content stream) shared by visual + PAdE
 // src/main/pdf-ops/signature-appearance.ts
 
 export interface AppearanceSpec {
-  rect: PdfRect;                          // widget rect; appearance fits this rect
+  rect: PdfRect; // widget rect; appearance fits this rect
   source: VisualAppearanceSource;
   showName: boolean;
   showDate: boolean;
@@ -758,13 +779,13 @@ export interface AppearanceSpec {
   reason?: string;
   subjectCN?: string;
   issuerCN?: string;
-  signedAt?: number;                      // ms epoch
+  signedAt?: number; // ms epoch
   tsaUrl?: string;
 }
 
 export interface AppearanceStreamOk {
-  pdfStream: Uint8Array;                  // ready to attach as widget.AP.N
-  warnings: string[];                     // e.g. "Reason text was truncated"
+  pdfStream: Uint8Array; // ready to attach as widget.AP.N
+  warnings: string[]; // e.g. "Reason text was truncated"
 }
 
 export async function composeAppearance(
@@ -790,6 +811,7 @@ export async function composeAppearance(
 ```
 
 Each text row is one line at fontSize = `min(10, H/8)`, Helvetica embed. Rows are dropped in priority order if they don't fit:
+
 1. (lowest) Timestamped by
 2. Reason
 3. Issuer
@@ -803,11 +825,11 @@ The drop policy is documented in user-guide (Wave 18 Nathan).
 
 ### 5.3 Drawn / typed / image source handling
 
-| Source kind | Renderer prepares | Main embeds |
-|---|---|---|
-| `typed { name, fontFamily?, fontSize? }` | Renderer renders the name in a `<canvas>` at high DPI (96 → 192), exports PNG bytes, ships in `VisualAppearanceSpec.source.pngBytes`. The renderer (NOT main) chooses the font — same modules used by FreeText annotations. | Main treats the PNG as the appearance image. |
-| `drawn { pngBytes, widthPx, heightPx }` | Renderer's `<canvas>` captures pointer events with smoothing; exports PNG. | Main treats the PNG as the appearance image. |
-| `image { bytes, mimeType, widthPx, heightPx }` | Renderer reads the dropped file; ships bytes. | Main decodes PNG/JPEG via pdf-lib's `embedPng`/`embedJpg`; uses the embedded image. |
+| Source kind                                    | Renderer prepares                                                                                                                                                                                                           | Main embeds                                                                         |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `typed { name, fontFamily?, fontSize? }`       | Renderer renders the name in a `<canvas>` at high DPI (96 → 192), exports PNG bytes, ships in `VisualAppearanceSpec.source.pngBytes`. The renderer (NOT main) chooses the font — same modules used by FreeText annotations. | Main treats the PNG as the appearance image.                                        |
+| `drawn { pngBytes, widthPx, heightPx }`        | Renderer's `<canvas>` captures pointer events with smoothing; exports PNG.                                                                                                                                                  | Main treats the PNG as the appearance image.                                        |
+| `image { bytes, mimeType, widthPx, heightPx }` | Renderer reads the dropped file; ships bytes.                                                                                                                                                                               | Main decodes PNG/JPEG via pdf-lib's `embedPng`/`embedJpg`; uses the embedded image. |
 
 The "drawn" source is the most common; smoothing is renderer-side using a small Catmull-Rom interpolation in `use-signature-canvas.ts`. The canvas exports at 4x device pixel ratio for crispness when embedded at 96 DPI.
 
@@ -815,11 +837,11 @@ The "drawn" source is the most common; smoothing is renderer-side using a small 
 
 After Phase 4 signs a placeholder, we need the form-engine + renderer to distinguish three states:
 
-| State | Field `/V` entry | Widget `/AP /N` | Audit log row |
-|---|---|---|---|
-| Placeholder (Phase 3) | absent | absent | none |
-| Visual-signed | empty dict `<< >>` | present | none |
-| PAdES-signed | `<< /ByteRange [...] /Contents <hex> >>` etc. | present | one row |
+| State                 | Field `/V` entry                              | Widget `/AP /N` | Audit log row |
+| --------------------- | --------------------------------------------- | --------------- | ------------- |
+| Placeholder (Phase 3) | absent                                        | absent          | none          |
+| Visual-signed         | empty dict `<< >>`                            | present         | none          |
+| PAdES-signed          | `<< /ByteRange [...] /Contents <hex> >>` etc. | present         | one row       |
 
 The form-engine's `extractFieldDefinition` (`form-engine.md §3.1.1`) gains a branch for visual-signed detection:
 
@@ -841,6 +863,7 @@ if (pdfField instanceof PDFSignature) {
 ```
 
 The renderer's form-fill overlay (`ui-spec.md §12.5`) gains the THREE states:
+
 - placeholder → "Click to sign" (Phase 4 active button)
 - visual-signed → "Signed (visual)" lock + tooltip
 - pades-signed → "Signed by <subjectCN> on <date>" lock + tooltip + clickable to open audit detail
@@ -858,18 +881,18 @@ import { request } from 'node:https';
 import forge from 'node-forge';
 
 export interface TsaRequestInput {
-  tsaUrl: string;                         // https://...; validated by caller
-  hash: Uint8Array;                       // sha256 of the doc bytes (32 bytes)
+  tsaUrl: string; // https://...; validated by caller
+  hash: Uint8Array; // sha256 of the doc bytes (32 bytes)
   hashAlgorithm: 'sha-256';
-  nonce: bigint;                          // random nonce; verify in response
-  timeoutMs?: number;                     // default 30000
+  nonce: bigint; // random nonce; verify in response
+  timeoutMs?: number; // default 30000
 }
 
 export interface TsaResponseOk {
-  tsr: Uint8Array;                        // TimeStampResp DER bytes (full response, for embedding)
-  tsToken: Uint8Array;                    // TimeStampToken DER bytes (inner content; goes into CMS unsignedAttrs)
-  genTime: number;                        // ms epoch from the TSR
-  serialNumber: bigint;                   // TSR serial number
+  tsr: Uint8Array; // TimeStampResp DER bytes (full response, for embedding)
+  tsToken: Uint8Array; // TimeStampToken DER bytes (inner content; goes into CMS unsignedAttrs)
+  genTime: number; // ms epoch from the TSR
+  serialNumber: bigint; // TSR serial number
 }
 
 export type TsaError =
@@ -878,9 +901,11 @@ export type TsaError =
   | 'tsa_timeout'
   | 'tsa_invalid_response'
   | 'tsa_nonce_mismatch'
-  | 'tsa_genTime_skew';                   // genTime drift from system clock > 5 minutes
+  | 'tsa_genTime_skew'; // genTime drift from system clock > 5 minutes
 
-export async function requestTimestamp(input: TsaRequestInput): Promise<Result<TsaResponseOk, TsaError>>;
+export async function requestTimestamp(
+  input: TsaRequestInput,
+): Promise<Result<TsaResponseOk, TsaError>>;
 ```
 
 ### 6.2 Algorithm
@@ -925,14 +950,14 @@ export async function requestTimestamp(input: TsaRequestInput): Promise<Result<T
 
 Per architecture-phase-4.md §4.5, ALL failures are fail-loud:
 
-| Code | Cause | Renderer message |
-|---|---|---|
-| `tsa_http_error` | 4xx/5xx HTTP status | "TSA returned HTTP <code>: <body>. Disable TSA or check the URL." |
-| `tsa_tls_error` | TLS handshake failure | "TSA TLS error: <code>. The TSA's certificate may not be in your system trust store." |
-| `tsa_timeout` | No response within `timeoutMs` | "TSA timed out after <n> seconds. The service may be down." |
-| `tsa_invalid_response` | Malformed TSR or status != granted | "TSA rejected the request: <status>." |
-| `tsa_nonce_mismatch` | Returned nonce doesn't match | "TSA response is suspicious (nonce mismatch). Do not trust this TSA URL." |
-| `tsa_genTime_skew` | genTime drifts >5 min from system clock | "TSA returned a time that's <n> minutes off your system clock. Sync your clock or pick a different TSA." |
+| Code                   | Cause                                   | Renderer message                                                                                         |
+| ---------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `tsa_http_error`       | 4xx/5xx HTTP status                     | "TSA returned HTTP <code>: <body>. Disable TSA or check the URL."                                        |
+| `tsa_tls_error`        | TLS handshake failure                   | "TSA TLS error: <code>. The TSA's certificate may not be in your system trust store."                    |
+| `tsa_timeout`          | No response within `timeoutMs`          | "TSA timed out after <n> seconds. The service may be down."                                              |
+| `tsa_invalid_response` | Malformed TSR or status != granted      | "TSA rejected the request: <status>."                                                                    |
+| `tsa_nonce_mismatch`   | Returned nonce doesn't match            | "TSA response is suspicious (nonce mismatch). Do not trust this TSA URL."                                |
+| `tsa_genTime_skew`     | genTime drifts >5 min from system clock | "TSA returned a time that's <n> minutes off your system clock. Sync your clock or pick a different TSA." |
 
 The sign fails; no signed bytes are produced. User can disable TSA and re-sign.
 
@@ -995,19 +1020,18 @@ The order matters: signatures run AFTER form ops (which may add the placeholder 
 ```ts
 export type ReplayError =
   // ...existing variants...
-  | 'signature_widget_missing'
-  | 'pades_invalidated_by_subsequent_edit';
+  'signature_widget_missing' | 'pades_invalidated_by_subsequent_edit';
 ```
 
 ### 7.4 Undo semantics for PAdES
 
 Undoing a `signature-pades-applied` op is conceptually weird (the bytes ARE the document). Wave 16 implementation:
 
-| Scenario | Behavior |
-|---|---|
-| Sign + Undo BEFORE save | Renderer rolls back via inverse `signature-pades-removed` (deletes the widget + clears the `/V` Contents from the field dict). Audit log row is DELETED (Ravi Wave 16 adds `delete(id)` to the repo). Document returns to placeholder state. |
-| Sign + Save + Undo | Renderer's history still has the inverse. Save replaces on-disk file with the unsigned bytes. **A confirmation modal warns** "Undoing the PAdES signature will produce an unsigned file. External verifiers will no longer trust the previously signed file. Continue?" If user proceeds, audit log row is deleted; document is unsigned; on disk file is unsigned-bytes. |
-| Sign + Save + Close + Reopen | Document has the signature; the renderer reconstructs the form-fill overlay from the signed `/V`. Undo history is EMPTY (history doesn't survive close). User can sign-again to add a second signature (Phase 4.5 multi-sign workflow); Phase 4 instead prompts "This document is already signed; re-signing will invalidate the previous signature. Continue?" |
+| Scenario                     | Behavior                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sign + Undo BEFORE save      | Renderer rolls back via inverse `signature-pades-removed` (deletes the widget + clears the `/V` Contents from the field dict). Audit log row is DELETED (Ravi Wave 16 adds `delete(id)` to the repo). Document returns to placeholder state.                                                                                                                              |
+| Sign + Save + Undo           | Renderer's history still has the inverse. Save replaces on-disk file with the unsigned bytes. **A confirmation modal warns** "Undoing the PAdES signature will produce an unsigned file. External verifiers will no longer trust the previously signed file. Continue?" If user proceeds, audit log row is deleted; document is unsigned; on disk file is unsigned-bytes. |
+| Sign + Save + Close + Reopen | Document has the signature; the renderer reconstructs the form-fill overlay from the signed `/V`. Undo history is EMPTY (history doesn't survive close). User can sign-again to add a second signature (Phase 4.5 multi-sign workflow); Phase 4 instead prompts "This document is already signed; re-signing will invalidate the previous signature. Continue?"           |
 
 The Wave 16 implementer keeps undo behavior simple: the inverse `signature-pades-removed` removes the widget + clears `/V` + deletes the audit row. The confirmation modal lives in the renderer.
 
@@ -1103,43 +1127,43 @@ Lives in `tests/fixtures/signature-engine/`:
 
 ### 9.2 Test categories
 
-| Category | Coverage |
-|---|---|
-| Cert load — happy path | Load test-cert.pfx with correct password; assert handle returned, subjectCN/issuerCN/fingerprint correct, isExpired=false. |
-| Cert load — wrong password | Load with wrong password; assert error='wrong_password'. Assert pfxBuf + passwordBuf zeroed post-call (read the buffer back; should be all zeros). |
-| Cert load — expired cert | Load test-cert-expired.pfx; assert isExpired=true; load succeeds (it's still loadable, just expired). |
-| Cert load — buffer zeroing | After every load (success OR failure), assert both input buffers are entirely zero. |
-| Cert release — happy path | Load, release, assert getEntry returns null. |
-| Cert release — idempotent | Load, release, release again; second release returns false but doesn't throw. |
-| Cert release — releaseAll | Load 3 certs, releaseAll(), assert all 3 are released. |
-| `signatures:certLoad` IPC — password discipline | Spy on the handler; assert the password string is set to '' before the IPC response returns. (Tricky to test directly; use a wrapper that captures the local var.) |
-| Visual sign — typed | Apply typed signature to a placeholder; reload; assert widget has /AP /N stream + /V <<>>. |
-| Visual sign — drawn | Same with drawn PNG bytes. |
-| Visual sign — image | Same with uploaded PNG. |
-| Visual sign — freeform placement | Same, no placeholder; assert new /Sig field authored at the rect. |
-| PAdES sign (primary engine) — placeholder | Sign placeholder-only.pdf with test-cert.pfx; reload; verify against golden bytes. |
-| PAdES sign — verify in Acrobat Reader DC | Manual test step (Wave 16 + Wave 17): open signed PDF in Acrobat, verify signature shows green checkmark. |
-| PAdES sign — byte-range correctness | Re-hash the bytes over the byte-range from the audit row; compare to messageDigest in CMS; assert match. |
-| PAdES sign — TSA happy path | Mock TSA returns a valid TSR; assert sign succeeds with tsa_response_status='ok'. |
-| PAdES sign — TSA timeout | Mock TSA never responds within 30s; assert error='tsa_timeout' AND no audit row inserted AND no bytes returned. |
-| PAdES sign — TSA HTTP error | Mock TSA returns 500; assert error='tsa_http_error'. |
-| PAdES sign — TSA invalid response | Mock TSA returns malformed bytes; assert error='tsa_invalid_response'. |
-| PAdES sign — TSA nonce mismatch | Mock TSA returns wrong nonce; assert error='tsa_nonce_mismatch'. |
-| PAdES sign — TSA genTime skew | Mock TSA returns genTime 10 minutes off; assert error='tsa_genTime_skew'. |
-| PAdES sign — expired cert | Sign with test-cert-expired.pfx; assert error='cert_expired' OR success with warning (Wave 16 decides; Riley's recommendation: error). |
+| Category                                            | Coverage                                                                                                                                                                                                                               |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cert load — happy path                              | Load test-cert.pfx with correct password; assert handle returned, subjectCN/issuerCN/fingerprint correct, isExpired=false.                                                                                                             |
+| Cert load — wrong password                          | Load with wrong password; assert error='wrong_password'. Assert pfxBuf + passwordBuf zeroed post-call (read the buffer back; should be all zeros).                                                                                     |
+| Cert load — expired cert                            | Load test-cert-expired.pfx; assert isExpired=true; load succeeds (it's still loadable, just expired).                                                                                                                                  |
+| Cert load — buffer zeroing                          | After every load (success OR failure), assert both input buffers are entirely zero.                                                                                                                                                    |
+| Cert release — happy path                           | Load, release, assert getEntry returns null.                                                                                                                                                                                           |
+| Cert release — idempotent                           | Load, release, release again; second release returns false but doesn't throw.                                                                                                                                                          |
+| Cert release — releaseAll                           | Load 3 certs, releaseAll(), assert all 3 are released.                                                                                                                                                                                 |
+| `signatures:certLoad` IPC — password discipline     | Spy on the handler; assert the password string is set to '' before the IPC response returns. (Tricky to test directly; use a wrapper that captures the local var.)                                                                     |
+| Visual sign — typed                                 | Apply typed signature to a placeholder; reload; assert widget has /AP /N stream + /V <<>>.                                                                                                                                             |
+| Visual sign — drawn                                 | Same with drawn PNG bytes.                                                                                                                                                                                                             |
+| Visual sign — image                                 | Same with uploaded PNG.                                                                                                                                                                                                                |
+| Visual sign — freeform placement                    | Same, no placeholder; assert new /Sig field authored at the rect.                                                                                                                                                                      |
+| PAdES sign (primary engine) — placeholder           | Sign placeholder-only.pdf with test-cert.pfx; reload; verify against golden bytes.                                                                                                                                                     |
+| PAdES sign — verify in Acrobat Reader DC            | Manual test step (Wave 16 + Wave 17): open signed PDF in Acrobat, verify signature shows green checkmark.                                                                                                                              |
+| PAdES sign — byte-range correctness                 | Re-hash the bytes over the byte-range from the audit row; compare to messageDigest in CMS; assert match.                                                                                                                               |
+| PAdES sign — TSA happy path                         | Mock TSA returns a valid TSR; assert sign succeeds with tsa_response_status='ok'.                                                                                                                                                      |
+| PAdES sign — TSA timeout                            | Mock TSA never responds within 30s; assert error='tsa_timeout' AND no audit row inserted AND no bytes returned.                                                                                                                        |
+| PAdES sign — TSA HTTP error                         | Mock TSA returns 500; assert error='tsa_http_error'.                                                                                                                                                                                   |
+| PAdES sign — TSA invalid response                   | Mock TSA returns malformed bytes; assert error='tsa_invalid_response'.                                                                                                                                                                 |
+| PAdES sign — TSA nonce mismatch                     | Mock TSA returns wrong nonce; assert error='tsa_nonce_mismatch'.                                                                                                                                                                       |
+| PAdES sign — TSA genTime skew                       | Mock TSA returns genTime 10 minutes off; assert error='tsa_genTime_skew'.                                                                                                                                                              |
+| PAdES sign — expired cert                           | Sign with test-cert-expired.pfx; assert error='cert_expired' OR success with warning (Wave 16 decides; Riley's recommendation: error).                                                                                                 |
 | PAdES sign (manual engine) — same matrix as primary | Run identical tests against `applyPadesManual`; assert byte-stable against `golden-pdf-signed-via-manual.pdf` (NOT the same as primary's golden — manual produces slightly different bytes due to ASN.1 ordering, but both are valid). |
-| PAdES sign — placeholder too small | Use placeholderSize=100 (intentionally tiny); assert error='pades_placeholder_too_small'. |
-| Audit log — insert + list | Sign, list by doc_hash, assert row present with correct fields. |
-| Audit log — delete (for undo) | Sign, delete, assert row gone. |
-| Audit log — listByFingerprint | Insert 3 rows with same fingerprint; query; assert all 3 returned. |
-| Verify — happy path | Sign, immediately verify; assert valid=true tamperedSinceSign=false. |
-| Verify — tampered | Sign, modify one byte of the signed file, verify; assert valid=false tamperedSinceSign=true. |
-| Replay engine — sign + reorder | Sign + reorder pages in the same dirtyOps; assert `pades_invalidated_by_subsequent_edit` error. |
-| Annotation shapes — Square | Add a Square annotation; reload; assert subtype + rect + color preserved. |
-| Annotation shapes — Polygon | Same for polygon. |
-| Annotation shapes — Polyline-measure | Add polyline with measure calibration; assert /Measure dict written + reload preserves it. |
-| Calibration — set / get | Set per-doc calibration; read it back. |
-| App quit — releaseAll | Trigger `before-quit`; assert releaseAll fires and all certs are released. |
+| PAdES sign — placeholder too small                  | Use placeholderSize=100 (intentionally tiny); assert error='pades_placeholder_too_small'.                                                                                                                                              |
+| Audit log — insert + list                           | Sign, list by doc_hash, assert row present with correct fields.                                                                                                                                                                        |
+| Audit log — delete (for undo)                       | Sign, delete, assert row gone.                                                                                                                                                                                                         |
+| Audit log — listByFingerprint                       | Insert 3 rows with same fingerprint; query; assert all 3 returned.                                                                                                                                                                     |
+| Verify — happy path                                 | Sign, immediately verify; assert valid=true tamperedSinceSign=false.                                                                                                                                                                   |
+| Verify — tampered                                   | Sign, modify one byte of the signed file, verify; assert valid=false tamperedSinceSign=true.                                                                                                                                           |
+| Replay engine — sign + reorder                      | Sign + reorder pages in the same dirtyOps; assert `pades_invalidated_by_subsequent_edit` error.                                                                                                                                        |
+| Annotation shapes — Square                          | Add a Square annotation; reload; assert subtype + rect + color preserved.                                                                                                                                                              |
+| Annotation shapes — Polygon                         | Same for polygon.                                                                                                                                                                                                                      |
+| Annotation shapes — Polyline-measure                | Add polyline with measure calibration; assert /Measure dict written + reload preserves it.                                                                                                                                             |
+| Calibration — set / get                             | Set per-doc calibration; read it back.                                                                                                                                                                                                 |
+| App quit — releaseAll                               | Trigger `before-quit`; assert releaseAll fires and all certs are released.                                                                                                                                                             |
 
 ### 9.3 Permissive-stub anti-pattern guards
 
@@ -1151,6 +1175,7 @@ Per the Wave 13.5 lesson (permissive-stub root cause): tests MUST use REAL produ
 - The Audit log test MUST use a real `:memory:` SQLite connection, NOT a fake repo.
 
 Diego's Wave 17 packaging adds a CI lint that grep-flags permissive stubs in `*.test.ts`:
+
 - `loadCert: () => ok\(.*\)` — flag
 - `applyPades: () => ok\(.*\)` — flag
 - `requestTimestamp: () => ok\(.*\)` — flag
@@ -1166,61 +1191,61 @@ If `node-signpdf` updates and the output bytes change, the golden test alerts th
 
 ## 10. Files this engine creates / extends (Wave 16 ownership)
 
-| File | Status | Owner |
-|---|---|---|
-| `src/main/pdf-ops/signature-engine.ts` | NEW | David + Riley |
-| `src/main/pdf-ops/signature-engine.test.ts` | NEW | David |
-| `src/main/pdf-ops/visual-signature.ts` | NEW | David |
-| `src/main/pdf-ops/visual-signature.test.ts` | NEW | David |
-| `src/main/pdf-ops/pades-signature.ts` | NEW | David |
-| `src/main/pdf-ops/pades-signature.test.ts` | NEW | David |
-| `src/main/pdf-ops/pades-signature-manual.ts` | NEW | David |
-| `src/main/pdf-ops/pades-signature-manual.test.ts` | NEW | David |
-| `src/main/pdf-ops/tsa-client.ts` | NEW | David |
-| `src/main/pdf-ops/tsa-client.test.ts` | NEW | David |
-| `src/main/pdf-ops/signature-appearance.ts` | NEW | David |
-| `src/main/pdf-ops/signature-appearance.test.ts` | NEW | David |
-| `src/main/pdf-ops/cert-store.ts` | NEW | David |
-| `src/main/pdf-ops/cert-store.test.ts` | NEW | David |
-| `src/main/pdf-ops/annotations/square-annotation.ts` | NEW | David |
-| `src/main/pdf-ops/annotations/circle-annotation.ts` | NEW | David |
-| `src/main/pdf-ops/annotations/polygon-annotation.ts` | NEW | David |
-| `src/main/pdf-ops/annotations/polyline-annotation.ts` | NEW | David |
-| `src/main/pdf-ops/annotations/line-annotation.ts` | NEW | David |
-| `src/main/pdf-ops/annotations/callout-annotation.ts` | NEW | David |
-| `src/main/pdf-ops/annotations/measure-units.ts` | NEW | David |
-| `src/main/pdf-ops/annotations/annotations.test.ts` | NEW | David |
-| `src/main/pdf-ops/replay-engine.ts` | EDIT | David — adds step 3.7 + H-3.1 JS-strip move (§4.8 absorption) |
-| `src/ipc/handlers/signatures-cert-load.ts` | NEW | David |
-| `src/ipc/handlers/signatures-cert-release.ts` | NEW | David |
-| `src/ipc/handlers/signatures-apply-visual.ts` | NEW | David |
-| `src/ipc/handlers/signatures-apply-pades.ts` | NEW | David |
-| `src/ipc/handlers/signatures-request-timestamp.ts` | NEW | David |
-| `src/ipc/handlers/signatures-verify.ts` | NEW | David |
-| `src/ipc/handlers/signatures-list-audit.ts` | NEW | David |
-| `src/ipc/handlers/annotations-add-shape.ts` | NEW | David |
-| `src/ipc/handlers/annotations-set-measure-calibration.ts` | NEW | David |
-| `src/ipc/contracts.ts` | EDIT | David — new channel types per `api-contracts.md §14` |
-| `src/ipc/register.ts` | EDIT | David |
-| `src/main/pdf-ops/types/node-signpdf.d.ts` | NEW | David — type shim |
-| `migrations/0004_phase4_signatures.sql` | NEW | Ravi |
-| `src/db/repositories/signature-audit-repo.ts` | NEW | Ravi |
-| `src/db/repositories/signature-audit-repo.test.ts` | NEW | Ravi |
-| `src/db/types.ts` | EDIT | Ravi — `SignatureAuditRow` |
-| `tests/fixtures/signature-engine/*.pdf` | NEW | David |
-| `tests/fixtures/signature-engine/*.pfx` | NEW | David |
-| `tests/fixtures/signature-engine/*.bin` | NEW | David |
-| `src/client/components/modals/signature-capture-modal/**` | NEW | Riley |
-| `src/client/components/modals/pades-sign-modal/**` | NEW | Riley |
-| `src/client/components/signature-placement-overlay/**` | NEW | Riley |
-| `src/client/components/annotation-tools/shape-tool.tsx` etc. | NEW | Riley |
-| `src/client/components/annotation-summary-panel/**` | NEW | Riley |
-| `src/client/components/signature-audit-panel/**` | NEW | Riley |
-| `src/client/state/slices/signatures-slice.ts` | NEW | Riley |
-| `src/client/state/slices/annotation-summary-slice.ts` | NEW | Riley |
-| `src/client/state/slices/measure-calibration-slice.ts` | NEW | Riley |
-| `src/client/state/thunks.ts` | EDIT | Riley |
-| `src/client/hooks/use-signature-canvas.ts` | NEW | Riley |
+| File                                                         | Status | Owner                                                         |
+| ------------------------------------------------------------ | ------ | ------------------------------------------------------------- |
+| `src/main/pdf-ops/signature-engine.ts`                       | NEW    | David + Riley                                                 |
+| `src/main/pdf-ops/signature-engine.test.ts`                  | NEW    | David                                                         |
+| `src/main/pdf-ops/visual-signature.ts`                       | NEW    | David                                                         |
+| `src/main/pdf-ops/visual-signature.test.ts`                  | NEW    | David                                                         |
+| `src/main/pdf-ops/pades-signature.ts`                        | NEW    | David                                                         |
+| `src/main/pdf-ops/pades-signature.test.ts`                   | NEW    | David                                                         |
+| `src/main/pdf-ops/pades-signature-manual.ts`                 | NEW    | David                                                         |
+| `src/main/pdf-ops/pades-signature-manual.test.ts`            | NEW    | David                                                         |
+| `src/main/pdf-ops/tsa-client.ts`                             | NEW    | David                                                         |
+| `src/main/pdf-ops/tsa-client.test.ts`                        | NEW    | David                                                         |
+| `src/main/pdf-ops/signature-appearance.ts`                   | NEW    | David                                                         |
+| `src/main/pdf-ops/signature-appearance.test.ts`              | NEW    | David                                                         |
+| `src/main/pdf-ops/cert-store.ts`                             | NEW    | David                                                         |
+| `src/main/pdf-ops/cert-store.test.ts`                        | NEW    | David                                                         |
+| `src/main/pdf-ops/annotations/square-annotation.ts`          | NEW    | David                                                         |
+| `src/main/pdf-ops/annotations/circle-annotation.ts`          | NEW    | David                                                         |
+| `src/main/pdf-ops/annotations/polygon-annotation.ts`         | NEW    | David                                                         |
+| `src/main/pdf-ops/annotations/polyline-annotation.ts`        | NEW    | David                                                         |
+| `src/main/pdf-ops/annotations/line-annotation.ts`            | NEW    | David                                                         |
+| `src/main/pdf-ops/annotations/callout-annotation.ts`         | NEW    | David                                                         |
+| `src/main/pdf-ops/annotations/measure-units.ts`              | NEW    | David                                                         |
+| `src/main/pdf-ops/annotations/annotations.test.ts`           | NEW    | David                                                         |
+| `src/main/pdf-ops/replay-engine.ts`                          | EDIT   | David — adds step 3.7 + H-3.1 JS-strip move (§4.8 absorption) |
+| `src/ipc/handlers/signatures-cert-load.ts`                   | NEW    | David                                                         |
+| `src/ipc/handlers/signatures-cert-release.ts`                | NEW    | David                                                         |
+| `src/ipc/handlers/signatures-apply-visual.ts`                | NEW    | David                                                         |
+| `src/ipc/handlers/signatures-apply-pades.ts`                 | NEW    | David                                                         |
+| `src/ipc/handlers/signatures-request-timestamp.ts`           | NEW    | David                                                         |
+| `src/ipc/handlers/signatures-verify.ts`                      | NEW    | David                                                         |
+| `src/ipc/handlers/signatures-list-audit.ts`                  | NEW    | David                                                         |
+| `src/ipc/handlers/annotations-add-shape.ts`                  | NEW    | David                                                         |
+| `src/ipc/handlers/annotations-set-measure-calibration.ts`    | NEW    | David                                                         |
+| `src/ipc/contracts.ts`                                       | EDIT   | David — new channel types per `api-contracts.md §14`          |
+| `src/ipc/register.ts`                                        | EDIT   | David                                                         |
+| `src/main/pdf-ops/types/node-signpdf.d.ts`                   | NEW    | David — type shim                                             |
+| `migrations/0004_phase4_signatures.sql`                      | NEW    | Ravi                                                          |
+| `src/db/repositories/signature-audit-repo.ts`                | NEW    | Ravi                                                          |
+| `src/db/repositories/signature-audit-repo.test.ts`           | NEW    | Ravi                                                          |
+| `src/db/types.ts`                                            | EDIT   | Ravi — `SignatureAuditRow`                                    |
+| `tests/fixtures/signature-engine/*.pdf`                      | NEW    | David                                                         |
+| `tests/fixtures/signature-engine/*.pfx`                      | NEW    | David                                                         |
+| `tests/fixtures/signature-engine/*.bin`                      | NEW    | David                                                         |
+| `src/client/components/modals/signature-capture-modal/**`    | NEW    | Riley                                                         |
+| `src/client/components/modals/pades-sign-modal/**`           | NEW    | Riley                                                         |
+| `src/client/components/signature-placement-overlay/**`       | NEW    | Riley                                                         |
+| `src/client/components/annotation-tools/shape-tool.tsx` etc. | NEW    | Riley                                                         |
+| `src/client/components/annotation-summary-panel/**`          | NEW    | Riley                                                         |
+| `src/client/components/signature-audit-panel/**`             | NEW    | Riley                                                         |
+| `src/client/state/slices/signatures-slice.ts`                | NEW    | Riley                                                         |
+| `src/client/state/slices/annotation-summary-slice.ts`        | NEW    | Riley                                                         |
+| `src/client/state/slices/measure-calibration-slice.ts`       | NEW    | Riley                                                         |
+| `src/client/state/thunks.ts`                                 | EDIT   | Riley                                                         |
+| `src/client/hooks/use-signature-canvas.ts`                   | NEW    | Riley                                                         |
 
 Wave 16 implementation count: **~40 new files** (excluding tests) + ~6 edits. Test files roughly double the count. Aligns with phase-4-plan's "+80 tests" estimate.
 

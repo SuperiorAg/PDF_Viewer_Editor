@@ -52,6 +52,7 @@ type DocumentHandle = number; // assigned by main on open; renderer treats as op
 A `DocumentHandle` identifies an open document for the duration of its life in main-process memory. The renderer never sees the underlying file path; it works with handles. Main resolves `handle → path + buffer` internally.
 
 Handle lifecycle:
+
 - Created by `dialog:openPdf`, `fs:readPdf` (drag-drop), or `pdf:combine` (output of combine is a new handle for the new document)
 - Held while the renderer has the document open
 - Released by `fs:closePdf` (sent on document close or app quit)
@@ -62,6 +63,7 @@ Handle lifecycle:
 ## 2. Channels — `dialog`
 
 ### 2.1 `dialog:openPdf`
+
 Show native open dialog; on success, read the chosen file into memory and return a handle.
 
 ```ts
@@ -70,7 +72,7 @@ type DialogOpenPdfError = 'user_cancelled' | 'invalid_pdf' | 'fs_read_failed' | 
 interface DialogOpenPdfValue {
   handle: DocumentHandle;
   displayName: string;
-  fileHash: string;          // SHA-256(first 64 KiB || size), hex lowercase
+  fileHash: string; // SHA-256(first 64 KiB || size), hex lowercase
   pageCount: number;
   pdflibLoadWarnings: string[]; // surfaced by ExportEngineSelector heuristic later
 }
@@ -78,20 +80,22 @@ type DialogOpenPdfResponse = Result<DialogOpenPdfValue, DialogOpenPdfError>;
 ```
 
 Notes:
+
 - "Too large" threshold = 500 MB for Phase 1 (configurable in `app_settings`)
 - `pdflibLoadWarnings` is the raw warning list pdf-lib emits on load; the renderer stores it on the document model for use at export time
 
 ### 2.2 `dialog:saveAs`
+
 Show native save dialog; return chosen path (sanitized). Does NOT write — caller follows up with `fs:writePdf`.
 
 ```ts
 interface DialogSaveAsRequest {
-  suggestedName: string;     // e.g. original filename with " (edited).pdf" suffix
+  suggestedName: string; // e.g. original filename with " (edited).pdf" suffix
 }
 type DialogSaveAsError = 'user_cancelled' | 'invalid_path';
 interface DialogSaveAsValue {
-  destinationToken: string;  // opaque; pass to fs:writePdf. Renderer never sees the raw path.
-  displayName: string;       // for UI ("Saved to X.pdf")
+  destinationToken: string; // opaque; pass to fs:writePdf. Renderer never sees the raw path.
+  displayName: string; // for UI ("Saved to X.pdf")
 }
 type DialogSaveAsResponse = Result<DialogSaveAsValue, DialogSaveAsError>;
 ```
@@ -103,6 +107,7 @@ type DialogSaveAsResponse = Result<DialogSaveAsValue, DialogSaveAsError>;
 ## 3. Channels — `fs`
 
 ### 3.1 `fs:readPdf` (drag-drop path)
+
 Same shape as `dialog:openPdf` but accepts a path from a drag-drop event. Path is sanitized in main; renderer-supplied paths from drag events are validated against the OS-reported file URL list.
 
 ```ts
@@ -116,17 +121,23 @@ type FsReadPdfResponse = Result<DialogOpenPdfValue, FsReadPdfError>;
 ```
 
 ### 3.2 `fs:writePdf`
+
 Write the current document's edited bytes to the saved destination.
 
 ```ts
 interface FsWritePdfRequest {
   handle: DocumentHandle;
-  destinationToken: string;   // from dialog:saveAs
+  destinationToken: string; // from dialog:saveAs
   // For Phase 1 the renderer hands main the edited bytes; for Phase 2 we may move
   // the pdf-lib replay into main entirely. Both paths are supported by the contract.
   payload:
     | { kind: 'bytes'; bytes: Uint8Array }
-    | { kind: 'ops'; originalHandle: DocumentHandle; ops: EditOperationSerialized[]; annotations: AnnotationModelSerialized[] };
+    | {
+        kind: 'ops';
+        originalHandle: DocumentHandle;
+        ops: EditOperationSerialized[];
+        annotations: AnnotationModelSerialized[];
+      };
 }
 type FsWritePdfError = 'token_expired' | 'handle_not_found' | 'fs_write_failed' | 'disk_full';
 interface FsWritePdfValue {
@@ -137,10 +148,13 @@ type FsWritePdfResponse = Result<FsWritePdfValue, FsWritePdfError>;
 ```
 
 ### 3.3 `fs:closePdf`
+
 Release a document handle and its in-memory buffers.
 
 ```ts
-interface FsClosePdfRequest { handle: DocumentHandle }
+interface FsClosePdfRequest {
+  handle: DocumentHandle;
+}
 type FsClosePdfError = 'handle_not_found';
 type FsClosePdfResponse = Result<{}, FsClosePdfError>;
 ```
@@ -152,14 +166,15 @@ type FsClosePdfResponse = Result<{}, FsClosePdfError>;
 Backed by SQLite table `recent_files` (see `docs/data-models.md` §2.1).
 
 ### 4.1 `recents:list`
+
 ```ts
 interface RecentsListRequest {
   limit?: number; // default 20
 }
 interface RecentsListItem {
-  path: string;          // shown only in tooltip; raw display path
+  path: string; // shown only in tooltip; raw display path
   displayName: string;
-  lastOpenedAt: number;  // ms epoch
+  lastOpenedAt: number; // ms epoch
   fileHash: string;
   fileStillExists: boolean; // main checks existsSync; renderer dims missing entries
 }
@@ -168,9 +183,10 @@ type RecentsListResponse = Result<{ items: RecentsListItem[] }, RecentsListError
 ```
 
 ### 4.2 `recents:add` (called internally on open; renderer rarely calls)
+
 ```ts
 interface RecentsAddRequest {
-  path: string;          // resolved absolute path (main has it from open dialog)
+  path: string; // resolved absolute path (main has it from open dialog)
   displayName: string;
   fileHash: string;
 }
@@ -179,6 +195,7 @@ type RecentsAddResponse = Result<{}, RecentsAddError>;
 ```
 
 ### 4.3 `recents:clear`
+
 ```ts
 interface RecentsClearRequest {}
 type RecentsClearError = 'db_unavailable';
@@ -195,41 +212,57 @@ Backed by SQLite `app_settings` table. Values are JSON-serialized strings; the c
 type SettingKey =
   | 'recents.maxItems'
   | 'open.maxFileSizeMB'
-  | 'export.defaultEngine'              // 'auto' | 'pdf-lib' | 'chromium'
+  | 'export.defaultEngine' // 'auto' | 'pdf-lib' | 'chromium'
   | 'export.showWarningsToast'
-  | 'file_association.pdf.requested'    // boolean; reflects Decision 4 state
-  | 'theme'                              // 'system' | 'light' | 'dark' — Phase 2+ stretch
-  | 'undo.maxHistory'                    // default 100; Phase 2 wires the slider
-  ;
+  | 'file_association.pdf.requested' // boolean; reflects Decision 4 state
+  | 'theme' // 'system' | 'light' | 'dark' — Phase 2+ stretch
+  | 'undo.maxHistory'; // default 100; Phase 2 wires the slider
 
-type SettingValue<K extends SettingKey> =
-  K extends 'recents.maxItems' ? number :
-  K extends 'open.maxFileSizeMB' ? number :
-  K extends 'export.defaultEngine' ? 'auto' | 'pdf-lib' | 'chromium' :
-  K extends 'export.showWarningsToast' ? boolean :
-  K extends 'file_association.pdf.requested' ? boolean :
-  K extends 'theme' ? 'system' | 'light' | 'dark' :
-  K extends 'undo.maxHistory' ? number :
-  never;
+type SettingValue<K extends SettingKey> = K extends 'recents.maxItems'
+  ? number
+  : K extends 'open.maxFileSizeMB'
+    ? number
+    : K extends 'export.defaultEngine'
+      ? 'auto' | 'pdf-lib' | 'chromium'
+      : K extends 'export.showWarningsToast'
+        ? boolean
+        : K extends 'file_association.pdf.requested'
+          ? boolean
+          : K extends 'theme'
+            ? 'system' | 'light' | 'dark'
+            : K extends 'undo.maxHistory'
+              ? number
+              : never;
 ```
 
 ### 5.1 `settings:get`
+
 ```ts
-interface SettingsGetRequest<K extends SettingKey> { key: K }
+interface SettingsGetRequest<K extends SettingKey> {
+  key: K;
+}
 type SettingsGetError = 'db_unavailable' | 'unknown_key';
-type SettingsGetResponse<K extends SettingKey> = Result<{ value: SettingValue<K> | null }, SettingsGetError>;
+type SettingsGetResponse<K extends SettingKey> = Result<
+  { value: SettingValue<K> | null },
+  SettingsGetError
+>;
 ```
 
 `null` when the key has never been set; the renderer applies its own default in that case.
 
 ### 5.2 `settings:set`
+
 ```ts
-interface SettingsSetRequest<K extends SettingKey> { key: K; value: SettingValue<K> }
+interface SettingsSetRequest<K extends SettingKey> {
+  key: K;
+  value: SettingValue<K>;
+}
 type SettingsSetError = 'db_unavailable' | 'unknown_key' | 'invalid_value';
 type SettingsSetResponse = Result<{}, SettingsSetError>;
 ```
 
 ### 5.3 `settings:getAll` (renderer boot)
+
 ```ts
 interface SettingsGetAllRequest {}
 interface SettingsGetAllValue {
@@ -247,8 +280,11 @@ type SettingsGetAllResponse = Result<SettingsGetAllValue, SettingsGetAllError>;
 User-authored bookmarks per file (keyed by `fileHash`). Distinct from native PDF outline bookmarks (those are read-only in Phase 1; merged display in UI).
 
 ### 6.1 `bookmarks:list`
+
 ```ts
-interface BookmarksListRequest { fileHash: string }
+interface BookmarksListRequest {
+  fileHash: string;
+}
 interface BookmarkRow {
   id: number;
   fileHash: string;
@@ -261,6 +297,7 @@ type BookmarksListResponse = Result<{ items: BookmarkRow[] }, BookmarksListError
 ```
 
 ### 6.2 `bookmarks:upsert`
+
 ```ts
 interface BookmarksUpsertRequest {
   fileHash: string;
@@ -273,8 +310,11 @@ type BookmarksUpsertResponse = Result<{ id: number }, BookmarksUpsertError>;
 ```
 
 ### 6.3 `bookmarks:delete`
+
 ```ts
-interface BookmarksDeleteRequest { id: number }
+interface BookmarksDeleteRequest {
+  id: number;
+}
 type BookmarksDeleteError = 'db_unavailable' | 'not_found';
 type BookmarksDeleteResponse = Result<{}, BookmarksDeleteError>;
 ```
@@ -284,6 +324,7 @@ type BookmarksDeleteResponse = Result<{}, BookmarksDeleteError>;
 ## 7. Channels — `pdf` (document operations)
 
 ### 7.1 `pdf:combine`
+
 Server-side merge of multiple PDFs into a new document. Runs in main (pdf-lib) so the renderer stays responsive.
 
 ```ts
@@ -294,16 +335,22 @@ interface PdfCombineRequest {
     | { kind: 'path'; path: string; pageRange?: { start: number; end: number } } // path is one main has from a file picker; renderer never originates raw paths
   >;
 }
-type PdfCombineError = 'invalid_source' | 'handle_not_found' | 'fs_read_failed' | 'pdf_load_failed' | 'invalid_page_range';
+type PdfCombineError =
+  | 'invalid_source'
+  | 'handle_not_found'
+  | 'fs_read_failed'
+  | 'pdf_load_failed'
+  | 'invalid_page_range';
 interface PdfCombineValue {
-  handle: DocumentHandle;        // new in-memory document
+  handle: DocumentHandle; // new in-memory document
   pageCount: number;
-  displayName: string;           // default "Combined Document.pdf"; user can change via Save As
+  displayName: string; // default "Combined Document.pdf"; user can change via Save As
 }
 type PdfCombineResponse = Result<PdfCombineValue, PdfCombineError>;
 ```
 
 ### 7.2 `pdf:export` (Phase 2 channel, contract specified now per Decision 1)
+
 Export the current state of an open document to a fresh PDF, applying all dirty operations.
 
 ```ts
@@ -311,22 +358,22 @@ type ExportEnginePreference = 'auto' | 'pdf-lib' | 'chromium';
 
 interface PdfExportRequest {
   handle: DocumentHandle;
-  preference: ExportEnginePreference;  // user choice from export dialog
+  preference: ExportEnginePreference; // user choice from export dialog
 }
 
 type PdfExportError =
   | 'handle_not_found'
   | 'engine_failed_pdflib'
   | 'engine_failed_chromium'
-  | 'no_dirty_changes'      // not actually an error in UX; channel returns it so renderer can offer "save without re-emit"
+  | 'no_dirty_changes' // not actually an error in UX; channel returns it so renderer can offer "save without re-emit"
   | 'cancelled';
 
 interface PdfExportValue {
-  engine: 'pdf-lib' | 'chromium';      // which engine actually ran
-  reason: string;                       // why this engine was chosen
+  engine: 'pdf-lib' | 'chromium'; // which engine actually ran
+  reason: string; // why this engine was chosen
   forcedBy: 'user' | 'heuristic';
   warnings: string[];
-  outputBytes: Uint8Array;              // ~for small documents; for large, see streaming variant below
+  outputBytes: Uint8Array; // ~for small documents; for large, see streaming variant below
 }
 type PdfExportResponse = Result<PdfExportValue, PdfExportError>;
 ```
@@ -334,12 +381,18 @@ type PdfExportResponse = Result<PdfExportValue, PdfExportError>;
 For documents >50 MB, main streams via `pdf:export:progress` events (§7.3) and returns a temp-file path token instead of `outputBytes`. (Implementation detail for Phase 2; contract reserves the field.)
 
 ### 7.3 `pdf:export:progress` (event stream, main → renderer)
+
 ```ts
 interface PdfExportProgressEvent {
   handle: DocumentHandle;
   jobId: string;
-  phase: 'preparing' | 'pdflib-applying-ops' | 'chromium-loading' | 'chromium-printing' | 'finalizing';
-  percent: number;     // 0–100; -1 for indeterminate
+  phase:
+    | 'preparing'
+    | 'pdflib-applying-ops'
+    | 'chromium-loading'
+    | 'chromium-printing'
+    | 'finalizing';
+  percent: number; // 0–100; -1 for indeterminate
   message?: string;
 }
 ```
@@ -347,8 +400,11 @@ interface PdfExportProgressEvent {
 Renderer subscribes via `window.pdfApi.events.onExportProgress(handler)` (preload exposes a typed listener registration helper).
 
 ### 7.4 `pdf:getOutline` (PDF-native bookmarks; read-only Phase 1)
+
 ```ts
-interface PdfGetOutlineRequest { handle: DocumentHandle }
+interface PdfGetOutlineRequest {
+  handle: DocumentHandle;
+}
 interface OutlineNode {
   title: string;
   pageIndex: number | null; // null for chapter-headers without destinations
@@ -363,10 +419,11 @@ type PdfGetOutlineResponse = Result<{ outline: OutlineNode[] }, PdfGetOutlineErr
 ## 8. Channels — `app`
 
 ### 8.1 `app:getVersion`
+
 ```ts
 interface AppGetVersionRequest {}
 interface AppGetVersionValue {
-  appVersion: string;       // from package.json
+  appVersion: string; // from package.json
   electronVersion: string;
   chromiumVersion: string;
   nodeVersion: string;
@@ -375,52 +432,68 @@ type AppGetVersionResponse = Result<AppGetVersionValue, never>;
 ```
 
 ### 8.2 `app:quit`
+
 ```ts
-interface AppQuitRequest { confirmUnsaved: boolean }
+interface AppQuitRequest {
+  confirmUnsaved: boolean;
+}
 type AppQuitError = 'unsaved_changes';
 type AppQuitResponse = Result<{}, AppQuitError>;
 // If confirmUnsaved is false and there are dirty docs, returns the error so the renderer can prompt.
 ```
 
 ### 8.3 `app:setDefaultPdfHandler` (Decision 4 runtime toggle)
+
 Request that the OS make PDF_Viewer_Editor the default handler for `.pdf`. On Windows 10+ the OS may show its own consent UI; the channel surfaces the OS-reported result.
 
 ```ts
 interface AppSetDefaultPdfHandlerRequest {
-  enable: boolean;     // true → request to become default; false → relinquish (no-op if not currently default)
+  enable: boolean; // true → request to become default; false → relinquish (no-op if not currently default)
 }
 type AppSetDefaultPdfHandlerError =
-  | 'os_denied'                    // user clicked "No" in Windows consent UI
-  | 'unsupported_os'               // non-Windows platform (Phase 7)
+  | 'os_denied' // user clicked "No" in Windows consent UI
+  | 'unsupported_os' // non-Windows platform (Phase 7)
   | 'registry_write_failed'
   | 'already_in_requested_state';
 interface AppSetDefaultPdfHandlerValue {
-  isNowDefault: boolean;           // current OS state after the request
-  prompt: 'shown' | 'not_shown';   // whether the OS surfaced its consent UI
+  isNowDefault: boolean; // current OS state after the request
+  prompt: 'shown' | 'not_shown'; // whether the OS surfaced its consent UI
 }
-type AppSetDefaultPdfHandlerResponse = Result<AppSetDefaultPdfHandlerValue, AppSetDefaultPdfHandlerError>;
+type AppSetDefaultPdfHandlerResponse = Result<
+  AppSetDefaultPdfHandlerValue,
+  AppSetDefaultPdfHandlerError
+>;
 ```
 
 ### 8.4 `app:getDefaultPdfHandlerStatus`
+
 ```ts
 interface AppGetDefaultPdfHandlerStatusRequest {}
 interface AppGetDefaultPdfHandlerStatusValue {
   isDefault: boolean;
-  currentDefaultName?: string;     // e.g. "Microsoft Edge" if we're not default; null if unknown
+  currentDefaultName?: string; // e.g. "Microsoft Edge" if we're not default; null if unknown
 }
-type AppGetDefaultPdfHandlerStatusResponse = Result<AppGetDefaultPdfHandlerStatusValue, 'os_query_failed'>;
+type AppGetDefaultPdfHandlerStatusResponse = Result<
+  AppGetDefaultPdfHandlerStatusValue,
+  'os_query_failed'
+>;
 ```
 
 ### 8.5 `app:openExternal` (recents tooltip, etc.)
+
 For the small set of UI affordances that need to open an OS path (e.g. "show in Explorer"). Strictly path-validated; never opens arbitrary URLs.
 
 ```ts
-interface AppOpenExternalRequest { kind: 'show_in_explorer'; handle: DocumentHandle }
+interface AppOpenExternalRequest {
+  kind: 'show_in_explorer';
+  handle: DocumentHandle;
+}
 type AppOpenExternalError = 'handle_not_found' | 'os_failed';
 type AppOpenExternalResponse = Result<{}, AppOpenExternalError>;
 ```
 
 ### 8.6 `app:pickPdfPath` — Phase-2 placeholder (not implemented in Phase 1)
+
 Reserved channel for the combine-modal "Add file…" affordance. Opens the OS open-file dialog and returns a sanitized path string (not a handle — the combine flow accepts paths directly). Phase 1 stubs the affordance in the UI with a "coming soon" toast; the channel ships in Phase 2 with the implementation.
 
 ```ts
@@ -438,6 +511,7 @@ type AppPickPdfPathResponse = Result<AppPickPdfPathValue, AppPickPdfPathError>;
 These four channels were added to `src/ipc/contracts.ts` during Wave 2 to support a future custom-chrome / title-bar story. The Phase 1 renderer does NOT consume them — Electron's native chrome covers Phase 1. They are documented here so the contract module reflects shipped reality and Julian's Wave 3 audit covers them. Phase 2+ custom-chrome work uses these directly.
 
 ### 9.1 `window:minimize`
+
 ```ts
 interface WindowMinimizeRequest {}
 type WindowMinimizeError = 'no_window';
@@ -445,16 +519,22 @@ type WindowMinimizeResponse = Result<{}, WindowMinimizeError>;
 ```
 
 ### 9.2 `window:maximize`
+
 Toggles between maximized and unmaximized. Returns the resulting state so the renderer can swap the icon.
+
 ```ts
 interface WindowMaximizeRequest {}
 type WindowMaximizeError = 'no_window';
-interface WindowMaximizeValue { isMaximized: boolean }
+interface WindowMaximizeValue {
+  isMaximized: boolean;
+}
 type WindowMaximizeResponse = Result<WindowMaximizeValue, WindowMaximizeError>;
 ```
 
 ### 9.3 `window:close`
+
 Closes the focused window. Fires the standard `before-close` flow (unsaved-changes prompt etc.); the renderer should rely on the existing close-confirmation modal rather than calling this for documents with dirty state.
+
 ```ts
 interface WindowCloseRequest {}
 type WindowCloseError = 'no_window';
@@ -462,11 +542,17 @@ type WindowCloseResponse = Result<{}, WindowCloseError>;
 ```
 
 ### 9.4 `window:getState`
+
 Read-only snapshot of the window's chrome state — used by Phase-2 custom chrome to render the right minimize/maximize icon at startup.
+
 ```ts
 interface WindowGetStateRequest {}
 type WindowGetStateError = 'no_window';
-interface WindowGetStateValue { isMaximized: boolean; isMinimized: boolean; isFullScreen: boolean }
+interface WindowGetStateValue {
+  isMaximized: boolean;
+  isMinimized: boolean;
+  isFullScreen: boolean;
+}
 type WindowGetStateResponse = Result<WindowGetStateValue, WindowGetStateError>;
 ```
 
@@ -483,45 +569,47 @@ The following Phase-1 channels ship a typed stub implementation that returns the
 ```ts
 export interface PdfApi {
   dialog: {
-    openPdf:  () => Promise<DialogOpenPdfResponse>;
-    saveAs:   (req: DialogSaveAsRequest) => Promise<DialogSaveAsResponse>;
+    openPdf: () => Promise<DialogOpenPdfResponse>;
+    saveAs: (req: DialogSaveAsRequest) => Promise<DialogSaveAsResponse>;
   };
   fs: {
-    readPdf:  (req: FsReadPdfRequest)  => Promise<FsReadPdfResponse>;
+    readPdf: (req: FsReadPdfRequest) => Promise<FsReadPdfResponse>;
     writePdf: (req: FsWritePdfRequest) => Promise<FsWritePdfResponse>;
     closePdf: (req: FsClosePdfRequest) => Promise<FsClosePdfResponse>;
   };
   recents: {
-    list:  (req: RecentsListRequest)  => Promise<RecentsListResponse>;
-    add:   (req: RecentsAddRequest)   => Promise<RecentsAddResponse>;
+    list: (req: RecentsListRequest) => Promise<RecentsListResponse>;
+    add: (req: RecentsAddRequest) => Promise<RecentsAddResponse>;
     clear: () => Promise<RecentsClearResponse>;
   };
   settings: {
-    get:    <K extends SettingKey>(req: SettingsGetRequest<K>) => Promise<SettingsGetResponse<K>>;
-    set:    <K extends SettingKey>(req: SettingsSetRequest<K>) => Promise<SettingsSetResponse>;
+    get: <K extends SettingKey>(req: SettingsGetRequest<K>) => Promise<SettingsGetResponse<K>>;
+    set: <K extends SettingKey>(req: SettingsSetRequest<K>) => Promise<SettingsSetResponse>;
     getAll: () => Promise<SettingsGetAllResponse>;
   };
   bookmarks: {
-    list:   (req: BookmarksListRequest)   => Promise<BookmarksListResponse>;
+    list: (req: BookmarksListRequest) => Promise<BookmarksListResponse>;
     upsert: (req: BookmarksUpsertRequest) => Promise<BookmarksUpsertResponse>;
     delete: (req: BookmarksDeleteRequest) => Promise<BookmarksDeleteResponse>;
   };
   pdf: {
-    combine:    (req: PdfCombineRequest)    => Promise<PdfCombineResponse>;
-    export:     (req: PdfExportRequest)     => Promise<PdfExportResponse>;
+    combine: (req: PdfCombineRequest) => Promise<PdfCombineResponse>;
+    export: (req: PdfExportRequest) => Promise<PdfExportResponse>;
     getOutline: (req: PdfGetOutlineRequest) => Promise<PdfGetOutlineResponse>;
   };
   app: {
-    getVersion:                   () => Promise<AppGetVersionResponse>;
-    quit:                         (req: AppQuitRequest) => Promise<AppQuitResponse>;
-    setDefaultPdfHandler:         (req: AppSetDefaultPdfHandlerRequest) => Promise<AppSetDefaultPdfHandlerResponse>;
-    getDefaultPdfHandlerStatus:   () => Promise<AppGetDefaultPdfHandlerStatusResponse>;
-    openExternal:                 (req: AppOpenExternalRequest) => Promise<AppOpenExternalResponse>;
+    getVersion: () => Promise<AppGetVersionResponse>;
+    quit: (req: AppQuitRequest) => Promise<AppQuitResponse>;
+    setDefaultPdfHandler: (
+      req: AppSetDefaultPdfHandlerRequest,
+    ) => Promise<AppSetDefaultPdfHandlerResponse>;
+    getDefaultPdfHandlerStatus: () => Promise<AppGetDefaultPdfHandlerStatusResponse>;
+    openExternal: (req: AppOpenExternalRequest) => Promise<AppOpenExternalResponse>;
   };
   window: {
     minimize: () => Promise<WindowMinimizeResponse>;
     maximize: () => Promise<WindowMaximizeResponse>;
-    close:    () => Promise<WindowCloseResponse>;
+    close: () => Promise<WindowCloseResponse>;
     getState: () => Promise<WindowGetStateResponse>;
   };
   events: {
@@ -536,13 +624,13 @@ The preload `index.ts` constructs this object by binding each method to `ipcRend
 
 ## 10. Validation responsibilities
 
-| Layer | Validates |
-|---|---|
-| Renderer (TS compiler) | Argument types — caught at build time |
-| Preload | Nothing (pure forward) |
-| Main handler (entry) | Zod schema of payload — runtime |
-| Main handler (logic) | Business rules (handle exists, file exists, bounds, etc.) |
-| Main handler (output) | Result variant — TS exhaustive checks |
+| Layer                  | Validates                                                 |
+| ---------------------- | --------------------------------------------------------- |
+| Renderer (TS compiler) | Argument types — caught at build time                     |
+| Preload                | Nothing (pure forward)                                    |
+| Main handler (entry)   | Zod schema of payload — runtime                           |
+| Main handler (logic)   | Business rules (handle exists, file exists, bounds, etc.) |
+| Main handler (output)  | Result variant — TS exhaustive checks                     |
 
 The renderer NEVER trusts a payload returned from main without checking the `ok` discriminant. ESLint rule: `consistent-return-result` (custom) — to be authored in Wave 3.
 
@@ -553,6 +641,7 @@ The renderer NEVER trusts a payload returned from main without checking the `ok`
 Phase 1's contract is frozen at end of Wave 1. Changes during Wave 2 require an explicit Marcus-approved amendment to this file. The contract module (`src/ipc/contracts.ts`) is owned by David; Riley reads only.
 
 If David discovers a contract bug during Wave 2 implementation, the protocol is:
+
 1. David documents the issue inline as a comment in `src/ipc/contracts.ts`
 2. David pings Marcus
 3. Marcus dispatches Riley for a contract amendment
@@ -566,11 +655,11 @@ This avoids the parallel-write contention pattern from the orchestrator's Hard-W
 
 The §1-§11 surface above remains FROZEN at Wave 1 (per locked decision P2-L-5 in `docs/phase-2-plan.md`). Phase 2 channels are appended below in §12 as additive-only changes. Two Phase-1 stubs change status (no contract shape change, just removal of the `'not_implemented'` error variant):
 
-| Channel | Phase 1 status | Phase 2 status |
-|---|---|---|
-| `fs:writePdf` with `payload.kind === 'ops'` | Returns `'not_implemented'` | **LIVE** — real replay-engine path; returns `{ bytesWritten, newFileHash, annotationRefAssignments }` |
-| `pdf:export` | Returns `'not_implemented'` | **LIVE** — dual-engine selector (pdf-lib default, Chromium fallback) |
-| `pdf:combine` | Returns `'not_implemented'` (per Wave-2 stub status §9.5) | (Wave 7 Phase-2 ships real implementation per phase-2-plan §2.2) |
+| Channel                                     | Phase 1 status                                            | Phase 2 status                                                                                        |
+| ------------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `fs:writePdf` with `payload.kind === 'ops'` | Returns `'not_implemented'`                               | **LIVE** — real replay-engine path; returns `{ bytesWritten, newFileHash, annotationRefAssignments }` |
+| `pdf:export`                                | Returns `'not_implemented'`                               | **LIVE** — dual-engine selector (pdf-lib default, Chromium fallback)                                  |
+| `pdf:combine`                               | Returns `'not_implemented'` (per Wave-2 stub status §9.5) | (Wave 7 Phase-2 ships real implementation per phase-2-plan §2.2)                                      |
 
 The `'not_implemented'` variant remains on each error union for API stability; handlers stop returning it in Phase 2.
 
@@ -604,14 +693,14 @@ interface PdfEmbedImageRequest {
 type PdfEmbedImageError =
   | 'handle_not_found'
   | 'invalid_payload'
-  | 'image_decode_failed'           // PNG/JPEG load failed
-  | 'tiff_decode_failed'            // TIFF subtype unsupported
-  | 'tiff_multi_page_warning'       // first page used; warning returned alongside success — NOT an error
-  | 'out_of_range';                 // atIndex or pageIndex out of bounds
+  | 'image_decode_failed' // PNG/JPEG load failed
+  | 'tiff_decode_failed' // TIFF subtype unsupported
+  | 'tiff_multi_page_warning' // first page used; warning returned alongside success — NOT an error
+  | 'out_of_range'; // atIndex or pageIndex out of bounds
 
 interface PdfEmbedImageValue {
   /** The EditOperation to append to dirtyOps. Caller dispatches applyEdit(op) on the renderer slice. */
-  op: EditOperationSerialized;       // kind: 'image-insert' | 'image-overlay'
+  op: EditOperationSerialized; // kind: 'image-insert' | 'image-overlay'
   /** Content hash of the embedded image (sha256 hex). Used for dedup across the same save. */
   contentHash: string;
   /** Warnings (e.g. "Multi-page TIFF: first page used"); non-blocking. */
@@ -631,7 +720,7 @@ Apply a text-replace EditOperation. The renderer typically calls this **after** 
 interface PdfReplaceTextRequest {
   handle: DocumentHandle;
   pageIndex: number;
-  objectId: string;        // from a prior pdf:identifyTextSpan call (see §12.3)
+  objectId: string; // from a prior pdf:identifyTextSpan call (see §12.3)
   newText: string;
 }
 
@@ -639,11 +728,11 @@ type PdfReplaceTextError =
   | 'handle_not_found'
   | 'invalid_payload'
   | 'text_span_not_found' // objectId resolves to nothing in the current bytes
-  | 'missing_glyph'        // font lacks one or more codepoints; per locked decision P2-L-3 no substitution
+  | 'missing_glyph' // font lacks one or more codepoints; per locked decision P2-L-3 no substitution
   | 'out_of_range';
 
 interface PdfReplaceTextValue {
-  op: EditOperationSerialized;  // kind: 'text-replace' { ..., oldText, newText }
+  op: EditOperationSerialized; // kind: 'text-replace' { ..., oldText, newText }
   /** Will the new text be clipped by the original run's bounding box? Renderer warned the user already, but this confirms. */
   willClip: boolean;
   /** If willClip, this is the overflow in PDF user-space units. */
@@ -675,15 +764,15 @@ type PdfIdentifyTextSpanError =
   | 'out_of_range';
 
 interface PdfIdentifyTextSpanValue {
-  objectId: string;          // pageObjectNumber/contentStreamIndex/runIndex — see edit-replay-engine.md §4.6.1
+  objectId: string; // pageObjectNumber/contentStreamIndex/runIndex — see edit-replay-engine.md §4.6.1
   runBoundingRect: PdfRect;
   currentText: string;
   font: {
-    family: string;          // PDF font name, e.g. "Helvetica" or subset prefix
+    family: string; // PDF font name, e.g. "Helvetica" or subset prefix
     size: number;
     /** Glyph metrics for the renderer-side font-metrics shim (architecture-phase-2.md §4.3). */
     glyphWidths: Record<number /* codepoint */, number /* width at 1pt */>;
-    glyphMapSize: number;    // total number of glyphs in the font's encoding (for missing-glyph detection)
+    glyphMapSize: number; // total number of glyphs in the font's encoding (for missing-glyph detection)
   };
 }
 
@@ -699,12 +788,12 @@ Send the current document state (replayed) to a physical printer via Electron's 
 ```ts
 interface PdfPrintRequest {
   handle: DocumentHandle;
-  ops: EditOperationSerialized[];          // dirtyOps to apply before printing
+  ops: EditOperationSerialized[]; // dirtyOps to apply before printing
   annotations: AnnotationModelSerialized[];
-  printerName?: string;                     // if absent, OS dialog is shown
+  printerName?: string; // if absent, OS dialog is shown
   pageRange?: { start: number; end: number }; // inclusive, 1-based; absent = all pages
   options?: {
-    silent?: boolean;                       // suppress OS dialog (requires printerName)
+    silent?: boolean; // suppress OS dialog (requires printerName)
     copies?: number;
     color?: boolean;
     duplex?: 'simplex' | 'short-edge' | 'long-edge';
@@ -715,17 +804,17 @@ interface PdfPrintRequest {
 type PdfPrintError =
   | 'handle_not_found'
   | 'invalid_payload'
-  | 'replay_failed'                          // engine failed to produce printable bytes
+  | 'replay_failed' // engine failed to produce printable bytes
   | 'no_printers_found'
-  | 'printer_not_found'                      // printerName doesn't match any installed printer
-  | 'user_cancelled'                         // user closed the OS dialog without confirming
-  | 'print_dispatch_failed';                 // Electron-side error
+  | 'printer_not_found' // printerName doesn't match any installed printer
+  | 'user_cancelled' // user closed the OS dialog without confirming
+  | 'print_dispatch_failed'; // Electron-side error
 
 interface PdfPrintValue {
   jobDispatched: true;
   /** Engine used to produce the printable bytes. Always 'pdf-lib' in Phase 2 unless the engine selector forced 'chromium'. */
   engineUsed: 'pdf-lib' | 'chromium';
-  warnings: string[];                        // e.g. from replay engine
+  warnings: string[]; // e.g. from replay engine
 }
 
 type PdfPrintResponse = Result<PdfPrintValue, PdfPrintError>;
@@ -738,7 +827,9 @@ Print is fire-and-forget once dispatched; the OS handles spooling. The channel r
 Hierarchical fetch of user-authored bookmarks for a file, with `parent_id` + `sort_order` honored.
 
 ```ts
-interface BookmarksListTreeRequest { fileHash: string }
+interface BookmarksListTreeRequest {
+  fileHash: string;
+}
 
 interface BookmarkNode {
   id: number;
@@ -748,7 +839,7 @@ interface BookmarkNode {
   createdAt: number;
   parentId: number | null;
   sortOrder: number;
-  children: BookmarkNode[];          // recursive
+  children: BookmarkNode[]; // recursive
 }
 
 type BookmarksListTreeError = 'db_unavailable';
@@ -764,7 +855,7 @@ Re-parent and/or re-order a single bookmark.
 ```ts
 interface BookmarksMoveRequest {
   id: number;
-  newParentId: number | null;    // null = make top-level
+  newParentId: number | null; // null = make top-level
   newSortOrder: number;
 }
 
@@ -790,7 +881,10 @@ type BookmarksMoveResponse = Result<{}, BookmarksMoveError>;
 Convenience channel — equivalent to `bookmarks:upsert` with only `title` changed, but easier for the renderer to call from the inline-rename UI.
 
 ```ts
-interface BookmarksRenameRequest { id: number; title: string }
+interface BookmarksRenameRequest {
+  id: number;
+  title: string;
+}
 type BookmarksRenameError = 'db_unavailable' | 'not_found' | 'invalid_payload';
 type BookmarksRenameResponse = Result<{}, BookmarksRenameError>;
 ```
@@ -801,14 +895,14 @@ The existing event stream (§7.3) gains the following `phase` values:
 
 ```ts
 type PdfExportProgressPhase =
-  | 'preparing'                       // existing Phase 1
-  | 'pdflib-applying-ops'             // existing
-  | 'pdflib-applying-text-replace'    // NEW sub-phase
-  | 'pdflib-embedding-images'         // NEW sub-phase
-  | 'pdflib-emitting-annotations'     // NEW sub-phase
-  | 'chromium-loading'                // existing
-  | 'chromium-printing'               // existing
-  | 'finalizing';                     // existing
+  | 'preparing' // existing Phase 1
+  | 'pdflib-applying-ops' // existing
+  | 'pdflib-applying-text-replace' // NEW sub-phase
+  | 'pdflib-embedding-images' // NEW sub-phase
+  | 'pdflib-emitting-annotations' // NEW sub-phase
+  | 'chromium-loading' // existing
+  | 'chromium-printing' // existing
+  | 'finalizing'; // existing
 ```
 
 Additive — no existing phase values are removed.
@@ -820,19 +914,22 @@ The `SettingKey` union (§5) extends with:
 ```ts
 type SettingKey =
   // ...existing keys (recents.maxItems, open.maxFileSizeMB, etc.)...
-  | 'export.deterministic'                  // boolean; strip timestamps from Chromium output; default false
-  | 'export.includeBookmarksInOutline'      // boolean; write user-authored bookmarks to exported PDF /Outlines; default true
-  | 'editing.confirmDelete'                 // boolean; show confirm dialog on annotation/page delete; default true (from Julian Wave 2 MEDIUM finding I-2, absorbed in Phase 2)
-  | 'editing.commitTextOnBlur'              // boolean; commit text-edit on click-out (vs only Enter); default true
-  ;
+  | 'export.deterministic' // boolean; strip timestamps from Chromium output; default false
+  | 'export.includeBookmarksInOutline' // boolean; write user-authored bookmarks to exported PDF /Outlines; default true
+  | 'editing.confirmDelete' // boolean; show confirm dialog on annotation/page delete; default true (from Julian Wave 2 MEDIUM finding I-2, absorbed in Phase 2)
+  | 'editing.commitTextOnBlur'; // boolean; commit text-edit on click-out (vs only Enter); default true
 
 type SettingValue<K extends SettingKey> =
   // ...existing mappings...
-  K extends 'export.deterministic' ? boolean :
-  K extends 'export.includeBookmarksInOutline' ? boolean :
-  K extends 'editing.confirmDelete' ? boolean :
-  K extends 'editing.commitTextOnBlur' ? boolean :
-  never;
+  K extends 'export.deterministic'
+    ? boolean
+    : K extends 'export.includeBookmarksInOutline'
+      ? boolean
+      : K extends 'editing.confirmDelete'
+        ? boolean
+        : K extends 'editing.commitTextOnBlur'
+          ? boolean
+          : never;
 ```
 
 These are added to the registry in `data-models.md` §2.3 + §7.
@@ -846,16 +943,16 @@ export interface PdfApi {
   // ...existing Phase 1 namespaces...
   pdf: {
     // ...existing Phase 1 methods (combine, export, getOutline)...
-    embedImage:       (req: PdfEmbedImageRequest)       => Promise<PdfEmbedImageResponse>;       // NEW
-    replaceText:      (req: PdfReplaceTextRequest)      => Promise<PdfReplaceTextResponse>;      // NEW
+    embedImage: (req: PdfEmbedImageRequest) => Promise<PdfEmbedImageResponse>; // NEW
+    replaceText: (req: PdfReplaceTextRequest) => Promise<PdfReplaceTextResponse>; // NEW
     identifyTextSpan: (req: PdfIdentifyTextSpanRequest) => Promise<PdfIdentifyTextSpanResponse>; // NEW
-    print:            (req: PdfPrintRequest)            => Promise<PdfPrintResponse>;            // NEW
+    print: (req: PdfPrintRequest) => Promise<PdfPrintResponse>; // NEW
   };
   bookmarks: {
     // ...existing list, upsert, delete...
     listTree: (req: BookmarksListTreeRequest) => Promise<BookmarksListTreeResponse>; // NEW
-    move:     (req: BookmarksMoveRequest)     => Promise<BookmarksMoveResponse>;     // NEW
-    rename:   (req: BookmarksRenameRequest)   => Promise<BookmarksRenameResponse>;   // NEW
+    move: (req: BookmarksMoveRequest) => Promise<BookmarksMoveResponse>; // NEW
+    rename: (req: BookmarksRenameRequest) => Promise<BookmarksRenameResponse>; // NEW
   };
   // events.onExportProgress receives new phase values (§12.8); type is the same.
 }
@@ -892,16 +989,13 @@ interface FormsDetectRequest {
   handle: DocumentHandle;
 }
 
-type FormsDetectError =
-  | 'handle_not_found'
-  | 'load_failed'
-  | 'detect_failed';
+type FormsDetectError = 'handle_not_found' | 'load_failed' | 'detect_failed';
 
 interface FormsDetectValue {
   fields: FormFieldDefinition[];
   hasAcroForm: boolean;
-  hasXfaForm: boolean;                // XFA detected → renderer shows "read-only XFA" banner
-  hasJavaScriptActions: boolean;      // /Names /JavaScript present → renderer warning
+  hasXfaForm: boolean; // XFA detected → renderer shows "read-only XFA" banner
+  hasJavaScriptActions: boolean; // /Names /JavaScript present → renderer warning
   warnings: string[];
 }
 
@@ -925,8 +1019,8 @@ type FormsFillError =
   | 'handle_not_found'
   | 'invalid_payload'
   | 'field_not_found'
-  | 'field_type_mismatch'             // e.g. text value on a checkbox field
-  | 'option_not_in_field';            // dropdown/radio value not in options[]
+  | 'field_type_mismatch' // e.g. text value on a checkbox field
+  | 'option_not_in_field'; // dropdown/radio value not in options[]
 
 interface FormsFillValue {
   fieldName: string;
@@ -982,12 +1076,12 @@ type FormsDesignAddError =
   | 'handle_not_found'
   | 'invalid_payload'
   | 'duplicate_field_name'
-  | 'invalid_field_definition'        // e.g. radio with no options
-  | 'unsupported_field_type'          // Phase 3.1 types
+  | 'invalid_field_definition' // e.g. radio with no options
+  | 'unsupported_field_type' // Phase 3.1 types
   | 'page_out_of_range';
 
 interface FormsDesignAddValue {
-  op: EditOperationSerialized;        // kind: 'form-design-add'
+  op: EditOperationSerialized; // kind: 'form-design-add'
   /** Confirmed/sanitized field definition (e.g. rect coords clamped to page bounds). */
   normalizedFieldDefinition: FormFieldDefinition;
   warnings: string[];
@@ -1006,13 +1100,10 @@ interface FormsDesignRemoveRequest {
   fieldName: string;
 }
 
-type FormsDesignRemoveError =
-  | 'handle_not_found'
-  | 'invalid_payload'
-  | 'field_not_found';
+type FormsDesignRemoveError = 'handle_not_found' | 'invalid_payload' | 'field_not_found';
 
 interface FormsDesignRemoveValue {
-  op: EditOperationSerialized;        // kind: 'form-design-remove'; carries the full FieldDefinition for inverse
+  op: EditOperationSerialized; // kind: 'form-design-remove'; carries the full FieldDefinition for inverse
   warnings: string[];
 }
 
@@ -1039,7 +1130,7 @@ interface FormTemplateListItem {
 type FormsListTemplatesError = 'db_unavailable';
 
 interface FormsListTemplatesValue {
-  items: FormTemplateListItem[];      // ordered by updatedAt DESC
+  items: FormTemplateListItem[]; // ordered by updatedAt DESC
 }
 
 type FormsListTemplatesResponse = Result<FormsListTemplatesValue, FormsListTemplatesError>;
@@ -1054,8 +1145,8 @@ Save the current document's authored field set as a reusable template.
 ```ts
 interface FormsSaveTemplateRequest {
   handle: DocumentHandle;
-  name: string;                       // unique; on conflict, returns 'name_in_use'
-  fields: FormFieldDefinition[];      // typically formsSlice.fields filtered to origin='authored'
+  name: string; // unique; on conflict, returns 'name_in_use'
+  fields: FormFieldDefinition[]; // typically formsSlice.fields filtered to origin='authored'
   /** Optional column-mapping snapshot from a prior mail-merge run, persisted with the template. */
   columnMappings?: Record<string, string>;
 }
@@ -1083,10 +1174,7 @@ interface FormsLoadTemplateRequest {
   templateId: number;
 }
 
-type FormsLoadTemplateError =
-  | 'invalid_payload'
-  | 'template_not_found'
-  | 'db_unavailable';
+type FormsLoadTemplateError = 'invalid_payload' | 'template_not_found' | 'db_unavailable';
 
 interface FormsLoadTemplateValue {
   id: number;
@@ -1116,18 +1204,18 @@ wire callers that omit the field get unchanged behavior. Mirrors the
 
 ```ts
 interface MailMergeJob {
-  jobId: string;                                 // renderer-generated UUID; used to correlate progress events
-  templateHandle: DocumentHandle | null;         // open document used as template
-  templateId: number | null;                     // OR a saved form-template id (one of templateHandle / templateId must be set)
+  jobId: string; // renderer-generated UUID; used to correlate progress events
+  templateHandle: DocumentHandle | null; // open document used as template
+  templateId: number | null; // OR a saved form-template id (one of templateHandle / templateId must be set)
   dataSource:
     | { kind: 'csv'; bytes: Uint8Array; delimiter?: ',' | ';' | '\t' }
-    | { kind: 'xlsx'; bytes: Uint8Array };       // bytes streamed from renderer file-pick
+    | { kind: 'xlsx'; bytes: Uint8Array }; // bytes streamed from renderer file-pick
   columnMapping: Record<string /* columnName */, string /* fieldName */>;
   outputMode:
-    | { kind: 'folder'; outputFolder: string; filenameTemplate: string }   // e.g. "contract-{LastName}-{rowIndex:04}.pdf"
+    | { kind: 'folder'; outputFolder: string; filenameTemplate: string } // e.g. "contract-{LastName}-{rowIndex:04}.pdf"
     | { kind: 'concat'; outputFile: string };
   /** Default filenameTemplate is `merged-{rowIndex:04}.pdf` if not supplied. */
-  fields: FormFieldDefinition[];                 // snapshot of field defs for mapRowToFieldValues; allows coercion
+  fields: FormFieldDefinition[]; // snapshot of field defs for mapRowToFieldValues; allows coercion
   /** Phase 3.1 (H-3.2): flatten each per-row output. Default false. */
   flattenForms?: boolean;
 }
@@ -1137,19 +1225,19 @@ interface FormsRunMailMergeRequest {
 }
 
 type FormsRunMailMergeError =
-  | 'handle_not_found'                          // template handle invalid
-  | 'template_not_found'                        // templateId invalid
-  | 'invalid_payload'                           // bad job shape
-  | 'data_parse_failed'                         // csv-parse / exceljs threw
-  | 'unmapped_required_field'                   // required field has no column mapping
-  | 'row_fill_failed'                           // a per-row fillForm errored
-  | 'output_path_invalid'                       // path-sanitizer rejected outputFolder/outputFile
-  | 'fs_write_failed'                           // disk write failed mid-run
-  | 'cancelled';                                // user fired forms:runMailMerge:cancel
+  | 'handle_not_found' // template handle invalid
+  | 'template_not_found' // templateId invalid
+  | 'invalid_payload' // bad job shape
+  | 'data_parse_failed' // csv-parse / exceljs threw
+  | 'unmapped_required_field' // required field has no column mapping
+  | 'row_fill_failed' // a per-row fillForm errored
+  | 'output_path_invalid' // path-sanitizer rejected outputFolder/outputFile
+  | 'fs_write_failed' // disk write failed mid-run
+  | 'cancelled'; // user fired forms:runMailMerge:cancel
 
 interface FormsRunMailMergeValue {
   jobId: string;
-  outputPath: string | null;                    // null if cancelled in concat mode
+  outputPath: string | null; // null if cancelled in concat mode
   rowsWritten: number;
   totalRows: number;
   wasCancelled: boolean;
@@ -1176,9 +1264,9 @@ type MailMergeProgressPhase =
 interface MailMergeProgressEvent {
   jobId: string;
   phase: MailMergeProgressPhase;
-  currentRow: number;                  // 1-based; 0 during parsing-data / preparing-template
-  totalRows: number;                   // populated after parsing-data; -1 before
-  percent: number;                     // 0-100; monotonic per jobId
+  currentRow: number; // 1-based; 0 during parsing-data / preparing-template
+  totalRows: number; // populated after parsing-data; -1 before
+  percent: number; // 0-100; monotonic per jobId
   /** Most-recent warning, if any. Accumulator lives in the resulting MailMergeValue. */
   latestWarning?: string;
 }
@@ -1190,7 +1278,9 @@ Renderer subscribes via `window.pdfApi.events.onMailMergeProgress(handler)` — 
 
 ```ts
 // Companion to forms:runMailMerge; fired when user clicks Cancel in the progress modal.
-interface FormsRunMailMergeCancelRequest { jobId: string }
+interface FormsRunMailMergeCancelRequest {
+  jobId: string;
+}
 type FormsRunMailMergeCancelError = 'job_not_found';
 type FormsRunMailMergeCancelResponse = Result<{}, FormsRunMailMergeCancelError>;
 ```
@@ -1219,19 +1309,22 @@ Extends `SettingKey` union (§5):
 ```ts
 type SettingKey =
   // ...existing Phase 1 + Phase 2 keys...
-  | 'forms.dateLocale'                  // 'system' | 'en-US' | 'en-GB' | 'ISO' — date input parsing locale; default 'system'
-  | 'forms.flattenOnExportDefault'      // boolean; default false (export dialog checkbox default state)
-  | 'mailMerge.lastOutputFolder'        // string; auto-populates wizard step 4 folder picker
-  | 'mailMerge.defaultOutputMode'       // 'folder' | 'concat'; default 'folder'
-  ;
+  | 'forms.dateLocale' // 'system' | 'en-US' | 'en-GB' | 'ISO' — date input parsing locale; default 'system'
+  | 'forms.flattenOnExportDefault' // boolean; default false (export dialog checkbox default state)
+  | 'mailMerge.lastOutputFolder' // string; auto-populates wizard step 4 folder picker
+  | 'mailMerge.defaultOutputMode'; // 'folder' | 'concat'; default 'folder'
 
 type SettingValue<K extends SettingKey> =
   // ...existing mappings...
-  K extends 'forms.dateLocale' ? 'system' | 'en-US' | 'en-GB' | 'ISO' :
-  K extends 'forms.flattenOnExportDefault' ? boolean :
-  K extends 'mailMerge.lastOutputFolder' ? string :
-  K extends 'mailMerge.defaultOutputMode' ? 'folder' | 'concat' :
-  never;
+  K extends 'forms.dateLocale'
+    ? 'system' | 'en-US' | 'en-GB' | 'ISO'
+    : K extends 'forms.flattenOnExportDefault'
+      ? boolean
+      : K extends 'mailMerge.lastOutputFolder'
+        ? string
+        : K extends 'mailMerge.defaultOutputMode'
+          ? 'folder' | 'concat'
+          : never;
 ```
 
 Added to the registry in `data-models.md §2.3 + §8`.
@@ -1244,16 +1337,18 @@ Extends §9.6 + §12.10:
 export interface PdfApi {
   // ...existing Phase 1 + Phase 2 namespaces...
   forms: {
-    detect:       (req: FormsDetectRequest)       => Promise<FormsDetectResponse>;
-    fill:         (req: FormsFillRequest)         => Promise<FormsFillResponse>;
-    flatten:      (req: FormsFlattenRequest)      => Promise<FormsFlattenResponse>;
-    designAdd:    (req: FormsDesignAddRequest)    => Promise<FormsDesignAddResponse>;
+    detect: (req: FormsDetectRequest) => Promise<FormsDetectResponse>;
+    fill: (req: FormsFillRequest) => Promise<FormsFillResponse>;
+    flatten: (req: FormsFlattenRequest) => Promise<FormsFlattenResponse>;
+    designAdd: (req: FormsDesignAddRequest) => Promise<FormsDesignAddResponse>;
     designRemove: (req: FormsDesignRemoveRequest) => Promise<FormsDesignRemoveResponse>;
     listTemplates: (req: FormsListTemplatesRequest) => Promise<FormsListTemplatesResponse>;
     saveTemplate: (req: FormsSaveTemplateRequest) => Promise<FormsSaveTemplateResponse>;
     loadTemplate: (req: FormsLoadTemplateRequest) => Promise<FormsLoadTemplateResponse>;
     runMailMerge: (req: FormsRunMailMergeRequest) => Promise<FormsRunMailMergeResponse>;
-    cancelMailMerge: (req: FormsRunMailMergeCancelRequest) => Promise<FormsRunMailMergeCancelResponse>;
+    cancelMailMerge: (
+      req: FormsRunMailMergeCancelRequest,
+    ) => Promise<FormsRunMailMergeCancelResponse>;
   };
   events: {
     // ...existing onExportProgress...
@@ -1267,6 +1362,7 @@ export interface PdfApi {
 §10 table still holds for the new channels. Every new handler validates payload with zod, sanitizes paths (output folder/file) through `path-sanitizer.ts`, and returns the discriminated-union `Result`.
 
 Two Phase-3-specific validation rules:
+
 - `forms:designAdd`'s `fieldDefinition.rect` is clamped to page bounds (`max(0, x)` ↦ `min(pageWidth, x + width)` etc). Out-of-bounds coords return `invalid_field_definition` with details.
 - `forms:runMailMerge`'s output paths are sanitized BEFORE the runner starts. Cross-volume paths in folder mode produce a warning (folder mode writes per-row atomically; cross-volume rename falls back to copy-then-delete which is slower but still atomic at the file level).
 
@@ -1295,7 +1391,7 @@ Load a PFX/P12 cert blob + password into main-process memory and return an opaqu
 ```ts
 interface SignaturesCertLoadRequest {
   pfxBytes: Uint8Array;
-  password: string;                       // CONSUMED; main converts to Buffer + zeroes immediately
+  password: string; // CONSUMED; main converts to Buffer + zeroes immediately
 }
 
 type SignaturesCertLoadError =
@@ -1306,13 +1402,13 @@ type SignaturesCertLoadError =
   | 'wrong_password';
 
 interface SignaturesCertLoadValue {
-  handle: string;                         // opaque UUID v4; treat as opaque
-  subjectCN: string;                      // for display
-  issuerCN: string;                       // for display
-  notBefore: number;                      // ms epoch
-  notAfter: number;                       // ms epoch
-  fingerprint: string;                    // SHA-256 hex of the cert
-  isExpired: boolean;                     // already evaluated against system clock
+  handle: string; // opaque UUID v4; treat as opaque
+  subjectCN: string; // for display
+  issuerCN: string; // for display
+  notBefore: number; // ms epoch
+  notAfter: number; // ms epoch
+  fingerprint: string; // SHA-256 hex of the cert
+  isExpired: boolean; // already evaluated against system clock
 }
 
 type SignaturesCertLoadResponse = Result<SignaturesCertLoadValue, SignaturesCertLoadError>;
@@ -1332,7 +1428,7 @@ interface SignaturesCertReleaseRequest {
 type SignaturesCertReleaseError = 'invalid_payload';
 
 interface SignaturesCertReleaseValue {
-  released: boolean;                      // true if the handle existed and was released; false if already gone
+  released: boolean; // true if the handle existed and was released; false if already gone
 }
 
 type SignaturesCertReleaseResponse = Result<SignaturesCertReleaseValue, SignaturesCertReleaseError>;
@@ -1347,25 +1443,39 @@ type SignaturePlacementMode = 'placeholder' | 'freeform';
 
 interface SignaturePlacement {
   mode: SignaturePlacementMode;
-  fieldName?: string;                     // when mode='placeholder'
-  pageIndex?: number;                     // when mode='freeform'
-  rect?: PdfRect;                         // when mode='freeform'; PDF user-space
-  rotation?: 0 | 90 | 180 | 270;          // optional
+  fieldName?: string; // when mode='placeholder'
+  pageIndex?: number; // when mode='freeform'
+  rect?: PdfRect; // when mode='freeform'; PDF user-space
+  rotation?: 0 | 90 | 180 | 270; // optional
 }
 
 type VisualAppearanceSource =
-  | { kind: 'typed'; name: string; fontFamily?: string; fontSize?: number; pngBytes: Uint8Array; widthPx: number; heightPx: number }
+  | {
+      kind: 'typed';
+      name: string;
+      fontFamily?: string;
+      fontSize?: number;
+      pngBytes: Uint8Array;
+      widthPx: number;
+      heightPx: number;
+    }
   | { kind: 'drawn'; pngBytes: Uint8Array; widthPx: number; heightPx: number }
-  | { kind: 'image'; bytes: Uint8Array; mimeType: 'image/png' | 'image/jpeg'; widthPx: number; heightPx: number };
+  | {
+      kind: 'image';
+      bytes: Uint8Array;
+      mimeType: 'image/png' | 'image/jpeg';
+      widthPx: number;
+      heightPx: number;
+    };
 
 interface VisualAppearanceSpec {
   source: VisualAppearanceSource;
   showName: boolean;
   showDate: boolean;
   showReason: boolean;
-  showSubjectCN: boolean;                 // always false for visual; included for type symmetry
-  showIssuerCN: boolean;                  // always false for visual
-  showTsaInfo: boolean;                   // always false for visual
+  showSubjectCN: boolean; // always false for visual; included for type symmetry
+  showIssuerCN: boolean; // always false for visual
+  showTsaInfo: boolean; // always false for visual
   reason?: string;
 }
 
@@ -1385,7 +1495,7 @@ type SignaturesApplyVisualError =
   | 'serialize_failed';
 
 interface SignaturesApplyVisualValue {
-  op: EditOperationSerialized;            // kind: 'signature-visual-place'
+  op: EditOperationSerialized; // kind: 'signature-visual-place'
   warnings: string[];
 }
 
@@ -1398,25 +1508,25 @@ Apply a PAdES cryptographic signature. Long-running if TSA is enabled (≤30s). 
 
 ```ts
 interface PadesAppearanceSpec extends VisualAppearanceSpec {
-  showSubjectCN: boolean;                 // default true for PAdES
-  showIssuerCN: boolean;                  // default false
-  showTsaInfo: boolean;                   // default false
+  showSubjectCN: boolean; // default true for PAdES
+  showIssuerCN: boolean; // default false
+  showTsaInfo: boolean; // default false
 }
 
 interface SignaturesApplyPadesRequest {
   handle: DocumentHandle;
   placement: SignaturePlacement;
-  certHandle: string;                     // from signatures:certLoad
+  certHandle: string; // from signatures:certLoad
   appearance: PadesAppearanceSpec;
-  tsaUrl: string | null;                  // null = no TSA; non-null = attempt TSA (fail-loud on TSA failure)
+  tsaUrl: string | null; // null = no TSA; non-null = attempt TSA (fail-loud on TSA failure)
   reason?: string;
   location?: string;
-  placeholderSize?: number;               // /Contents hex placeholder size; default 16384; raise if cert chain is large
-  autoRelease?: boolean;                  // release certHandle on completion; default true
+  placeholderSize?: number; // /Contents hex placeholder size; default 16384; raise if cert chain is large
+  autoRelease?: boolean; // release certHandle on completion; default true
 }
 
 type SignaturesApplyPadesError =
-  | 'handle_not_found'                    // DocumentHandle
+  | 'handle_not_found' // DocumentHandle
   | 'cert_handle_not_found'
   | 'cert_expired'
   | 'cert_not_yet_valid'
@@ -1439,11 +1549,11 @@ type SignaturesApplyPadesError =
   | 'audit_log_failed';
 
 interface SignaturesApplyPadesValue {
-  op: EditOperationSerialized;            // kind: 'signature-pades-applied'
-  auditLogRowId: number;                  // newly inserted row in signature_audit_log
+  op: EditOperationSerialized; // kind: 'signature-pades-applied'
+  auditLogRowId: number; // newly inserted row in signature_audit_log
   signerSubjectCN: string;
   certFingerprint: string;
-  signedAt: number;                       // ms epoch from the engine
+  signedAt: number; // ms epoch from the engine
   tsaResponseStatus: 'ok' | 'failed' | null;
   warnings: string[];
 }
@@ -1457,9 +1567,9 @@ Standalone TSA request. Used internally by `applyPades`; also exposed for the Se
 
 ```ts
 interface SignaturesRequestTimestampRequest {
-  tsaUrl: string;                         // https://...
-  hash: Uint8Array;                       // 32 bytes (sha256)
-  timeoutMs?: number;                     // default 30000
+  tsaUrl: string; // https://...
+  hash: Uint8Array; // 32 bytes (sha256)
+  timeoutMs?: number; // default 30000
 }
 
 type SignaturesRequestTimestampError =
@@ -1472,13 +1582,16 @@ type SignaturesRequestTimestampError =
   | 'tsa_genTime_skew';
 
 interface SignaturesRequestTimestampValue {
-  tsrBytes: Uint8Array;                   // TimeStampResp DER
-  tsTokenBytes: Uint8Array;               // TimeStampToken DER (inner content)
-  genTime: number;                        // ms epoch
-  serialNumber: string;                   // decimal stringified bigint
+  tsrBytes: Uint8Array; // TimeStampResp DER
+  tsTokenBytes: Uint8Array; // TimeStampToken DER (inner content)
+  genTime: number; // ms epoch
+  serialNumber: string; // decimal stringified bigint
 }
 
-type SignaturesRequestTimestampResponse = Result<SignaturesRequestTimestampValue, SignaturesRequestTimestampError>;
+type SignaturesRequestTimestampResponse = Result<
+  SignaturesRequestTimestampValue,
+  SignaturesRequestTimestampError
+>;
 ```
 
 ### 14.6 `signatures:verify`
@@ -1499,8 +1612,8 @@ type SignaturesVerifyError =
   | 'verify_failed';
 
 interface SignaturesVerifyValue {
-  valid: boolean;                         // hash matches
-  tamperedSinceSign: boolean;             // doc_hash from audit row !== sha256(current bytes)
+  valid: boolean; // hash matches
+  tamperedSinceSign: boolean; // doc_hash from audit row !== sha256(current bytes)
   certInfo: {
     fingerprint: string;
     subjectCN: string;
@@ -1525,12 +1638,12 @@ List rows from `signature_audit_log` with optional filters.
 
 ```ts
 interface SignaturesListAuditRequest {
-  fileHash?: string;                      // filter by doc_hash OR pre_sign_doc_hash
+  fileHash?: string; // filter by doc_hash OR pre_sign_doc_hash
   signedByFingerprint?: string;
-  since?: number;                         // ms epoch
-  until?: number;                         // ms epoch
-  limit?: number;                         // default 100
-  offset?: number;                        // default 0
+  since?: number; // ms epoch
+  until?: number; // ms epoch
+  limit?: number; // default 100
+  offset?: number; // default 0
 }
 
 interface SignatureAuditItem {
@@ -1546,7 +1659,7 @@ interface SignatureAuditItem {
   certNotAfter: number | null;
   tsaUrl: string | null;
   tsaResponseStatus: 'ok' | 'failed' | null;
-  sigBytesOffset: number | null;          // null for visual signatures
+  sigBytesOffset: number | null; // null for visual signatures
   sigBytesLength: number | null;
   byteRange: number[] | null;
   reason: string | null;
@@ -1559,7 +1672,7 @@ type SignaturesListAuditError = 'invalid_payload' | 'db_unavailable';
 
 interface SignaturesListAuditValue {
   items: SignatureAuditItem[];
-  total: number;                          // total matching rows (for pagination)
+  total: number; // total matching rows (for pagination)
 }
 
 type SignaturesListAuditResponse = Result<SignaturesListAuditValue, SignaturesListAuditError>;
@@ -1571,26 +1684,26 @@ Author one of the new Phase-4 shape / line / callout / measure annotations. Retu
 
 ```ts
 type ShapeAnnotationSubtype =
-  | 'Square'                              // rectangle
-  | 'Circle'                              // ellipse
-  | 'Polygon'                             // closed polygon
-  | 'PolyLine'                            // open polyline
-  | 'Line'                                // straight line (used for arrows + line-measure)
-  | 'FreeTextCallout';                    // /FreeText with /IT FreeTextCallout
+  | 'Square' // rectangle
+  | 'Circle' // ellipse
+  | 'Polygon' // closed polygon
+  | 'PolyLine' // open polyline
+  | 'Line' // straight line (used for arrows + line-measure)
+  | 'FreeTextCallout'; // /FreeText with /IT FreeTextCallout
 
 interface ShapeAnnotationModel {
-  id: string;                             // UUID v4
+  id: string; // UUID v4
   pageIndex: number;
   subtype: ShapeAnnotationSubtype;
   rect: PdfRect;
   color: RgbColor;
-  opacity: number;                        // 0..1
-  borderWidth: number;                    // pt
+  opacity: number; // 0..1
+  borderWidth: number; // pt
   borderStyle: 'solid' | 'dashed' | 'dotted';
-  fillColor?: RgbColor;                   // for Square/Circle/Polygon when fillEnabled
+  fillColor?: RgbColor; // for Square/Circle/Polygon when fillEnabled
   fillEnabled?: boolean;
   // For Polygon/PolyLine:
-  vertices?: number[];                    // [x1, y1, x2, y2, ...] in PDF user-space
+  vertices?: number[]; // [x1, y1, x2, y2, ...] in PDF user-space
   // For Line:
   lineStart?: { x: number; y: number };
   lineEnd?: { x: number; y: number };
@@ -1604,13 +1717,13 @@ interface ShapeAnnotationModel {
   // For Line/PolyLine with measure:
   measure?: {
     unit: 'inch' | 'cm' | 'mm' | 'pt' | 'px' | 'custom';
-    customUnitLabel?: string;             // when unit='custom'
-    scale: number;                        // 1 page-unit = N <unit>
+    customUnitLabel?: string; // when unit='custom'
+    scale: number; // 1 page-unit = N <unit>
   };
   author?: string;
   createdAt: number;
   modifiedAt: number;
-  contents?: string;                      // /Contents text for popup
+  contents?: string; // /Contents text for popup
 }
 
 interface AnnotationsAddShapeRequest {
@@ -1618,13 +1731,10 @@ interface AnnotationsAddShapeRequest {
   annotation: ShapeAnnotationModel;
 }
 
-type AnnotationsAddShapeError =
-  | 'handle_not_found'
-  | 'invalid_payload'
-  | 'out_of_range';                       // pageIndex / rect out of bounds
+type AnnotationsAddShapeError = 'handle_not_found' | 'invalid_payload' | 'out_of_range'; // pageIndex / rect out of bounds
 
 interface AnnotationsAddShapeValue {
-  op: EditOperationSerialized;            // kind: 'annot-add-shape'
+  op: EditOperationSerialized; // kind: 'annot-add-shape'
   warnings: string[];
 }
 
@@ -1648,9 +1758,7 @@ interface AnnotationsSetMeasureCalibrationRequest {
   calibration: MeasureCalibration;
 }
 
-type AnnotationsSetMeasureCalibrationError =
-  | 'handle_not_found'
-  | 'invalid_payload';
+type AnnotationsSetMeasureCalibrationError = 'handle_not_found' | 'invalid_payload';
 
 type AnnotationsSetMeasureCalibrationResponse = Result<{}, AnnotationsSetMeasureCalibrationError>;
 
@@ -1664,7 +1772,10 @@ interface AnnotationsGetMeasureCalibrationValue {
   calibration: MeasureCalibration | null; // null if not yet calibrated
 }
 
-type AnnotationsGetMeasureCalibrationResponse = Result<AnnotationsGetMeasureCalibrationValue, AnnotationsGetMeasureCalibrationError>;
+type AnnotationsGetMeasureCalibrationResponse = Result<
+  AnnotationsGetMeasureCalibrationValue,
+  AnnotationsGetMeasureCalibrationError
+>;
 ```
 
 ### 14.10 New `SettingKey`s
@@ -1674,33 +1785,43 @@ Extends `SettingKey` union (§5):
 ```ts
 type SettingKey =
   // ...existing Phase 1 + 2 + 3 keys...
-  | 'signatures.tsaUrl'                   // string; default ''
-  | 'signatures.tsaEnabled'               // boolean; default false
-  | 'signatures.tsaTimeoutMs'             // number; default 30000
-  | 'signatures.placeholderSize'          // number (/Contents hex chars); default 16384
-  | 'signatures.defaultShowDate'          // boolean; default true
-  | 'signatures.defaultShowSubjectCN'     // boolean; default true (PAdES only)
-  | 'signatures.padesEngine'              // 'signpdf' | 'manual'; default 'signpdf' (Phase 4.1 toggle)
-  | 'annotations.defaultBorderWidth'      // number, pt; default 1
-  | 'annotations.defaultBorderStyle'      // 'solid' | 'dashed' | 'dotted'; default 'solid'
-  | 'annotations.defaultFillEnabled'      // boolean; default false
-  | 'annotations.defaultLineEndStyle'     // 'None' | 'OpenArrow' | 'ClosedArrow'; default 'OpenArrow' (arrow tool)
-  ;
+  | 'signatures.tsaUrl' // string; default ''
+  | 'signatures.tsaEnabled' // boolean; default false
+  | 'signatures.tsaTimeoutMs' // number; default 30000
+  | 'signatures.placeholderSize' // number (/Contents hex chars); default 16384
+  | 'signatures.defaultShowDate' // boolean; default true
+  | 'signatures.defaultShowSubjectCN' // boolean; default true (PAdES only)
+  | 'signatures.padesEngine' // 'signpdf' | 'manual'; default 'signpdf' (Phase 4.1 toggle)
+  | 'annotations.defaultBorderWidth' // number, pt; default 1
+  | 'annotations.defaultBorderStyle' // 'solid' | 'dashed' | 'dotted'; default 'solid'
+  | 'annotations.defaultFillEnabled' // boolean; default false
+  | 'annotations.defaultLineEndStyle'; // 'None' | 'OpenArrow' | 'ClosedArrow'; default 'OpenArrow' (arrow tool)
 
 type SettingValue<K extends SettingKey> =
   // ...existing mappings...
-  K extends 'signatures.tsaUrl' ? string :
-  K extends 'signatures.tsaEnabled' ? boolean :
-  K extends 'signatures.tsaTimeoutMs' ? number :
-  K extends 'signatures.placeholderSize' ? number :
-  K extends 'signatures.defaultShowDate' ? boolean :
-  K extends 'signatures.defaultShowSubjectCN' ? boolean :
-  K extends 'signatures.padesEngine' ? 'signpdf' | 'manual' :
-  K extends 'annotations.defaultBorderWidth' ? number :
-  K extends 'annotations.defaultBorderStyle' ? 'solid' | 'dashed' | 'dotted' :
-  K extends 'annotations.defaultFillEnabled' ? boolean :
-  K extends 'annotations.defaultLineEndStyle' ? 'None' | 'OpenArrow' | 'ClosedArrow' :
-  never;
+  K extends 'signatures.tsaUrl'
+    ? string
+    : K extends 'signatures.tsaEnabled'
+      ? boolean
+      : K extends 'signatures.tsaTimeoutMs'
+        ? number
+        : K extends 'signatures.placeholderSize'
+          ? number
+          : K extends 'signatures.defaultShowDate'
+            ? boolean
+            : K extends 'signatures.defaultShowSubjectCN'
+              ? boolean
+              : K extends 'signatures.padesEngine'
+                ? 'signpdf' | 'manual'
+                : K extends 'annotations.defaultBorderWidth'
+                  ? number
+                  : K extends 'annotations.defaultBorderStyle'
+                    ? 'solid' | 'dashed' | 'dotted'
+                    : K extends 'annotations.defaultFillEnabled'
+                      ? boolean
+                      : K extends 'annotations.defaultLineEndStyle'
+                        ? 'None' | 'OpenArrow' | 'ClosedArrow'
+                        : never;
 ```
 
 Added to the registry in `data-models.md §2.3` via the Phase-4 amendment in `data-models.md §9`.
@@ -1714,19 +1835,25 @@ export interface PdfApi {
   // ...existing Phase 1 + 2 + 3 namespaces...
 
   signatures: {
-    certLoad:         (req: SignaturesCertLoadRequest)         => Promise<SignaturesCertLoadResponse>;
-    certRelease:      (req: SignaturesCertReleaseRequest)      => Promise<SignaturesCertReleaseResponse>;
-    applyVisual:      (req: SignaturesApplyVisualRequest)      => Promise<SignaturesApplyVisualResponse>;
-    applyPades:       (req: SignaturesApplyPadesRequest)       => Promise<SignaturesApplyPadesResponse>;
-    requestTimestamp: (req: SignaturesRequestTimestampRequest) => Promise<SignaturesRequestTimestampResponse>;
-    verify:           (req: SignaturesVerifyRequest)           => Promise<SignaturesVerifyResponse>;
-    listAudit:        (req: SignaturesListAuditRequest)        => Promise<SignaturesListAuditResponse>;
+    certLoad: (req: SignaturesCertLoadRequest) => Promise<SignaturesCertLoadResponse>;
+    certRelease: (req: SignaturesCertReleaseRequest) => Promise<SignaturesCertReleaseResponse>;
+    applyVisual: (req: SignaturesApplyVisualRequest) => Promise<SignaturesApplyVisualResponse>;
+    applyPades: (req: SignaturesApplyPadesRequest) => Promise<SignaturesApplyPadesResponse>;
+    requestTimestamp: (
+      req: SignaturesRequestTimestampRequest,
+    ) => Promise<SignaturesRequestTimestampResponse>;
+    verify: (req: SignaturesVerifyRequest) => Promise<SignaturesVerifyResponse>;
+    listAudit: (req: SignaturesListAuditRequest) => Promise<SignaturesListAuditResponse>;
   };
 
   annotations: {
-    addShape:               (req: AnnotationsAddShapeRequest)               => Promise<AnnotationsAddShapeResponse>;
-    setMeasureCalibration:  (req: AnnotationsSetMeasureCalibrationRequest)  => Promise<AnnotationsSetMeasureCalibrationResponse>;
-    getMeasureCalibration:  (req: AnnotationsGetMeasureCalibrationRequest)  => Promise<AnnotationsGetMeasureCalibrationResponse>;
+    addShape: (req: AnnotationsAddShapeRequest) => Promise<AnnotationsAddShapeResponse>;
+    setMeasureCalibration: (
+      req: AnnotationsSetMeasureCalibrationRequest,
+    ) => Promise<AnnotationsSetMeasureCalibrationResponse>;
+    getMeasureCalibration: (
+      req: AnnotationsGetMeasureCalibrationRequest,
+    ) => Promise<AnnotationsGetMeasureCalibrationResponse>;
   };
 }
 ```
@@ -1768,9 +1895,9 @@ interface FsReadBytesByHandleRequest {
 
 ```ts
 type FsReadBytesByHandleError =
-  | 'unknown_handle'    // handle was never registered (or already closed)
-  | 'document_evicted'  // handle is registered but bytes are gone (future LRU)
-  | 'fs_read_failed';   // reserved for future on-disk-backed handles
+  | 'unknown_handle' // handle was never registered (or already closed)
+  | 'document_evicted' // handle is registered but bytes are gone (future LRU)
+  | 'fs_read_failed'; // reserved for future on-disk-backed handles
 
 interface FsReadBytesByHandleValue {
   bytes: Uint8Array;
@@ -1780,16 +1907,19 @@ type FsReadBytesByHandleResponse = Result<FsReadBytesByHandleValue, FsReadBytesB
 ```
 
 **Behavior:**
+
 - Looks up the document record in main's `documentStore` by handle.
 - Returns the stored bytes verbatim. Bytes are validated AT OPEN TIME by `dialog:openPdf` / `fs:readPdf` (sanitizePath + statFile + size cap + %PDF- header sniff via `loadPdfMetadata`). They are NOT re-validated on each read.
 - The response bytes cross via Electron's structured clone — the underlying `ArrayBuffer` is copied, so renderer mutations cannot affect main's copy.
 
 **Security:**
+
 - No path is accepted from the renderer. Trust derives from the integer `handle`, a process-local opaque identifier minted by `documentStore.register` after the open-time validation chain.
 - The handler does NOT return the document's filesystem path. The renderer cannot escalate to disk through this channel.
 - Payload validation via zod (`safeParse`); same discipline as `signatures:certLoad`.
 
 **Performance:**
+
 - One-shot copy per call (Electron structured clone). Acceptable per the 500 MB max-file-size cap.
 - Phase 5 may add a streaming variant or an LRU eviction policy; reserved error variant `document_evicted` already exists for the LRU case.
 
@@ -1800,9 +1930,7 @@ export interface PdfApi {
   // ... §§1-14 unchanged ...
   fs: {
     // ... existing fs:* members unchanged ...
-    readBytesByHandle: (
-      req: FsReadBytesByHandleRequest,
-    ) => Promise<FsReadBytesByHandleResponse>;
+    readBytesByHandle: (req: FsReadBytesByHandleRequest) => Promise<FsReadBytesByHandleResponse>;
   };
 }
 ```
@@ -1837,12 +1965,12 @@ List installed + downloadable language packs. Renderer calls this on OCR modal o
 type OcrLanguagePackSource = 'bundled' | 'downloaded';
 
 interface LanguagePack {
-  lang: string;                           // ISO 639-2/3-letter code (e.g. 'eng', 'spa', 'chi_sim')
-  displayName: string;                    // 'English', 'Spanish', 'Chinese (Simplified)'
+  lang: string; // ISO 639-2/3-letter code (e.g. 'eng', 'spa', 'chi_sim')
+  displayName: string; // 'English', 'Spanish', 'Chinese (Simplified)'
   source: OcrLanguagePackSource;
   sizeBytes: number;
   sha256: string;
-  installedAt: number;                    // ms epoch
+  installedAt: number; // ms epoch
   lastUsedAt: number | null;
 }
 
@@ -1854,14 +1982,16 @@ interface LanguagePackCatalogEntry {
   // No `source` field — these are NOT installed; downloadable from upstream.
 }
 
-interface OcrDetectLanguagesRequest { /* empty body */ }
+interface OcrDetectLanguagesRequest {
+  /* empty body */
+}
 
 type OcrDetectLanguagesError = 'catalog_load_failed';
 
 interface OcrDetectLanguagesValue {
   installed: LanguagePack[];
   downloadable: LanguagePackCatalogEntry[];
-  defaultLang: string;                    // current value of setting `ocr.defaultLang`, e.g. 'eng'
+  defaultLang: string; // current value of setting `ocr.defaultLang`, e.g. 'eng'
 }
 
 type OcrDetectLanguagesResponse = Result<OcrDetectLanguagesValue, OcrDetectLanguagesError>;
@@ -1881,9 +2011,9 @@ interface PreprocessOptions {
 interface OcrRunOnPageRequest {
   handle: DocumentHandle;
   pageIndex: number;
-  langs: string[];                        // one OR more; engine joins with '+' for tesseract.js multi-lang
+  langs: string[]; // one OR more; engine joins with '+' for tesseract.js multi-lang
   preprocess: PreprocessOptions;
-  invalidatesSignaturesConfirmed?: boolean;  // required true if the doc has prior PAdES signatures
+  invalidatesSignaturesConfirmed?: boolean; // required true if the doc has prior PAdES signatures
 }
 
 type OcrRunOnPageError =
@@ -1891,13 +2021,13 @@ type OcrRunOnPageError =
   | 'handle_not_found'
   | 'page_out_of_range'
   | 'language_pack_not_installed'
-  | 'signed_pdf_requires_confirm'         // doc has prior PAdES signatures and confirm flag is false
-  | 'pdf_render_failed'                   // pdf.js rasterize failed for this page
-  | 'ocr_engine_failed'                   // tesseract.js internal failure
-  | 'worker_watchdog_timeout';            // per-page watchdog fired (R-W19-D)
+  | 'signed_pdf_requires_confirm' // doc has prior PAdES signatures and confirm flag is false
+  | 'pdf_render_failed' // pdf.js rasterize failed for this page
+  | 'ocr_engine_failed' // tesseract.js internal failure
+  | 'worker_watchdog_timeout'; // per-page watchdog fired (R-W19-D)
 
 interface OcrRunOnPageValue {
-  pageResult: OcrPageResult;              // see data-models.md §10.6
+  pageResult: OcrPageResult; // see data-models.md §10.6
   durationMs: number;
 }
 
@@ -1911,7 +2041,7 @@ Run OCR on a page range. Long-running; emits `ocr:progress` event stream. Return
 ```ts
 interface OcrRunOnDocumentRequest {
   handle: DocumentHandle;
-  pageRange: { start: number; end: number };  // inclusive; start <= end < doc.pageCount
+  pageRange: { start: number; end: number }; // inclusive; start <= end < doc.pageCount
   langs: string[];
   preprocess: PreprocessOptions;
   invalidatesSignaturesConfirmed?: boolean;
@@ -1925,12 +2055,12 @@ type OcrRunOnDocumentError =
   | 'signed_pdf_requires_confirm'
   | 'ocr_engine_failed'
   | 'output_serialize_failed'
-  | 'cancelled';                          // job was cancelled by user; partial output discarded
+  | 'cancelled'; // job was cancelled by user; partial output discarded
 
 interface OcrRunOnDocumentValue {
-  jobId: number;                          // FK to ocr_jobs.id
-  summary: OcrJobSummary;                 // see data-models.md §10.7
-  op: EditOperationSerialized;            // kind: 'ocr-text-behind-applied'
+  jobId: number; // FK to ocr_jobs.id
+  summary: OcrJobSummary; // see data-models.md §10.7
+  op: EditOperationSerialized; // kind: 'ocr-text-behind-applied'
 }
 
 type OcrRunOnDocumentResponse = Result<OcrRunOnDocumentValue, OcrRunOnDocumentError>;
@@ -1947,7 +2077,13 @@ type OcrProgressEvent =
   | { jobId: number; phase: 'starting'; totalPages: number }
   | { jobId: number; phase: 'rasterizing'; pageIndex: number; totalPages: number }
   | { jobId: number; phase: 'preprocessing'; pageIndex: number; totalPages: number }
-  | { jobId: number; phase: 'recognizing'; pageIndex: number; totalPages: number; confidenceSoFar: number | null }
+  | {
+      jobId: number;
+      phase: 'recognizing';
+      pageIndex: number;
+      totalPages: number;
+      confidenceSoFar: number | null;
+    }
   | { jobId: number; phase: 'composing-text-behind-image'; pageIndex: number; totalPages: number }
   | { jobId: number; phase: 'writing-output'; pageIndex: number; totalPages: number }
   | { jobId: number; phase: 'completed'; summary: OcrJobSummary }
@@ -1966,13 +2102,10 @@ interface OcrCancelJobRequest {
   jobId: number;
 }
 
-type OcrCancelJobError =
-  | 'invalid_payload'
-  | 'job_not_found'
-  | 'job_already_terminal';               // already completed / cancelled / failed
+type OcrCancelJobError = 'invalid_payload' | 'job_not_found' | 'job_already_terminal'; // already completed / cancelled / failed
 
 interface OcrCancelJobValue {
-  cancelled: boolean;                     // true if a running job was cancelled; false if it was already terminal
+  cancelled: boolean; // true if a running job was cancelled; false if it was already terminal
   pagesCompleted: number;
 }
 
@@ -1987,18 +2120,18 @@ List rows from `ocr_jobs` (for the debugging / audit panel — Phase 5.2 candida
 interface OcrListJobsRequest {
   filters?: {
     docHash?: string;
-    status?: OcrJobStatus;                // 'queued' | 'running' | 'completed' | 'cancelled' | 'failed' | 'superseded_by_undo'
+    status?: OcrJobStatus; // 'queued' | 'running' | 'completed' | 'cancelled' | 'failed' | 'superseded_by_undo'
     since?: number;
     until?: number;
   };
-  limit?: number;                         // default 100, max 1000
+  limit?: number; // default 100, max 1000
   offset?: number;
 }
 
 type OcrListJobsError = 'invalid_payload';
 
 interface OcrListJobsValue {
-  jobs: OcrJobRowDto[];                   // see data-models.md §10.5
+  jobs: OcrJobRowDto[]; // see data-models.md §10.5
   total: number;
 }
 
@@ -2011,23 +2144,26 @@ Download a language pack from the upstream tessdata mirror. Verifies SHA-256 aga
 
 ```ts
 interface OcrLanguagePackDownloadRequest {
-  lang: string;                           // catalog code, e.g. 'spa'
+  lang: string; // catalog code, e.g. 'spa'
 }
 
 type OcrLanguagePackDownloadError =
   | 'invalid_payload'
-  | 'lang_not_in_catalog'                 // unknown lang code
+  | 'lang_not_in_catalog' // unknown lang code
   | 'pack_already_installed'
   | 'network_error'
-  | 'pack_integrity_failed'               // SHA-256 mismatch
+  | 'pack_integrity_failed' // SHA-256 mismatch
   | 'disk_write_failed'
   | 'cancelled';
 
 interface OcrLanguagePackDownloadValue {
-  pack: LanguagePack;                     // newly installed
+  pack: LanguagePack; // newly installed
 }
 
-type OcrLanguagePackDownloadResponse = Result<OcrLanguagePackDownloadValue, OcrLanguagePackDownloadError>;
+type OcrLanguagePackDownloadResponse = Result<
+  OcrLanguagePackDownloadValue,
+  OcrLanguagePackDownloadError
+>;
 ```
 
 **Event stream — `ocr:languagePackDownload:progress`:**
@@ -2056,7 +2192,7 @@ interface OcrLanguagePackRemoveRequest {
 type OcrLanguagePackRemoveError =
   | 'invalid_payload'
   | 'pack_not_installed'
-  | 'cannot_remove_bundled'               // bundled `eng` cannot be removed
+  | 'cannot_remove_bundled' // bundled `eng` cannot be removed
   | 'disk_unlink_failed';
 
 interface OcrLanguagePackRemoveValue {
@@ -2071,7 +2207,9 @@ type OcrLanguagePackRemoveResponse = Result<OcrLanguagePackRemoveValue, OcrLangu
 Per `architecture-phase-5.md §7` Q-E deferral. The contract is reserved so Phase 5.1 is additive. Phase 5 handler returns `Result<never, 'not_implemented_phase_5_1'>` (same Phase-1 pattern as `app:pickPdfPath`).
 
 ```ts
-interface ScanListDevicesRequest { /* empty body */ }
+interface ScanListDevicesRequest {
+  /* empty body */
+}
 
 type ScanListDevicesError = 'not_implemented_phase_5_1';
 
@@ -2089,7 +2227,7 @@ Same pattern as §16.9.
 
 ```ts
 interface ScanAcquireRequest {
-  deviceId?: string;                      // optional in Phase 5.1; ignored in Phase 5 placeholder
+  deviceId?: string; // optional in Phase 5.1; ignored in Phase 5 placeholder
   resolution?: number;
   colorMode?: 'bw' | 'grayscale' | 'color';
   // ... full shape filled in Phase 5.1 design wave
@@ -2104,18 +2242,18 @@ type ScanAcquireResponse = Result<never, ScanAcquireError>;
 
 Eleven new keys added to the existing `settings` table (Phase 1 §5 / Phase 2 §12.9 / Phase 3 §13.12 / Phase 4 §14.10 pattern):
 
-| Key | Type | Default | Validation |
-|---|---|---|---|
-| `ocr.defaultLang` | string | `'eng'` | one of installed pack langs |
-| `ocr.lowConfidenceThreshold` | number | `60` | 0..100 |
-| `ocr.rasterDpi` | number | `300` | 72..600 |
-| `ocr.maxConcurrentLanguages` | number | `4` | 1..8 |
-| `ocr.workerWatchdogSec` | number | `60` | 10..600 |
-| `ocr.preprocess.deskew` | boolean | `true` | — |
-| `ocr.preprocess.denoise` | boolean | `false` | — |
-| `ocr.preprocess.contrastBoost` | boolean | `false` | — |
-| `ocr.denoise.kernel` | number | `3` | odd, 3..9 |
-| `ocr.showConfidenceOverlayByDefault` | boolean | `false` | — |
+| Key                                   | Type    | Default | Validation                                    |
+| ------------------------------------- | ------- | ------- | --------------------------------------------- |
+| `ocr.defaultLang`                     | string  | `'eng'` | one of installed pack langs                   |
+| `ocr.lowConfidenceThreshold`          | number  | `60`    | 0..100                                        |
+| `ocr.rasterDpi`                       | number  | `300`   | 72..600                                       |
+| `ocr.maxConcurrentLanguages`          | number  | `4`     | 1..8                                          |
+| `ocr.workerWatchdogSec`               | number  | `60`    | 10..600                                       |
+| `ocr.preprocess.deskew`               | boolean | `true`  | —                                             |
+| `ocr.preprocess.denoise`              | boolean | `false` | —                                             |
+| `ocr.preprocess.contrastBoost`        | boolean | `false` | —                                             |
+| `ocr.denoise.kernel`                  | number  | `3`     | odd, 3..9                                     |
+| `ocr.showConfidenceOverlayByDefault`  | boolean | `false` | —                                             |
 | `ocr.confirmInvalidateSignaturesOnce` | boolean | `false` | "don't ask me again" toggle for the §6 prompt |
 
 ### 16.12 Aggregate `PdfApi` shape — Phase 5 additions
@@ -2129,10 +2267,16 @@ export interface PdfApi {
     runOnDocument: (req: OcrRunOnDocumentRequest) => Promise<OcrRunOnDocumentResponse>;
     cancelJob: (req: OcrCancelJobRequest) => Promise<OcrCancelJobResponse>;
     listJobs: (req: OcrListJobsRequest) => Promise<OcrListJobsResponse>;
-    languagePackDownload: (req: OcrLanguagePackDownloadRequest) => Promise<OcrLanguagePackDownloadResponse>;
-    languagePackRemove: (req: OcrLanguagePackRemoveRequest) => Promise<OcrLanguagePackRemoveResponse>;
+    languagePackDownload: (
+      req: OcrLanguagePackDownloadRequest,
+    ) => Promise<OcrLanguagePackDownloadResponse>;
+    languagePackRemove: (
+      req: OcrLanguagePackRemoveRequest,
+    ) => Promise<OcrLanguagePackRemoveResponse>;
     onProgress: (handler: (event: OcrProgressEvent) => void) => () => void;
-    onLanguagePackDownloadProgress: (handler: (event: OcrLanguagePackDownloadProgressEvent) => void) => () => void;
+    onLanguagePackDownloadProgress: (
+      handler: (event: OcrLanguagePackDownloadProgressEvent) => void,
+    ) => () => void;
   };
   scan: {
     listDevices: (req: ScanListDevicesRequest) => Promise<ScanListDevicesResponse>;
@@ -2176,27 +2320,27 @@ type ExportQualityTier = 'text-only' | 'layout-preserving';
 
 interface ExportToDocxRequest {
   handle: DocumentHandle;
-  pageRange: { start: number; end: number };  // inclusive; start <= end < doc.pageCount
+  pageRange: { start: number; end: number }; // inclusive; start <= end < doc.pageCount
   qualityTier: ExportQualityTier;
   includeAnnotations: boolean;
-  pageSize: 'letter' | 'a4' | 'auto';         // 'auto' = use source page size
-  outputPath: string;                          // absolute path; main validates writability
+  pageSize: 'letter' | 'a4' | 'auto'; // 'auto' = use source page size
+  outputPath: string; // absolute path; main validates writability
 }
 
 type ExportToDocxError =
   | 'invalid_payload'
   | 'handle_not_found'
   | 'page_range_out_of_range'
-  | 'output_path_unwritable'                   // path not writable / locked by another process
-  | 'queue_full'                                // queue at `export.maxQueueSize`
-  | 'extraction_failed'                         // pdf.js / pdf-lib error during text/operator extraction
-  | 'writer_failed'                             // docx library error during compose
-  | 'output_write_failed'                       // fs error during atomic write
+  | 'output_path_unwritable' // path not writable / locked by another process
+  | 'queue_full' // queue at `export.maxQueueSize`
+  | 'extraction_failed' // pdf.js / pdf-lib error during text/operator extraction
+  | 'writer_failed' // docx library error during compose
+  | 'output_write_failed' // fs error during atomic write
   | 'cancelled';
 
 interface ExportToDocxValue {
-  jobId: number;                                // FK to export_jobs.id
-  summary: ExportJobSummary;                    // see data-models.md §11.5
+  jobId: number; // FK to export_jobs.id
+  summary: ExportJobSummary; // see data-models.md §11.5
 }
 
 type ExportToDocxResponse = Result<ExportToDocxValue, ExportToDocxError>;
@@ -2211,7 +2355,7 @@ interface ExportToXlsxRequest {
   handle: DocumentHandle;
   pageRange: { start: number; end: number };
   qualityTier: ExportQualityTier;
-  includeAnnotations: boolean;                  // default false; modal default is false for xlsx
+  includeAnnotations: boolean; // default false; modal default is false for xlsx
   outputPath: string;
 }
 
@@ -2277,11 +2421,11 @@ interface ExportToImagesRequest {
   handle: DocumentHandle;
   pageRange: { start: number; end: number };
   format: ImageExportFormat;
-  dpi: number;                                  // 72-600 (validated by zod)
-  jpegQuality?: number;                         // 0.1-1.0; honored only when format='jpeg'; default 0.9
-  multiPageTiff?: boolean;                      // honored only when format='tiff'; default false
-  includeAnnotations: boolean;                  // controls pdfjs annotationMode
-  outputPath: string;                           // basename for single-page; final path for multi-page tiff
+  dpi: number; // 72-600 (validated by zod)
+  jpegQuality?: number; // 0.1-1.0; honored only when format='jpeg'; default 0.9
+  multiPageTiff?: boolean; // honored only when format='tiff'; default false
+  includeAnnotations: boolean; // controls pdfjs annotationMode
+  outputPath: string; // basename for single-page; final path for multi-page tiff
 }
 
 type ExportToImagesError =
@@ -2290,15 +2434,15 @@ type ExportToImagesError =
   | 'page_range_out_of_range'
   | 'output_path_unwritable'
   | 'queue_full'
-  | 'rasterize_failed'                          // pdfjs render error
-  | 'encode_failed'                             // canvas.toBuffer / utif.encode error
+  | 'rasterize_failed' // pdfjs render error
+  | 'encode_failed' // canvas.toBuffer / utif.encode error
   | 'output_write_failed'
   | 'cancelled';
 
 interface ExportToImagesValue {
   jobId: number;
   summary: ExportJobSummary;
-  outputPaths: string[];                        // ONE entry per page for single-page formats; ONE entry total for multi-page tiff
+  outputPaths: string[]; // ONE entry per page for single-page formats; ONE entry total for multi-page tiff
 }
 
 type ExportToImagesResponse = Result<ExportToImagesValue, ExportToImagesError>;
@@ -2313,14 +2457,57 @@ type ExportFormat = 'docx' | 'xlsx' | 'pptx' | 'png' | 'jpeg' | 'tiff';
 
 type ExportProgressEvent =
   | { jobId: number; format: ExportFormat; phase: 'starting'; totalPages: number }
-  | { jobId: number; format: ExportFormat; phase: 'extracting-text'; pageIndex: number; totalPages: number }
-  | { jobId: number; format: ExportFormat; phase: 'detecting-tables'; pageIndex: number; totalPages: number }
-  | { jobId: number; format: ExportFormat; phase: 'extracting-images'; pageIndex: number; totalPages: number }
-  | { jobId: number; format: ExportFormat; phase: 'rasterizing'; pageIndex: number; totalPages: number }    // image format only
-  | { jobId: number; format: ExportFormat; phase: 'writing-output'; bytesWritten: number; totalBytesEstimate: number | null }
+  | {
+      jobId: number;
+      format: ExportFormat;
+      phase: 'extracting-text';
+      pageIndex: number;
+      totalPages: number;
+    }
+  | {
+      jobId: number;
+      format: ExportFormat;
+      phase: 'detecting-tables';
+      pageIndex: number;
+      totalPages: number;
+    }
+  | {
+      jobId: number;
+      format: ExportFormat;
+      phase: 'extracting-images';
+      pageIndex: number;
+      totalPages: number;
+    }
+  | {
+      jobId: number;
+      format: ExportFormat;
+      phase: 'rasterizing';
+      pageIndex: number;
+      totalPages: number;
+    } // image format only
+  | {
+      jobId: number;
+      format: ExportFormat;
+      phase: 'writing-output';
+      bytesWritten: number;
+      totalBytesEstimate: number | null;
+    }
   | { jobId: number; format: ExportFormat; phase: 'completed'; summary: ExportJobSummary }
-  | { jobId: number; format: ExportFormat; phase: 'cancelled'; pagesCompleted: number; totalPages: number }
-  | { jobId: number; format: ExportFormat; phase: 'failed'; pagesCompleted: number; totalPages: number; error: string };
+  | {
+      jobId: number;
+      format: ExportFormat;
+      phase: 'cancelled';
+      pagesCompleted: number;
+      totalPages: number;
+    }
+  | {
+      jobId: number;
+      format: ExportFormat;
+      phase: 'failed';
+      pagesCompleted: number;
+      totalPages: number;
+      error: string;
+    };
 ```
 
 Subscribe via `window.pdfApi.export.onProgress((event) => { ... })`. Returns an unsubscribe function. The handler MUST debounce + throttle to ≤ 10 events/sec per `phase` per page to avoid renderer rerender storms (mirrors Phase 5 throttling discipline).
@@ -2334,13 +2521,10 @@ interface ExportCancelJobRequest {
   jobId: number;
 }
 
-type ExportCancelJobError =
-  | 'invalid_payload'
-  | 'job_not_found'
-  | 'job_already_terminal';                     // already completed / cancelled / failed
+type ExportCancelJobError = 'invalid_payload' | 'job_not_found' | 'job_already_terminal'; // already completed / cancelled / failed
 
 interface ExportCancelJobValue {
-  cancelled: boolean;                           // true if a running/queued job was cancelled; false if it was already terminal
+  cancelled: boolean; // true if a running/queued job was cancelled; false if it was already terminal
   pagesCompleted: number;
 }
 
@@ -2356,18 +2540,18 @@ interface ExportListJobsRequest {
   filters?: {
     docHash?: string;
     format?: ExportFormat;
-    status?: ExportJobStatus;                   // 'queued' | 'running' | 'completed' | 'cancelled' | 'failed'
+    status?: ExportJobStatus; // 'queued' | 'running' | 'completed' | 'cancelled' | 'failed'
     since?: number;
     until?: number;
   };
-  limit?: number;                               // default 100, max 1000
+  limit?: number; // default 100, max 1000
   offset?: number;
 }
 
 type ExportListJobsError = 'invalid_payload';
 
 interface ExportListJobsValue {
-  jobs: ExportJobRowDto[];                      // see data-models.md §11.5
+  jobs: ExportJobRowDto[]; // see data-models.md §11.5
   total: number;
 }
 
@@ -2379,24 +2563,26 @@ type ExportListJobsResponse = Result<ExportListJobsValue, ExportListJobsError>;
 Returns the static format catalog — what the renderer uses to render the format picker + per-format defaults. Cached client-side; returned synchronously by the handler (no DB read; data is compiled in).
 
 ```ts
-interface ExportListFormatsRequest { /* empty body */ }
+interface ExportListFormatsRequest {
+  /* empty body */
+}
 
-type ExportListFormatsError = 'never';          // handler is infallible
+type ExportListFormatsError = 'never'; // handler is infallible
 
 interface ExportFormatDescriptor {
   format: ExportFormat;
-  displayName: string;                          // 'Word document', 'Excel workbook', 'PowerPoint presentation', 'PNG image', 'JPEG image', 'TIFF image'
-  defaultExtension: string;                     // 'docx', 'xlsx', 'pptx', 'png', 'jpeg', 'tiff'
+  displayName: string; // 'Word document', 'Excel workbook', 'PowerPoint presentation', 'PNG image', 'JPEG image', 'TIFF image'
+  defaultExtension: string; // 'docx', 'xlsx', 'pptx', 'png', 'jpeg', 'tiff'
   category: 'office' | 'image';
-  supportsQualityTier: boolean;                 // true for office; false for image
+  supportsQualityTier: boolean; // true for office; false for image
   defaultQualityTier: ExportQualityTier | 'n/a';
-  defaultIncludeAnnotations: boolean;           // true for docx/pptx/image; false for xlsx
+  defaultIncludeAnnotations: boolean; // true for docx/pptx/image; false for xlsx
   /** Per-format setting keys — UI uses these to render the right extras */
-  settingKeys: string[];                        // e.g. ['export.docx.qualityTier', 'export.docx.pageSize', ...]
+  settingKeys: string[]; // e.g. ['export.docx.qualityTier', 'export.docx.pageSize', ...]
 }
 
 interface ExportListFormatsValue {
-  formats: ExportFormatDescriptor[];            // 6 entries: docx, xlsx, pptx, png, jpeg, tiff
+  formats: ExportFormatDescriptor[]; // 6 entries: docx, xlsx, pptx, png, jpeg, tiff
 }
 
 type ExportListFormatsResponse = Result<ExportListFormatsValue, ExportListFormatsError>;
@@ -2408,17 +2594,20 @@ Main-process file SAVE-AS dialog. Structurally mirrors Phase 1's `dialog:pickSav
 
 ```ts
 interface DialogPickExportOutputPathRequest {
-  defaultBasename: string;                      // e.g. 'my-doc' → dialog suggests 'my-doc.docx'
-  format: ExportFormat;                          // determines default extension + dialog filter
+  defaultBasename: string; // e.g. 'my-doc' → dialog suggests 'my-doc.docx'
+  format: ExportFormat; // determines default extension + dialog filter
 }
 
 type DialogPickExportOutputPathError = 'invalid_payload';
 
 interface DialogPickExportOutputPathValue {
-  outputPath: string | null;                    // null if user cancelled
+  outputPath: string | null; // null if user cancelled
 }
 
-type DialogPickExportOutputPathResponse = Result<DialogPickExportOutputPathValue, DialogPickExportOutputPathError>;
+type DialogPickExportOutputPathResponse = Result<
+  DialogPickExportOutputPathValue,
+  DialogPickExportOutputPathError
+>;
 ```
 
 ### 17.10 Preload-exposed API surface (Phase 6 extension)
@@ -2439,7 +2628,9 @@ export interface PreloadApi {
   };
   dialog: {
     // ...Phase 1-5 surfaces (frozen)...
-    pickExportOutputPath: (req: DialogPickExportOutputPathRequest) => Promise<DialogPickExportOutputPathResponse>;
+    pickExportOutputPath: (
+      req: DialogPickExportOutputPathRequest,
+    ) => Promise<DialogPickExportOutputPathResponse>;
   };
 }
 ```
@@ -2478,24 +2669,30 @@ Check the configured release feed for an available update. Explicit (About-modal
 
 ```ts
 type UpdateStatus =
-  | 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded'
-  | 'up-to-date' | 'error' | 'not-configured';
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'downloading'
+  | 'downloaded'
+  | 'up-to-date'
+  | 'error'
+  | 'not-configured';
 
 interface UpdateCheckRequest {
-  trigger: 'explicit' | 'launch';               // 'launch' callers MUST have verified the channel setting first
+  trigger: 'explicit' | 'launch'; // 'launch' callers MUST have verified the channel setting first
 }
 
 type UpdateCheckError =
   | 'invalid_payload'
-  | 'update_not_configured'                       // publish target is a PLACEHOLDER (P7-L-2); HONEST, not a fake up-to-date
-  | 'network_failed'                              // feed unreachable
-  | 'feed_parse_failed';                          // latest.yml malformed
+  | 'update_not_configured' // publish target is a PLACEHOLDER (P7-L-2); HONEST, not a fake up-to-date
+  | 'network_failed' // feed unreachable
+  | 'feed_parse_failed'; // latest.yml malformed
 
 interface UpdateCheckValue {
   status: UpdateStatus;
-  availableVersion: string | null;               // null unless status === 'available' (NO sentinel '')
-  currentVersion: string;                         // app.getVersion()
-  lastCheckedAt: number;                          // ms epoch; the controller stamps this + persists to settings
+  availableVersion: string | null; // null unless status === 'available' (NO sentinel '')
+  currentVersion: string; // app.getVersion()
+  lastCheckedAt: number; // ms epoch; the controller stamps this + persists to settings
 }
 
 type UpdateCheckResponse = Result<UpdateCheckValue, UpdateCheckError>;
@@ -2507,15 +2704,15 @@ Download the available update bundle. NEVER auto-invoked — always user-initiat
 
 ```ts
 interface UpdateDownloadRequest {
-  version: string;                                // the availableVersion from a prior check (guards stale UI)
+  version: string; // the availableVersion from a prior check (guards stale UI)
 }
 
 type UpdateDownloadError =
   | 'invalid_payload'
   | 'update_not_configured'
-  | 'no_update_available'                         // no prior 'available' check, or version mismatch
+  | 'no_update_available' // no prior 'available' check, or version mismatch
   | 'download_failed'
-  | 'signature_verification_failed';              // bundle signature invalid (cert dependency; P7-L-2 §3.5)
+  | 'signature_verification_failed'; // bundle signature invalid (cert dependency; P7-L-2 §3.5)
 
 interface UpdateDownloadValue {
   status: 'downloaded';
@@ -2531,18 +2728,20 @@ Quit and install a downloaded update. User-initiated ("Restart and install"). Tr
 
 ```ts
 interface UpdateInstallRequest {
-  version: string;                                // must match the downloaded version
+  version: string; // must match the downloaded version
 }
 
 type UpdateInstallError =
   | 'invalid_payload'
-  | 'no_downloaded_update'                         // nothing downloaded, or version mismatch
+  | 'no_downloaded_update' // nothing downloaded, or version mismatch
   | 'install_failed';
 
 // On success the process quits; the renderer never receives ok(). The Result type exists for the
 // failure paths only (e.g. nothing downloaded). The handler returns ok({ quitting: true }) immediately
 // before scheduling quitAndInstall on the next tick.
-interface UpdateInstallValue { quitting: true; }
+interface UpdateInstallValue {
+  quitting: true;
+}
 
 type UpdateInstallResponse = Result<UpdateInstallValue, UpdateInstallError>;
 ```
@@ -2552,7 +2751,7 @@ type UpdateInstallResponse = Result<UpdateInstallValue, UpdateInstallError>;
 ```ts
 interface UpdateProgressEvent {
   version: string;
-  percent: number;                                // 0-100
+  percent: number; // 0-100
   bytesPerSecond: number;
   transferred: number;
   total: number;
@@ -2565,25 +2764,37 @@ Record an allowlisted anonymous usage event. The handler is a thin persistence/n
 
 ```ts
 type TelemetryEventName =
-  | 'app.launch' | 'doc.open' | 'doc.save'
-  | 'feature.annotate.add' | 'feature.page.reorder' | 'feature.combine.run'
-  | 'feature.form.fill' | 'feature.mailmerge.run' | 'feature.sign.pades'
+  | 'app.launch'
+  | 'doc.open'
+  | 'doc.save'
+  | 'feature.annotate.add'
+  | 'feature.page.reorder'
+  | 'feature.combine.run'
+  | 'feature.form.fill'
+  | 'feature.mailmerge.run'
+  | 'feature.sign.pades'
   | 'feature.ocr.run'
-  | 'feature.export.docx' | 'feature.export.xlsx' | 'feature.export.pptx' | 'feature.export.image'
-  | 'feature.update.checked' | 'feature.locale.changed';
+  | 'feature.export.docx'
+  | 'feature.export.xlsx'
+  | 'feature.export.pptx'
+  | 'feature.export.image'
+  | 'feature.update.checked'
+  | 'feature.locale.changed';
 
 interface TelemetryRecordEventRequest {
   name: TelemetryEventName;
-  dayBucket: string;                              // 'YYYY-MM-DD' — coarse; NO sub-day timestamp (anti-fingerprint)
+  dayBucket: string; // 'YYYY-MM-DD' — coarse; NO sub-day timestamp (anti-fingerprint)
   // NO other fields permitted. NO document content, NO file paths, NO field values, NO user id.
 }
 
 type TelemetryRecordEventError =
   | 'invalid_payload'
-  | 'not_opted_in'                                 // opt-in is OFF; event dropped (returned for renderer assertion in tests)
-  | 'not_allowlisted';                             // name not in the static allowlist; dropped
+  | 'not_opted_in' // opt-in is OFF; event dropped (returned for renderer assertion in tests)
+  | 'not_allowlisted'; // name not in the static allowlist; dropped
 
-interface TelemetryRecordEventValue { recorded: boolean; }   // false when dropped (not opted in / not allowlisted)
+interface TelemetryRecordEventValue {
+  recorded: boolean;
+} // false when dropped (not opted in / not allowlisted)
 
 type TelemetryRecordEventResponse = Result<TelemetryRecordEventValue, TelemetryRecordEventError>;
 ```
@@ -2595,11 +2806,16 @@ type TelemetryRecordEventResponse = Result<TelemetryRecordEventValue, TelemetryR
 Set the telemetry opt-in flag (persists to `settings.telemetry.optIn`, default `false`). Clearing opt-in also clears the local ring buffer.
 
 ```ts
-interface TelemetrySetOptInRequest { optIn: boolean; }
+interface TelemetrySetOptInRequest {
+  optIn: boolean;
+}
 
 type TelemetrySetOptInError = 'invalid_payload' | 'settings_write_failed';
 
-interface TelemetrySetOptInValue { optIn: boolean; bufferCleared: boolean; }  // bufferCleared true when turning OFF
+interface TelemetrySetOptInValue {
+  optIn: boolean;
+  bufferCleared: boolean;
+} // bufferCleared true when turning OFF
 
 type TelemetrySetOptInResponse = Result<TelemetrySetOptInValue, TelemetrySetOptInError>;
 ```
@@ -2609,14 +2825,16 @@ type TelemetrySetOptInResponse = Result<TelemetrySetOptInValue, TelemetrySetOptI
 Return the current opt-in state + buffer snapshot (for the Settings toggle + the debug panel that makes the opt-in auditable).
 
 ```ts
-interface TelemetryGetStatusRequest { includeBuffer: boolean; }  // debug panel passes true
+interface TelemetryGetStatusRequest {
+  includeBuffer: boolean;
+} // debug panel passes true
 
 type TelemetryGetStatusError = 'invalid_payload';
 
 interface TelemetryGetStatusValue {
   optedIn: boolean;
   bufferedCount: number;
-  lastEventAt: number | null;                     // nullable + late-init (NO sentinel 0)
+  lastEventAt: number | null; // nullable + late-init (NO sentinel 0)
   /** Only present when includeBuffer === true; the debug-panel auditable snapshot */
   buffer: Array<{ name: TelemetryEventName; dayBucket: string }> | null;
 }
@@ -2629,13 +2847,17 @@ type TelemetryGetStatusResponse = Result<TelemetryGetStatusValue, TelemetryGetSt
 Persist the selected locale (`settings.i18n.locale`, default `'en-US'`). The renderer applies it live via `i18next.changeLanguage`; this channel only persists.
 
 ```ts
-type AppLocale = 'en-US' | 'es-ES';               // 'es-ES' is the proof locale (sample, not complete — P7-L-6 #4)
+type AppLocale = 'en-US' | 'es-ES'; // 'es-ES' is the proof locale (sample, not complete — P7-L-6 #4)
 
-interface I18nSetLocaleRequest { locale: AppLocale; }
+interface I18nSetLocaleRequest {
+  locale: AppLocale;
+}
 
 type I18nSetLocaleError = 'invalid_payload' | 'unsupported_locale' | 'settings_write_failed';
 
-interface I18nSetLocaleValue { locale: AppLocale; }
+interface I18nSetLocaleValue {
+  locale: AppLocale;
+}
 
 type I18nSetLocaleResponse = Result<I18nSetLocaleValue, I18nSetLocaleError>;
 ```
@@ -2645,22 +2867,27 @@ type I18nSetLocaleResponse = Result<I18nSetLocaleValue, I18nSetLocaleError>;
 Return the supported locales so the picker is data-driven (NOT hardcoded in the renderer). Each entry carries a `complete` flag so the UI can label the proof locale honestly.
 
 ```ts
-interface I18nGetAvailableLocalesRequest { /* empty */ }
+interface I18nGetAvailableLocalesRequest {
+  /* empty */
+}
 
-type I18nGetAvailableLocalesError = never;        // always succeeds (static list)
+type I18nGetAvailableLocalesError = never; // always succeeds (static list)
 
 interface LocaleDescriptor {
   locale: AppLocale;
-  nativeName: string;                             // 'English (US)' / 'Español (España)'
+  nativeName: string; // 'English (US)' / 'Español (España)'
   /** false for the proof locale — UI shows "translation sample, some strings may appear in English" */
   complete: boolean;
 }
 
 interface I18nGetAvailableLocalesValue {
-  locales: LocaleDescriptor[];                    // [{ 'en-US', complete: true }, { 'es-ES', complete: false }]
+  locales: LocaleDescriptor[]; // [{ 'en-US', complete: true }, { 'es-ES', complete: false }]
 }
 
-type I18nGetAvailableLocalesResponse = Result<I18nGetAvailableLocalesValue, I18nGetAvailableLocalesError>;
+type I18nGetAvailableLocalesResponse = Result<
+  I18nGetAvailableLocalesValue,
+  I18nGetAvailableLocalesError
+>;
 ```
 
 ### 18.9 Aggregate `PdfApi` shape additions (preload bridge surface)
@@ -2681,7 +2908,9 @@ interface PdfApi {
   };
   i18n: {
     setLocale: (req: I18nSetLocaleRequest) => Promise<I18nSetLocaleResponse>;
-    getAvailableLocales: (req: I18nGetAvailableLocalesRequest) => Promise<I18nGetAvailableLocalesResponse>;
+    getAvailableLocales: (
+      req: I18nGetAvailableLocalesRequest,
+    ) => Promise<I18nGetAvailableLocalesResponse>;
   };
 }
 ```

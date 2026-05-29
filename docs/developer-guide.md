@@ -5,8 +5,8 @@ This guide gets a new contributor from `git clone` to a successful local dev loo
 **Phase 7 quick reference for contributors touching auto-update / telemetry / i18n / a11y / cross-platform code:**
 
 - Phase 7 is the **polish phase** (v0.7.0; v0.7.1 is the backlog-fix point release) — it adds no document-editing capability. It adds the auto-update client, opt-in telemetry, WCAG 2.1 AA accessibility, the i18next localization framework, and macOS + Linux build config. The full design lives in [`architecture-phase-7.md`](architecture-phase-7.md) (8 locked decisions P7-L-1..P7-L-8); the a11y remediation map in [`a11y-audit.md`](a11y-audit.md); the localization design in [`i18n-strategy.md`](i18n-strategy.md). The architecture is FROZEN (P7-L-FREEZE) — extend behavior, not architecture. The 0.7.1 backlog-fix wave resolved the image-export glyph defect, multi-language OCR download, the deep modal i18n (816 keys), the annotation-layer a11y name, the better-sqlite3 Node-20 baseline (L-003), and the unsaved-work install gate (in source). See [Auto-update architecture](#auto-update-architecture-phase-7) for the honest binary-vs-source note on the install gate.
-- **Telemetry has no PII slot by construction.** The IPC request zod schema is `.strict()` — it rejects any property beyond `{ name, dayBucket }`, so a leak cannot be introduced by a careless call site. Opt-in defaults OFF and the gate is a silent no-op that returns *before* buffering. The transport is an in-memory ring buffer; there is no `telemetry_events` table, no network transport, no third-party SDK. Read [Telemetry framework](#telemetry-framework-phase-7) before touching `src/main/telemetry.ts`, `src/ipc/handlers/telemetry-*.ts`, or `src/client/telemetry/**`. **This is the project's exemplar privacy pattern — do not relax it.**
-- **Auto-update is library-injected, not direct-imported.** `electron-updater` is loaded via a runtime `require` *inside* `loadElectronUpdaterModule`, but that loader + `createAutoUpdateController` are STATICALLY imported into `src/main/index.ts` — the deliberate fix for the Phase-6.1 vite-tree-shake trap (see [Common pitfalls → Runtime `require()`](#runtime-require-of-in-tree-modules--vite-tree-shake--electron-30-esm-rejection)). The publish target is a placeholder; the controller returns the honest `update_not_configured`, never a fake "up to date". Read [Auto-update architecture](#auto-update-architecture-phase-7).
+- **Telemetry has no PII slot by construction.** The IPC request zod schema is `.strict()` — it rejects any property beyond `{ name, dayBucket }`, so a leak cannot be introduced by a careless call site. Opt-in defaults OFF and the gate is a silent no-op that returns _before_ buffering. The transport is an in-memory ring buffer; there is no `telemetry_events` table, no network transport, no third-party SDK. Read [Telemetry framework](#telemetry-framework-phase-7) before touching `src/main/telemetry.ts`, `src/ipc/handlers/telemetry-*.ts`, or `src/client/telemetry/**`. **This is the project's exemplar privacy pattern — do not relax it.**
+- **Auto-update is library-injected, not direct-imported.** `electron-updater` is loaded via a runtime `require` _inside_ `loadElectronUpdaterModule`, but that loader + `createAutoUpdateController` are STATICALLY imported into `src/main/index.ts` — the deliberate fix for the Phase-6.1 vite-tree-shake trap (see [Common pitfalls → Runtime `require()`](#runtime-require-of-in-tree-modules--vite-tree-shake--electron-30-esm-rejection)). The publish target is a placeholder; the controller returns the honest `update_not_configured`, never a fake "up to date". Read [Auto-update architecture](#auto-update-architecture-phase-7).
 - **i18n keys are typed.** `t('toolbar:open')` is compile-checked against the en-US JSON via `CustomTypeOptions` augmentation; a typo is a compile error, not a raw key on screen. `fallbackLng: 'en-US'` + `returnEmptyString: false` guarantee a missing es-ES key renders English. **No `as any` on `t()`.** Read [i18n framework](#i18n-framework-phase-7).
 - **a11y patterns are three shared hooks.** `useTablistKeys` (WAI-ARIA tab roving + arrow nav), `useFocusTrap` (modal focus trap + restore), `useRovingToolbar` (single-Tab-stop toolbar). The `jsx-a11y/aria-proptypes` ESLint rule was restored from `warn` to `error` in Wave 29 — the ratchet that prevents the Phase-1 tab-semantics regression. Read [a11y patterns](#a11y-patterns-phase-7).
 - **The structural-PII-guard is the project's SIXTH hard-won ratchet.** See [Structural engineering discipline — the six ratchets](#structural-engineering-discipline--the-six-ratchets). The trust-floor honesty pattern held across all six phases (H-3 → forms → PAdES → OCR → export → Phase-7 polish).
@@ -43,13 +43,13 @@ This guide gets a new contributor from `git clone` to a successful local dev loo
 
 ## Prerequisites
 
-| Tool | Required version | Notes |
-|---|---|---|
-| **Node.js** | **20 LTS** (20.10+), enforced | **Node 20 is the locked baseline (L-003).** A `pretest` guard (`scripts/check-node.mjs`) stops the suite with a recovery message if the host Node can't load `better-sqlite3`; `engines.node` is `">=20.10.0 <21"` so Node 24 emits a loud `EBADENGINE` warning on install. On a Node-24-only host, use the non-destructive escape hatch `node scripts/rebuild-native-for-node.mjs && npm test` (then `--electron` to restore the packaging binary). **Never** trigger a from-source `better-sqlite3` rebuild on Node 24 (node-gyp + Python 3.14 fails, and a prior failed rebuild deleted the working Electron-ABI binding). See [Common pitfalls → Node 24 vs Electron 30 ABI](#node-24-vs-electron-30-abi). The CI matrix locks Node 20. |
-| npm | 10+ | Ships with Node 20. |
-| Python | 3.13 or earlier | Only needed if `better-sqlite3` falls back to source build. Python 3.14 removed `distutils`, which `node-gyp` still depends on. |
-| Visual Studio Build Tools | Latest with "Desktop development with C++" workload | Windows only; needed for native module compilation. |
-| Git | any modern | — |
+| Tool                      | Required version                                    | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Node.js**               | **20 LTS** (20.10+), enforced                       | **Node 20 is the locked baseline (L-003).** A `pretest` guard (`scripts/check-node.mjs`) stops the suite with a recovery message if the host Node can't load `better-sqlite3`; `engines.node` is `">=20.10.0 <21"` so Node 24 emits a loud `EBADENGINE` warning on install. On a Node-24-only host, use the non-destructive escape hatch `node scripts/rebuild-native-for-node.mjs && npm test` (then `--electron` to restore the packaging binary). **Never** trigger a from-source `better-sqlite3` rebuild on Node 24 (node-gyp + Python 3.14 fails, and a prior failed rebuild deleted the working Electron-ABI binding). See [Common pitfalls → Node 24 vs Electron 30 ABI](#node-24-vs-electron-30-abi). The CI matrix locks Node 20. |
+| npm                       | 10+                                                 | Ships with Node 20.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Python                    | 3.13 or earlier                                     | Only needed if `better-sqlite3` falls back to source build. Python 3.14 removed `distutils`, which `node-gyp` still depends on.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Visual Studio Build Tools | Latest with "Desktop development with C++" workload | Windows only; needed for native module compilation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Git                       | any modern                                          | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 macOS and Linux can run `lint`, `typecheck`, and `vitest` (the same as the Linux CI matrix job). Only Windows can produce the packaged `.exe` or run the Playwright Electron e2e — the release target is Windows.
 
@@ -280,12 +280,12 @@ Phase 3 layers AcroForm support on top of the Phase 2 edit-replay engine without
 
 **Form-state vs document-state (conventions §14).** Phase 3 introduces a third state-management pattern alongside the Phase 1 dirtyOps funnel and the Phase 2 bookmarks-via-SQLite track. Form-fill values live in `formsSlice.values` as **transient renderer state**; only the explicit commit boundary produces an EditOperation. Form-design ops (add / remove / edit field) use the standard per-op pattern.
 
-| Pattern | Storage | Saves through | Undo |
-|---|---|---|---|
-| Document mutations (rotate, delete, annotate, text-replace, image overlay) | `dirtyOps[]` | `replay()` step 3 | Per-op inverse |
-| Bookmarks | SQLite | Direct IPC, engine NOT invoked | Per-op inverse on bookmarks slice |
-| **Form-fill values** | `formsSlice.values` (transient) → batched into one `form-commit` op at commit boundary | `replay()` step 3.6 | Whole-form-batch undo |
-| **Form-design** (add/remove/edit field) | `dirtyOps[]` (per-op) | `replay()` step 3.6 | Per-op inverse |
+| Pattern                                                                    | Storage                                                                                | Saves through                  | Undo                              |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------ | --------------------------------- |
+| Document mutations (rotate, delete, annotate, text-replace, image overlay) | `dirtyOps[]`                                                                           | `replay()` step 3              | Per-op inverse                    |
+| Bookmarks                                                                  | SQLite                                                                                 | Direct IPC, engine NOT invoked | Per-op inverse on bookmarks slice |
+| **Form-fill values**                                                       | `formsSlice.values` (transient) → batched into one `form-commit` op at commit boundary | `replay()` step 3.6            | Whole-form-batch undo             |
+| **Form-design** (add/remove/edit field)                                    | `dirtyOps[]` (per-op)                                                                  | `replay()` step 3.6            | Per-op inverse                    |
 
 **The HYBRID commit boundary.** Form fills accumulate as transient values in `formsSlice.values`. Saves auto-commit before writing; users can also commit explicitly via a "Commit form values" button in the Forms sidebar. The single `form-commit` EditOperation carries `fieldValues` (the changed values) + `previousValues` (for undo). This is why Ctrl+Z unwinds the whole form-fill batch, not each keystroke — matching Word/Acrobat semantics. Rationale: see `architecture-phase-3.md §5` and `conventions.md §14.2`.
 
@@ -306,6 +306,7 @@ Phase 3 layers AcroForm support on top of the Phase 2 edit-replay engine without
 Order matters: design-add → design-edit → design-remove → fill. This way the user can author a field, edit it, then fill it within the same commit.
 
 **No JavaScript form actions (P3-L-2).** Saved documents never contain JavaScript. The engine strips two surfaces:
+
 - Field-level `/AA` (additional actions) dicts — stripped in `emitField`.
 - Document-level `/Names /JavaScript` — stripped in `stripDocLevelJavaScript`.
 
@@ -422,6 +423,7 @@ The signature audit log schema-v5 amendment: one nullable column `invalidated_by
 Before each release that adds new bundled or downloadable languages, the release-build script MUST fetch the real `.traineddata.gz` for every catalog entry from `https://tessdata.projectnaptha.com/4.0.0_fast/<lang>.traineddata.gz`, compute SHA-256, and inject the real SHA values into [`src/main/pdf-ops/language-pack-catalog.json`](../src/main/pdf-ops/language-pack-catalog.json) BEFORE running `npm run dist:win`.
 
 **Current state (RESOLVED in 0.7.1):**
+
 - `eng` row has real SHA `ed350f3752f81ee8f38769edc14d92d997dababe23b565c59879372cc46a2468` (10,923,060 bytes; bundled from `node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz`). Note the bundled `eng` is a DIFFERENT artifact from the downloadable packs — it ships via the npm package (10.9 MB) per `electron-builder.yml`, NOT from the `4.0.0_fast` CDN (1.98 MB). Bundled packs resolve by file-existence, not hash.
 - The other 9 rows (spa / fra / deu / por / ita / rus / chi_sim / chi_tra / jpn) now carry **real SHA-256 hashes**, computed over the exact `${baseUrl}/<lang>.traineddata.gz` bytes the download path consumes (`baseUrl = https://tessdata.projectnaptha.com/4.0.0_fast`). The `TBD-FILL-AT-RELEASE` sentinels are gone, and the placeholder `sizeBytes` (which were ~10x too large) were corrected to actual gz sizes. **Multi-language download works.**
 - The `language-pack-manager.ts` download handler still rejects hash mismatches via `pack_integrity_failed` — the integrity posture is unchanged; only the catalog values became real. `language-pack-catalog.test.ts` pins no-sentinel + 64-hex + positive-size + the bundled `eng` hash + ≥8 distinct downloadable.
@@ -432,19 +434,19 @@ Before each release that adds new bundled or downloadable languages, the release
 
 Nine new IPC channels under two new namespaces — `ocr:*` (seven) and `scan:*` (two Phase 5.1 placeholders). All `ocr:*` channels are LIVE in 0.5.0; `scan:*` returns `not_implemented_phase_5_1`. Full contract types: [`api-contracts.md §16`](api-contracts.md). Quick reference card:
 
-| Channel | What it does |
-|---|---|
-| `ocr:detectLanguages` | List installed + downloadable packs. Renderer calls this on OCR wizard open. |
-| `ocr:runOnPage` | OCR a single page. Short-running; no progress events. Returns `OcrPageResult`. |
-| `ocr:runOnDocument` | OCR a page range. Long-running; emits `ocr:progress` event stream. Returns `{ jobId, summary, op }`. |
-| `ocr:cancelJob` | Graceful cancellation (between pages, not mid-page). Idempotent. |
-| `ocr:listJobs` | List rows from `ocr_jobs` (debugging + audit panel). |
-| `ocr:languagePackDownload` | Download a pack from `tessdata.projectnaptha.com`; verify SHA-256; emit progress events. |
-| `ocr:languagePackRemove` | Remove a downloaded pack. Refuses to remove bundled `eng`. |
-| `scan:listDevices` | Phase 5.1 placeholder; returns `not_implemented_phase_5_1`. |
-| `scan:acquire` | Phase 5.1 placeholder; same. |
-| `ocr:progress` (event stream) | Per-page progress: `starting / rasterizing / preprocessing / recognizing / composing-text-behind-image / writing-output / completed / cancelled / failed`. |
-| `ocr:languagePackDownload:progress` (event stream) | Download progress: `starting / downloading / verifying / completed / cancelled / failed`. |
+| Channel                                            | What it does                                                                                                                                               |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ocr:detectLanguages`                              | List installed + downloadable packs. Renderer calls this on OCR wizard open.                                                                               |
+| `ocr:runOnPage`                                    | OCR a single page. Short-running; no progress events. Returns `OcrPageResult`.                                                                             |
+| `ocr:runOnDocument`                                | OCR a page range. Long-running; emits `ocr:progress` event stream. Returns `{ jobId, summary, op }`.                                                       |
+| `ocr:cancelJob`                                    | Graceful cancellation (between pages, not mid-page). Idempotent.                                                                                           |
+| `ocr:listJobs`                                     | List rows from `ocr_jobs` (debugging + audit panel).                                                                                                       |
+| `ocr:languagePackDownload`                         | Download a pack from `tessdata.projectnaptha.com`; verify SHA-256; emit progress events.                                                                   |
+| `ocr:languagePackRemove`                           | Remove a downloaded pack. Refuses to remove bundled `eng`.                                                                                                 |
+| `scan:listDevices`                                 | Phase 5.1 placeholder; returns `not_implemented_phase_5_1`.                                                                                                |
+| `scan:acquire`                                     | Phase 5.1 placeholder; same.                                                                                                                               |
+| `ocr:progress` (event stream)                      | Per-page progress: `starting / rasterizing / preprocessing / recognizing / composing-text-behind-image / writing-output / completed / cancelled / failed`. |
+| `ocr:languagePackDownload:progress` (event stream) | Download progress: `starting / downloading / verifying / completed / cancelled / failed`.                                                                  |
 
 See [`api-reference.md`](api-reference.md) for request/response shapes + error variants + renderer examples.
 
@@ -479,12 +481,12 @@ Phase 6 lights up Export to Office and image formats on top of the read-only-on-
 
 **Per-format writers ([`src/main/export/writers/`](../src/main/export/writers/)).**
 
-| Writer | Library | Layout-preserving behavior | Text-only behavior |
-|---|---|---|---|
-| [`docx-writer.ts`](../src/main/export/writers/docx-writer.ts) | `docx` (MIT) | `Paragraph` + `Table` + `ImageRun` from the extracted layout | Flat reading-order `Paragraph` stream, no tables/images |
-| [`xlsx-writer.ts`](../src/main/export/writers/xlsx-writer.ts) | `exceljs` (MIT) | Sheet-per-page; detected tables → cell grids (streaming write API `useSharedStrings: true` for large workbooks, R-W23-C) | One sheet, all text rows |
-| [`pptx-writer.ts`](../src/main/export/writers/pptx-writer.ts) | `pptxgenjs` (MIT) | One slide per page; 16:9 widescreen + letterboxing; `SLIDE_W_IN / pageWIn` scale factor + PDF-bottom-up → PPTX-top-down Y-flip (R-W23-D — `pres.write()` wrapped in a Promise to avoid blocking the event loop) | One slide per page, text only |
-| [`image-writer.ts`](../src/main/export/writers/image-writer.ts) | `@napi-rs/canvas` + `utif` (both MIT) | n/a (image formats have no quality tier) | Raster at chosen DPI; PNG/JPEG one file per page; `utif` multi-page TIFF bundling |
+| Writer                                                          | Library                               | Layout-preserving behavior                                                                                                                                                                                      | Text-only behavior                                                                |
+| --------------------------------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| [`docx-writer.ts`](../src/main/export/writers/docx-writer.ts)   | `docx` (MIT)                          | `Paragraph` + `Table` + `ImageRun` from the extracted layout                                                                                                                                                    | Flat reading-order `Paragraph` stream, no tables/images                           |
+| [`xlsx-writer.ts`](../src/main/export/writers/xlsx-writer.ts)   | `exceljs` (MIT)                       | Sheet-per-page; detected tables → cell grids (streaming write API `useSharedStrings: true` for large workbooks, R-W23-C)                                                                                        | One sheet, all text rows                                                          |
+| [`pptx-writer.ts`](../src/main/export/writers/pptx-writer.ts)   | `pptxgenjs` (MIT)                     | One slide per page; 16:9 widescreen + letterboxing; `SLIDE_W_IN / pageWIn` scale factor + PDF-bottom-up → PPTX-top-down Y-flip (R-W23-D — `pres.write()` wrapped in a Promise to avoid blocking the event loop) | One slide per page, text only                                                     |
+| [`image-writer.ts`](../src/main/export/writers/image-writer.ts) | `@napi-rs/canvas` + `utif` (both MIT) | n/a (image formats have no quality tier)                                                                                                                                                                        | Raster at chosen DPI; PNG/JPEG one file per page; `utif` multi-page TIFF bundling |
 
 **Export-job lifecycle (conventions §17 + Julian Wave 25 H-25.1 gap).** Per-job state lives in an `ActiveJob` map; the `export_jobs` row transitions `queued` → `running` → `completed` / `cancelled` / `failed`. Per-page cancel checkpoints at 3 points (start / after layout extract / after table detect) via an `AbortController` wired into `export:cancelJob`. Output is written atomically: `<output>.export-temp` → rename to `<output>` on success; the temp file is unlinked on cancel/failure (no orphan partial output).
 
@@ -522,7 +524,7 @@ In dev, `require.resolve('pdfjs-dist/package.json')` lands in `node_modules/`. I
 
 Auto-update uses **`electron-updater` (MIT)** with the GitHub-releases provider. The full design is in [`architecture-phase-7.md §3`](architecture-phase-7.md); the controller is [`src/main/auto-update.ts`](../src/main/auto-update.ts); the three IPC handlers are `src/ipc/handlers/update-{check,download,install}.ts`.
 
-**Library injection, not direct import (the Phase-6.1 lesson applied).** `electron-updater` is loaded by a runtime `require` *inside* `loadElectronUpdaterModule()`, which returns `null` if the package is absent. But that loader **and** `createAutoUpdateController` are **statically imported** into `src/main/index.ts`. This is deliberate: a runtime `require` of the *factory module itself* would get vite-tree-shaken out of the main bundle (the exact trap that cost two Diego vite-config patches in Phase 6.1 — see [Common pitfalls → Runtime `require()`](#runtime-require-of-in-tree-modules--vite-tree-shake--electron-30-esm-rejection)). **Do not add a vite safety-net plugin for auto-update; the static import keeps it in the main bundle.**
+**Library injection, not direct import (the Phase-6.1 lesson applied).** `electron-updater` is loaded by a runtime `require` _inside_ `loadElectronUpdaterModule()`, which returns `null` if the package is absent. But that loader **and** `createAutoUpdateController` are **statically imported** into `src/main/index.ts`. This is deliberate: a runtime `require` of the _factory module itself_ would get vite-tree-shaken out of the main bundle (the exact trap that cost two Diego vite-config patches in Phase 6.1 — see [Common pitfalls → Runtime `require()`](#runtime-require-of-in-tree-modules--vite-tree-shake--electron-30-esm-rejection)). **Do not add a vite safety-net plugin for auto-update; the static import keeps it in the main bundle.**
 
 **The placeholder publish target → honest `update_not_configured`.** `electron-builder.yml` carries a `publish: { provider: github, owner: PLACEHOLDER, repo: PLACEHOLDER }` block. The controller reads the emitted `app-update.yml` from `process.resourcesPath` via `isPublishConfiguredFromAppUpdateYml()`, which returns `false` on `PLACEHOLDER`. `ensureUpdater()` returns `null` when EITHER the publish target is a placeholder OR `electron-updater` is not installed — both route every update call to a `Result<never, 'update_not_configured'>`. The controller **never throws across the IPC boundary** and **never fakes a "you're up to date"**. When a real channel is configured (Phase 7.1), the controller auto-detects the live feed with **zero code change**.
 
@@ -531,9 +533,10 @@ Auto-update uses **`electron-updater` (MIT)** with the GitHub-releases provider.
 - `autoDownload = false` always — no silent background downloads. Every download is user-initiated after a check reports `available`.
 - `update.lastCheckedAt` is stamped + persisted **only** when a check actually runs (nullable + late-init; **no sentinel `0`** — a `0` would render "Jan 1 1970" in the About modal).
 - Signature verification is **not disabled** — an unsigned bundle surfaces `signature_verification_failed` (the cert dependency, P7-L-2 §3.5). This is correct security behavior, not a bug.
-- `update:install` schedules `quitAndInstall()` on the next tick and returns `ok({ quitting: true })` *before* the process exits, so the renderer observes the ok first. The request carries an optional `confirmedDiscardUnsaved?: boolean`; the controller refuses with `unsaved_work_blocks_install` when there is unsaved work and the flag is not set (see the unsaved-work gate below).
+- `update:install` schedules `quitAndInstall()` on the next tick and returns `ok({ quitting: true })` _before_ the process exits, so the renderer observes the ok first. The request carries an optional `confirmedDiscardUnsaved?: boolean`; the controller refuses with `unsaved_work_blocks_install` when there is unsaved work and the flag is not set (see the unsaved-work gate below).
 
 > **Unsaved-work install gate (H-29.1 / H-FIX.1 — FIXED IN SOURCE; honest binary-vs-source note).** The gate that prevents `quitAndInstall` from discarding unsaved edits is **correct in the source code**, end-to-end:
+>
 > - **Main-process gate** (`auto-update.ts`): after the configured + version-match guards but before the irreversible quit, if `hasUnsavedWork()` and NOT `confirmedDiscardUnsaved`, it returns `unsaved_work_blocks_install` and schedules no quit. The contract gained `confirmedDiscardUnsaved?: boolean` + the `unsaved_work_blocks_install` error variant.
 > - **Renderer dirty-state gate** (`update-status-area/index.tsx`, H-FIX.1): production wires `hasUnsavedWork: () => false` (dirty state is renderer-owned, mirroring `app:quit`), so the renderer is the live trigger — it checks its own `selectIsDirty` before calling `install` and opens a Save / Discard / Cancel confirm dialog when dirty; the main gate is defense-in-depth. This closes the subtle "test-green gate wired to a constant-false probe" data-loss bug.
 >
@@ -543,10 +546,10 @@ Auto-update uses **`electron-updater` (MIT)** with the GitHub-releases provider.
 
 Telemetry is a **hand-rolled, zero-new-dependency** framework: opt-in, default OFF, anonymous counts only, no third-party SDK, no network transport. The design is in [`architecture-phase-7.md §4`](architecture-phase-7.md); the main-process service is [`src/main/telemetry.ts`](../src/main/telemetry.ts); the renderer hook + transport are in `src/client/telemetry/**`; the IPC handlers are `src/ipc/handlers/telemetry-{record-event,set-opt-in,get-status}.ts`.
 
-**The `.strict()` zod schema is a STRUCTURAL PII barrier — the project's exemplar privacy pattern.** Three independent, test-pinned barriers make the absence of personal data a *property of the type system + schema*, not a discipline that can be forgotten:
+**The `.strict()` zod schema is a STRUCTURAL PII barrier — the project's exemplar privacy pattern.** Three independent, test-pinned barriers make the absence of personal data a _property of the type system + schema_, not a discipline that can be forgotten:
 
 1. **The IPC request schema is `.strict()`** ([`telemetry-record-event.ts`](../src/ipc/handlers/telemetry-record-event.ts)). It accepts only `{ name, dayBucket }` and **rejects any additional property** at `safeParse`. There is physically no field for `userId`, `filePath`, `docTitle`, `value`, or an error string — so a leak cannot be introduced by a careless call site; it fails as `invalid_payload`. Test it directly: `recordEvent({ name, dayBucket, userId: 'x' })` → `invalid_payload`. The `dayBucket` regex `^\d{4}-\d{2}-\d{2}$` also rejects sub-day timestamps (anti-fingerprinting).
-2. **The event interface has no PII slot, and the transport is REQUIRED on the interface** (no optional + stub fallback — the anti-stub discipline). The call site passes only the event *name*; the hook adds the count + day bucket. A future maintainer cannot quietly add a free-text field without changing the schema *and* the type *and* the tests.
+2. **The event interface has no PII slot, and the transport is REQUIRED on the interface** (no optional + stub fallback — the anti-stub discipline). The call site passes only the event _name_; the hook adds the count + day bucket. A future maintainer cannot quietly add a free-text field without changing the schema _and_ the type _and_ the tests.
 3. **Opt-in defaults OFF and the gate is a SILENT no-op that returns BEFORE buffering** (`telemetry.ts`). When opt-in is OFF the event is not even stored (`not_opted_in`, `transport.size() === 0`), re-checked server-side. Turning opt-in OFF clears the buffer (`bufferCleared: true`).
 
 Plus: timestamps are **day-bucketed** (defeats session fingerprinting); the buffer is an **in-memory bounded ring** (`NoOpRingBufferTransport`, default 500, oldest evicted at capacity) — **no SQLite table** (a persisted table would be a forensic/tamper surface; the migration header explicitly forbids a future maintainer from adding one); **no event payload is ever logged** (channel + ok/dropped only); **no third-party phone-home SDK**.
@@ -571,18 +574,18 @@ Localization uses **`i18next` (MIT)** + **`react-i18next` (MIT)** + **`i18next-r
 - **`fallbackLng: 'en-US'` + `returnEmptyString: false` + `returnNull: false`.** A missing es-ES key renders the English value, never a raw `ns:key` on screen. The structural defense against the half-extracted-mix problem.
 - **Typed keys via `CustomTypeOptions`.** The `i18next.d.ts` augmentation types `resources` from the en-US JSON, so `t('toolbar:open')` is compile-checked — a typo or missing key is a **compile error**, not a runtime raw key. **No `as any` on `t()`** (if the type system complains, the key is missing from en-US — add it, don't cast).
 - **Lazy-load story.** es-ES is intended to be a Vite code-split chunk loaded only when selected (via the resources-to-backend template-literal dynamic import). In the v0.7.0 packaged build, the es-ES strings were **inlined into the main renderer chunk** rather than split into a separate chunk (functionally identical — the strings ship and the live switch works; the per-locale initial-chunk-size optimization did not materialize). Converting to an `import.meta.glob` map to restore the code-split is a non-blocking follow-up (Diego Wave 29 note).
-- **The 28c gap — RESOLVED in 0.7.1.** The deep Phase-4..6 modal-*step* bodies (multi-step OCR-invalidate confirm prose, signature-capture sub-step instructions, the export / mail-merge / PAdES step components) are now `t()`-extracted across 25 components. en-US baseline 482 → 816 keys (measured by `coverage.test.ts`, not estimated); es-ES translates the high-frequency new surface (modal titles, step labels, buttons, honesty headings) at ~68% (558/816), with the rest falling back to English (never a raw key — `coverage.test.ts` proves every en-US key resolves to a non-raw es-ES string). `extraction-regression.test.ts` has a `SWEPT_28C` group asserting no literal `aria-label/title/placeholder` survives and each component consumes `useT`.
+- **The 28c gap — RESOLVED in 0.7.1.** The deep Phase-4..6 modal-_step_ bodies (multi-step OCR-invalidate confirm prose, signature-capture sub-step instructions, the export / mail-merge / PAdES step components) are now `t()`-extracted across 25 components. en-US baseline 482 → 816 keys (measured by `coverage.test.ts`, not estimated); es-ES translates the high-frequency new surface (modal titles, step labels, buttons, honesty headings) at ~68% (558/816), with the rest falling back to English (never a raw key — `coverage.test.ts` proves every en-US key resolves to a non-raw es-ES string). `extraction-regression.test.ts` has a `SWEPT_28C` group asserting no literal `aria-label/title/placeholder` survives and each component consumes `useT`.
 - **No new date/number-formatting dependency** — relative times, file sizes, and counts route through the platform `Intl` API keyed to the active locale. No `date-fns` / `moment` / `numeral`.
 
 ### a11y patterns (Phase 7)
 
 The accessibility audit + remediation map is in [`a11y-audit.md`](a11y-audit.md). Wave 28a closed all ten remediation items (R-1..R-10) and the deferred Phase-1 ARIA-tab debt. The reusable infrastructure is **three shared hooks** in [`src/client/hooks/`](../src/client/hooks/):
 
-| Hook | Purpose |
-|---|---|
-| `use-tablist-keys.ts` | WAI-ARIA tab pattern: roving tabindex (only the active tab is in the tab order) + Arrow/Home/End keyboard nav. Used by the sidebar tablist (vertical) and the Settings tablist (horizontal). |
-| `use-focus-trap.ts` | Modal focus management: focus-in on mount, Tab/Shift+Tab cycle within, Esc escapes (no keyboard trap), focus restored to the trigger on close. Applied via the shared `ModalShell` all modals route through. (Deliberately does NOT filter focusables by `offsetParent`/visibility — jsdom never computes layout, so that filter would empty the list and break the trap in tests.) |
-| `use-roving-toolbar.ts` | Toolbar single-Tab-stop + arrow traversal, disabled-button skip, remembers last-focused. `aria-pressed` emitted only for toggle buttons (momentary actions like Open/Save omit it). |
+| Hook                    | Purpose                                                                                                                                                                                                                                                                                                                                                                             |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `use-tablist-keys.ts`   | WAI-ARIA tab pattern: roving tabindex (only the active tab is in the tab order) + Arrow/Home/End keyboard nav. Used by the sidebar tablist (vertical) and the Settings tablist (horizontal).                                                                                                                                                                                        |
+| `use-focus-trap.ts`     | Modal focus management: focus-in on mount, Tab/Shift+Tab cycle within, Esc escapes (no keyboard trap), focus restored to the trigger on close. Applied via the shared `ModalShell` all modals route through. (Deliberately does NOT filter focusables by `offsetParent`/visibility — jsdom never computes layout, so that filter would empty the list and break the trap in tests.) |
+| `use-roving-toolbar.ts` | Toolbar single-Tab-stop + arrow traversal, disabled-button skip, remembers last-focused. `aria-pressed` emitted only for toggle buttons (momentary actions like Open/Save omit it).                                                                                                                                                                                                 |
 
 The WAI-ARIA tab pattern (applied identically to sidebar + settings): `role="tablist"` + per-tab `role="tab"` + `aria-selected` + `aria-controls`/`aria-labelledby` tabpanel + roving tabindex. All `aria-label` strings go through `t()` (a Spanish-speaking Narrator user must hear Spanish labels — conventions §18.4.9).
 
@@ -594,11 +597,11 @@ The WAI-ARIA tab pattern (applied identically to sidebar + settings): `role="tab
 
 **The native-module rebuild story is the riskiest unverified surface** ([`architecture-phase-7.md §6`](architecture-phase-7.md)):
 
-| Native dep | Cross-platform handling | mac/linux risk |
-|---|---|---|
-| `better-sqlite3` (N-API SQLite) | `electron-rebuild` compiles against the target platform + Electron ABI (per-platform prebuild or from-source). Needs the platform toolchain (Xcode CLT / build-essential) on the build host — **cross-compile from Windows is unsupported; you must build ON a mac/linux host.** | **HIGH** — a failed rebuild crashes the DB layer on launch (white-screen app), invisible to a green CI package step |
-| `@napi-rs/canvas` (Skia, raster pipeline) | Per-platform prebuilt `.node` binaries; the universal-mac target needs BOTH darwin-x64 AND darwin-arm64 merged | **MEDIUM** — the universal merge must include both prebuilds |
-| `tesseract.js-core` (WASM + traineddata) | WASM is platform-agnostic; tessdata copied via the existing asarUnpack | **LOW** |
+| Native dep                                | Cross-platform handling                                                                                                                                                                                                                                                          | mac/linux risk                                                                                                      |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `better-sqlite3` (N-API SQLite)           | `electron-rebuild` compiles against the target platform + Electron ABI (per-platform prebuild or from-source). Needs the platform toolchain (Xcode CLT / build-essential) on the build host — **cross-compile from Windows is unsupported; you must build ON a mac/linux host.** | **HIGH** — a failed rebuild crashes the DB layer on launch (white-screen app), invisible to a green CI package step |
+| `@napi-rs/canvas` (Skia, raster pipeline) | Per-platform prebuilt `.node` binaries; the universal-mac target needs BOTH darwin-x64 AND darwin-arm64 merged                                                                                                                                                                   | **MEDIUM** — the universal merge must include both prebuilds                                                        |
+| `tesseract.js-core` (WASM + traineddata)  | WASM is platform-agnostic; tessdata copied via the existing asarUnpack                                                                                                                                                                                                           | **LOW**                                                                                                             |
 
 The top-level `asarUnpack` globs sit OUTSIDE the `win:` block, so they apply to mac/linux too. Verifying mac + Linux on real hosts (build + launch + an L-002-equivalent screenshot) is the headline **Phase 7.1** work item — when a host appears, no design work remains, only `electron-builder --mac` / `--linux` + the screenshot drill.
 
@@ -606,17 +609,17 @@ The top-level `asarUnpack` globs sit OUTSIDE the `win:` block, so they apply to 
 
 Eight new channels under three new domains, all designed in [`api-contracts.md §18`](api-contracts.md). Quick reference card:
 
-| Channel | Status | What it does |
-|---|---|---|
-| `update:check` | LIVE controller, placeholder feed | Check the release feed. Returns honest `update_not_configured` while the publish target is a placeholder. |
-| `update:download` | LIVE controller, placeholder feed | Download an available update (user-initiated only). Surfaces `signature_verification_failed` for unsigned bundles. |
-| `update:install` | LIVE controller, placeholder feed | `quitAndInstall`. Returns `ok({ quitting: true })` before exit. (No unsaved-work gate yet — H-29.1.) |
-| `update:onProgress` (event) | LIVE | Download-progress events to the active window. |
-| `telemetry:recordEvent` | LIVE | `.strict()` PII guard; opt-in re-checked server-side; allowlist re-validated; never logs the payload. |
-| `telemetry:setOptIn` | LIVE | Persist the opt-in flag; turning OFF clears the buffer. |
-| `telemetry:getStatus` | LIVE | Opt-in state + buffer snapshot (`includeBuffer: true` for the debug panel). |
-| `i18n:setLocale` | LIVE | Persist `settings.i18n.locale`; rejects unsupported locales. The renderer applies the live switch via i18next. |
-| `i18n:getAvailableLocales` | LIVE | Static descriptor list with a `complete` flag (the proof locale's `complete: false` drives the picker's "translation sample" subtext). |
+| Channel                     | Status                            | What it does                                                                                                                           |
+| --------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `update:check`              | LIVE controller, placeholder feed | Check the release feed. Returns honest `update_not_configured` while the publish target is a placeholder.                              |
+| `update:download`           | LIVE controller, placeholder feed | Download an available update (user-initiated only). Surfaces `signature_verification_failed` for unsigned bundles.                     |
+| `update:install`            | LIVE controller, placeholder feed | `quitAndInstall`. Returns `ok({ quitting: true })` before exit. (No unsaved-work gate yet — H-29.1.)                                   |
+| `update:onProgress` (event) | LIVE                              | Download-progress events to the active window.                                                                                         |
+| `telemetry:recordEvent`     | LIVE                              | `.strict()` PII guard; opt-in re-checked server-side; allowlist re-validated; never logs the payload.                                  |
+| `telemetry:setOptIn`        | LIVE                              | Persist the opt-in flag; turning OFF clears the buffer.                                                                                |
+| `telemetry:getStatus`       | LIVE                              | Opt-in state + buffer snapshot (`includeBuffer: true` for the debug panel).                                                            |
+| `i18n:setLocale`            | LIVE                              | Persist `settings.i18n.locale`; rejects unsupported locales. The renderer applies the live switch via i18next.                         |
+| `i18n:getAvailableLocales`  | LIVE                              | Static descriptor list with a `complete` flag (the proof locale's `complete: false` drives the picker's "translation sample" subtext). |
 
 See [`api-reference.md`](api-reference.md) for request/response shapes + error variants + renderer examples.
 
@@ -624,18 +627,18 @@ See [`api-reference.md`](api-reference.md) for request/response shapes + error v
 
 Eleven new IPC channels under two new namespaces — `signatures:*` (seven) and `annotations:*` (three plus `addShape`). All channels are LIVE in 0.4.2 and end-to-end after the Phase 4.1 B-17.1 closure. Full contract types: [`api-contracts.md §14`](api-contracts.md). Quick reference card:
 
-| Channel | What it does |
-|---|---|
-| `signatures:certLoad` | Load PFX + password; return opaque handle. Buffer-wraps password in ≤5 lines, drops JS string, transfers ownership to cert-store. |
-| `signatures:certRelease` | Idempotent zero + release. Renderer fires on modal close; app.before-quit fires for retained handles. |
-| `signatures:applyVisual` | Visual signature (placeholder or freeform). Appearance only; writes empty `/V <<>>` marker. No audit row. |
-| `signatures:applyPades` | PAdES cryptographic signature (placeholder or freeform). Auto-release default true. Inserts audit row. |
-| `signatures:requestTimestamp` | Standalone TSA request. Used internally by applyPades; also exposed for Settings "Test TSA URL". |
-| `signatures:verify` | Re-hash byte-range; compare to audit row. Informational (NOT trust-chain validation). |
-| `signatures:listAudit` | List rows from `signature_audit_log` with optional filters (file hash, fingerprint, date range). |
-| `annotations:addShape` | Author Square / Circle / Polygon / PolyLine / Line / FreeTextCallout. Returns `annot-add-shape` EditOperation. |
-| `annotations:setMeasureCalibration` | Set per-document calibration (unit + scale). |
-| `annotations:getMeasureCalibration` | Get current calibration or null. |
+| Channel                                | What it does                                                                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `signatures:certLoad`                  | Load PFX + password; return opaque handle. Buffer-wraps password in ≤5 lines, drops JS string, transfers ownership to cert-store.     |
+| `signatures:certRelease`               | Idempotent zero + release. Renderer fires on modal close; app.before-quit fires for retained handles.                                 |
+| `signatures:applyVisual`               | Visual signature (placeholder or freeform). Appearance only; writes empty `/V <<>>` marker. No audit row.                             |
+| `signatures:applyPades`                | PAdES cryptographic signature (placeholder or freeform). Auto-release default true. Inserts audit row.                                |
+| `signatures:requestTimestamp`          | Standalone TSA request. Used internally by applyPades; also exposed for Settings "Test TSA URL".                                      |
+| `signatures:verify`                    | Re-hash byte-range; compare to audit row. Informational (NOT trust-chain validation).                                                 |
+| `signatures:listAudit`                 | List rows from `signature_audit_log` with optional filters (file hash, fingerprint, date range).                                      |
+| `annotations:addShape`                 | Author Square / Circle / Polygon / PolyLine / Line / FreeTextCallout. Returns `annot-add-shape` EditOperation.                        |
+| `annotations:setMeasureCalibration`    | Set per-document calibration (unit + scale).                                                                                          |
+| `annotations:getMeasureCalibration`    | Get current calibration or null.                                                                                                      |
 | **`fs:readBytesByHandle`** (Phase 4.1) | Renderer fetches validated document bytes by handle for pdf.js rendering. NEVER accepts a path; trust derives from the opaque handle. |
 
 See [`api-reference.md`](api-reference.md) for request/response shapes + error variants + renderer examples.
@@ -768,7 +771,7 @@ The 0.7.1 backlog-fix wave wired `husky@9` + `lint-staged@17` (both MIT, build/t
 - **`.husky/pre-commit`** runs `npx lint-staged` (per the `lint-staged` config in `package.json`: `eslint --fix --max-warnings 0` + `prettier --write` on staged `*.{ts,tsx}`), **then** a `tsc` safeguard (`npx tsc -p tsconfig.main.json --noEmit`).
 - **`.husky/pre-push`** runs the full three-tsconfig `npm run typecheck` + the full-repo `npm run lint` (mirrors the CI gate).
 
-**Why the pre-commit hook also runs `tsc` (the load-bearing safeguard).** `eslint --fix` for `@typescript-eslint/consistent-type-imports` aggressively collapses mixed value+type imports into `import type {}`. For modules that import a pdf-lib **class** and use it as a runtime value (e.g. `PDFDict`), that autofix goes **lint-GREEN but tsc-RED** (`TS1361: '…' cannot be used as a value because it was imported using 'import type'`). A lint-only hook would therefore *introduce* type breakage on commit. Running `tsc` after the autofix catches it. The pre-commit typecheck is scoped to `tsconfig.main.json` (fastest; pdf-lib is a main-only dep, so the hazard lives entirely there) to keep commits fast; the full three-tsconfig sweep is on pre-push.
+**Why the pre-commit hook also runs `tsc` (the load-bearing safeguard).** `eslint --fix` for `@typescript-eslint/consistent-type-imports` aggressively collapses mixed value+type imports into `import type {}`. For modules that import a pdf-lib **class** and use it as a runtime value (e.g. `PDFDict`), that autofix goes **lint-GREEN but tsc-RED** (`TS1361: '…' cannot be used as a value because it was imported using 'import type'`). A lint-only hook would therefore _introduce_ type breakage on commit. Running `tsc` after the autofix catches it. The pre-commit typecheck is scoped to `tsconfig.main.json` (fastest; pdf-lib is a main-only dep, so the hazard lives entirely there) to keep commits fast; the full three-tsconfig sweep is on pre-push.
 
 (If you do not have a git repo initialized, husky cannot bind `core.hooksPath` and the hooks are inert until `git init` + `npm install`. They are still correct — the logic was proven by running the exact hook commands directly.)
 
@@ -797,13 +800,13 @@ The Phase-7 telemetry tests are the privacy proof: `telemetry-record-event.test.
 
 **Historical:** Phase 7 close (Wave 29) ~1718 / 5; Phase 6 close (2026-05-27) ~1520 / 1527.
 
-| Suite | Test count | What's covered |
-|---|---|---|
-| `src/main` + `src/ipc` + `src/preload` (Vitest) | **~880** | Everything from Phase 1-5 (engine round-trips, all IPC handlers, db-bridge, replay golden bytes, atomic save, L-001, cert-store + PAdES + TSA + shape-annotations, **Phase 5 OCR engine + worker-pool + language-pack-manager + searchable-pdf-builder + ocr-text-layer + image-preprocess + ocr-confidence + pades-detect**) PLUS **Phase 6 export: engine (per-page pipeline + job lifecycle + cancel checkpoints), layout-extract (8-step pipeline incl. empty-page-returns-null + column X-clustering + heading MODE-bucketing + density-rejection), table-detect (5-step line-grid + fails-soft on borderless), image-extract (CTM stack tracking + MIN_AREA_PT2 skip), four writers (docx / xlsx-streaming / pptx Y-flip / image raster + multi-page-TIFF), export-shared, the 8 `export:*` handlers + `dialog:pickExportOutputPath`**. 2 Phase-6 tests currently failing (pptx Y-flip + image-extract CTM-restore; David Wave 25.1). |
-| `src/client` (Vitest) | **~370 pass / 5 pre-existing fail** | Phase 1-5 slices + selectors + history middleware + components + thunks PLUS **Phase 6 export-slice (modal step + draft + in-flight job + recent-jobs + last-chosen-format + format catalog, nullable + late-init throughout), export-selectors (incl. `selectResolvedQualityTier`), thunks-phase6 (listFormats / pickOutputPath / startExport format-discriminated dispatch / cancel / refresh / dismiss), export-modal (format-picker / quality-tier-picker / per-format-options / per-format-limitations-panel / running-step), exports-panel sidebar tab (job-row), status-bar export-progress widget**. 5 documented pre-existing failures (Wave 16 carry-over: annotation-summary-panel, pades-sign-modal ×2, signature-audit-panel, use-signature-canvas — jsdom-canvas + `getByText` ambiguity). |
-| `src/db` (Vitest) | **~290** | Phase 1-5 repos PLUS **Phase 6 `export_jobs` repo (insert / status transitions / list-with-filters / stats columns; schema v6) + 17 new `export.*` setting keys**. NO Phase 1-5 table touched. Requires better-sqlite3 ABI matching host Node (see [Common pitfalls → Node 24 vs Electron 30 ABI](#node-24-vs-electron-30-abi)). |
-| `tests/e2e` (Playwright Electron) | 1 smoke + 1 H-3-closure | Launches the app, asserts main window mounts, asserts the Phase 1+2+3+4+5+6 channels are attached on `window.pdfApi`. |
-| **Total** | **1520 / 1527 pass** + 2 e2e | Per-suite splits are approximate (the authoritative aggregate is the 1520/1527 from Diego's Wave 25 `npm test` run). |
+| Suite                                           | Test count                          | What's covered                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/main` + `src/ipc` + `src/preload` (Vitest) | **~880**                            | Everything from Phase 1-5 (engine round-trips, all IPC handlers, db-bridge, replay golden bytes, atomic save, L-001, cert-store + PAdES + TSA + shape-annotations, **Phase 5 OCR engine + worker-pool + language-pack-manager + searchable-pdf-builder + ocr-text-layer + image-preprocess + ocr-confidence + pades-detect**) PLUS **Phase 6 export: engine (per-page pipeline + job lifecycle + cancel checkpoints), layout-extract (8-step pipeline incl. empty-page-returns-null + column X-clustering + heading MODE-bucketing + density-rejection), table-detect (5-step line-grid + fails-soft on borderless), image-extract (CTM stack tracking + MIN_AREA_PT2 skip), four writers (docx / xlsx-streaming / pptx Y-flip / image raster + multi-page-TIFF), export-shared, the 8 `export:*` handlers + `dialog:pickExportOutputPath`**. 2 Phase-6 tests currently failing (pptx Y-flip + image-extract CTM-restore; David Wave 25.1). |
+| `src/client` (Vitest)                           | **~370 pass / 5 pre-existing fail** | Phase 1-5 slices + selectors + history middleware + components + thunks PLUS **Phase 6 export-slice (modal step + draft + in-flight job + recent-jobs + last-chosen-format + format catalog, nullable + late-init throughout), export-selectors (incl. `selectResolvedQualityTier`), thunks-phase6 (listFormats / pickOutputPath / startExport format-discriminated dispatch / cancel / refresh / dismiss), export-modal (format-picker / quality-tier-picker / per-format-options / per-format-limitations-panel / running-step), exports-panel sidebar tab (job-row), status-bar export-progress widget**. 5 documented pre-existing failures (Wave 16 carry-over: annotation-summary-panel, pades-sign-modal ×2, signature-audit-panel, use-signature-canvas — jsdom-canvas + `getByText` ambiguity).                                                                                                                                    |
+| `src/db` (Vitest)                               | **~290**                            | Phase 1-5 repos PLUS **Phase 6 `export_jobs` repo (insert / status transitions / list-with-filters / stats columns; schema v6) + 17 new `export.*` setting keys**. NO Phase 1-5 table touched. Requires better-sqlite3 ABI matching host Node (see [Common pitfalls → Node 24 vs Electron 30 ABI](#node-24-vs-electron-30-abi)).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `tests/e2e` (Playwright Electron)               | 1 smoke + 1 H-3-closure             | Launches the app, asserts main window mounts, asserts the Phase 1+2+3+4+5+6 channels are attached on `window.pdfApi`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Total**                                       | **1520 / 1527 pass** + 2 e2e        | Per-suite splits are approximate (the authoritative aggregate is the 1520/1527 from Diego's Wave 25 `npm test` run).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 **Phase 4 test gaps** (cited honestly):
 
@@ -861,6 +864,7 @@ Produces:
 - `pdfjs-dist/node_modules/@napi-rs/canvas-win32-x64-msvc/skia.win32-x64-msvc.node` (pre-existing pdfjs-dist transitive)
 
 Phase 5 size delta from Phase 4.2 (105 MB → 133 MB): +27 MB. Breakdown:
+
 - ~10 MB: bundled `eng.traineddata.gz` (extraResources)
 - ~10–12 MB: tesseract.js-core WASM blobs (5 variants: lstm, simd-lstm, relaxedsimd-lstm, simd, relaxedsimd) in `app.asar.unpacked/`
 - ~3 MB: `@napi-rs/canvas-win32-x64-msvc` Skia native binary
@@ -874,15 +878,15 @@ Code-signing is configured but **disabled by default** (no `WIN_CSC_LINK` env). 
 
 ## Testing strategy
 
-| Layer | Tool | Pattern |
-|---|---|---|
-| IPC handlers (main) | Vitest + injected fakes | Each handler is a pure function taking a `deps` object. Tests pass in-memory fakes for `readFile`, `showOpenDialog`, repos, etc. No real Electron, no real FS. |
-| Edit-replay engine | Vitest + golden bytes | `replay()` runs against fixture PDFs; tests assert structural properties (page count, widths, rotations) and golden bytes for byte-stable cases. |
-| Repos (db) | Vitest + in-memory SQLite | `connection.ts` accepts a `:memory:` path for tests; the same migrations run against an in-memory DB. Each test starts fresh. |
-| Slices / selectors (renderer) | Vitest + jsdom | RTK slices are pure reducers; tested by dispatching actions and asserting the next state. Selectors are tested for reference-equality on repeat calls (H-2 lesson). |
-| History middleware | Vitest + jsdom | Round-trip tests dispatch op → undo → assert state matches initial; raw vs compacted dispatch verified via byte assertions. |
-| Components (renderer) | Vitest + jsdom + @testing-library/react | Tests render the component with a wrapping `<Provider>` and assert on the accessible DOM. Mock `api` at the module boundary, not below. |
-| End-to-end | Playwright + `_electron.launch` | Boots a real Electron, drives it via Chromium devtools protocol, asserts on screenshots and selectors. Windows only. |
+| Layer                         | Tool                                    | Pattern                                                                                                                                                             |
+| ----------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| IPC handlers (main)           | Vitest + injected fakes                 | Each handler is a pure function taking a `deps` object. Tests pass in-memory fakes for `readFile`, `showOpenDialog`, repos, etc. No real Electron, no real FS.      |
+| Edit-replay engine            | Vitest + golden bytes                   | `replay()` runs against fixture PDFs; tests assert structural properties (page count, widths, rotations) and golden bytes for byte-stable cases.                    |
+| Repos (db)                    | Vitest + in-memory SQLite               | `connection.ts` accepts a `:memory:` path for tests; the same migrations run against an in-memory DB. Each test starts fresh.                                       |
+| Slices / selectors (renderer) | Vitest + jsdom                          | RTK slices are pure reducers; tested by dispatching actions and asserting the next state. Selectors are tested for reference-equality on repeat calls (H-2 lesson). |
+| History middleware            | Vitest + jsdom                          | Round-trip tests dispatch op → undo → assert state matches initial; raw vs compacted dispatch verified via byte assertions.                                         |
+| Components (renderer)         | Vitest + jsdom + @testing-library/react | Tests render the component with a wrapping `<Provider>` and assert on the accessible DOM. Mock `api` at the module boundary, not below.                             |
+| End-to-end                    | Playwright + `_electron.launch`         | Boots a real Electron, drives it via Chromium devtools protocol, asserts on screenshots and selectors. Windows only.                                                |
 
 **Key rules** (from [`conventions.md`](conventions.md) §8):
 
@@ -922,7 +926,9 @@ This is one of the two most common tasks. Here's the end-to-end walkthrough usin
 Edit [`src/ipc/contracts.ts`](../src/ipc/contracts.ts):
 
 ```ts
-export interface AppGetRuntimeInfoRequest { /* no args */ }
+export interface AppGetRuntimeInfoRequest {
+  /* no args */
+}
 export interface AppGetRuntimeInfoValue {
   uptime: number;
   memoryUsage: number;
@@ -997,19 +1003,27 @@ import { handleAppGetRuntimeInfo } from './app-get-runtime-info';
 
 describe('handleAppGetRuntimeInfo', () => {
   it('should return uptime and memory on success', () => {
-    const res = handleAppGetRuntimeInfo({}, {
-      getUptime: () => 1234,
-      getMemoryUsage: () => 567890,
-    });
+    const res = handleAppGetRuntimeInfo(
+      {},
+      {
+        getUptime: () => 1234,
+        getMemoryUsage: () => 567890,
+      },
+    );
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.value).toEqual({ uptime: 1234, memoryUsage: 567890 });
   });
 
   it('should return failed when getUptime throws', () => {
-    const res = handleAppGetRuntimeInfo({}, {
-      getUptime: () => { throw new Error('boom'); },
-      getMemoryUsage: () => 0,
-    });
+    const res = handleAppGetRuntimeInfo(
+      {},
+      {
+        getUptime: () => {
+          throw new Error('boom');
+        },
+        getMemoryUsage: () => 0,
+      },
+    );
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe('failed');
   });
@@ -1088,18 +1102,18 @@ This is the other most common task post-Phase 2. New op kinds extend the edit-re
 
 ### Touch-point checklist
 
-| # | File | Why | Owner |
-|---|---|---|---|
-| 1 | `docs/data-models.md` §7.1 | Add the new variant to the `EditOperation` discriminated union | Riley (data-models is frozen; flag for amendment via Marcus) |
-| 2 | `docs/data-models.md` §7.1.3 | Add forward + reverse inverse rows. The Wave 8.5 lesson: asymmetric inverse tables hide ship-blockers — both directions required. | Riley (frozen; amendment flag) |
-| 3 | `src/ipc/contracts.ts` | Add the variant to the `EditOperation` union (TypeScript mirror of data-models §7.1). If the variant requires a NEW IPC channel (e.g. `pdf:replaceText`), define the request/response types here. | David |
-| 4 | `src/main/pdf-ops/replay-engine.ts` | Add an `apply<Variant>(...)` handler that mutates the in-progress `PDFDocument`. Wire into the `applyOp` dispatcher's switch statement. | David |
-| 5 | `src/main/pdf-ops/replay-engine.test.ts` | Tests: (a) forward apply, (b) round-trip with delete-then-insert, (c) error path with `op_apply_failed`. Use width-tagged fixture PDFs for byte-stable assertions (pdf-lib's `useObjectStreams: true` compresses content streams, so byte-grep is unreliable). | David |
-| 6 | `src/client/state/slices/document-slice-apply.ts` | Add a renderer-side branch in `applyOperationToDocument`. Variants that DON'T mutate the PageModel (e.g. text-replace, image overlays) get an empty case with an explicit `// PRESENTATIONAL — main engine resolves at save` comment. | Riley |
-| 7 | `src/client/state/slices/document-inverses.ts` | Add an `inverseOf` branch. Both directions if the variant produces or consumes a `delete`/`insert` pair (image-insert variant inverse is `delete`; the inverse of THAT delete must round-trip back to `image-insert`, not generic `insert` — Wave 8.5 B-2 lesson). | Riley |
-| 8 | `src/client/state/middleware/history-middleware.ts` | If the new variant carries `Uint8Array` (image bytes), add a `compactImageOpForHistory`-equivalent compaction to keep the redux store under conventions §10's ban. The Wave 8.6 two-state model (raw on dispatch, compacted in storage) is the contract. | Riley |
-| 9 | Renderer UI affordance | Wire a toolbar button, menu item, shortcut, or modal that dispatches the new op via `applyEdit(...)`. Add to `use-app-shortcuts.ts` if it's a shortcut. | Riley |
-| 10 | Round-trip test | `src/client/state/slices/document-inverses.test.ts` — dispatch the op, dispatch its inverse, assert the next state matches the initial state. The Wave 8.5 lesson: image-bearing variants need an explicit byte-presence assertion on the inverse dispatch (not just shape equality). | Riley |
+| #   | File                                                | Why                                                                                                                                                                                                                                                                                   | Owner                                                        |
+| --- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| 1   | `docs/data-models.md` §7.1                          | Add the new variant to the `EditOperation` discriminated union                                                                                                                                                                                                                        | Riley (data-models is frozen; flag for amendment via Marcus) |
+| 2   | `docs/data-models.md` §7.1.3                        | Add forward + reverse inverse rows. The Wave 8.5 lesson: asymmetric inverse tables hide ship-blockers — both directions required.                                                                                                                                                     | Riley (frozen; amendment flag)                               |
+| 3   | `src/ipc/contracts.ts`                              | Add the variant to the `EditOperation` union (TypeScript mirror of data-models §7.1). If the variant requires a NEW IPC channel (e.g. `pdf:replaceText`), define the request/response types here.                                                                                     | David                                                        |
+| 4   | `src/main/pdf-ops/replay-engine.ts`                 | Add an `apply<Variant>(...)` handler that mutates the in-progress `PDFDocument`. Wire into the `applyOp` dispatcher's switch statement.                                                                                                                                               | David                                                        |
+| 5   | `src/main/pdf-ops/replay-engine.test.ts`            | Tests: (a) forward apply, (b) round-trip with delete-then-insert, (c) error path with `op_apply_failed`. Use width-tagged fixture PDFs for byte-stable assertions (pdf-lib's `useObjectStreams: true` compresses content streams, so byte-grep is unreliable).                        | David                                                        |
+| 6   | `src/client/state/slices/document-slice-apply.ts`   | Add a renderer-side branch in `applyOperationToDocument`. Variants that DON'T mutate the PageModel (e.g. text-replace, image overlays) get an empty case with an explicit `// PRESENTATIONAL — main engine resolves at save` comment.                                                 | Riley                                                        |
+| 7   | `src/client/state/slices/document-inverses.ts`      | Add an `inverseOf` branch. Both directions if the variant produces or consumes a `delete`/`insert` pair (image-insert variant inverse is `delete`; the inverse of THAT delete must round-trip back to `image-insert`, not generic `insert` — Wave 8.5 B-2 lesson).                    | Riley                                                        |
+| 8   | `src/client/state/middleware/history-middleware.ts` | If the new variant carries `Uint8Array` (image bytes), add a `compactImageOpForHistory`-equivalent compaction to keep the redux store under conventions §10's ban. The Wave 8.6 two-state model (raw on dispatch, compacted in storage) is the contract.                              | Riley                                                        |
+| 9   | Renderer UI affordance                              | Wire a toolbar button, menu item, shortcut, or modal that dispatches the new op via `applyEdit(...)`. Add to `use-app-shortcuts.ts` if it's a shortcut.                                                                                                                               | Riley                                                        |
+| 10  | Round-trip test                                     | `src/client/state/slices/document-inverses.test.ts` — dispatch the op, dispatch its inverse, assert the next state matches the initial state. The Wave 8.5 lesson: image-bearing variants need an explicit byte-presence assertion on the inverse dispatch (not just shape equality). | Riley                                                        |
 
 ### What's "presentational" vs "model-mutating"
 
@@ -1121,18 +1135,18 @@ Phase 3 ships six field types (text, checkbox, radio, dropdown, date, signature)
 
 ### Touch-point checklist
 
-| # | File | Why | Owner |
-|---|---|---|---|
-| 1 | [`docs/data-models.md` §8.1](data-models.md#8-phase-3-additions) | Extend the `FormFieldType` union (e.g. add `'listbox'`) and the `FormFieldValue` discriminated union if the new type carries a distinct value shape. | Riley (data-models frozen; flag for amendment via Marcus) |
-| 2 | [`docs/form-engine.md` §3.4](form-engine.md#34-createfield) | Document the create-path branch for the new type — high-level pdf-lib API vs manual PDFDict authorship. | Riley (form-engine frozen; flag for amendment via Marcus) |
-| 3 | `src/ipc/contracts.ts` | Mirror the data-models §8.1 union extension. The renderer gatekeeper at [`src/client/types/ipc-contract.ts`](../src/client/types/ipc-contract.ts) re-exports automatically; no manual edit needed there. | David |
-| 4 | `src/db/types.ts` | Mirror the same union extension. Per conventions §4.3 the db and IPC layers maintain structurally-identical types via the shared spec, not via a shared module (no deep cross-process imports). | Ravi |
-| 5 | [`src/main/pdf-ops/form-engine.ts`](../src/main/pdf-ops/form-engine.ts) | Add a `case '<type>':` branch in `createField`, `applyValueToField` (used by `fillForm`), and `extractFieldDefinition` (used by `detectForms`). For types that map to a pdf-lib high-level construct (text / checkbox / radio / dropdown), wire to the existing helper. For types that need a manual PDFDict (like `signature`), extend [`field-dict-authoring.ts`](../src/main/pdf-ops/field-dict-authoring.ts) with a `createXxxPlaceholder()` function. | David |
-| 6 | `src/main/pdf-ops/form-engine.test.ts` | Tests: (a) create round-trip — author the field, save, reload, assert it's detected with the right `FormFieldType`, (b) fill round-trip — fill a value, save, reload, assert `/V` carries the expected representation, (c) value-validation — assert the right `'field_type_mismatch'` / `'invalid_field_definition'` errors for malformed inputs. | David |
-| 7 | `src/client/state/slices/forms-slice.ts` | If the new type carries renderer-side transient state distinct from existing types (e.g. a multi-select listbox needs `selectedOptions: string[]` instead of `selectedValue: string`), extend the slice's `values` shape. Most variants map cleanly to existing FormFieldValue shapes and don't need slice changes. | Riley |
-| 8 | `src/client/components/form-designer/` and `src/client/components/form-fill-overlay/` | UI affordances: a new entry in the field-type selector (designer mode), a new render branch in the fill overlay, inspector property rows for any type-specific config. | Riley |
-| 9 | [`docs/user-guide.md`](user-guide.md) | Add the new type to the "Field types supported" table under [Working with forms](user-guide.md#field-types-supported). | Nathan |
-| 10 | [`docs/api-reference.md`](api-reference.md) | Update the `FormFieldDefinition` referenced under `forms:designAdd` if the union changed at the wire surface. | Nathan |
+| #   | File                                                                                  | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Owner                                                     |
+| --- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| 1   | [`docs/data-models.md` §8.1](data-models.md#8-phase-3-additions)                      | Extend the `FormFieldType` union (e.g. add `'listbox'`) and the `FormFieldValue` discriminated union if the new type carries a distinct value shape.                                                                                                                                                                                                                                                                                                       | Riley (data-models frozen; flag for amendment via Marcus) |
+| 2   | [`docs/form-engine.md` §3.4](form-engine.md#34-createfield)                           | Document the create-path branch for the new type — high-level pdf-lib API vs manual PDFDict authorship.                                                                                                                                                                                                                                                                                                                                                    | Riley (form-engine frozen; flag for amendment via Marcus) |
+| 3   | `src/ipc/contracts.ts`                                                                | Mirror the data-models §8.1 union extension. The renderer gatekeeper at [`src/client/types/ipc-contract.ts`](../src/client/types/ipc-contract.ts) re-exports automatically; no manual edit needed there.                                                                                                                                                                                                                                                   | David                                                     |
+| 4   | `src/db/types.ts`                                                                     | Mirror the same union extension. Per conventions §4.3 the db and IPC layers maintain structurally-identical types via the shared spec, not via a shared module (no deep cross-process imports).                                                                                                                                                                                                                                                            | Ravi                                                      |
+| 5   | [`src/main/pdf-ops/form-engine.ts`](../src/main/pdf-ops/form-engine.ts)               | Add a `case '<type>':` branch in `createField`, `applyValueToField` (used by `fillForm`), and `extractFieldDefinition` (used by `detectForms`). For types that map to a pdf-lib high-level construct (text / checkbox / radio / dropdown), wire to the existing helper. For types that need a manual PDFDict (like `signature`), extend [`field-dict-authoring.ts`](../src/main/pdf-ops/field-dict-authoring.ts) with a `createXxxPlaceholder()` function. | David                                                     |
+| 6   | `src/main/pdf-ops/form-engine.test.ts`                                                | Tests: (a) create round-trip — author the field, save, reload, assert it's detected with the right `FormFieldType`, (b) fill round-trip — fill a value, save, reload, assert `/V` carries the expected representation, (c) value-validation — assert the right `'field_type_mismatch'` / `'invalid_field_definition'` errors for malformed inputs.                                                                                                         | David                                                     |
+| 7   | `src/client/state/slices/forms-slice.ts`                                              | If the new type carries renderer-side transient state distinct from existing types (e.g. a multi-select listbox needs `selectedOptions: string[]` instead of `selectedValue: string`), extend the slice's `values` shape. Most variants map cleanly to existing FormFieldValue shapes and don't need slice changes.                                                                                                                                        | Riley                                                     |
+| 8   | `src/client/components/form-designer/` and `src/client/components/form-fill-overlay/` | UI affordances: a new entry in the field-type selector (designer mode), a new render branch in the fill overlay, inspector property rows for any type-specific config.                                                                                                                                                                                                                                                                                     | Riley                                                     |
+| 9   | [`docs/user-guide.md`](user-guide.md)                                                 | Add the new type to the "Field types supported" table under [Working with forms](user-guide.md#field-types-supported).                                                                                                                                                                                                                                                                                                                                     | Nathan                                                    |
+| 10  | [`docs/api-reference.md`](api-reference.md)                                           | Update the `FormFieldDefinition` referenced under `forms:designAdd` if the union changed at the wire surface.                                                                                                                                                                                                                                                                                                                                              | Nathan                                                    |
 
 ### What's "high-level pdf-lib API" vs "manual PDFDict"
 
@@ -1172,7 +1186,7 @@ If your selector takes a runtime argument (e.g. "annotations for page N"), **do 
 // useAppSelector(selectAnnotationsForPage(props.index)) re-runs every render
 export const selectAnnotationsForPage = (pageIndex: number) =>
   createSelector([selectAnnotations], (annotations) =>
-    annotations.filter(a => a.pageIndex === pageIndex)
+    annotations.filter((a) => a.pageIndex === pageIndex),
   );
 ```
 
@@ -1185,7 +1199,7 @@ const selectPageIndexArg = (_state: RootState, pageIndex: number) => pageIndex;
 export const selectAnnotationsForPage = createSelector(
   [selectAnnotations, selectPageIndexArg],
   (annotations, pageIndex): AnnotationModel[] =>
-    annotations.filter(a => a.pageIndex === pageIndex),
+    annotations.filter((a) => a.pageIndex === pageIndex),
 );
 
 // Consumer:
@@ -1202,33 +1216,33 @@ Cross-link: full request/response details with error variants live in [`api-refe
 
 ### Phase 2 channels
 
-| Channel | Direction | Request | Response | Status |
-|---|---|---|---|---|
-| `fs:applyEditOps` | R → M | `{ handle, ops, annotations, outputPath?, destinationToken?, engine? }` | `Result<{ bytesWritten, newFileHash, annotationRefAssignments, warnings }, FsApplyEditOpsError>` | LIVE — replay-engine entry point |
-| `pdf:embedImage` | R → M | `{ handle, image: { bytes, mimeType, width, height }, placement }` | `Result<{ op, contentHash, warnings }, PdfEmbedImageError>` | LIVE — PNG/JPEG/TIFF (first page); content-hash dedup |
-| `pdf:replaceText` | R → M | `{ handle, pageIndex, objectId, newText }` | `Result<{ op, willClip, overflowPt? }, PdfReplaceTextError>` | LIVE — replace-only; `clipped` + `missing_glyph` failure modes |
-| `pdf:identifyTextSpan` | R → M | `{ handle, pageIndex, x, y }` | `Result<{ objectId, runBoundingRect, currentText, font }, PdfIdentifyTextSpanError>` | LIVE channel; scanner returns `no_text_at_point`; real content-stream walker is Phase 4 absorb |
-| `pdf:print` | R → M | `{ handle, ops, annotations, printerName?, pageRange?, options? }` | `Result<{ jobDispatched, engineUsed, warnings }, PdfPrintError>` | LIVE — Electron `webContents.print()` dispatch |
-| `pdf:export` | R → M | `{ handle, preference: 'auto' \| 'pdf-lib' \| 'chromium', flattenForms? }` | `Result<{ engine, reason, forcedBy, warnings, outputBytes }, PdfExportError>` | LIVE — both engines; Phase 3 added `flattenForms?: boolean` additive field |
-| `bookmarks:listTree` | R → M | `{ fileHash }` | `Result<{ tree: BookmarkNode[] }, BookmarksListTreeError>` | LIVE |
-| `bookmarks:move` | R → M | `{ id, newParentId, newSortOrder }` | `Result<{}, BookmarksMoveError>` | LIVE |
-| `bookmarks:rename` | R → M | `{ id, title }` | `Result<{}, BookmarksRenameError>` | LIVE |
+| Channel                | Direction | Request                                                                    | Response                                                                                         | Status                                                                                         |
+| ---------------------- | --------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `fs:applyEditOps`      | R → M     | `{ handle, ops, annotations, outputPath?, destinationToken?, engine? }`    | `Result<{ bytesWritten, newFileHash, annotationRefAssignments, warnings }, FsApplyEditOpsError>` | LIVE — replay-engine entry point                                                               |
+| `pdf:embedImage`       | R → M     | `{ handle, image: { bytes, mimeType, width, height }, placement }`         | `Result<{ op, contentHash, warnings }, PdfEmbedImageError>`                                      | LIVE — PNG/JPEG/TIFF (first page); content-hash dedup                                          |
+| `pdf:replaceText`      | R → M     | `{ handle, pageIndex, objectId, newText }`                                 | `Result<{ op, willClip, overflowPt? }, PdfReplaceTextError>`                                     | LIVE — replace-only; `clipped` + `missing_glyph` failure modes                                 |
+| `pdf:identifyTextSpan` | R → M     | `{ handle, pageIndex, x, y }`                                              | `Result<{ objectId, runBoundingRect, currentText, font }, PdfIdentifyTextSpanError>`             | LIVE channel; scanner returns `no_text_at_point`; real content-stream walker is Phase 4 absorb |
+| `pdf:print`            | R → M     | `{ handle, ops, annotations, printerName?, pageRange?, options? }`         | `Result<{ jobDispatched, engineUsed, warnings }, PdfPrintError>`                                 | LIVE — Electron `webContents.print()` dispatch                                                 |
+| `pdf:export`           | R → M     | `{ handle, preference: 'auto' \| 'pdf-lib' \| 'chromium', flattenForms? }` | `Result<{ engine, reason, forcedBy, warnings, outputBytes }, PdfExportError>`                    | LIVE — both engines; Phase 3 added `flattenForms?: boolean` additive field                     |
+| `bookmarks:listTree`   | R → M     | `{ fileHash }`                                                             | `Result<{ tree: BookmarkNode[] }, BookmarksListTreeError>`                                       | LIVE                                                                                           |
+| `bookmarks:move`       | R → M     | `{ id, newParentId, newSortOrder }`                                        | `Result<{}, BookmarksMoveError>`                                                                 | LIVE                                                                                           |
+| `bookmarks:rename`     | R → M     | `{ id, title }`                                                            | `Result<{}, BookmarksRenameError>`                                                               | LIVE                                                                                           |
 
 ### Phase 3 channels
 
-| Channel | Direction | Request | Response | Status |
-|---|---|---|---|---|
-| `forms:detect` | R → M | `{ handle }` | `Result<{ fields, hasAcroForm, hasXfaForm, hasJavaScriptActions, warnings }, FormsDetectError>` | LIVE |
-| `forms:fill` | R → M | `{ handle, fieldName, value }` | `Result<{ fieldName, normalizedValue, warnings }, FormsFillError>` | LIVE — validates value; commit boundary produces the EditOperation |
-| `forms:flatten` | R → M | `{ handle }` | `Result<{ op, flattenedFieldCount, warnings }, FormsFlattenError>` | LIVE — returns `form-flatten` EditOperation |
-| `forms:designAdd` | R → M | `{ handle, fieldDefinition }` | `Result<{ op, normalizedFieldDefinition, warnings }, FormsDesignAddError>` | LIVE — clamps rect to page bounds |
-| `forms:designRemove` | R → M | `{ handle, fieldName }` | `Result<{ op, warnings }, FormsDesignRemoveError>` | LIVE — op carries full `before` for inverse |
-| `forms:listTemplates` | R → M | `{}` | `Result<{ items: FormTemplateListItem[] }, FormsListTemplatesError>` | LIVE — summary only (id, name, fieldCount, dates) |
-| `forms:saveTemplate` | R → M | `{ handle, name, fields, columnMappings? }` | `Result<{ id, warnings }, FormsSaveTemplateError>` | LIVE — `name_in_use` on duplicate |
-| `forms:loadTemplate` | R → M | `{ templateId }` | `Result<{ id, name, fields, lastColumnMappings }, FormsLoadTemplateError>` | LIVE |
-| `forms:runMailMerge` | R → M | `{ job: MailMergeJob }` | `Result<{ jobId, outputPath, rowsWritten, totalRows, wasCancelled, warnings }, FormsRunMailMergeError>` | LIVE — streams `mail-merge:progress` |
-| `forms:runMailMerge:cancel` | R → M | `{ jobId }` | `Result<{}, 'job_not_found'>` | LIVE — flips cancelRequested flag |
-| `mail-merge:progress` | M → R (event) | — | `{ jobId, phase, currentRow, totalRows, percent, latestWarning? }` | LIVE — subscribe via `window.pdfApi.events.onMailMergeProgress(h)` |
+| Channel                     | Direction     | Request                                     | Response                                                                                                | Status                                                             |
+| --------------------------- | ------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `forms:detect`              | R → M         | `{ handle }`                                | `Result<{ fields, hasAcroForm, hasXfaForm, hasJavaScriptActions, warnings }, FormsDetectError>`         | LIVE                                                               |
+| `forms:fill`                | R → M         | `{ handle, fieldName, value }`              | `Result<{ fieldName, normalizedValue, warnings }, FormsFillError>`                                      | LIVE — validates value; commit boundary produces the EditOperation |
+| `forms:flatten`             | R → M         | `{ handle }`                                | `Result<{ op, flattenedFieldCount, warnings }, FormsFlattenError>`                                      | LIVE — returns `form-flatten` EditOperation                        |
+| `forms:designAdd`           | R → M         | `{ handle, fieldDefinition }`               | `Result<{ op, normalizedFieldDefinition, warnings }, FormsDesignAddError>`                              | LIVE — clamps rect to page bounds                                  |
+| `forms:designRemove`        | R → M         | `{ handle, fieldName }`                     | `Result<{ op, warnings }, FormsDesignRemoveError>`                                                      | LIVE — op carries full `before` for inverse                        |
+| `forms:listTemplates`       | R → M         | `{}`                                        | `Result<{ items: FormTemplateListItem[] }, FormsListTemplatesError>`                                    | LIVE — summary only (id, name, fieldCount, dates)                  |
+| `forms:saveTemplate`        | R → M         | `{ handle, name, fields, columnMappings? }` | `Result<{ id, warnings }, FormsSaveTemplateError>`                                                      | LIVE — `name_in_use` on duplicate                                  |
+| `forms:loadTemplate`        | R → M         | `{ templateId }`                            | `Result<{ id, name, fields, lastColumnMappings }, FormsLoadTemplateError>`                              | LIVE                                                               |
+| `forms:runMailMerge`        | R → M         | `{ job: MailMergeJob }`                     | `Result<{ jobId, outputPath, rowsWritten, totalRows, wasCancelled, warnings }, FormsRunMailMergeError>` | LIVE — streams `mail-merge:progress`                               |
+| `forms:runMailMerge:cancel` | R → M         | `{ jobId }`                                 | `Result<{}, 'job_not_found'>`                                                                           | LIVE — flips cancelRequested flag                                  |
+| `mail-merge:progress`       | M → R (event) | —                                           | `{ jobId, phase, currentRow, totalRows, percent, latestWarning? }`                                      | LIVE — subscribe via `window.pdfApi.events.onMailMergeProgress(h)` |
 
 **`MailMergeJob` includes the Phase 3.1 (Wave 13.5) `flattenForms?: boolean` field** — when `true`, each per-row fill output is `form.flatten()`-ed before the atomic write, producing non-interactive PDFs. Renderer-side this is the wizard step 4 "Flatten forms in output" checkbox.
 
@@ -1236,54 +1250,54 @@ Cross-link: full request/response details with error variants live in [`api-refe
 
 Phase 4 adds 10 IPC channels under two new namespaces plus `fs:readBytesByHandle` (Phase 4.1). All channels are LIVE in 0.4.2 end-to-end after the Phase 4.1 B-17.1 closure. Full contract types at [`api-contracts.md §14`](api-contracts.md) (Phase 4) and [`api-contracts.md §15`](api-contracts.md) (Phase 4.1).
 
-| Channel | Direction | Request | Response | Status |
-|---|---|---|---|---|
-| `signatures:certLoad` | R → M | `{ pfxBytes, password }` | `Result<{ handle, subjectCN, issuerCN, notBefore, notAfter, fingerprint, isExpired }, SignaturesCertLoadError>` | LIVE — Buffer-wraps password ≤5 lines; zero-on-finally |
-| `signatures:certRelease` | R → M | `{ handle }` | `Result<{ released }, 'invalid_payload'>` | LIVE — idempotent |
-| `signatures:applyVisual` | R → M | `{ handle, placement, appearance }` | `Result<{ op, warnings }, SignaturesApplyVisualError>` | LIVE — placeholder OR freeform |
-| `signatures:applyPades` | R → M | `{ handle, placement, certHandle, appearance, tsaUrl, reason?, location?, placeholderSize?, autoRelease? }` | `Result<{ op, auditLogRowId, signerSubjectCN, certFingerprint, signedAt, tsaResponseStatus, warnings }, SignaturesApplyPadesError>` | LIVE end-to-end (B-17.1 closed) — `node-signpdf` primary; manual fallback via `signatures.padesEngine='manual'` |
-| `signatures:requestTimestamp` | R → M | `{ tsaUrl, hash, timeoutMs? }` | `Result<{ tsrBytes, tsTokenBytes, genTime, serialNumber }, SignaturesRequestTimestampError>` | LIVE — hand-rolled DER over node:https |
-| `signatures:verify` | R → M | `{ handle, auditLogRowId }` | `Result<{ valid, tamperedSinceSign, certInfo, tsaInfo }, SignaturesVerifyError>` | LIVE — informational; NOT trust-chain validation |
-| `signatures:listAudit` | R → M | `{ fileHash?, signedByFingerprint?, since?, until?, limit?, offset? }` | `Result<{ items: SignatureAuditItem[], total }, SignaturesListAuditError>` | LIVE — reads `signature_audit_log` (schema v4) |
-| `annotations:addShape` | R → M | `{ handle, annotation: ShapeAnnotationModel }` | `Result<{ op, warnings }, AnnotationsAddShapeError>` | LIVE — covers all 7 subtypes (Square/Circle/Polygon/PolyLine/Line/FreeTextCallout + Line/PolyLine with /Measure) |
-| `annotations:setMeasureCalibration` | R → M | `{ handle, calibration: { unit, customUnitLabel?, scale } }` | `Result<{}, AnnotationsSetMeasureCalibrationError>` | LIVE — per-doc in-memory store |
-| `annotations:getMeasureCalibration` | R → M | `{ handle }` | `Result<{ calibration: MeasureCalibration \| null }, 'handle_not_found'>` | LIVE |
-| **`fs:readBytesByHandle`** | R → M | `{ handle: DocumentHandle }` | `Result<{ bytes: Uint8Array }, FsReadBytesByHandleError>` | LIVE (Phase 4.1) — never accepts a path; renderer cannot escalate to disk |
+| Channel                             | Direction | Request                                                                                                     | Response                                                                                                                            | Status                                                                                                           |
+| ----------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `signatures:certLoad`               | R → M     | `{ pfxBytes, password }`                                                                                    | `Result<{ handle, subjectCN, issuerCN, notBefore, notAfter, fingerprint, isExpired }, SignaturesCertLoadError>`                     | LIVE — Buffer-wraps password ≤5 lines; zero-on-finally                                                           |
+| `signatures:certRelease`            | R → M     | `{ handle }`                                                                                                | `Result<{ released }, 'invalid_payload'>`                                                                                           | LIVE — idempotent                                                                                                |
+| `signatures:applyVisual`            | R → M     | `{ handle, placement, appearance }`                                                                         | `Result<{ op, warnings }, SignaturesApplyVisualError>`                                                                              | LIVE — placeholder OR freeform                                                                                   |
+| `signatures:applyPades`             | R → M     | `{ handle, placement, certHandle, appearance, tsaUrl, reason?, location?, placeholderSize?, autoRelease? }` | `Result<{ op, auditLogRowId, signerSubjectCN, certFingerprint, signedAt, tsaResponseStatus, warnings }, SignaturesApplyPadesError>` | LIVE end-to-end (B-17.1 closed) — `node-signpdf` primary; manual fallback via `signatures.padesEngine='manual'`  |
+| `signatures:requestTimestamp`       | R → M     | `{ tsaUrl, hash, timeoutMs? }`                                                                              | `Result<{ tsrBytes, tsTokenBytes, genTime, serialNumber }, SignaturesRequestTimestampError>`                                        | LIVE — hand-rolled DER over node:https                                                                           |
+| `signatures:verify`                 | R → M     | `{ handle, auditLogRowId }`                                                                                 | `Result<{ valid, tamperedSinceSign, certInfo, tsaInfo }, SignaturesVerifyError>`                                                    | LIVE — informational; NOT trust-chain validation                                                                 |
+| `signatures:listAudit`              | R → M     | `{ fileHash?, signedByFingerprint?, since?, until?, limit?, offset? }`                                      | `Result<{ items: SignatureAuditItem[], total }, SignaturesListAuditError>`                                                          | LIVE — reads `signature_audit_log` (schema v4)                                                                   |
+| `annotations:addShape`              | R → M     | `{ handle, annotation: ShapeAnnotationModel }`                                                              | `Result<{ op, warnings }, AnnotationsAddShapeError>`                                                                                | LIVE — covers all 7 subtypes (Square/Circle/Polygon/PolyLine/Line/FreeTextCallout + Line/PolyLine with /Measure) |
+| `annotations:setMeasureCalibration` | R → M     | `{ handle, calibration: { unit, customUnitLabel?, scale } }`                                                | `Result<{}, AnnotationsSetMeasureCalibrationError>`                                                                                 | LIVE — per-doc in-memory store                                                                                   |
+| `annotations:getMeasureCalibration` | R → M     | `{ handle }`                                                                                                | `Result<{ calibration: MeasureCalibration \| null }, 'handle_not_found'>`                                                           | LIVE                                                                                                             |
+| **`fs:readBytesByHandle`**          | R → M     | `{ handle: DocumentHandle }`                                                                                | `Result<{ bytes: Uint8Array }, FsReadBytesByHandleError>`                                                                           | LIVE (Phase 4.1) — never accepts a path; renderer cannot escalate to disk                                        |
 
 ### Phase 5 channels — `ocr:*` + `scan:*`
 
 Phase 5 adds 9 IPC channels under two new namespaces plus 2 event streams. All `ocr:*` channels are LIVE end-to-end in 0.5.0; `scan:*` returns `not_implemented_phase_5_1`. Full contract types at [`api-contracts.md §16`](api-contracts.md).
 
-| Channel | Direction | Request | Response | Status |
-|---|---|---|---|---|
-| `ocr:detectLanguages` | R → M | `{}` | `Result<{ installed: LanguagePack[]; downloadable: LanguagePackCatalogEntry[]; defaultLang: string }, OcrDetectLanguagesError>` | LIVE |
-| `ocr:runOnPage` | R → M | `{ handle, pageIndex, langs, preprocess, invalidatesSignaturesConfirmed? }` | `Result<{ pageResult, durationMs }, OcrRunOnPageError>` | LIVE — short-running; no progress events |
-| `ocr:runOnDocument` | R → M | `{ handle, pageRange, langs, preprocess, invalidatesSignaturesConfirmed? }` | `Result<{ jobId, summary, op }, OcrRunOnDocumentError>` | LIVE — streams `ocr:progress` |
-| `ocr:cancelJob` | R → M | `{ jobId }` | `Result<{ cancelled, pagesCompleted }, OcrCancelJobError>` | LIVE — graceful (between pages); idempotent |
-| `ocr:listJobs` | R → M | `{ filters?, limit?, offset? }` | `Result<{ jobs, total }, 'invalid_payload'>` | LIVE |
-| `ocr:languagePackDownload` | R → M | `{ lang }` | `Result<{ pack }, OcrLanguagePackDownloadError>` | LIVE — SHA-256 verified; streams `ocr:languagePackDownload:progress`. **v0.5.0 ships English-only; non-English rows fail with `pack_integrity_failed` until Phase 5.1.x catalog-builder lands.** |
-| `ocr:languagePackRemove` | R → M | `{ lang }` | `Result<{ removed }, OcrLanguagePackRemoveError>` | LIVE — refuses to remove bundled `eng` (`cannot_remove_bundled`) |
-| `scan:listDevices` | R → M | `{}` | `Result<never, 'not_implemented_phase_5_1'>` | STUB — Phase 5.1 |
-| `scan:acquire` | R → M | `{ deviceId?, resolution?, colorMode? }` | `Result<never, 'not_implemented_phase_5_1'>` | STUB — Phase 5.1 |
-| `ocr:progress` | M → R (event) | — | `OcrProgressEvent` — `{ jobId, phase, ... }` | LIVE — subscribe via `window.pdfApi.ocr.onProgress(h)` |
-| `ocr:languagePackDownload:progress` | M → R (event) | — | `OcrLanguagePackDownloadProgressEvent` | LIVE — subscribe via `window.pdfApi.ocr.onLanguagePackDownloadProgress(h)` |
+| Channel                             | Direction     | Request                                                                     | Response                                                                                                                        | Status                                                                                                                                                                                           |
+| ----------------------------------- | ------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ocr:detectLanguages`               | R → M         | `{}`                                                                        | `Result<{ installed: LanguagePack[]; downloadable: LanguagePackCatalogEntry[]; defaultLang: string }, OcrDetectLanguagesError>` | LIVE                                                                                                                                                                                             |
+| `ocr:runOnPage`                     | R → M         | `{ handle, pageIndex, langs, preprocess, invalidatesSignaturesConfirmed? }` | `Result<{ pageResult, durationMs }, OcrRunOnPageError>`                                                                         | LIVE — short-running; no progress events                                                                                                                                                         |
+| `ocr:runOnDocument`                 | R → M         | `{ handle, pageRange, langs, preprocess, invalidatesSignaturesConfirmed? }` | `Result<{ jobId, summary, op }, OcrRunOnDocumentError>`                                                                         | LIVE — streams `ocr:progress`                                                                                                                                                                    |
+| `ocr:cancelJob`                     | R → M         | `{ jobId }`                                                                 | `Result<{ cancelled, pagesCompleted }, OcrCancelJobError>`                                                                      | LIVE — graceful (between pages); idempotent                                                                                                                                                      |
+| `ocr:listJobs`                      | R → M         | `{ filters?, limit?, offset? }`                                             | `Result<{ jobs, total }, 'invalid_payload'>`                                                                                    | LIVE                                                                                                                                                                                             |
+| `ocr:languagePackDownload`          | R → M         | `{ lang }`                                                                  | `Result<{ pack }, OcrLanguagePackDownloadError>`                                                                                | LIVE — SHA-256 verified; streams `ocr:languagePackDownload:progress`. **v0.5.0 ships English-only; non-English rows fail with `pack_integrity_failed` until Phase 5.1.x catalog-builder lands.** |
+| `ocr:languagePackRemove`            | R → M         | `{ lang }`                                                                  | `Result<{ removed }, OcrLanguagePackRemoveError>`                                                                               | LIVE — refuses to remove bundled `eng` (`cannot_remove_bundled`)                                                                                                                                 |
+| `scan:listDevices`                  | R → M         | `{}`                                                                        | `Result<never, 'not_implemented_phase_5_1'>`                                                                                    | STUB — Phase 5.1                                                                                                                                                                                 |
+| `scan:acquire`                      | R → M         | `{ deviceId?, resolution?, colorMode? }`                                    | `Result<never, 'not_implemented_phase_5_1'>`                                                                                    | STUB — Phase 5.1                                                                                                                                                                                 |
+| `ocr:progress`                      | M → R (event) | —                                                                           | `OcrProgressEvent` — `{ jobId, phase, ... }`                                                                                    | LIVE — subscribe via `window.pdfApi.ocr.onProgress(h)`                                                                                                                                           |
+| `ocr:languagePackDownload:progress` | M → R (event) | —                                                                           | `OcrLanguagePackDownloadProgressEvent`                                                                                          | LIVE — subscribe via `window.pdfApi.ocr.onLanguagePackDownloadProgress(h)`                                                                                                                       |
 
 **Phase 5 setting keys added in schema v5** (see [`data-models.md §10`](data-models.md) and [`src/db/types.ts:381`](../src/db/types.ts) `SettingKey`):
 
 ```ts
 type SettingKey =
   // ...P1+P2+P3+P4 keys...
-  | 'ocr.defaultLang'                       // string; default 'eng'
-  | 'ocr.lowConfidenceThreshold'            // number 0..100; default 60 (P5-L-6)
-  | 'ocr.rasterDpi'                         // number 72..600; default 300
-  | 'ocr.maxConcurrentLanguages'            // number 1..8; default 4 (LRU eviction)
-  | 'ocr.workerWatchdogSec'                 // number 10..600; default 60 (per-page timeout)
-  | 'ocr.preprocess.deskew'                 // boolean; default true
-  | 'ocr.preprocess.denoise'                // boolean; default false
-  | 'ocr.preprocess.contrastBoost'          // boolean; default false
-  | 'ocr.denoise.kernel'                    // number 3..9 (odd); default 3
-  | 'ocr.showConfidenceOverlayByDefault'    // boolean; default false
-  | 'ocr.confirmInvalidateSignaturesOnce';  // boolean; default false (per-session only; see conventions §16.5)
+  | 'ocr.defaultLang' // string; default 'eng'
+  | 'ocr.lowConfidenceThreshold' // number 0..100; default 60 (P5-L-6)
+  | 'ocr.rasterDpi' // number 72..600; default 300
+  | 'ocr.maxConcurrentLanguages' // number 1..8; default 4 (LRU eviction)
+  | 'ocr.workerWatchdogSec' // number 10..600; default 60 (per-page timeout)
+  | 'ocr.preprocess.deskew' // boolean; default true
+  | 'ocr.preprocess.denoise' // boolean; default false
+  | 'ocr.preprocess.contrastBoost' // boolean; default false
+  | 'ocr.denoise.kernel' // number 3..9 (odd); default 3
+  | 'ocr.showConfidenceOverlayByDefault' // boolean; default false
+  | 'ocr.confirmInvalidateSignaturesOnce'; // boolean; default false (per-session only; see conventions §16.5)
 ```
 
 **New EditOperation variants** in Phase 5 (mirrored across `data-models.md §10.3` + `src/ipc/contracts.ts`):
@@ -1297,17 +1311,17 @@ Phase 1–4 channels remain unchanged. See [`api-reference.md`](api-reference.md
 
 Phase 6 adds 8 new IPC channels under the new `export:*` namespace plus 1 dialog channel and 1 event stream. Full contract types at [`api-contracts.md §17`](api-contracts.md#17-phase-6-additions-2026-05-27-riley).
 
-| Channel | Direction | Request | Response | Status |
-|---|---|---|---|---|
-| `export:toDocx` | R → M | `{ handle, pageRange, qualityTier, includeAnnotations, pageSize, outputPath }` | `Result<{ jobId, summary: ExportJobSummary }, ExportToDocxError>` | **LIVE engine; LIVE-pending source-loader wire** — engine runs end-to-end against synthetic data; production `createProdSourceLoader` is a typed-throwing stub (Julian M-25.4; David Wave 25.1 wires) |
-| `export:toXlsx` | R → M | `{ handle, pageRange, qualityTier, includeAnnotations, outputPath }` | `Result<{ jobId, summary }, ExportToXlsxError>` | **LIVE end-to-end** — Diego Wave 25 packaged-binary evidence at `release/wave-25-v060-xlsx-output.xlsx` (7097 bytes, ZIP signature 504b0304, 2 sheets readable via exceljs) |
-| `export:toPptx` | R → M | `{ handle, pageRange, qualityTier, includeAnnotations, outputPath }` | `Result<{ jobId, summary }, ExportToPptxError>` | LIVE engine; LIVE-pending source-loader wire (same gap as docx) |
-| `export:toImages` | R → M | `{ handle, pageRange, format: 'png'\|'jpeg'\|'tiff', dpi, jpegQuality?, multiPageTiff?, includeAnnotations, outputPath }` | `Result<{ jobId, summary, outputPaths }, ExportToImagesError>` | LIVE engine; LIVE-pending source-loader wire (same gap) |
-| `export:cancelJob` | R → M | `{ jobId }` | `Result<{ cancelled, pagesCompleted }, ExportCancelJobError>` | LIVE — graceful (between per-page steps); idempotent; partial output unlinked via atomic `.export-temp` cleanup |
-| `export:listJobs` | R → M | `{ filters?, limit?, offset? }` | `Result<{ jobs: ExportJobRowDto[], total }, 'invalid_payload'>` | LIVE — feeds Exports sidebar tab |
-| `export:listFormats` | R → M | `{}` | `Result<{ formats: ExportFormatDescriptor[] }, 'never'>` | LIVE — static catalog (no DB read); 6 entries (docx / xlsx / pptx / png / jpeg / tiff) |
-| `dialog:pickExportOutputPath` | R → M | `{ defaultBasename, format }` | `Result<{ outputPath: string \| null }, 'invalid_payload'>` | LIVE — Electron native save-as; default extension derived from format |
-| `export:progress` | M → R (event) | — | `ExportProgressEvent` — `{ jobId, format, phase, ... }` | LIVE — phases: `starting` / `extracting-text` / `detecting-tables` / `extracting-images` / `rasterizing` (image only) / `writing-output` / `completed` / `cancelled` / `failed`. Subscribe via `window.pdfApi.export.onProgress(h)` |
+| Channel                       | Direction     | Request                                                                                                                   | Response                                                          | Status                                                                                                                                                                                                                              |
+| ----------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `export:toDocx`               | R → M         | `{ handle, pageRange, qualityTier, includeAnnotations, pageSize, outputPath }`                                            | `Result<{ jobId, summary: ExportJobSummary }, ExportToDocxError>` | **LIVE engine; LIVE-pending source-loader wire** — engine runs end-to-end against synthetic data; production `createProdSourceLoader` is a typed-throwing stub (Julian M-25.4; David Wave 25.1 wires)                               |
+| `export:toXlsx`               | R → M         | `{ handle, pageRange, qualityTier, includeAnnotations, outputPath }`                                                      | `Result<{ jobId, summary }, ExportToXlsxError>`                   | **LIVE end-to-end** — Diego Wave 25 packaged-binary evidence at `release/wave-25-v060-xlsx-output.xlsx` (7097 bytes, ZIP signature 504b0304, 2 sheets readable via exceljs)                                                         |
+| `export:toPptx`               | R → M         | `{ handle, pageRange, qualityTier, includeAnnotations, outputPath }`                                                      | `Result<{ jobId, summary }, ExportToPptxError>`                   | LIVE engine; LIVE-pending source-loader wire (same gap as docx)                                                                                                                                                                     |
+| `export:toImages`             | R → M         | `{ handle, pageRange, format: 'png'\|'jpeg'\|'tiff', dpi, jpegQuality?, multiPageTiff?, includeAnnotations, outputPath }` | `Result<{ jobId, summary, outputPaths }, ExportToImagesError>`    | LIVE engine; LIVE-pending source-loader wire (same gap)                                                                                                                                                                             |
+| `export:cancelJob`            | R → M         | `{ jobId }`                                                                                                               | `Result<{ cancelled, pagesCompleted }, ExportCancelJobError>`     | LIVE — graceful (between per-page steps); idempotent; partial output unlinked via atomic `.export-temp` cleanup                                                                                                                     |
+| `export:listJobs`             | R → M         | `{ filters?, limit?, offset? }`                                                                                           | `Result<{ jobs: ExportJobRowDto[], total }, 'invalid_payload'>`   | LIVE — feeds Exports sidebar tab                                                                                                                                                                                                    |
+| `export:listFormats`          | R → M         | `{}`                                                                                                                      | `Result<{ formats: ExportFormatDescriptor[] }, 'never'>`          | LIVE — static catalog (no DB read); 6 entries (docx / xlsx / pptx / png / jpeg / tiff)                                                                                                                                              |
+| `dialog:pickExportOutputPath` | R → M         | `{ defaultBasename, format }`                                                                                             | `Result<{ outputPath: string \| null }, 'invalid_payload'>`       | LIVE — Electron native save-as; default extension derived from format                                                                                                                                                               |
+| `export:progress`             | M → R (event) | —                                                                                                                         | `ExportProgressEvent` — `{ jobId, format, phase, ... }`           | LIVE — phases: `starting` / `extracting-text` / `detecting-tables` / `extracting-images` / `rasterizing` (image only) / `writing-output` / `completed` / `cancelled` / `failed`. Subscribe via `window.pdfApi.export.onProgress(h)` |
 
 **Error variants** (per channel, channel-specific string-literal unions):
 
@@ -1320,32 +1334,32 @@ Phase 6 adds 8 new IPC channels under the new `export:*` namespace plus 1 dialog
 ```ts
 type SettingKey =
   // ...P1+P2+P3+P4+P5 keys...
-  | 'export.docx.qualityTier'                // 'text-only' | 'layout-preserving'; default 'layout-preserving' (Q-D)
-  | 'export.docx.pageSize'                   // 'letter' | 'a4' | 'auto'; default 'auto'
-  | 'export.docx.includeAnnotations'         // boolean; default true
-  | 'export.xlsx.qualityTier'                // 'text-only' | 'layout-preserving'; default 'text-only' (Q-D)
-  | 'export.xlsx.includeAnnotations'         // boolean; default false
-  | 'export.pptx.qualityTier'                // 'text-only' | 'layout-preserving'; default 'layout-preserving' (Q-D)
-  | 'export.pptx.includeAnnotations'         // boolean; default true
-  | 'export.image.format'                    // 'png' | 'jpeg' | 'tiff'; default 'png'
-  | 'export.image.dpi'                       // number 72..600; default 150
-  | 'export.image.jpegQuality'               // number 0.1..1.0; default 0.9
-  | 'export.image.multiPageTiff'             // boolean; default false
-  | 'export.image.includeAnnotations'        // boolean; default true
-  | 'export.layout.lineEpsilonPt'            // number; default 2 (paragraph clustering)
-  | 'export.layout.paragraphBreakRatio'      // number; default 1.5
-  | 'export.layout.headingRatio'             // number; default 1.3
-  | 'export.layout.columnGapPt'              // number; default 40
-  | 'export.maxQueueSize';                   // number; default 50 (Phase 6.1 ExportQueue uses same cap)
+  | 'export.docx.qualityTier' // 'text-only' | 'layout-preserving'; default 'layout-preserving' (Q-D)
+  | 'export.docx.pageSize' // 'letter' | 'a4' | 'auto'; default 'auto'
+  | 'export.docx.includeAnnotations' // boolean; default true
+  | 'export.xlsx.qualityTier' // 'text-only' | 'layout-preserving'; default 'text-only' (Q-D)
+  | 'export.xlsx.includeAnnotations' // boolean; default false
+  | 'export.pptx.qualityTier' // 'text-only' | 'layout-preserving'; default 'layout-preserving' (Q-D)
+  | 'export.pptx.includeAnnotations' // boolean; default true
+  | 'export.image.format' // 'png' | 'jpeg' | 'tiff'; default 'png'
+  | 'export.image.dpi' // number 72..600; default 150
+  | 'export.image.jpegQuality' // number 0.1..1.0; default 0.9
+  | 'export.image.multiPageTiff' // boolean; default false
+  | 'export.image.includeAnnotations' // boolean; default true
+  | 'export.layout.lineEpsilonPt' // number; default 2 (paragraph clustering)
+  | 'export.layout.paragraphBreakRatio' // number; default 1.5
+  | 'export.layout.headingRatio' // number; default 1.3
+  | 'export.layout.columnGapPt' // number; default 40
+  | 'export.maxQueueSize'; // number; default 50 (Phase 6.1 ExportQueue uses same cap)
 ```
 
 **Phase 6 schema v6 amendments** (additive only):
 
-| Table | Change |
-|---|---|
-| `export_jobs` | NEW — per-job state (`format`, `quality_tier`, `page_range_*`, `dpi`, `jpeg_quality`, `multi_page_tiff`, `output_path`, `output_size_bytes`, `status`, `started_at`, `completed_at`, `duration_ms`, `pages_processed`, `paragraphs_extracted`, `tables_detected`, `images_embedded`, `error_message`, `created_at`). Three indexes on `doc_hash` / `status` / `format`. Nullable fields throughout (anti-sentinel: NULL means "not yet" or "not applicable to this format") |
-| `settings` | 17 INSERT OR IGNORE rows for per-format defaults (see setting keys above). NO column changes |
-| All Phase 1-5 tables | UNCHANGED — Phase 6 is read-only on the source PDF; no new column on any prior table (cross-checked against P6-L-9) |
+| Table                | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `export_jobs`        | NEW — per-job state (`format`, `quality_tier`, `page_range_*`, `dpi`, `jpeg_quality`, `multi_page_tiff`, `output_path`, `output_size_bytes`, `status`, `started_at`, `completed_at`, `duration_ms`, `pages_processed`, `paragraphs_extracted`, `tables_detected`, `images_embedded`, `error_message`, `created_at`). Three indexes on `doc_hash` / `status` / `format`. Nullable fields throughout (anti-sentinel: NULL means "not yet" or "not applicable to this format") |
+| `settings`           | 17 INSERT OR IGNORE rows for per-format defaults (see setting keys above). NO column changes                                                                                                                                                                                                                                                                                                                                                                                |
+| All Phase 1-5 tables | UNCHANGED — Phase 6 is read-only on the source PDF; no new column on any prior table (cross-checked against P6-L-9)                                                                                                                                                                                                                                                                                                                                                         |
 
 **EditOperation union** — **NOT extended in Phase 6.** Export does not produce an edit; the `EditOperation` discriminated union is frozen by Phase 6. The replay engine is unchanged.
 
@@ -1354,17 +1368,17 @@ type SettingKey =
 ```ts
 type SettingKey =
   // ...P1+P2+P3 keys...
-  | 'signatures.tsaUrl'                   // string; default ''
-  | 'signatures.tsaEnabled'               // boolean; default false (P4-L-2)
-  | 'signatures.tsaTimeoutMs'             // number; default 30000
-  | 'signatures.placeholderSize'          // number (/Contents hex chars); default 16384
-  | 'signatures.defaultShowDate'          // boolean; default true
-  | 'signatures.defaultShowSubjectCN'     // boolean; default true (PAdES only)
-  | 'signatures.padesEngine'              // 'signpdf' | 'manual'; default 'signpdf' (P4-L-3)
-  | 'annotations.defaultBorderWidth'      // number, pt; default 1
-  | 'annotations.defaultBorderStyle'      // 'solid' | 'dashed' | 'dotted'; default 'solid'
-  | 'annotations.defaultFillEnabled'      // boolean; default false
-  | 'annotations.defaultLineEndStyle';    // 'None' | 'OpenArrow' | 'ClosedArrow'; default 'OpenArrow'
+  | 'signatures.tsaUrl' // string; default ''
+  | 'signatures.tsaEnabled' // boolean; default false (P4-L-2)
+  | 'signatures.tsaTimeoutMs' // number; default 30000
+  | 'signatures.placeholderSize' // number (/Contents hex chars); default 16384
+  | 'signatures.defaultShowDate' // boolean; default true
+  | 'signatures.defaultShowSubjectCN' // boolean; default true (PAdES only)
+  | 'signatures.padesEngine' // 'signpdf' | 'manual'; default 'signpdf' (P4-L-3)
+  | 'annotations.defaultBorderWidth' // number, pt; default 1
+  | 'annotations.defaultBorderStyle' // 'solid' | 'dashed' | 'dotted'; default 'solid'
+  | 'annotations.defaultFillEnabled' // boolean; default false
+  | 'annotations.defaultLineEndStyle'; // 'None' | 'OpenArrow' | 'ClosedArrow'; default 'OpenArrow'
 ```
 
 **New EditOperation variants** in Phase 4 (mirrored across `data-models.md §9.5` + `src/ipc/contracts.ts`):
@@ -1385,14 +1399,14 @@ Phase 1 channels (`dialog:*`, `fs:readPdf`, `fs:writePdf`, `fs:closePdf`, `recen
 
 Over seven phases the swarm converted six recurring, expensive failure modes from "remember not to do this" into **structural barriers** — type-system, schema, lint-rule, or required-on-interface constraints that fail the build (or fail loudly at runtime) rather than rotting silently. Julian's Wave 29 review confirmed all six held for the **sixth consecutive wave**. This is the project's hard-won engineering-discipline section; read it before adding any new feature surface.
 
-| # | Ratchet | The failure it prevents | How it's enforced | Reference |
-|---|---|---|---|---|
-| 1 | **No permissive test stubs** | A handler's test injects a no-op / passthrough fake (`sanitizePath: (r) => r`) that accepts inputs the real production function rejects → CI green, production 100% broken | Tests for DI'd handlers inject the **real** sanitizer/writer/byte-producer; stub only at the OS/SQL/clock boundary. Compare test-deps vs `register.ts` line-by-line. | [Permissive test stubs](#permissive-test-stubs-mask-production-failures) |
-| 2 | **No sentinel defaults** | `pageCount: -1` / `width: 612` / `lastCheckedAt: 0` silently consumed downstream (a `0` renders "Jan 1 1970" in the About modal) | **Nullable + late-init** (`T | null`), never a sentinel. Consumers pattern-match `null` for the "not yet" state. Phase 7: `availableVersion`, `lastCheckedAt`, `lastEventAt` all `T | null`; migration seeds `update.lastCheckedAt = null`. | [Stubs-shipped-with-TODO](#stubs-shipped-with-todo-comments-become-structural-debt-invisible-to-typecheck--mock-cover) |
-| 3 | **No stub-with-TODO past a wave boundary** | A `// TODO: next wave wires this` stub returns a sentinel; typecheck + mocked consumer tests pass; only the packaged binary on a real doc reveals the break | If a dep MUST be provided in production, make it **REQUIRED on the interface** (no optional + fallback). The type system fails the wave that ships without wiring it. Phase 7: telemetry `transport` + auto-update/telemetry injected options are required. | [Stubs-shipped-with-TODO](#stubs-shipped-with-todo-comments-become-structural-debt-invisible-to-typecheck--mock-cover) |
-| 4 | **No code-comment contradictions** | The comment says X but the type system silently drops X (the Wave-21 `renderMode`-cast-on-`drawText` trap; an `as any` masking a dropped library option) | Verify the code achieves what the comment claims; library options go through **typed adapters** (the library-injection pattern), not `as any`. Phase 7: zero `as any` on `t()`, telemetry, or the auto-update controller. | [Code-comment contradictions](#code-comment-contradictions-when-the-comment-says-x-but-the-type-system-drops-x) |
-| 5 | **No layout/best-effort claims without visual proof** | A doc or test asserts "the layout converts faithfully" / "the binary launches" without pixels-on-screen evidence | L-002 visual verification (operator-level screenshot of the running binary) is the last-line check; process-metadata is the floor, not the ceiling. Phase 7: Diego's Wave 29 pixel-level launch + Settings + live-Spanish-switch + About screenshots. | `.learnings/locked-instructions.md` L-002 |
-| 6 | **Structural PII guard (NEW in Phase 7)** | An "anonymous telemetry" feature leaks PII because the absence of personal data is a *discipline* (a habit) rather than a *property* | Make the absence of PII a **type + schema property**: a `.strict()` zod request schema that rejects any field beyond `{ name, dayBucket }`; an event interface with no PII slot; a silent opt-in gate that returns before buffering; an in-memory transport with no DB table. | [Telemetry framework](#telemetry-framework-phase-7) |
+| #   | Ratchet                                               | The failure it prevents                                                                                                                                                    | How it's enforced                                                                                                                                                                                                                                                             | Reference                                                                                                                                        |
+| --- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1   | **No permissive test stubs**                          | A handler's test injects a no-op / passthrough fake (`sanitizePath: (r) => r`) that accepts inputs the real production function rejects → CI green, production 100% broken | Tests for DI'd handlers inject the **real** sanitizer/writer/byte-producer; stub only at the OS/SQL/clock boundary. Compare test-deps vs `register.ts` line-by-line.                                                                                                          | [Permissive test stubs](#permissive-test-stubs-mask-production-failures)                                                                         |
+| 2   | **No sentinel defaults**                              | `pageCount: -1` / `width: 612` / `lastCheckedAt: 0` silently consumed downstream (a `0` renders "Jan 1 1970" in the About modal)                                           | **Nullable + late-init** (`T                                                                                                                                                                                                                                                  | null`), never a sentinel. Consumers pattern-match `null`for the "not yet" state. Phase 7:`availableVersion`, `lastCheckedAt`, `lastEventAt`all`T | null`; migration seeds `update.lastCheckedAt = null`. | [Stubs-shipped-with-TODO](#stubs-shipped-with-todo-comments-become-structural-debt-invisible-to-typecheck--mock-cover) |
+| 3   | **No stub-with-TODO past a wave boundary**            | A `// TODO: next wave wires this` stub returns a sentinel; typecheck + mocked consumer tests pass; only the packaged binary on a real doc reveals the break                | If a dep MUST be provided in production, make it **REQUIRED on the interface** (no optional + fallback). The type system fails the wave that ships without wiring it. Phase 7: telemetry `transport` + auto-update/telemetry injected options are required.                   | [Stubs-shipped-with-TODO](#stubs-shipped-with-todo-comments-become-structural-debt-invisible-to-typecheck--mock-cover)                           |
+| 4   | **No code-comment contradictions**                    | The comment says X but the type system silently drops X (the Wave-21 `renderMode`-cast-on-`drawText` trap; an `as any` masking a dropped library option)                   | Verify the code achieves what the comment claims; library options go through **typed adapters** (the library-injection pattern), not `as any`. Phase 7: zero `as any` on `t()`, telemetry, or the auto-update controller.                                                     | [Code-comment contradictions](#code-comment-contradictions-when-the-comment-says-x-but-the-type-system-drops-x)                                  |
+| 5   | **No layout/best-effort claims without visual proof** | A doc or test asserts "the layout converts faithfully" / "the binary launches" without pixels-on-screen evidence                                                           | L-002 visual verification (operator-level screenshot of the running binary) is the last-line check; process-metadata is the floor, not the ceiling. Phase 7: Diego's Wave 29 pixel-level launch + Settings + live-Spanish-switch + About screenshots.                         | `.learnings/locked-instructions.md` L-002                                                                                                        |
+| 6   | **Structural PII guard (NEW in Phase 7)**             | An "anonymous telemetry" feature leaks PII because the absence of personal data is a _discipline_ (a habit) rather than a _property_                                       | Make the absence of PII a **type + schema property**: a `.strict()` zod request schema that rejects any field beyond `{ name, dayBucket }`; an event interface with no PII slot; a silent opt-in gate that returns before buffering; an in-memory transport with no DB table. | [Telemetry framework](#telemetry-framework-phase-7)                                                                                              |
 
 **The trust-floor honesty pattern is the connective tissue across all six.** Every phase that introduced a security-sensitive, cryptographic, destructive, or best-effort capability documented its honesty obligations at the same five-to-six surfaces (top-of-guide preamble + dedicated trust-floor section + inline reminders + README known-limitations + the point-of-action UI). The pattern held for **all seven phases** — H-3 walking-skeleton (Save doesn't preserve edits) → Phase 3 forms (JS-strip / XFA / signed-fields) → Phase 4 PAdES (invalidate / zero-on-finally / no-default-TSA / informational-verify) → Phase 5 OCR (low-confidence / no-cloud / text-becomes-PDF / re-OCR-duplicates) → Phase 6 export (best-effort / borderless-tables / XFA-no-export / signed-source-stays-valid / OCR-determines-fidelity) → **Phase 7 polish (telemetry-OFF-by-default / update-placeholder / mac-linux-unverified / es-ES-sample)**. The doc structure is now mechanical; the obligations are phase-specific. When you add a feature with limitations, copy the structure and swap the obligation list.
 
@@ -1544,15 +1558,17 @@ A piece of code wants to do **X**. The developer writes the obvious-looking call
 
 // We need rendering mode 3 (invisible) so OCR text overlays the image without showing visibly.
 page.drawText(word.text, {
-  x, y,
+  x,
+  y,
   size: fontSize,
   font: helvetica,
   // PDF rendering mode 3 = invisible (per spec § 9.3.6)
-  renderMode: 3,  // ← TypeScript accepts; pdf-lib SILENTLY DROPS this key
+  renderMode: 3, // ← TypeScript accepts; pdf-lib SILENTLY DROPS this key
 } as any);
 ```
 
 The code:
+
 1. Has a comment claiming `renderMode: 3` makes the text invisible.
 2. Uses an `as any` cast to silence TypeScript's "renderMode does not exist on PDFPageDrawTextOptions" error.
 3. Compiles cleanly. Tests pass (text shows up where expected; word selection works; the test fixtures don't paint the visible rendering, only assert structural properties).
@@ -1572,7 +1588,8 @@ page.pushOperators(setTextRenderingMode(TextRenderingMode.Invisible));
 
 for (const word of pageWords) {
   page.drawText(word.text, {
-    x, y,
+    x,
+    y,
     size: fontSize,
     font: helvetica,
     // (no renderMode option — invisible is set via the operator push above)
@@ -1628,6 +1645,7 @@ A handler / module / state slice ships a stub with a `// TODO: the next wave wil
 **Audit habit.** When you write or review a stub-with-TODO, ask: "what is the production behavior if no follow-up wave wires this?" If the answer is "the user sees broken UI", you have to either (a) ship the real impl now, (b) make the consumer fail loudly, or (c) put a lock in `.learnings/locked-instructions.md` that the next wave MUST wire it. The thing you must NOT do is ship the stub with the expectation that "the next wave will get to it" — the next wave never does, because the failure is invisible from inside the swarm.
 
 **Pointer to source:** the structural lesson is encoded in the post-Phase-4.1 file shape:
+
 - [`src/ipc/register.ts`](../src/ipc/register.ts) — `loadPdfMetadata` is REQUIRED (no fallback).
 - [`src/main/pdf-ops/pdf-metadata-loader.ts`](../src/main/pdf-ops/pdf-metadata-loader.ts) — real impl, permanent.
 - [`src/client/services/pdf-render.ts`](../src/client/services/pdf-render.ts) — real pdfjs wiring at `:43` (worker import) + `:165` (getDocument call).
@@ -1644,9 +1662,9 @@ This is the most expensive recurring failure mode in the swarm's history — it 
 ```ts
 // In a *.test.ts file — WRONG
 const deps = {
-  sanitizePath: (raw: string) => raw,            // permissive passthrough
-  writeFile:    async () => undefined,           // no-op
-  getBytes:     async () => new Uint8Array(0),   // empty
+  sanitizePath: (raw: string) => raw, // permissive passthrough
+  writeFile: async () => undefined, // no-op
+  getBytes: async () => new Uint8Array(0), // empty
 };
 ```
 
@@ -1686,7 +1704,7 @@ In Phase 2, main logs go to stdout in dev / `%APPDATA%/PDF Viewer & Editor/logs/
 
 ## Release process
 
-Release is still **manual** in 0.7.0. Phase 7 wired the auto-update *client* (electron-updater) and added the `publish` block to `electron-builder.yml`, but the publish target is a **placeholder** (`owner: PLACEHOLDER`, `repo: PLACEHOLDER`) — the client routes to the honest `update_not_configured` until a real channel exists. Configuring a real GitHub release channel + a code-signing cert is the **Phase 7.1** step that turns auto-update live (with zero code change in the controller).
+Release is still **manual** in 0.7.0. Phase 7 wired the auto-update _client_ (electron-updater) and added the `publish` block to `electron-builder.yml`, but the publish target is a **placeholder** (`owner: PLACEHOLDER`, `repo: PLACEHOLDER`) — the client routes to the honest `update_not_configured` until a real channel exists. Configuring a real GitHub release channel + a code-signing cert is the **Phase 7.1** step that turns auto-update live (with zero code change in the controller).
 
 1. Bump the version in `package.json` (e.g. `0.7.0` → `0.7.1`).
 2. Update [`docs/build-report.md`](build-report.md) with the wave history if relevant.
@@ -1696,7 +1714,7 @@ Release is still **manual** in 0.7.0. Phase 7 wired the auto-update *client* (el
 6. **L-002 visual verification (mandatory before marking a packaging wave GREEN):** capture an operator-level screenshot of the running packaged binary showing the rendered UI — not just process metadata. Embed the path + a description in the build report. See [`.learnings/locked-instructions.md`](../.learnings/locked-instructions.md) L-002.
 7. Upload the contents of `release/*.exe` plus `latest.yml` (the electron-updater feed metadata) and the blockmap to GitHub Releases.
 
-**Code-signing** is the Phase 7.1 prerequisite for auto-update to *apply* downloaded bundles (electron-updater verifies a bundle's signature before applying it). When the cert is available, set `WIN_CSC_LINK` + `WIN_CSC_KEY_PASSWORD` as GitHub secrets and uncomment the env entries in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). Until then, binaries are unsigned and trigger SmartScreen / Gatekeeper warnings on first launch.
+**Code-signing** is the Phase 7.1 prerequisite for auto-update to _apply_ downloaded bundles (electron-updater verifies a bundle's signature before applying it). When the cert is available, set `WIN_CSC_LINK` + `WIN_CSC_KEY_PASSWORD` as GitHub secrets and uncomment the env entries in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). Until then, binaries are unsigned and trigger SmartScreen / Gatekeeper warnings on first launch.
 
 **Cross-platform packaging.** `electron-builder.yml` is configured for macOS (`dmg` + `zip`, universal) and Linux (`AppImage` + `deb`), but CI builds Windows only (P7-L-1) and the mac/linux configs are **UNVERIFIED on real hardware**. Building them requires running `electron-builder --mac` / `--linux` **on a mac/linux host** (cross-compile from Windows is unsupported — `better-sqlite3` must rebuild against the target toolchain). See [Cross-platform build](#cross-platform-build-phase-7) + [README → Platform support](../README.md#platform-support). Verifying on real hosts (with an L-002-equivalent screenshot) is the Phase 7.1 work item.
 

@@ -109,15 +109,15 @@ Migration runner (Ravi's `src/db/migrate.ts`) reads `MAX(version)`, finds files 
 
 Authoritative list (cross-referenced with `docs/api-contracts.md` §5):
 
-| Key | Value JSON type | Default | Set by |
-|---|---|---|---|
-| `recents.maxItems` | number | 20 | User (Settings dialog) |
-| `open.maxFileSizeMB` | number | 500 | User (Settings dialog) |
-| `export.defaultEngine` | `"auto"\|"pdf-lib"\|"chromium"` | `"auto"` | User (Settings dialog) |
-| `export.showWarningsToast` | boolean | `true` | User (Settings dialog) |
-| `file_association.pdf.requested` | boolean | `true` after install if user kept the checkbox | Installer (NSIS) + Settings dialog toggle |
-| `theme` | `"system"\|"light"\|"dark"` | `"system"` | User (Settings dialog; Phase 2 wires UI) |
-| `undo.maxHistory` | number | 100 | User (Settings dialog; Phase 2 wires UI) |
+| Key                              | Value JSON type                 | Default                                        | Set by                                    |
+| -------------------------------- | ------------------------------- | ---------------------------------------------- | ----------------------------------------- |
+| `recents.maxItems`               | number                          | 20                                             | User (Settings dialog)                    |
+| `open.maxFileSizeMB`             | number                          | 500                                            | User (Settings dialog)                    |
+| `export.defaultEngine`           | `"auto"\|"pdf-lib"\|"chromium"` | `"auto"`                                       | User (Settings dialog)                    |
+| `export.showWarningsToast`       | boolean                         | `true`                                         | User (Settings dialog)                    |
+| `file_association.pdf.requested` | boolean                         | `true` after install if user kept the checkbox | Installer (NSIS) + Settings dialog toggle |
+| `theme`                          | `"system"\|"light"\|"dark"`     | `"system"`                                     | User (Settings dialog; Phase 2 wires UI)  |
+| `undo.maxHistory`                | number                          | 100                                            | User (Settings dialog; Phase 2 wires UI)  |
 
 Renderer reads `settings:getAll` on boot and merges with its hardcoded defaults. Writes go through `settings:set`.
 
@@ -134,67 +134,82 @@ Lives in renderer Redux store (`documentSlice`); David's main-process pdf-ops re
 // Renderer mirrors these in src/client/state/slices/document-slice.ts
 
 type DocumentHandle = number;
-type FileHash       = string; // 64-char hex lowercase
+type FileHash = string; // 64-char hex lowercase
 
 type AnnotationSubtype =
   // Phase 1
-  | 'Highlight' | 'Text' | 'FreeText'
+  | 'Highlight'
+  | 'Text'
+  | 'FreeText'
   // Phase 2
-  | 'Underline' | 'StrikeOut' | 'Ink'
+  | 'Underline'
+  | 'StrikeOut'
+  | 'Ink'
   // Phase 4
-  | 'Square' | 'Circle' | 'Line';
+  | 'Square'
+  | 'Circle'
+  | 'Line';
 
 interface PDFDocumentModel {
   handle: DocumentHandle;
   displayName: string;
   fileHash: FileHash;
-  pageCount: number;             // mutates with insert/delete
+  pageCount: number; // mutates with insert/delete
   pages: PageModel[];
   annotations: AnnotationModel[];
   dirtyOps: EditOperation[];
-  savedAtHandleVersion: number;  // 0 initially; increments on save
-  pdflibLoadWarnings: string[];  // from pdf-lib's load; consumed by ExportEngineSelector
+  savedAtHandleVersion: number; // 0 initially; increments on save
+  pdflibLoadWarnings: string[]; // from pdf-lib's load; consumed by ExportEngineSelector
 }
 
 interface PageModel {
-  pageIndex: number;             // 0-based; current ordinal (mutates with reorder)
+  pageIndex: number; // 0-based; current ordinal (mutates with reorder)
   sourcePageRef: SourcePageRef;
   rotation: 0 | 90 | 180 | 270;
-  width: number;                 // PDF user-space units (typically 612 = 8.5"x72)
+  width: number; // PDF user-space units (typically 612 = 8.5"x72)
   height: number;
 }
 
 type SourcePageRef =
-  | { kind: 'original';  originalIndex: number }
-  | { kind: 'inserted';  sourceFileHash: FileHash; sourcePageIndex: number }
-  | { kind: 'blank';     width: number; height: number };
-  // Phase 2 adds:
-  // | { kind: 'image'; bytes: Uint8Array; mimeType: 'image/png' | 'image/jpeg'; width: number; height: number };
+  | { kind: 'original'; originalIndex: number }
+  | { kind: 'inserted'; sourceFileHash: FileHash; sourcePageIndex: number }
+  | { kind: 'blank'; width: number; height: number };
+// Phase 2 adds:
+// | { kind: 'image'; bytes: Uint8Array; mimeType: 'image/png' | 'image/jpeg'; width: number; height: number };
 
 interface AnnotationModel {
-  id: string;                    // UUID v4; stable across edits & undo
-  pageIndex: number;             // current page (mutates with reorder)
+  id: string; // UUID v4; stable across edits & undo
+  pageIndex: number; // current page (mutates with reorder)
   subtype: AnnotationSubtype;
-  rect: PdfRect;                 // bounding box in PDF user-space (origin bottom-left)
+  rect: PdfRect; // bounding box in PDF user-space (origin bottom-left)
   color: RgbColor;
-  opacity: number;               // 0..1
-  contents?: string;             // for Text, FreeText
-  author?: string;               // from settings; defaults to OS username
-  createdAt: number;             // ms epoch
-  modifiedAt: number;            // ms epoch
+  opacity: number; // 0..1
+  contents?: string; // for Text, FreeText
+  author?: string; // from settings; defaults to OS username
+  createdAt: number; // ms epoch
+  modifiedAt: number; // ms epoch
   // subtype-specific fields:
-  highlight?:   { quadPoints: number[] };               // Highlight only
-  freeText?:    { fontSize: number; fontFamily: string }; // FreeText only
-  ink?:         { paths: Array<{ x: number; y: number }[]> }; // Ink only (Phase 2)
-  square?:      { borderWidth: number };                // Square only (Phase 4)
+  highlight?: { quadPoints: number[] }; // Highlight only
+  freeText?: { fontSize: number; fontFamily: string }; // FreeText only
+  ink?: { paths: Array<{ x: number; y: number }[]> }; // Ink only (Phase 2)
+  square?: { borderWidth: number }; // Square only (Phase 4)
   // round-trip:
-  pdfObjectNumber?: number;       // present after save; absent for unsaved
-  dirty: boolean;                 // since last save
+  pdfObjectNumber?: number; // present after save; absent for unsaved
+  dirty: boolean; // since last save
   preservedDict?: Record<string, unknown>; // unknown-subtype passthrough; read-only in UI
 }
 
-interface PdfRect { x: number; y: number; width: number; height: number }
-interface RgbColor { r: number; g: number; b: number } // each 0..1
+interface PdfRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+interface RgbColor {
+  r: number;
+  g: number;
+  b: number;
+} // each 0..1
 
 // ============================================================
 // Edit operations — the heart of the document model
@@ -207,12 +222,24 @@ interface EditMeta {
 }
 
 type EditOperation =
-  | { kind: 'reorder';      meta: EditMeta; fromIndex: number; toIndex: number }
-  | { kind: 'insert';       meta: EditMeta; atIndex: number; source: SourcePageRef }
-  | { kind: 'delete';       meta: EditMeta; pageIndex: number; preservedSource: SourcePageRef } // preservedSource lets undo restore the page
-  | { kind: 'rotate';       meta: EditMeta; pageIndex: number; fromRotation: 0|90|180|270; toRotation: 0|90|180|270 }
-  | { kind: 'annot-add';    meta: EditMeta; annotation: AnnotationModel }
-  | { kind: 'annot-edit';   meta: EditMeta; id: string; before: Partial<AnnotationModel>; after: Partial<AnnotationModel> }
+  | { kind: 'reorder'; meta: EditMeta; fromIndex: number; toIndex: number }
+  | { kind: 'insert'; meta: EditMeta; atIndex: number; source: SourcePageRef }
+  | { kind: 'delete'; meta: EditMeta; pageIndex: number; preservedSource: SourcePageRef } // preservedSource lets undo restore the page
+  | {
+      kind: 'rotate';
+      meta: EditMeta;
+      pageIndex: number;
+      fromRotation: 0 | 90 | 180 | 270;
+      toRotation: 0 | 90 | 180 | 270;
+    }
+  | { kind: 'annot-add'; meta: EditMeta; annotation: AnnotationModel }
+  | {
+      kind: 'annot-edit';
+      meta: EditMeta;
+      id: string;
+      before: Partial<AnnotationModel>;
+      after: Partial<AnnotationModel>;
+    }
   | { kind: 'annot-delete'; meta: EditMeta; before: AnnotationModel };
 
 // Serialized variant for IPC (Uint8Array doesn't survive structuredClone in some IPC paths)
@@ -224,15 +251,15 @@ type AnnotationModelSerialized = AnnotationModel; // same shape
 
 Every `EditOperation` has a deterministic inverse computed at dispatch time and stored on the history stack:
 
-| Forward | Inverse |
-|---|---|
-| `reorder { from, to }` | `reorder { from: to, to: from }` |
-| `insert { atIndex, source }` | `delete { pageIndex: atIndex, preservedSource: source }` |
+| Forward                                 | Inverse                                                  |
+| --------------------------------------- | -------------------------------------------------------- |
+| `reorder { from, to }`                  | `reorder { from: to, to: from }`                         |
+| `insert { atIndex, source }`            | `delete { pageIndex: atIndex, preservedSource: source }` |
 | `delete { pageIndex, preservedSource }` | `insert { atIndex: pageIndex, source: preservedSource }` |
-| `rotate { from, to }` | `rotate { from: to, to: from }` |
-| `annot-add { annotation }` | `annot-delete { before: annotation }` |
-| `annot-edit { id, before, after }` | `annot-edit { id, before: after, after: before }` |
-| `annot-delete { before }` | `annot-add { annotation: before }` |
+| `rotate { from, to }`                   | `rotate { from: to, to: from }`                          |
+| `annot-add { annotation }`              | `annot-delete { before: annotation }`                    |
+| `annot-edit { id, before, after }`      | `annot-edit { id, before: after, after: before }`        |
+| `annot-delete { before }`               | `annot-add { annotation: before }`                       |
 
 Inverses live next to the reducer in `src/client/state/slices/document-slice.inverses.ts` (Riley's file in Wave 2). Pure functions. Vitest-tested with property-based tests (each op composed with its inverse must yield identity).
 
@@ -247,17 +274,17 @@ Inverses live next to the reducer in `src/client/state/slices/document-slice.inv
 
 ### 3.4 Annotation round-trip — pdf-lib support matrix (Decision 2)
 
-| User-visible | ISO 32000 Subtype | Phase | pdf-lib support | Notes |
-|---|---|---|---|---|
-| Highlight | `/Highlight` | 1 | Native | `QuadPoints` array; pdf-lib has helpers in 1.17+ |
-| Sticky note | `/Text` | 1 | Native | `Contents`, icon name `Note`, `Open` bool |
-| Text box | `/FreeText` | 1 | Native + manual appearance stream | pdf-lib creates the dict; appearance stream needed for cross-viewer fidelity (else some viewers won't display) |
-| Underline | `/Underline` | 2 | Native | Like Highlight; QuadPoints |
-| Strikethrough | `/StrikeOut` | 2 | Native | Like Highlight; QuadPoints |
-| Freehand | `/Ink` | 2 | **Manual dict authoring** | `InkList` of point arrays; pdf-lib has no helper. **Flagged in ExportEngineSelector as a Chromium-fallback hint.** |
-| Rectangle | `/Square` | 4 | Native | Border style, color, opacity |
-| Circle / ellipse | `/Circle` | 4 | Native | Same as Square |
-| Line / arrow | `/Line` | 4 | Native | `L` array (x1,y1,x2,y2), `LE` (line-ending styles) |
+| User-visible     | ISO 32000 Subtype | Phase | pdf-lib support                   | Notes                                                                                                              |
+| ---------------- | ----------------- | ----- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Highlight        | `/Highlight`      | 1     | Native                            | `QuadPoints` array; pdf-lib has helpers in 1.17+                                                                   |
+| Sticky note      | `/Text`           | 1     | Native                            | `Contents`, icon name `Note`, `Open` bool                                                                          |
+| Text box         | `/FreeText`       | 1     | Native + manual appearance stream | pdf-lib creates the dict; appearance stream needed for cross-viewer fidelity (else some viewers won't display)     |
+| Underline        | `/Underline`      | 2     | Native                            | Like Highlight; QuadPoints                                                                                         |
+| Strikethrough    | `/StrikeOut`      | 2     | Native                            | Like Highlight; QuadPoints                                                                                         |
+| Freehand         | `/Ink`            | 2     | **Manual dict authoring**         | `InkList` of point arrays; pdf-lib has no helper. **Flagged in ExportEngineSelector as a Chromium-fallback hint.** |
+| Rectangle        | `/Square`         | 4     | Native                            | Border style, color, opacity                                                                                       |
+| Circle / ellipse | `/Circle`         | 4     | Native                            | Same as Square                                                                                                     |
+| Line / arrow     | `/Line`           | 4     | Native                            | `L` array (x1,y1,x2,y2), `LE` (line-ending styles)                                                                 |
 
 **No sidecar JSON** (Decision 2). Subtypes pdf-lib cannot author cleanly are either (a) hand-authored via `PDFDict` / `PDFArray` primitives in `src/main/pdf-ops/annotations.ts` (David's file in Wave 2 / 4), OR (b) trigger the Chromium export engine via the ExportEngineSelector heuristic so the visual is rendered.
 
@@ -271,7 +298,11 @@ Conversion lives in **exactly one module**: `src/client/services/pdf-coords.ts` 
 ```ts
 function pdfRectToScreen(rect: PdfRect, page: PageModel, viewport: PageViewport): ScreenRect;
 function screenRectToPdf(rect: ScreenRect, page: PageModel, viewport: PageViewport): PdfRect;
-function pdfPointToScreen(pt: { x: number; y: number }, page: PageModel, viewport: PageViewport): { x: number; y: number };
+function pdfPointToScreen(
+  pt: { x: number; y: number },
+  page: PageModel,
+  viewport: PageViewport,
+): { x: number; y: number };
 // ... etc.
 ```
 
@@ -288,7 +319,7 @@ Specified here so David's IPC handlers know what to call.
 interface RecentFilesRepo {
   list(limit: number): RecentFileRow[];
   upsert(row: Omit<RecentFileRow, 'last_opened_at'> & { last_opened_at?: number }): void;
-  clear(): number;  // returns rows deleted
+  clear(): number; // returns rows deleted
   getByPath(path: string): RecentFileRow | null;
 }
 
@@ -302,7 +333,9 @@ interface SettingsRepo {
 // src/db/repositories/bookmarks-repo.ts (Ravi)
 interface BookmarksRepo {
   listByFile(fileHash: string): BookmarkRow[];
-  upsert(row: Omit<BookmarkRow, 'id' | 'created_at'> & { id?: number; created_at?: number }): number; // returns id
+  upsert(
+    row: Omit<BookmarkRow, 'id' | 'created_at'> & { id?: number; created_at?: number },
+  ): number; // returns id
   delete(id: number): boolean; // returns true if deleted
 }
 ```
@@ -337,6 +370,7 @@ Row types (`RecentFileRow`, `BookmarkRow`) live in `src/db/types.ts` (Ravi's fil
 > §1-§6 above remain FROZEN at Wave 1. Additions below are append-only.
 
 This section adds:
+
 - Six new `EditOperation` variants
 - New `SourcePageRef` variant for image-as-page
 - Image-embed model (`ImageEmbedPayload`, content-hash dedup)
@@ -354,45 +388,45 @@ type EditOperation =
   // ...Phase 1 variants (reorder, insert, delete, rotate, annot-add, annot-edit, annot-delete)...
 
   // Phase 2:
-  | { kind: 'image-insert';
-      meta: EditMeta;
-      atIndex: number;
-      image: ImageEmbedPayload;
-    }
-  | { kind: 'image-overlay';
+  | { kind: 'image-insert'; meta: EditMeta; atIndex: number; image: ImageEmbedPayload }
+  | {
+      kind: 'image-overlay';
       meta: EditMeta;
       pageIndex: number;
       rect: PdfRect;
       image: ImageEmbedPayload;
-      overlayId: string;                  // UUID; lets later ops reference this overlay
+      overlayId: string; // UUID; lets later ops reference this overlay
     }
-  | { kind: 'image-overlay-edit';
+  | {
+      kind: 'image-overlay-edit';
       meta: EditMeta;
       pageIndex: number;
       overlayId: string;
       beforeRect: PdfRect;
       afterRect: PdfRect;
     }
-  | { kind: 'image-overlay-delete';
+  | {
+      kind: 'image-overlay-delete';
       meta: EditMeta;
       pageIndex: number;
       overlayId: string;
-      before: { rect: PdfRect; image: ImageEmbedPayload };  // for undo
+      before: { rect: PdfRect; image: ImageEmbedPayload }; // for undo
     }
-  | { kind: 'text-replace';
+  | {
+      kind: 'text-replace';
       meta: EditMeta;
       pageIndex: number;
-      objectId: string;                   // pageObjectNumber/contentStreamIndex/runIndex (see edit-replay-engine.md §4.6.1)
-      oldText: string;                    // for inverse
+      objectId: string; // pageObjectNumber/contentStreamIndex/runIndex (see edit-replay-engine.md §4.6.1)
+      oldText: string; // for inverse
       newText: string;
     };
 
 interface ImageEmbedPayload {
-  bytes: Uint8Array;                       // populated by pdf:embedImage handler in main; renderer dispatches via op
+  bytes: Uint8Array; // populated by pdf:embedImage handler in main; renderer dispatches via op
   mimeType: 'image/png' | 'image/jpeg' | 'image/tiff';
-  width: number;                           // intrinsic pixel width
-  height: number;                          // intrinsic pixel height
-  contentHash: string;                     // sha256(bytes), hex lowercase; used for engine-side dedup (see edit-replay-engine.md §7)
+  width: number; // intrinsic pixel width
+  height: number; // intrinsic pixel height
+  contentHash: string; // sha256(bytes), hex lowercase; used for engine-side dedup (see edit-replay-engine.md §7)
 }
 ```
 
@@ -418,13 +452,13 @@ type SourcePageRef =
 
 #### 7.1.3 Inverse table (extends §3.2)
 
-| Forward | Inverse |
-|---|---|
-| `image-insert { atIndex, image }` | `delete { pageIndex: atIndex, preservedSource: { kind: 'image', image, pageWidth: …, pageHeight: … } }` |
-| `image-overlay { pageIndex, rect, image, overlayId }` | `image-overlay-delete { pageIndex, overlayId, before: { rect, image } }` |
-| `image-overlay-edit { pageIndex, overlayId, beforeRect, afterRect }` | `image-overlay-edit { pageIndex, overlayId, beforeRect: afterRect, afterRect: beforeRect }` |
-| `image-overlay-delete { pageIndex, overlayId, before }` | `image-overlay { pageIndex, rect: before.rect, image: before.image, overlayId }` |
-| `text-replace { pageIndex, objectId, oldText, newText }` | `text-replace { pageIndex, objectId, oldText: newText, newText: oldText }` |
+| Forward                                                              | Inverse                                                                                                 |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `image-insert { atIndex, image }`                                    | `delete { pageIndex: atIndex, preservedSource: { kind: 'image', image, pageWidth: …, pageHeight: … } }` |
+| `image-overlay { pageIndex, rect, image, overlayId }`                | `image-overlay-delete { pageIndex, overlayId, before: { rect, image } }`                                |
+| `image-overlay-edit { pageIndex, overlayId, beforeRect, afterRect }` | `image-overlay-edit { pageIndex, overlayId, beforeRect: afterRect, afterRect: beforeRect }`             |
+| `image-overlay-delete { pageIndex, overlayId, before }`              | `image-overlay { pageIndex, rect: before.rect, image: before.image, overlayId }`                        |
+| `text-replace { pageIndex, objectId, oldText, newText }`             | `text-replace { pageIndex, objectId, oldText: newText, newText: oldText }`                              |
 
 Bookmarks ops (§7.3) have their own inverse table — they do NOT live in the EditOperation union per `edit-replay-engine.md` §4.7.
 
@@ -459,9 +493,9 @@ Convention §13 (`conventions.md` §13 Phase-2 addition) documents this pattern.
 
 ```ts
 interface PdfImage {
-  contentHash: string;          // sha256 hex
+  contentHash: string; // sha256 hex
   mimeType: 'image/png' | 'image/jpeg' | 'image/tiff';
-  width: number;                // intrinsic pixel dims
+  width: number; // intrinsic pixel dims
   height: number;
   /** Source bytes; held in main's image-cache for the handle's lifetime. */
   bytes: Uint8Array;
@@ -525,8 +559,8 @@ interface BookmarkRow {
   page_index: number;
   title: string;
   created_at: number;
-  parent_id: number | null;      // NEW Phase 2
-  sort_order: number;             // NEW Phase 2
+  parent_id: number | null; // NEW Phase 2
+  sort_order: number; // NEW Phase 2
 }
 
 // IPC contract camelCase (data-models.md §3.1 convention):
@@ -562,12 +596,14 @@ type MoveBookmarkResult =
 
 interface BookmarksRepo {
   // Phase 1 — unchanged signatures (backward-compatible):
-  listByFile(fileHash: string): BookmarkRow[];          // flat list
-  upsert(row: Omit<BookmarkRow, 'id' | 'created_at'> & { id?: number; created_at?: number }): number;
+  listByFile(fileHash: string): BookmarkRow[]; // flat list
+  upsert(
+    row: Omit<BookmarkRow, 'id' | 'created_at'> & { id?: number; created_at?: number },
+  ): number;
   delete(id: number): boolean;
 
   // Phase 2 — new methods:
-  listTree(fileHash: string): BookmarkNodeRow[];                                    // hierarchical
+  listTree(fileHash: string): BookmarkNodeRow[]; // hierarchical
   move(id: number, newParentId: number | null, newSortOrder: number): MoveBookmarkResult; // Wave 8.5: was `boolean`
   rename(id: number, title: string): boolean;
 }
@@ -614,14 +650,14 @@ The `/Ink` annotation uses hand-authored `PDFDict` per `data-models.md` §3.4 (n
 
 None new — all Phase 2 open questions from `phase-2-plan.md` §7 have been answered in this amendment, `architecture-phase-2.md`, or `edit-replay-engine.md`. Cross-reference table:
 
-| phase-2-plan §7 question | Answer location |
-|---|---|
-| 1. Op ordering | architecture-phase-2.md §8; edit-replay-engine.md §6 — dispatch order |
-| 2. Partial-failure rollback | architecture-phase-2.md §9; edit-replay-engine.md §9 — whole-save abort |
-| 3. Atomic save | architecture-phase-2.md §10; edit-replay-engine.md §10 — write-to-temp, rename |
-| 4. Bytes lifetime | architecture-phase-2.md §11 — held for handle lifetime |
-| 5. Image dedup | architecture-phase-2.md §12; edit-replay-engine.md §7 — content-hash cache per save |
-| 6. Determinism | architecture-phase-2.md §13 — new setting `export.deterministic` |
+| phase-2-plan §7 question         | Answer location                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------ |
+| 1. Op ordering                   | architecture-phase-2.md §8; edit-replay-engine.md §6 — dispatch order                |
+| 2. Partial-failure rollback      | architecture-phase-2.md §9; edit-replay-engine.md §9 — whole-save abort              |
+| 3. Atomic save                   | architecture-phase-2.md §10; edit-replay-engine.md §10 — write-to-temp, rename       |
+| 4. Bytes lifetime                | architecture-phase-2.md §11 — held for handle lifetime                               |
+| 5. Image dedup                   | architecture-phase-2.md §12; edit-replay-engine.md §7 — content-hash cache per save  |
+| 6. Determinism                   | architecture-phase-2.md §13 — new setting `export.deterministic`                     |
 | 7. Text-edit span identification | architecture-phase-2.md §14; api-contracts.md §12.3 — `pdf:identifyTextSpan` channel |
 
 ---
@@ -633,6 +669,7 @@ None new — all Phase 2 open questions from `phase-2-plan.md` §7 have been ans
 > §1-§7 above remain FROZEN at Wave 6. Additions below are append-only. Per the Phase-3 freeze rule (`docs/architecture-phase-3.md §13`), Phase-1 + Phase-2 sections do not change.
 
 This section adds:
+
 - `FormFieldDefinition`, `FormFieldValue`, `FormFieldType`, `FormFieldOption` types
 - Four new `EditOperation` variants (`form-commit`, `form-design-add`, `form-design-remove`, `form-design-edit`)
 - Schema v3 DDL (`form_templates` table)
@@ -648,10 +685,10 @@ This section adds:
 type FormFieldType =
   | 'text'
   | 'checkbox'
-  | 'radio'        // a radio GROUP; individual radio buttons live in options[]
-  | 'dropdown'     // single-select combo box
-  | 'signature'    // placeholder only; signing arrives Phase 4
-  | 'date';        // text field with date-format hint + locale-aware renderer
+  | 'radio' // a radio GROUP; individual radio buttons live in options[]
+  | 'dropdown' // single-select combo box
+  | 'signature' // placeholder only; signing arrives Phase 4
+  | 'date'; // text field with date-format hint + locale-aware renderer
 
 interface FormFieldDefinition {
   /** Unique within document. AcroForm field name (period-separated for nested fields). */
@@ -682,12 +719,12 @@ interface FormFieldOption {
 }
 
 type FormFieldValue =
-  | { type: 'text';      value: string }
-  | { type: 'checkbox';  value: boolean }
-  | { type: 'radio';     value: string /* one of options[].value */ }
-  | { type: 'dropdown';  value: string }
+  | { type: 'text'; value: string }
+  | { type: 'checkbox'; value: boolean }
+  | { type: 'radio'; value: string /* one of options[].value */ }
+  | { type: 'dropdown'; value: string }
   | { type: 'signature'; value: null /* always null in Phase 3 */ }
-  | { type: 'date';      value: string /* ISO-8601 YYYY-MM-DD */ };
+  | { type: 'date'; value: string /* ISO-8601 YYYY-MM-DD */ };
 ```
 
 ### 8.2 EditOperation extensions
@@ -699,29 +736,30 @@ type EditOperation =
   // ...Phase 1 + Phase 2 variants...
 
   // Phase 3:
-  | { kind: 'form-commit';
+  | {
+      kind: 'form-commit';
       meta: EditMeta;
       /** Map of field.name → new value. Only changed values appear. */
       fieldValues: Record<string, FormFieldValue>;
       /** Snapshot of prior committed values for each changed field (undo target). */
       previousValues: Record<string, FormFieldValue | undefined>;
     }
-  | { kind: 'form-design-add';
-      meta: EditMeta;
-      fieldDefinition: FormFieldDefinition;
-    }
-  | { kind: 'form-design-remove';
+  | { kind: 'form-design-add'; meta: EditMeta; fieldDefinition: FormFieldDefinition }
+  | {
+      kind: 'form-design-remove';
       meta: EditMeta;
       fieldName: string;
-      before: FormFieldDefinition;      // full snapshot for inverse re-author
+      before: FormFieldDefinition; // full snapshot for inverse re-author
     }
-  | { kind: 'form-design-edit';
+  | {
+      kind: 'form-design-edit';
       meta: EditMeta;
       fieldName: string;
       before: Partial<FormFieldDefinition>;
       after: Partial<FormFieldDefinition>;
     }
-  | { kind: 'form-flatten';
+  | {
+      kind: 'form-flatten';
       meta: EditMeta;
       /** Snapshot of fields BEFORE flatten, for inverse undo via re-creating fields + re-filling. */
       beforeFields: FormFieldDefinition[];
@@ -733,13 +771,13 @@ Note: `form-flatten` is a deliberately heavy inverse (re-creating N fields + re-
 
 ### 8.3 Inverse table (extends §3.2 + §7.1.3)
 
-| Forward | Inverse |
-|---|---|
-| `form-commit { fieldValues, previousValues }` | `form-commit { fieldValues: previousValues, previousValues: fieldValues }` |
-| `form-design-add { fieldDefinition }` | `form-design-remove { fieldName: fieldDefinition.name, before: fieldDefinition }` |
-| `form-design-remove { fieldName, before }` | `form-design-add { fieldDefinition: before }` |
-| `form-design-edit { fieldName, before, after }` | `form-design-edit { fieldName, before: after, after: before }` |
-| `form-flatten { beforeFields, beforeValues }` | A composite synthesized at undo time: dispatch `form-design-add` per field in `beforeFields`, then `form-commit` with `beforeValues`. The history middleware emits a single history entry referencing the composite; documented in `architecture-phase-3.md §5.5` |
+| Forward                                         | Inverse                                                                                                                                                                                                                                                           |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `form-commit { fieldValues, previousValues }`   | `form-commit { fieldValues: previousValues, previousValues: fieldValues }`                                                                                                                                                                                        |
+| `form-design-add { fieldDefinition }`           | `form-design-remove { fieldName: fieldDefinition.name, before: fieldDefinition }`                                                                                                                                                                                 |
+| `form-design-remove { fieldName, before }`      | `form-design-add { fieldDefinition: before }`                                                                                                                                                                                                                     |
+| `form-design-edit { fieldName, before, after }` | `form-design-edit { fieldName, before: after, after: before }`                                                                                                                                                                                                    |
+| `form-flatten { beforeFields, beforeValues }`   | A composite synthesized at undo time: dispatch `form-design-add` per field in `beforeFields`, then `form-commit` with `beforeValues`. The history middleware emits a single history entry referencing the composite; documented in `architecture-phase-3.md §5.5` |
 
 Implementation note: the renderer's `document-inverses.ts` (Phase 1 file, Phase 2 extended) adds five new branches. The `form-flatten` inverse is a function that returns a thunk-like composite (matches the Phase 2 pattern for compact history entries).
 
@@ -805,9 +843,9 @@ interface FormTemplateRow {
 interface FormTemplateRowDto {
   id: number;
   name: string;
-  fields: FormFieldDefinition[];                              // PARSED from fields_json
+  fields: FormFieldDefinition[]; // PARSED from fields_json
   sourceDocHash: string | null;
-  lastColumnMappings: Record<string, string> | null;          // PARSED from last_column_mappings
+  lastColumnMappings: Record<string, string> | null; // PARSED from last_column_mappings
   createdAt: number;
   updatedAt: number;
 }
@@ -821,14 +859,16 @@ interface FormTemplateRowDto {
 // src/db/repositories/form-templates-repo.ts (Ravi Wave 12)
 
 interface FormTemplatesRepo {
-  list(): FormTemplateRow[];                                  // ordered by updated_at DESC
+  list(): FormTemplateRow[]; // ordered by updated_at DESC
   get(id: number): FormTemplateRow | null;
   getByName(name: string): FormTemplateRow | null;
-  upsert(row: Omit<FormTemplateRow, 'id' | 'created_at' | 'updated_at'> & {
-    id?: number;
-    created_at?: number;
-    updated_at?: number;
-  }): number;                                                  // returns id
+  upsert(
+    row: Omit<FormTemplateRow, 'id' | 'created_at' | 'updated_at'> & {
+      id?: number;
+      created_at?: number;
+      updated_at?: number;
+    },
+  ): number; // returns id
   delete(id: number): boolean;
   updateColumnMappings(id: number, mappings: Record<string, string>): boolean;
 }
@@ -861,19 +901,19 @@ interface FormTemplatesRepo {
 
 For David's zod schemas in the Phase-3 handlers:
 
-| Field | Rule |
-|---|---|
-| `name` | string, 1..63 chars, no `.` (period-separated names are NOT supported by the renderer's Inspector in Phase 3; Phase 3.1 may add nested-field support) |
-| `type` | one of the 6 FormFieldType literals |
-| `pageIndex` | integer, ≥ 0, < pageCount |
-| `rect.x/y` | number, finite |
-| `rect.width/height` | number, > 0 |
-| `label` | string, 0..200 chars |
-| `required` | boolean |
-| `options` | array of FormFieldOption; required if type === 'radio' or 'dropdown'; forbidden for other types |
-| `options[].value` | string, 1..100 chars |
-| `options[].label` | string, 0..200 chars |
-| `defaultValue` | matches `type` per FormFieldValue union; optional |
+| Field               | Rule                                                                                                                                                  |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`              | string, 1..63 chars, no `.` (period-separated names are NOT supported by the renderer's Inspector in Phase 3; Phase 3.1 may add nested-field support) |
+| `type`              | one of the 6 FormFieldType literals                                                                                                                   |
+| `pageIndex`         | integer, ≥ 0, < pageCount                                                                                                                             |
+| `rect.x/y`          | number, finite                                                                                                                                        |
+| `rect.width/height` | number, > 0                                                                                                                                           |
+| `label`             | string, 0..200 chars                                                                                                                                  |
+| `required`          | boolean                                                                                                                                               |
+| `options`           | array of FormFieldOption; required if type === 'radio' or 'dropdown'; forbidden for other types                                                       |
+| `options[].value`   | string, 1..100 chars                                                                                                                                  |
+| `options[].label`   | string, 0..200 chars                                                                                                                                  |
+| `defaultValue`      | matches `type` per FormFieldValue union; optional                                                                                                     |
 
 Out-of-bounds rect coords are clamped to page bounds with a warning per api-contracts §13.4. Names with `.` get rejected at the handler boundary with `invalid_field_definition`.
 
@@ -881,15 +921,15 @@ Out-of-bounds rect coords are clamped to page bounds with a warning per api-cont
 
 None new — all Phase 3 design questions from `wave-11-brief.md §"Specific design questions you must answer"` have been answered in `architecture-phase-3.md`, `form-engine.md`, this amendment, or the api-contracts §13 amendment. Cross-reference:
 
-| Wave-11-brief question | Answer location |
-|---|---|
-| A. pdf-lib CREATE boundary | architecture-phase-3.md §4.2; form-engine.md §3.4 + §3.7 — native-supported + manual-dict for signature |
-| B. EditOperation integration | architecture-phase-3.md §5 — HYBRID with commit boundary |
-| C. Mail-merge progress reporting | architecture-phase-3.md §6.3; api-contracts.md §13.10 — IPC stream + modal with cancel |
-| D. Field-mapping UI | architecture-phase-3.md §6.4 — auto-detect + per-template persistence in form_templates.last_column_mappings |
+| Wave-11-brief question            | Answer location                                                                                                               |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| A. pdf-lib CREATE boundary        | architecture-phase-3.md §4.2; form-engine.md §3.4 + §3.7 — native-supported + manual-dict for signature                       |
+| B. EditOperation integration      | architecture-phase-3.md §5 — HYBRID with commit boundary                                                                      |
+| C. Mail-merge progress reporting  | architecture-phase-3.md §6.3; api-contracts.md §13.10 — IPC stream + modal with cancel                                        |
+| D. Field-mapping UI               | architecture-phase-3.md §6.4 — auto-detect + per-template persistence in form_templates.last_column_mappings                  |
 | E. Form designer placement coords | UI in screen-space; conversion to PDF user-space at IPC boundary via pdf-coords.ts (`ui-spec.md §12` — see Phase-3 amendment) |
-| F. Signature placeholders | architecture-phase-3.md §8 — placeholder in Phase 3 + Phase 4 handoff |
-| G. Form template storage | architecture-phase-3.md §7.3; this §8.4.2 — cross-file table, not per-file |
+| F. Signature placeholders         | architecture-phase-3.md §8 — placeholder in Phase 3 + Phase 4 handoff                                                         |
+| G. Form template storage          | architecture-phase-3.md §7.3; this §8.4.2 — cross-file table, not per-file                                                    |
 
 ---
 
@@ -900,6 +940,7 @@ None new — all Phase 3 design questions from `wave-11-brief.md §"Specific des
 > §1-§8 above remain FROZEN at Wave 11. Additions below are append-only. Per the Phase-4 freeze rule (`docs/architecture-phase-4.md §13`), Phase-1 + Phase-2 + Phase-3 sections do not change.
 
 This section adds:
+
 - `SignaturePlacement`, `VisualAppearanceSpec`, `PadesAppearanceSpec`, `VisualAppearanceSource` types
 - `SignaturePayload` (extending Phase-3 `FormFieldValue.{ type: 'signature' }`)
 - Five new `EditOperation` variants (`signature-visual-place`, `signature-pades-applied`, `annot-add-shape`, `annot-edit-shape`, `annot-delete-shape`)
@@ -927,25 +968,39 @@ interface SignaturePlacement {
 }
 
 type VisualAppearanceSource =
-  | { kind: 'typed'; name: string; fontFamily?: string; fontSize?: number; pngBytes: Uint8Array; widthPx: number; heightPx: number }
+  | {
+      kind: 'typed';
+      name: string;
+      fontFamily?: string;
+      fontSize?: number;
+      pngBytes: Uint8Array;
+      widthPx: number;
+      heightPx: number;
+    }
   | { kind: 'drawn'; pngBytes: Uint8Array; widthPx: number; heightPx: number }
-  | { kind: 'image'; bytes: Uint8Array; mimeType: 'image/png' | 'image/jpeg'; widthPx: number; heightPx: number };
+  | {
+      kind: 'image';
+      bytes: Uint8Array;
+      mimeType: 'image/png' | 'image/jpeg';
+      widthPx: number;
+      heightPx: number;
+    };
 
 interface VisualAppearanceSpec {
   source: VisualAppearanceSource;
   showName: boolean;
   showDate: boolean;
   showReason: boolean;
-  showSubjectCN: boolean;                 // visual: always false; included for type symmetry
-  showIssuerCN: boolean;                  // visual: always false
-  showTsaInfo: boolean;                   // visual: always false
+  showSubjectCN: boolean; // visual: always false; included for type symmetry
+  showIssuerCN: boolean; // visual: always false
+  showTsaInfo: boolean; // visual: always false
   reason?: string;
 }
 
 interface PadesAppearanceSpec extends VisualAppearanceSpec {
-  showSubjectCN: boolean;                 // default true
-  showIssuerCN: boolean;                  // default false
-  showTsaInfo: boolean;                   // default false
+  showSubjectCN: boolean; // default true
+  showIssuerCN: boolean; // default false
+  showTsaInfo: boolean; // default false
 }
 ```
 
@@ -957,12 +1012,12 @@ Phase 3 `FormFieldValue.{ type: 'signature', value: null }` (§8.1) is extended 
 // extends data-models.md §8.1 FormFieldValue union — Phase 4 amendment
 
 type FormFieldValue =
-  | { type: 'text';      value: string }
-  | { type: 'checkbox';  value: boolean }
-  | { type: 'radio';     value: string }
-  | { type: 'dropdown';  value: string }
-  | { type: 'signature'; value: SignaturePayload | null }   // null = placeholder; non-null = signed
-  | { type: 'date';      value: string };
+  | { type: 'text'; value: string }
+  | { type: 'checkbox'; value: boolean }
+  | { type: 'radio'; value: string }
+  | { type: 'dropdown'; value: string }
+  | { type: 'signature'; value: SignaturePayload | null } // null = placeholder; non-null = signed
+  | { type: 'date'; value: string };
 
 interface SignaturePayload {
   kind: 'visual' | 'pades';
@@ -990,50 +1045,47 @@ type EditOperation =
   // ...Phase 1 + 2 + 3 variants...
 
   // Phase 4 — signatures:
-  | { kind: 'signature-visual-place';
+  | {
+      kind: 'signature-visual-place';
       meta: EditMeta;
       placement: SignaturePlacement;
       appearance: VisualAppearanceSpec;
       placeholderFieldName: string | null; // non-null when filling a Phase-3 /Sig field
     }
-  | { kind: 'signature-pades-applied';
+  | {
+      kind: 'signature-pades-applied';
       meta: EditMeta;
       placement: SignaturePlacement;
-      certFingerprint: string;             // SHA-256 hex; not the cert itself
+      certFingerprint: string; // SHA-256 hex; not the cert itself
       signerSubjectCN: string;
       signerIssuerCN: string;
       signedAt: number;
       tsaUrl: string | null;
-      auditLogRowId: number;               // FK to signature_audit_log.id
+      auditLogRowId: number; // FK to signature_audit_log.id
       placeholderFieldName: string | null;
     }
 
   // Phase 4 — annotation shapes (NEW variants, not extensions of annot-add/edit/delete):
-  | { kind: 'annot-add-shape';
-      meta: EditMeta;
-      annotation: ShapeAnnotationModel;
-    }
-  | { kind: 'annot-edit-shape';
+  | { kind: 'annot-add-shape'; meta: EditMeta; annotation: ShapeAnnotationModel }
+  | {
+      kind: 'annot-edit-shape';
       meta: EditMeta;
       id: string;
       before: Partial<ShapeAnnotationModel>;
       after: Partial<ShapeAnnotationModel>;
     }
-  | { kind: 'annot-delete-shape';
-      meta: EditMeta;
-      before: ShapeAnnotationModel;
-    };
+  | { kind: 'annot-delete-shape'; meta: EditMeta; before: ShapeAnnotationModel };
 ```
 
 #### 9.3.1 Inverse table (extends §3.2 + §7.1.3 + §8.3)
 
-| Forward | Inverse |
-|---|---|
-| `signature-visual-place { placement, appearance, placeholderFieldName }` | `signature-visual-remove { placement, placeholderFieldName, before: { appearance } }` (NEW companion variant; documented in §9.3.2) |
+| Forward                                                                                                 | Inverse                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `signature-visual-place { placement, appearance, placeholderFieldName }`                                | `signature-visual-remove { placement, placeholderFieldName, before: { appearance } }` (NEW companion variant; documented in §9.3.2)                   |
 | `signature-pades-applied { placement, certFingerprint, signerSubjectCN, signedAt, auditLogRowId, ... }` | `signature-pades-removed { placement, auditLogRowId, before: { certFingerprint, signerSubjectCN, signedAt } }` (NEW companion; deletes the audit row) |
-| `annot-add-shape { annotation }` | `annot-delete-shape { before: annotation }` |
-| `annot-edit-shape { id, before, after }` | `annot-edit-shape { id, before: after, after: before }` |
-| `annot-delete-shape { before }` | `annot-add-shape { annotation: before }` |
+| `annot-add-shape { annotation }`                                                                        | `annot-delete-shape { before: annotation }`                                                                                                           |
+| `annot-edit-shape { id, before, after }`                                                                | `annot-edit-shape { id, before: after, after: before }`                                                                                               |
+| `annot-delete-shape { before }`                                                                         | `annot-add-shape { annotation: before }`                                                                                                              |
 
 #### 9.3.2 Companion variants
 
@@ -1042,13 +1094,15 @@ For symmetry with §7.1.3's image-overlay-delete pattern, Phase 4 adds inverse-o
 ```ts
 type EditOperation =
   // ...
-  | { kind: 'signature-visual-remove';
+  | {
+      kind: 'signature-visual-remove';
       meta: EditMeta;
       placement: SignaturePlacement;
       placeholderFieldName: string | null;
       before: { appearance: VisualAppearanceSpec };
     }
-  | { kind: 'signature-pades-removed';
+  | {
+      kind: 'signature-pades-removed';
       meta: EditMeta;
       placement: SignaturePlacement;
       placeholderFieldName: string | null;
@@ -1170,7 +1224,7 @@ interface SignatureAuditRowDto {
   tsaResponseStatus: 'ok' | 'failed' | null;
   sigBytesOffset: number | null;
   sigBytesLength: number | null;
-  byteRange: number[] | null;            // PARSED from byte_range_json
+  byteRange: number[] | null; // PARSED from byte_range_json
   reason: string | null;
   location: string | null;
   fieldName: string | null;
@@ -1189,14 +1243,28 @@ interface SignatureAuditRepo {
   insert(row: Omit<SignatureAuditRow, 'id' | 'created_at'> & { created_at?: number }): number;
   get(id: number): SignatureAuditRow | null;
   listByDocHash(docHash: string, limit?: number, offset?: number): SignatureAuditRow[];
-  listByPreSignDocHash(preSignDocHash: string, limit?: number, offset?: number): SignatureAuditRow[];
-  listByFingerprint(fingerprint: string, since?: number, until?: number, limit?: number, offset?: number): SignatureAuditRow[];
-  listAll(filters: {
-    fileHash?: string;
-    signedByFingerprint?: string;
-    since?: number;
-    until?: number;
-  }, limit?: number, offset?: number): { items: SignatureAuditRow[]; total: number };
+  listByPreSignDocHash(
+    preSignDocHash: string,
+    limit?: number,
+    offset?: number,
+  ): SignatureAuditRow[];
+  listByFingerprint(
+    fingerprint: string,
+    since?: number,
+    until?: number,
+    limit?: number,
+    offset?: number,
+  ): SignatureAuditRow[];
+  listAll(
+    filters: {
+      fileHash?: string;
+      signedByFingerprint?: string;
+      since?: number;
+      until?: number;
+    },
+    limit?: number,
+    offset?: number,
+  ): { items: SignatureAuditRow[]; total: number };
   delete(id: number): boolean;
 }
 ```
@@ -1209,44 +1277,45 @@ interface SignatureAuditRepo {
 // extends data-models.md §3.1 — Phase 4 append-only
 
 type ShapeAnnotationSubtype =
-  | 'Square'         // rectangle
-  | 'Circle'         // ellipse
-  | 'Polygon'        // closed polygon
-  | 'PolyLine'       // open polyline
-  | 'Line'           // straight line (used for arrow + line-measure)
+  | 'Square' // rectangle
+  | 'Circle' // ellipse
+  | 'Polygon' // closed polygon
+  | 'PolyLine' // open polyline
+  | 'Line' // straight line (used for arrow + line-measure)
   | 'FreeTextCallout'; // /FreeText with /IT FreeTextCallout
 
 interface ShapeAnnotationModel {
-  id: string;                              // UUID v4
+  id: string; // UUID v4
   pageIndex: number;
   subtype: ShapeAnnotationSubtype;
-  rect: PdfRect;                           // bounding box; used for hit-testing
-  color: RgbColor;                         // stroke color
-  opacity: number;                         // 0..1
-  borderWidth: number;                     // pt; 0.25..10
+  rect: PdfRect; // bounding box; used for hit-testing
+  color: RgbColor; // stroke color
+  opacity: number; // 0..1
+  borderWidth: number; // pt; 0.25..10
   borderStyle: 'solid' | 'dashed' | 'dotted';
-  fillColor?: RgbColor;                    // for Square/Circle/Polygon when fillEnabled
+  fillColor?: RgbColor; // for Square/Circle/Polygon when fillEnabled
   fillEnabled?: boolean;
   // Subtype-specific (only one of these blocks is populated per row):
-  vertices?: number[];                     // [x1, y1, x2, y2, ...] for Polygon/PolyLine
-  lineStart?: { x: number; y: number };    // Line / arrow start
-  lineEnd?: { x: number; y: number };      // Line / arrow end
+  vertices?: number[]; // [x1, y1, x2, y2, ...] for Polygon/PolyLine
+  lineStart?: { x: number; y: number }; // Line / arrow start
+  lineEnd?: { x: number; y: number }; // Line / arrow end
   lineStartStyle?: 'None' | 'Butt' | 'OpenArrow' | 'ClosedArrow';
   lineEndStyle?: 'None' | 'Butt' | 'OpenArrow' | 'ClosedArrow';
-  calloutText?: string;                    // FreeTextCallout body
+  calloutText?: string; // FreeTextCallout body
   calloutPointer?: { x: number; y: number }; // /CL array tip
-  fontSize?: number;                       // FreeTextCallout
-  fontFamily?: string;                     // FreeTextCallout
-  measure?: {                              // Line / PolyLine when used as measure tool
+  fontSize?: number; // FreeTextCallout
+  fontFamily?: string; // FreeTextCallout
+  measure?: {
+    // Line / PolyLine when used as measure tool
     unit: 'inch' | 'cm' | 'mm' | 'pt' | 'px' | 'custom';
     customUnitLabel?: string;
     scale: number;
   };
   author?: string;
-  contents?: string;                       // /Contents popup text
+  contents?: string; // /Contents popup text
   createdAt: number;
   modifiedAt: number;
-  pdfObjectNumber?: number;                // assigned after save
+  pdfObjectNumber?: number; // assigned after save
   dirty: boolean;
   preservedDict?: Record<string, unknown>; // for round-trip of unknown fields
 }
@@ -1295,37 +1364,37 @@ Stored in main memory keyed by `DocumentHandle` for the document's open session.
 
 For David's zod schemas in the `annotations:addShape` handler:
 
-| Field | Rule |
-|---|---|
-| `id` | string, UUID v4 |
-| `pageIndex` | integer, ≥ 0, < pageCount |
-| `subtype` | one of the 6 ShapeAnnotationSubtype literals |
-| `rect` | bounded by page bounds; w/h > 0 |
-| `color` | RgbColor with all components 0..1 |
-| `opacity` | 0..1 |
-| `borderWidth` | 0.25..10 pt |
-| `borderStyle` | one of three literals |
-| `fillColor` | required if `fillEnabled === true` |
-| `vertices` | required if subtype is Polygon or PolyLine; even-length array; ≥ 3 points for Polygon; ≥ 2 for PolyLine |
-| `lineStart`/`lineEnd` | required if subtype is Line |
-| `calloutText` | required if subtype is FreeTextCallout; 0..2000 chars |
-| `calloutPointer` | required if subtype is FreeTextCallout |
-| `measure` | optional; required when used as line-measure / polyline-measure tool; scale > 0 |
+| Field                 | Rule                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------- |
+| `id`                  | string, UUID v4                                                                                         |
+| `pageIndex`           | integer, ≥ 0, < pageCount                                                                               |
+| `subtype`             | one of the 6 ShapeAnnotationSubtype literals                                                            |
+| `rect`                | bounded by page bounds; w/h > 0                                                                         |
+| `color`               | RgbColor with all components 0..1                                                                       |
+| `opacity`             | 0..1                                                                                                    |
+| `borderWidth`         | 0.25..10 pt                                                                                             |
+| `borderStyle`         | one of three literals                                                                                   |
+| `fillColor`           | required if `fillEnabled === true`                                                                      |
+| `vertices`            | required if subtype is Polygon or PolyLine; even-length array; ≥ 3 points for Polygon; ≥ 2 for PolyLine |
+| `lineStart`/`lineEnd` | required if subtype is Line                                                                             |
+| `calloutText`         | required if subtype is FreeTextCallout; 0..2000 chars                                                   |
+| `calloutPointer`      | required if subtype is FreeTextCallout                                                                  |
+| `measure`             | optional; required when used as line-measure / polyline-measure tool; scale > 0                         |
 
 ### 9.11 Phase 4 open questions
 
 None new — all Phase 4 design questions from `wave-15-brief.md §"Specific design questions"` have been answered in `architecture-phase-4.md`, `signature-engine.md`, this amendment, the api-contracts §14 amendment, the ui-spec §13 amendment, and the conventions §15 amendment. Cross-reference:
 
-| Wave-15-brief question | Answer location |
-|---|---|
-| A. PAdES library selection | architecture-phase-4.md §4.3; signature-engine.md §3 — node-signpdf primary + manual fallback |
-| B. Cert/password lifecycle | architecture-phase-4.md §4.2 + R-W15-A; signature-engine.md §4; conventions.md §15 |
-| C. TSA URL trust model | architecture-phase-4.md §4.5; signature-engine.md §6.4 — default OFF, user URL, validate-by-attempt |
-| D. Signature appearance stream design | architecture-phase-4.md §4.4; signature-engine.md §5 — deterministic layout + drop priority |
-| E. Visual vs PAdES UI distinction | ui-spec.md §13.4 — two clearly-labeled buttons in capture modal |
-| F. Verification UX | architecture-phase-4.md §4.5 + §8 — `signatures:verify` for own signatures only; Phase 4.1 for third-party |
-| G. Annotation toolset expansion | architecture-phase-4.md §5; ui-spec.md §13.5 — 7 tools enumerated; scope-fenced |
-| H. Signature placement overlay | ui-spec.md §13.4.3 — SHARED with image-overlay component per the question H decision |
+| Wave-15-brief question                | Answer location                                                                                            |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| A. PAdES library selection            | architecture-phase-4.md §4.3; signature-engine.md §3 — node-signpdf primary + manual fallback              |
+| B. Cert/password lifecycle            | architecture-phase-4.md §4.2 + R-W15-A; signature-engine.md §4; conventions.md §15                         |
+| C. TSA URL trust model                | architecture-phase-4.md §4.5; signature-engine.md §6.4 — default OFF, user URL, validate-by-attempt        |
+| D. Signature appearance stream design | architecture-phase-4.md §4.4; signature-engine.md §5 — deterministic layout + drop priority                |
+| E. Visual vs PAdES UI distinction     | ui-spec.md §13.4 — two clearly-labeled buttons in capture modal                                            |
+| F. Verification UX                    | architecture-phase-4.md §4.5 + §8 — `signatures:verify` for own signatures only; Phase 4.1 for third-party |
+| G. Annotation toolset expansion       | architecture-phase-4.md §5; ui-spec.md §13.5 — 7 tools enumerated; scope-fenced                            |
+| H. Signature placement overlay        | ui-spec.md §13.4.3 — SHARED with image-overlay component per the question H decision                       |
 
 End of Phase-4 data-models amendment.
 
@@ -1338,6 +1407,7 @@ End of Phase-4 data-models amendment.
 > §1-§9 above remain FROZEN at Wave 15. Additions below are append-only. Per the Phase-5 freeze rule (`docs/architecture-phase-5.md §14`), Phase-1 + Phase-2 + Phase-3 + Phase-4 sections do not change. One ALTER TABLE on the Phase-4 `signature_audit_log` is in scope per §10.4 — additive nullable column only.
 
 This section adds:
+
 - `LanguagePack`, `LanguagePackCatalogEntry`, `OcrLanguagePackSource` types
 - `PreprocessOptions`, `OcrWord`, `OcrPageResult`, `OcrJobSummary` types
 - One new `EditOperation` variant (`ocr-text-behind-applied`) + its inverse companion (`ocr-text-behind-removed`)
@@ -1355,13 +1425,13 @@ This section adds:
 type OcrLanguagePackSource = 'bundled' | 'downloaded';
 
 interface LanguagePack {
-  lang: string;                            // ISO 639-2/3 letter; tesseract.js compatible
-  displayName: string;                     // for UI
+  lang: string; // ISO 639-2/3 letter; tesseract.js compatible
+  displayName: string; // for UI
   source: OcrLanguagePackSource;
-  filePath: string;                        // absolute path (main only); NEVER echoed to renderer
+  filePath: string; // absolute path (main only); NEVER echoed to renderer
   sizeBytes: number;
-  sha256: string;                          // hex
-  installedAt: number;                     // ms epoch
+  sha256: string; // hex
+  installedAt: number; // ms epoch
   lastUsedAt: number | null;
 }
 
@@ -1408,17 +1478,19 @@ type EditOperation =
   // ...Phase 1 + 2 + 3 + 4 variants...
 
   // Phase 5 — OCR text-behind-image:
-  | { kind: 'ocr-text-behind-applied';
+  | {
+      kind: 'ocr-text-behind-applied';
       meta: EditMeta;
-      jobId: number;                       // FK to ocr_jobs.id
+      jobId: number; // FK to ocr_jobs.id
       pageRange: { start: number; end: number };
       langs: string[];
       meanConfidence: number;
       totalWordsRecognized: number;
-      invalidatesSignatures: boolean;      // true if PAdES widgets were present pre-OCR (user confirmed at modal time)
+      invalidatesSignatures: boolean; // true if PAdES widgets were present pre-OCR (user confirmed at modal time)
     }
   // Inverse companion (undo only):
-  | { kind: 'ocr-text-behind-removed';
+  | {
+      kind: 'ocr-text-behind-removed';
       meta: EditMeta;
       before: {
         jobId: number;
@@ -1432,10 +1504,10 @@ type EditOperation =
 
 #### 10.3.1 Inverse table (extends §3.2 + §7.1.3 + §8.3 + §9.3.1)
 
-| Forward | Inverse |
-|---|---|
-| `ocr-text-behind-applied { jobId, pageRange, langs, ... }` | `ocr-text-behind-removed { before: { jobId, pageRange, langs, ... } }` |
-| `ocr-text-behind-removed { before }` | `ocr-text-behind-applied { jobId: before.jobId, ..., invalidatesSignatures: false }` (Note: re-applying does NOT re-prompt — the signatures were already invalidated by the first run; the audit log already records it.) |
+| Forward                                                    | Inverse                                                                                                                                                                                                                   |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ocr-text-behind-applied { jobId, pageRange, langs, ... }` | `ocr-text-behind-removed { before: { jobId, pageRange, langs, ... } }`                                                                                                                                                    |
+| `ocr-text-behind-removed { before }`                       | `ocr-text-behind-applied { jobId: before.jobId, ..., invalidatesSignatures: false }` (Note: re-applying does NOT re-prompt — the signatures were already invalidated by the first run; the audit log already records it.) |
 
 #### 10.3.2 Phase 4 PAdES interaction note
 
@@ -1545,14 +1617,20 @@ Same disclosure as Phase 4 `signature_audit_log` (§9.4.3): the OCR audit tables
 ```ts
 // src/db/types.ts (Ravi Wave 20 edit)
 
-type OcrJobStatus = 'queued' | 'running' | 'completed' | 'cancelled' | 'failed' | 'superseded_by_undo';
+type OcrJobStatus =
+  | 'queued'
+  | 'running'
+  | 'completed'
+  | 'cancelled'
+  | 'failed'
+  | 'superseded_by_undo';
 
 interface OcrJobRow {
   id: number;
   doc_hash: string;
   page_range_start: number;
   page_range_end: number;
-  langs: string;                                  // '+'-joined
+  langs: string; // '+'-joined
   preprocess_json: string;
   status: OcrJobStatus;
   started_at: number;
@@ -1569,15 +1647,15 @@ interface OcrJobRowDto {
   id: number;
   docHash: string;
   pageRange: { start: number; end: number };
-  langs: string[];                                // parsed from '+'-joined string
-  preprocess: PreprocessOptions;                  // parsed from preprocess_json
+  langs: string[]; // parsed from '+'-joined string
+  preprocess: PreprocessOptions; // parsed from preprocess_json
   status: OcrJobStatus;
   startedAt: number;
   completedAt: number | null;
   meanConfidence: number | null;
   totalWords: number | null;
   errorMessage: string | null;
-  invalidatedSignatures: boolean;                 // 0/1 → bool
+  invalidatedSignatures: boolean; // 0/1 → bool
   createdAt: number;
 }
 ```
@@ -1601,7 +1679,7 @@ interface OcrResultRow {
 
 interface OcrWord {
   text: string;
-  confidence: number;                             // 0-100 (Tesseract scale)
+  confidence: number; // 0-100 (Tesseract scale)
   imgRect: { x0: number; y0: number; x1: number; y1: number };
   /** PDF user-space rect. NULLABLE — late-init; set by searchable-pdf-builder. */
   pdfRect: PdfRect | null;
@@ -1625,7 +1703,7 @@ interface OcrResultRowDto {
   totalWords: number;
   lowConfidenceWords: number;
   meanConfidence: number;
-  words: OcrWord[];                               // parsed from words_json
+  words: OcrWord[]; // parsed from words_json
   imgDimsPx: { widthPx: number; heightPx: number };
   durationMs: number;
   createdAt: number;
@@ -1657,7 +1735,7 @@ interface OcrJobSummary {
 interface LanguagePackRow {
   lang: string;
   source: OcrLanguagePackSource;
-  file_path: string;                              // main-only
+  file_path: string; // main-only
   size_bytes: number;
   sha256: string;
   installed_at: number;
@@ -1667,7 +1745,7 @@ interface LanguagePackRow {
 // Renderer-facing — file_path omitted (boundary discipline per §10.1):
 interface LanguagePackDto {
   lang: string;
-  displayName: string;                            // resolved from catalog at the bridge
+  displayName: string; // resolved from catalog at the bridge
   source: OcrLanguagePackSource;
   sizeBytes: number;
   sha256: string;
@@ -1696,13 +1774,22 @@ interface OcrJobsRepo {
   ): boolean;
   listByDocHash(docHash: string, limit?: number, offset?: number): OcrJobRow[];
   listByStatus(status: OcrJobStatus, limit?: number, offset?: number): OcrJobRow[];
-  listAll(filters: {
+  listAll(
+    filters: {
+      docHash?: string;
+      status?: OcrJobStatus;
+      since?: number;
+      until?: number;
+    },
+    limit?: number,
+    offset?: number,
+  ): OcrJobRow[];
+  countAll(filters: {
     docHash?: string;
     status?: OcrJobStatus;
     since?: number;
     until?: number;
-  }, limit?: number, offset?: number): OcrJobRow[];
-  countAll(filters: { docHash?: string; status?: OcrJobStatus; since?: number; until?: number }): number;
+  }): number;
   delete(id: number): boolean;
 }
 
@@ -1712,7 +1799,7 @@ interface OcrResultsRepo {
   insert(row: Omit<OcrResultRow, 'id' | 'created_at'> & { created_at?: number }): number;
   listByJobId(jobId: number): OcrResultRow[];
   getByJobAndPage(jobId: number, pageIndex: number): OcrResultRow | null;
-  deleteByJobId(jobId: number): number;          // returns rows deleted; cascade also fires on DELETE FROM ocr_jobs
+  deleteByJobId(jobId: number): number; // returns rows deleted; cascade also fires on DELETE FROM ocr_jobs
 }
 
 // src/db/repositories/language-packs-repo.ts (Ravi Wave 20)
@@ -1721,7 +1808,7 @@ interface LanguagePacksRepo {
   upsert(pack: LanguagePackRow): void;
   list(): LanguagePackRow[];
   get(lang: string): LanguagePackRow | null;
-  remove(lang: string): boolean;                  // refuses to remove source='bundled' — caller surfaces error
+  remove(lang: string): boolean; // refuses to remove source='bundled' — caller surfaces error
   touchLastUsed(lang: string, when: number): void;
 }
 
@@ -1729,7 +1816,7 @@ interface LanguagePacksRepo {
 interface SignatureAuditRepo {
   // ...existing Phase 4 methods unchanged...
   // Phase 5 addition:
-  markInvalidatedByOcrJob(rowIds: number[], ocrJobId: number): number;  // returns rows updated
+  markInvalidatedByOcrJob(rowIds: number[], ocrJobId: number): number; // returns rows updated
   listInvalidatedByOcrJob(ocrJobId: number): SignatureAuditRow[];
 }
 ```
@@ -1763,47 +1850,47 @@ This is the ONLY Phase-4 surface change permitted by the Phase-5 freeze — it i
 
 Eleven new keys (full list mirrored in api-contracts.md §16.11):
 
-| Key | Type | Default | Notes |
-|---|---|---|---|
-| `ocr.defaultLang` | string | `'eng'` | Initial lang in OCR modal |
-| `ocr.lowConfidenceThreshold` | number | `60` | Applied at render time, not recognition |
-| `ocr.rasterDpi` | number | `300` | Page rasterization DPI |
-| `ocr.maxConcurrentLanguages` | number | `4` | Worker pool size cap |
-| `ocr.workerWatchdogSec` | number | `60` | Per-page hang timeout |
-| `ocr.preprocess.deskew` | boolean | `true` | Default modal toggle |
-| `ocr.preprocess.denoise` | boolean | `false` | Default modal toggle |
-| `ocr.preprocess.contrastBoost` | boolean | `false` | Default modal toggle |
-| `ocr.denoise.kernel` | number | `3` | Denoise filter kernel |
-| `ocr.showConfidenceOverlayByDefault` | boolean | `false` | Overlay visibility on doc open |
-| `ocr.confirmInvalidateSignaturesOnce` | boolean | `false` | "Don't ask me again" for §6 prompt |
+| Key                                   | Type    | Default | Notes                                   |
+| ------------------------------------- | ------- | ------- | --------------------------------------- |
+| `ocr.defaultLang`                     | string  | `'eng'` | Initial lang in OCR modal               |
+| `ocr.lowConfidenceThreshold`          | number  | `60`    | Applied at render time, not recognition |
+| `ocr.rasterDpi`                       | number  | `300`   | Page rasterization DPI                  |
+| `ocr.maxConcurrentLanguages`          | number  | `4`     | Worker pool size cap                    |
+| `ocr.workerWatchdogSec`               | number  | `60`    | Per-page hang timeout                   |
+| `ocr.preprocess.deskew`               | boolean | `true`  | Default modal toggle                    |
+| `ocr.preprocess.denoise`              | boolean | `false` | Default modal toggle                    |
+| `ocr.preprocess.contrastBoost`        | boolean | `false` | Default modal toggle                    |
+| `ocr.denoise.kernel`                  | number  | `3`     | Denoise filter kernel                   |
+| `ocr.showConfidenceOverlayByDefault`  | boolean | `false` | Overlay visibility on doc open          |
+| `ocr.confirmInvalidateSignaturesOnce` | boolean | `false` | "Don't ask me again" for §6 prompt      |
 
 ### 10.12 Validation rules
 
-| Field | Rule |
-|---|---|
-| `lang` (catalog code) | `/^[a-z]{3}(_[a-z]+)?$/i` AND must be in catalog |
-| `pageRange.start` | `>= 0` |
-| `pageRange.end` | `>= start` AND `< doc.pageCount` |
-| `PreprocessOptions` | All three booleans required |
-| `confidence` (OcrWord) | 0..100, inclusive |
-| `OcrPageResult.words` | sorted by reading order (top-to-bottom, left-to-right within line) |
-| `OcrJobSummary.pageResults` | `null` until terminal status |
-| `LanguagePack.lang` | matches the same regex as catalog code |
-| `LanguagePack.sha256` | 64-hex-char string |
-| `signature_audit_log.invalidated_by_ocr_job_id` | nullable; FK on `ocr_jobs.id` |
+| Field                                           | Rule                                                               |
+| ----------------------------------------------- | ------------------------------------------------------------------ |
+| `lang` (catalog code)                           | `/^[a-z]{3}(_[a-z]+)?$/i` AND must be in catalog                   |
+| `pageRange.start`                               | `>= 0`                                                             |
+| `pageRange.end`                                 | `>= start` AND `< doc.pageCount`                                   |
+| `PreprocessOptions`                             | All three booleans required                                        |
+| `confidence` (OcrWord)                          | 0..100, inclusive                                                  |
+| `OcrPageResult.words`                           | sorted by reading order (top-to-bottom, left-to-right within line) |
+| `OcrJobSummary.pageResults`                     | `null` until terminal status                                       |
+| `LanguagePack.lang`                             | matches the same regex as catalog code                             |
+| `LanguagePack.sha256`                           | 64-hex-char string                                                 |
+| `signature_audit_log.invalidated_by_ocr_job_id` | nullable; FK on `ocr_jobs.id`                                      |
 
 ### 10.13 Phase 5 open questions
 
 None new — all Phase 5 design questions from `wave-19-brief.md §"Specific design questions"` have been answered in `architecture-phase-5.md`, `ocr-engine.md`, this amendment, the api-contracts §16 amendment, the ui-spec §14 amendment, and the conventions §16 amendment. Cross-reference:
 
-| Wave-19-brief question | Answer location |
-|---|---|
-| Q-A. tesseract.js vs native binding | architecture-phase-5.md §3.1; ocr-engine.md §2 — tesseract.js primary + Phase 5.1 system-Tesseract escape hatch |
-| Q-B. Language pack delivery | architecture-phase-5.md §4.3 + §3.3; ocr-engine.md §4 — bundle `eng` + lazy-download upstream + SHA-256 + offline-after-first-use |
-| Q-C. OCR job scheduling | architecture-phase-5.md §4.6; ocr-engine.md §7.4 — modal-driven blocking v1; background queue Phase 5.2 |
-| Q-D. Text-behind-image format | architecture-phase-5.md §4.4; ocr-engine.md §5 — render-mode-3 BT/ET, NOT ActualText |
-| Q-E. Native scanner go/no-go | architecture-phase-5.md §7 — DEFER to Phase 5.1 (no MIT-compatible binding survives the maturity bar) |
-| Plus: P5-L-10 PAdES interaction | architecture-phase-5.md §6; ocr-engine.md §8 — pre-flight confirm + audit-log update + replay guard |
+| Wave-19-brief question              | Answer location                                                                                                                   |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Q-A. tesseract.js vs native binding | architecture-phase-5.md §3.1; ocr-engine.md §2 — tesseract.js primary + Phase 5.1 system-Tesseract escape hatch                   |
+| Q-B. Language pack delivery         | architecture-phase-5.md §4.3 + §3.3; ocr-engine.md §4 — bundle `eng` + lazy-download upstream + SHA-256 + offline-after-first-use |
+| Q-C. OCR job scheduling             | architecture-phase-5.md §4.6; ocr-engine.md §7.4 — modal-driven blocking v1; background queue Phase 5.2                           |
+| Q-D. Text-behind-image format       | architecture-phase-5.md §4.4; ocr-engine.md §5 — render-mode-3 BT/ET, NOT ActualText                                              |
+| Q-E. Native scanner go/no-go        | architecture-phase-5.md §7 — DEFER to Phase 5.1 (no MIT-compatible binding survives the maturity bar)                             |
+| Plus: P5-L-10 PAdES interaction     | architecture-phase-5.md §6; ocr-engine.md §8 — pre-flight confirm + audit-log update + replay guard                               |
 
 End of Phase-5 data-models amendment.
 
@@ -1817,9 +1904,9 @@ End of Phase-5 data-models amendment.
 
 ### 11.1 Schema v6 migration overview
 
-| Migration | File | Adds |
-|---|---|---|
-| v6 | `migrations/0006_phase6_export.sql` | `export_jobs` table + 3 indexes + setting-key seed inserts via `INSERT OR IGNORE INTO settings (key, value)` |
+| Migration | File                                | Adds                                                                                                         |
+| --------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| v6        | `migrations/0006_phase6_export.sql` | `export_jobs` table + 3 indexes + setting-key seed inserts via `INSERT OR IGNORE INTO settings (key, value)` |
 
 Forward-only. Idempotent — `migrate.ts` skips applied versions. Clean migration from schema v5 — one new table only.
 
@@ -1899,7 +1986,7 @@ export interface ExportJobRowDto {
   imageOptions: { dpi: number; jpegQuality: number | null; multiPageTiff: boolean | null } | null;
   /** Basename of output_path; absolute path is NOT exposed to renderer (boundary discipline) */
   outputBasename: string;
-  outputDirHint: string;                        // last-folder-only, for "Open output folder" UX (NOT the full absolute path)
+  outputDirHint: string; // last-folder-only, for "Open output folder" UX (NOT the full absolute path)
   outputSizeBytes: number | null;
   status: 'queued' | 'running' | 'completed' | 'cancelled' | 'failed';
   startedAt: number;
@@ -1907,7 +1994,11 @@ export interface ExportJobRowDto {
   durationMs: number | null;
   pagesProcessed: number;
   /** Office-format-specific; null for image formats AND until done */
-  contentStats: { paragraphsExtracted: number; tablesDetected: number; imagesEmbedded: number } | null;
+  contentStats: {
+    paragraphsExtracted: number;
+    tablesDetected: number;
+    imagesEmbedded: number;
+  } | null;
   errorMessage: string | null;
   createdAt: number;
 }
@@ -1925,7 +2016,11 @@ export interface ExportJobSummary {
   outputBasename: string;
   outputDirHint: string;
   outputSizeBytes: number;
-  contentStats: { paragraphsExtracted: number; tablesDetected: number; imagesEmbedded: number } | null;
+  contentStats: {
+    paragraphsExtracted: number;
+    tablesDetected: number;
+    imagesEmbedded: number;
+  } | null;
   /** Nullable + late-init (Phase 5 lesson reaffirmed). Per-page progress is null until export starts; populated incrementally during run. */
   perPageProgress: Array<{ pageIndex: number; phase: string; completedAt: number | null }> | null;
 }
@@ -1937,25 +2032,25 @@ export interface ExportJobSummary {
 
 Phase 6 adds 17 new `settings` keys (no new table; folds into existing key-value store seeded by Phase 1). Migration v6 includes `INSERT OR IGNORE` for each key:
 
-| Key | Type | Default | Purpose |
-|---|---|---|---|
-| `export.docx.qualityTier` | `'text-only' \| 'layout-preserving'` | `'layout-preserving'` | Default tier for docx |
-| `export.docx.pageSize` | `'letter' \| 'a4' \| 'auto'` | `'auto'` | Default page size for docx output |
-| `export.docx.includeAnnotations` | `boolean` | `true` | Default for docx include-annotations toggle |
-| `export.xlsx.qualityTier` | `'text-only' \| 'layout-preserving'` | `'text-only'` | Default tier for xlsx (Q-D: Excel inherently tabular) |
-| `export.xlsx.includeAnnotations` | `boolean` | `false` | Default false (cells are data, not visual) |
-| `export.pptx.qualityTier` | `'text-only' \| 'layout-preserving'` | `'layout-preserving'` | Default tier for pptx |
-| `export.pptx.includeAnnotations` | `boolean` | `true` | Default true |
-| `export.image.format` | `'png' \| 'jpeg' \| 'tiff'` | `'png'` | Default image format in image-export sub-picker |
-| `export.image.dpi` | `number` | `150` | Default DPI for image export |
-| `export.image.jpegQuality` | `number` | `0.9` | Default JPEG quality |
-| `export.image.multiPageTiff` | `boolean` | `false` | Default multi-page-TIFF bundling |
-| `export.image.includeAnnotations` | `boolean` | `true` | Default for image-export include-annotations toggle |
-| `export.layout.lineEpsilonPt` | `number` | `2` | Y-coordinate clustering epsilon (paragraph detection; see export-engine.md §3.4.2) |
-| `export.layout.paragraphBreakRatio` | `number` | `1.5` | Line-gap / median-line-height threshold for paragraph break |
-| `export.layout.headingRatio` | `number` | `1.3` | Font-size / median-body-font ratio for heading classification |
-| `export.layout.columnGapPt` | `number` | `40` | Minimum X-gap for column boundary detection |
-| `export.maxQueueSize` | `number` | `50` | Max queued + 1 running |
+| Key                                 | Type                                 | Default               | Purpose                                                                            |
+| ----------------------------------- | ------------------------------------ | --------------------- | ---------------------------------------------------------------------------------- |
+| `export.docx.qualityTier`           | `'text-only' \| 'layout-preserving'` | `'layout-preserving'` | Default tier for docx                                                              |
+| `export.docx.pageSize`              | `'letter' \| 'a4' \| 'auto'`         | `'auto'`              | Default page size for docx output                                                  |
+| `export.docx.includeAnnotations`    | `boolean`                            | `true`                | Default for docx include-annotations toggle                                        |
+| `export.xlsx.qualityTier`           | `'text-only' \| 'layout-preserving'` | `'text-only'`         | Default tier for xlsx (Q-D: Excel inherently tabular)                              |
+| `export.xlsx.includeAnnotations`    | `boolean`                            | `false`               | Default false (cells are data, not visual)                                         |
+| `export.pptx.qualityTier`           | `'text-only' \| 'layout-preserving'` | `'layout-preserving'` | Default tier for pptx                                                              |
+| `export.pptx.includeAnnotations`    | `boolean`                            | `true`                | Default true                                                                       |
+| `export.image.format`               | `'png' \| 'jpeg' \| 'tiff'`          | `'png'`               | Default image format in image-export sub-picker                                    |
+| `export.image.dpi`                  | `number`                             | `150`                 | Default DPI for image export                                                       |
+| `export.image.jpegQuality`          | `number`                             | `0.9`                 | Default JPEG quality                                                               |
+| `export.image.multiPageTiff`        | `boolean`                            | `false`               | Default multi-page-TIFF bundling                                                   |
+| `export.image.includeAnnotations`   | `boolean`                            | `true`                | Default for image-export include-annotations toggle                                |
+| `export.layout.lineEpsilonPt`       | `number`                             | `2`                   | Y-coordinate clustering epsilon (paragraph detection; see export-engine.md §3.4.2) |
+| `export.layout.paragraphBreakRatio` | `number`                             | `1.5`                 | Line-gap / median-line-height threshold for paragraph break                        |
+| `export.layout.headingRatio`        | `number`                             | `1.3`                 | Font-size / median-body-font ratio for heading classification                      |
+| `export.layout.columnGapPt`         | `number`                             | `40`                  | Minimum X-gap for column boundary detection                                        |
+| `export.maxQueueSize`               | `number`                             | `50`                  | Max queued + 1 running                                                             |
 
 Stored as JSON-serialized strings in `settings.value` (Phase 1 convention). The renderer-side `settings-slice` (Phase 1) gains a `useExportSettings` selector pulling all 17 keys at once for the modal's per-format options panel.
 
@@ -1993,11 +2088,22 @@ export interface ExportJobRow {
 export interface ExportJobsRepo {
   insert(row: Omit<ExportJobRow, 'id' | 'created_at'> & { created_at?: number }): number;
   get(id: number): ExportJobRow | null;
-  updateStatus(id: number, status: ExportJobStatus, completedAt?: number, durationMs?: number, errorMessage?: string): boolean;
+  updateStatus(
+    id: number,
+    status: ExportJobStatus,
+    completedAt?: number,
+    durationMs?: number,
+    errorMessage?: string,
+  ): boolean;
   updateProgress(
     id: number,
     pagesProcessed: number,
-    extras?: { paragraphsExtracted?: number; tablesDetected?: number; imagesEmbedded?: number; outputSizeBytes?: number }
+    extras?: {
+      paragraphsExtracted?: number;
+      tablesDetected?: number;
+      imagesEmbedded?: number;
+      outputSizeBytes?: number;
+    },
   ): boolean;
   listByDocHash(docHash: string, limit?: number, offset?: number): ExportJobRow[];
   listByStatus(status: ExportJobStatus, limit?: number, offset?: number): ExportJobRow[];
@@ -2016,19 +2122,19 @@ export interface ExportJobsRepo {
 
 The renderer + IPC handler enforce the following invariants per row:
 
-| Field | Constraint |
-|---|---|
-| `format` | one of 6 enum values |
-| `quality_tier` | matches format: `'n/a'` iff format ∈ {png, jpeg, tiff}; else 'text-only' or 'layout-preserving' |
-| `page_range_start` | `>= 0` |
-| `page_range_end` | `>= start` AND `< doc.pageCount` |
-| `dpi` | non-null iff format ∈ {png, jpeg, tiff}; range [72, 600] |
-| `jpeg_quality` | non-null iff format='jpeg'; range [0.1, 1.0] |
-| `multi_page_tiff` | non-null iff format='tiff'; 0 or 1 |
-| `output_path` | absolute path; writable parent dir |
-| `output_size_bytes` | nullable until terminal; `>= 0` when populated |
-| `paragraphs_extracted` / `tables_detected` / `images_embedded` | nullable for image formats AND until done; `>= 0` when populated |
-| `error_message` | non-null iff status='failed'; max length 2048 chars |
+| Field                                                          | Constraint                                                                                      |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `format`                                                       | one of 6 enum values                                                                            |
+| `quality_tier`                                                 | matches format: `'n/a'` iff format ∈ {png, jpeg, tiff}; else 'text-only' or 'layout-preserving' |
+| `page_range_start`                                             | `>= 0`                                                                                          |
+| `page_range_end`                                               | `>= start` AND `< doc.pageCount`                                                                |
+| `dpi`                                                          | non-null iff format ∈ {png, jpeg, tiff}; range [72, 600]                                        |
+| `jpeg_quality`                                                 | non-null iff format='jpeg'; range [0.1, 1.0]                                                    |
+| `multi_page_tiff`                                              | non-null iff format='tiff'; 0 or 1                                                              |
+| `output_path`                                                  | absolute path; writable parent dir                                                              |
+| `output_size_bytes`                                            | nullable until terminal; `>= 0` when populated                                                  |
+| `paragraphs_extracted` / `tables_detected` / `images_embedded` | nullable for image formats AND until done; `>= 0` when populated                                |
+| `error_message`                                                | non-null iff status='failed'; max length 2048 chars                                             |
 
 ### 11.10 Migration repo seeds
 
@@ -2061,14 +2167,14 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
 
 None new — all Phase 6 design questions from `wave-23-brief.md "Specific design questions"` (Q-A through Q-F) have been answered in `architecture-phase-6.md`, `export-engine.md`, this amendment, the api-contracts §17 amendment, the ui-spec §15 amendment, and the conventions §17 amendment.
 
-| Wave-23-brief question | Answer location |
-|---|---|
-| Q-A. DOCX library scope | architecture-phase-6.md §3.1 + §4.4.1; export-engine.md §2.1 + §4 — `docx` (MIT) v9.7+; v1 surface = Paragraph + TextRun + Heading1..3 + Table + ImageRun + AlignmentType; defer footnotes/comments/revision tracking to Phase 6.1 |
+| Wave-23-brief question           | Answer location                                                                                                                                                                                                                                                                                                         |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q-A. DOCX library scope          | architecture-phase-6.md §3.1 + §4.4.1; export-engine.md §2.1 + §4 — `docx` (MIT) v9.7+; v1 surface = Paragraph + TextRun + Heading1..3 + Table + ImageRun + AlignmentType; defer footnotes/comments/revision tracking to Phase 6.1                                                                                      |
 | Q-B. Layout-preserving algorithm | architecture-phase-6.md §4.3; export-engine.md §3.4 + §3.5 — bounding-box Y-clustering (ε=2pt) for lines; paragraph-break by gap (1.5× line-height); heading by font-size delta (H1=1.8×, H2=1.5×, H3=1.3×); column detection by X-clustering (40pt gap); table detection via pdf.js operator-stream line-grid analysis |
-| Q-C. Image extraction | architecture-phase-6.md §3.1 + §4.4.4; export-engine.md §3.6 — pdf.js `getOperatorList()` → `OPS.paintImageXObject` capture; CTM stack tracking for position; format conversion to PNG; inline image + XObject reference + image-mask all handled; skip threshold 8×8 px / 16 pt² |
-| Q-D. Quality-tier UX | architecture-phase-6.md §4.2; ui-spec.md §15.3 — toggle in modal Step 2; `layout-preserving` default for Word + PowerPoint per locked-decision; `text-only` default for Excel (inherently tabular); image formats have no tier |
-| Q-E. Progress / cancel UX | architecture-phase-6.md §4.5; export-engine.md §8; ui-spec.md §15.3 + §15.7 — background queue + status-bar widget + Exports sidebar tab; per-page progress; cancel always available; partial output deleted on cancel; mid-page cancel = Phase 6.1; job persistence across restarts = Phase 7+ |
-| Q-F. Image format defaults | architecture-phase-6.md §4.4.4; export-engine.md §7 — PNG default (lossless); JPEG opt-in with quality slider (default 0.9); TIFF opt-in with multi-page bundle toggle (default false → one-file-per-page); dpi default 150 |
+| Q-C. Image extraction            | architecture-phase-6.md §3.1 + §4.4.4; export-engine.md §3.6 — pdf.js `getOperatorList()` → `OPS.paintImageXObject` capture; CTM stack tracking for position; format conversion to PNG; inline image + XObject reference + image-mask all handled; skip threshold 8×8 px / 16 pt²                                       |
+| Q-D. Quality-tier UX             | architecture-phase-6.md §4.2; ui-spec.md §15.3 — toggle in modal Step 2; `layout-preserving` default for Word + PowerPoint per locked-decision; `text-only` default for Excel (inherently tabular); image formats have no tier                                                                                          |
+| Q-E. Progress / cancel UX        | architecture-phase-6.md §4.5; export-engine.md §8; ui-spec.md §15.3 + §15.7 — background queue + status-bar widget + Exports sidebar tab; per-page progress; cancel always available; partial output deleted on cancel; mid-page cancel = Phase 6.1; job persistence across restarts = Phase 7+                         |
+| Q-F. Image format defaults       | architecture-phase-6.md §4.4.4; export-engine.md §7 — PNG default (lossless); JPEG opt-in with quality slider (default 0.9); TIFF opt-in with multi-page bundle toggle (default false → one-file-per-page); dpi default 150                                                                                             |
 
 End of Phase-6 data-models amendment.
 
@@ -2082,9 +2188,9 @@ End of Phase-6 data-models amendment.
 
 ### 12.1 Schema v7 migration overview
 
-| Migration | File | Adds |
-|---|---|---|
-| v7 | `migrations/0007_phase7_polish.sql` (Ravi Wave 28) | NO new table; NO new column; setting-key seed inserts via `INSERT OR IGNORE INTO settings (key, value)` + the `schema_migrations` version row |
+| Migration | File                                               | Adds                                                                                                                                          |
+| --------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| v7        | `migrations/0007_phase7_polish.sql` (Ravi Wave 28) | NO new table; NO new column; setting-key seed inserts via `INSERT OR IGNORE INTO settings (key, value)` + the `schema_migrations` version row |
 
 ```sql
 -- migrations/0007_phase7_polish.sql (Ravi Wave 28) — design shape
@@ -2105,12 +2211,12 @@ Forward-only. Idempotent — `migrate.ts` skips applied versions. Clean migratio
 
 Values are JSON-serialized strings in `settings.value` (Phase 1 convention; `'false'`, `'"en-US"'`, `'"manual"'`, `'null'`).
 
-| Key | TS type | Default | Purpose | Obligation |
-|---|---|---|---|---|
-| `telemetry.optIn` | `boolean` | `false` | Master opt-in for the telemetry framework. When `false`, the renderer's `useTelemetry` hook drops every event AND the `telemetry:recordEvent` handler returns `recorded: false`. | **#1 — default OFF** |
-| `i18n.locale` | `'en-US' \| 'es-ES'` | `'en-US'` | Active UI locale. Read at bootstrap → `i18next.changeLanguage`. `'es-ES'` is the proof locale (sample). | **#4 — baseline** |
-| `update.channel` | `'manual' \| 'check-on-launch'` | `'manual'` | Auto-update trigger policy. `'manual'` = explicit check only (default, because the publish target is a placeholder). `'check-on-launch'` = check once on launch (opt-in). | **#2 — no auto-check vs placeholder** |
-| `update.lastCheckedAt` | `number \| null` | `null` | ms-epoch timestamp of the last update check. `null` until the first check ever runs. Drives the About-modal "last checked: …" line. | nullable + late-init |
+| Key                    | TS type                         | Default    | Purpose                                                                                                                                                                          | Obligation                            |
+| ---------------------- | ------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `telemetry.optIn`      | `boolean`                       | `false`    | Master opt-in for the telemetry framework. When `false`, the renderer's `useTelemetry` hook drops every event AND the `telemetry:recordEvent` handler returns `recorded: false`. | **#1 — default OFF**                  |
+| `i18n.locale`          | `'en-US' \| 'es-ES'`            | `'en-US'`  | Active UI locale. Read at bootstrap → `i18next.changeLanguage`. `'es-ES'` is the proof locale (sample).                                                                          | **#4 — baseline**                     |
+| `update.channel`       | `'manual' \| 'check-on-launch'` | `'manual'` | Auto-update trigger policy. `'manual'` = explicit check only (default, because the publish target is a placeholder). `'check-on-launch'` = check once on launch (opt-in).        | **#2 — no auto-check vs placeholder** |
+| `update.lastCheckedAt` | `number \| null`                | `null`     | ms-epoch timestamp of the last update check. `null` until the first check ever runs. Drives the About-modal "last checked: …" line.                                              | nullable + late-init                  |
 
 **Anti-sentinel discipline (cross-check with the four-times-bitten 2026-05-26 lesson):** `update.lastCheckedAt` defaults to `null`, NOT `0`. The renderer's About-modal selector pattern-matches: `lastCheckedAt === null ? t('settings.update.neverChecked') : fmtDate(lastCheckedAt)`. A sentinel `0` would render "Jan 1, 1970" — the exact defect class this discipline prevents.
 
@@ -2121,10 +2227,7 @@ The Phase-1 `SettingKey` discriminated union (Ravi + David co-own the union; zer
 ```ts
 type SettingKey =
   // ...Phase 1-6 keys (frozen)...
-  | 'telemetry.optIn'
-  | 'i18n.locale'
-  | 'update.channel'
-  | 'update.lastCheckedAt';
+  'telemetry.optIn' | 'i18n.locale' | 'update.channel' | 'update.lastCheckedAt';
 ```
 
 Per the Wave-7 SettingKey-zero-drift lesson (a parallel agent pre-empting a union member caused no drift only because the shapes matched), David + Ravi MUST add these four to the SAME union in `src/ipc/contracts.ts` and the settings-repo's allowlist in Wave 28. Riley's renderer `settings-slice` gains a `usePhase7Settings` selector pulling all four at once for the Settings → General panel.
@@ -2134,7 +2237,7 @@ Per the Wave-7 SettingKey-zero-drift lesson (a parallel agent pre-empting a unio
 The telemetry event buffer (`NoOpRingBufferTransport`, architecture-phase-7.md §4.3) is a **renderer-side in-memory bounded array (default 500 events)**. It is:
 
 - **NOT a SQLite table.** Privacy design: telemetry events must not survive a restart, must not be forensically recoverable from the DB file, and must not be a tamper surface. An in-memory buffer that evaporates on quit is the correct durability for "anonymous counts the user can audit this session".
-- **NOT persisted to `settings`** either. Only the opt-in *flag* persists; the events themselves never touch disk.
+- **NOT persisted to `settings`** either. Only the opt-in _flag_ persists; the events themselves never touch disk.
 - Cleared on opt-out (`telemetry:setOptIn { optIn: false }` → `bufferCleared: true`) and on app quit (process exit).
 
 This is a deliberate non-table. Documented for the audit trail so a future maintainer does not "helpfully" add a `telemetry_events` table — that would violate the privacy stance (P7-L-3).
@@ -2154,24 +2257,24 @@ Unlike Phase 5/6 which needed snake_case-row ↔ camelCase-DTO translation, Phas
 ```ts
 // update-slice (architecture-phase-7.md §3.3) — sourced from settings + IPC responses
 interface UpdateState {
-  channel: 'manual' | 'check-on-launch';   // from settings 'update.channel'
-  status: UpdateStatus;                     // from update:check / download responses (not persisted)
+  channel: 'manual' | 'check-on-launch'; // from settings 'update.channel'
+  status: UpdateStatus; // from update:check / download responses (not persisted)
   availableVersion: string | null;
   downloadProgressPercent: number | null;
-  lastCheckedAt: number | null;             // from settings 'update.lastCheckedAt'
+  lastCheckedAt: number | null; // from settings 'update.lastCheckedAt'
   errorMessage: string | null;
 }
 
 // telemetry status (architecture-phase-7.md §4.4) — from telemetry:getStatus
 interface TelemetryStatus {
-  optedIn: boolean;                         // from settings 'telemetry.optIn'
-  bufferedCount: number;                    // from the in-memory buffer (not persisted)
+  optedIn: boolean; // from settings 'telemetry.optIn'
+  bufferedCount: number; // from the in-memory buffer (not persisted)
   lastEventAt: number | null;
 }
 
 // locale state — from settings 'i18n.locale' + i18n:getAvailableLocales
 interface LocaleState {
-  active: 'en-US' | 'es-ES';                // from settings 'i18n.locale'
+  active: 'en-US' | 'es-ES'; // from settings 'i18n.locale'
   available: Array<{ locale: 'en-US' | 'es-ES'; nativeName: string; complete: boolean }>;
 }
 ```
@@ -2180,24 +2283,24 @@ interface LocaleState {
 
 ### 12.8 Validation matrix (Phase 7)
 
-| Key / field | Constraint |
-|---|---|
-| `telemetry.optIn` | boolean; default `false` |
-| `i18n.locale` | one of `supportedLngs` (`'en-US'`, `'es-ES'`); reject others |
-| `update.channel` | one of `'manual'`, `'check-on-launch'` |
-| `update.lastCheckedAt` | `null` OR `>= 0` ms epoch; NEVER a sentinel `0` for "never" (use `null`) |
-| telemetry event | `name ∈ allowlist`; `dayBucket` matches `^\d{4}-\d{2}-\d{2}$`; `.strict()` rejects any extra property |
+| Key / field            | Constraint                                                                                            |
+| ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| `telemetry.optIn`      | boolean; default `false`                                                                              |
+| `i18n.locale`          | one of `supportedLngs` (`'en-US'`, `'es-ES'`); reject others                                          |
+| `update.channel`       | one of `'manual'`, `'check-on-launch'`                                                                |
+| `update.lastCheckedAt` | `null` OR `>= 0` ms epoch; NEVER a sentinel `0` for "never" (use `null`)                              |
+| telemetry event        | `name ∈ allowlist`; `dayBucket` matches `^\d{4}-\d{2}-\d{2}$`; `.strict()` rejects any extra property |
 
 ### 12.9 Phase 7 open questions
 
 None new — all Phase 7 design questions from the Wave-27 brief (Q-A through Q-E) are answered across `architecture-phase-7.md`, `a11y-audit.md`, `i18n-strategy.md`, this amendment, the api-contracts §18 amendment, the ui-spec §16 amendment, and the conventions §18 amendment.
 
-| Wave-27-brief question | Answer location |
-|---|---|
-| Q-A. i18n string-extraction scope | i18n-strategy.md §3 — big-bang sweep in Wave 28; ~800-1200 strings estimate; typed-key compile-error gate makes it verifiable |
-| Q-B. Telemetry transport | architecture-phase-7.md §4.3 — `NoOpRingBufferTransport` (in-memory bounded buffer, default 500); nothing leaves the machine; auditable via debug panel; real network transport = Phase 7.1 behind the same `TelemetryTransport` interface |
-| Q-C. Auto-update UX | architecture-phase-7.md §3.4 — explicit "Check for updates" in About modal (primary) + opt-in `update.channel='check-on-launch'` (default OFF); no silent background download (every download user-initiated) |
-| Q-D. a11y remediation priority | a11y-audit.md §5 — MUST: open/render/navigate/annotate/save + deferred ARIA tab patterns; SHOULD ranked: forms > export > OCR > sign; DOCUMENT-ONLY: freehand/drawn-signature keyboard, page-raster narration |
+| Wave-27-brief question             | Answer location                                                                                                                                                                                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q-A. i18n string-extraction scope  | i18n-strategy.md §3 — big-bang sweep in Wave 28; ~800-1200 strings estimate; typed-key compile-error gate makes it verifiable                                                                                                                     |
+| Q-B. Telemetry transport           | architecture-phase-7.md §4.3 — `NoOpRingBufferTransport` (in-memory bounded buffer, default 500); nothing leaves the machine; auditable via debug panel; real network transport = Phase 7.1 behind the same `TelemetryTransport` interface        |
+| Q-C. Auto-update UX                | architecture-phase-7.md §3.4 — explicit "Check for updates" in About modal (primary) + opt-in `update.channel='check-on-launch'` (default OFF); no silent background download (every download user-initiated)                                     |
+| Q-D. a11y remediation priority     | a11y-audit.md §5 — MUST: open/render/navigate/annotate/save + deferred ARIA tab patterns; SHOULD ranked: forms > export > OCR > sign; DOCUMENT-ONLY: freehand/drawn-signature keyboard, page-raster narration                                     |
 | Q-E. Cross-platform native modules | architecture-phase-7.md §6 — `better-sqlite3` (HIGH risk; per-platform rebuild), `@napi-rs/canvas` (MEDIUM; universal-mac merge of both arch prebuilds), `tesseract.js-core` (LOW; WASM is portable); the riskiest part of the UNVERIFIED configs |
 
 End of Phase-7 data-models amendment.

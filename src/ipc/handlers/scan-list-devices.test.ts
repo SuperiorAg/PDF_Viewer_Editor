@@ -57,7 +57,10 @@ describe('scan:listDevices (Phase 5.1 — LIVE, api-contracts.md §16.9)', () =>
       {},
       {
         addon: mockAddon({
-          listDevices: async () => ({ __wiaError: 'enumeration_failed', detail: 'EnumDeviceInfo hr=-1' }),
+          listDevices: async () => ({
+            __wiaError: 'enumeration_failed',
+            detail: 'EnumDeviceInfo hr=-1',
+          }),
         }),
       },
     );
@@ -70,7 +73,10 @@ describe('scan:listDevices (Phase 5.1 — LIVE, api-contracts.md §16.9)', () =>
       {},
       {
         addon: mockAddon({
-          listDevices: async () => ({ __wiaError: 'wia_service_unavailable', detail: 'CoCreate failed' }),
+          listDevices: async () => ({
+            __wiaError: 'wia_service_unavailable',
+            detail: 'CoCreate failed',
+          }),
         }),
       },
     );

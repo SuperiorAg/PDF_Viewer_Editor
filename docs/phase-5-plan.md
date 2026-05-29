@@ -25,23 +25,23 @@
 
 ## Wave structure
 
-| Wave | Owner | Mode | Scope |
-|---|---|---|---|
-| 19 | Riley | solo | Phase 5 architecture |
-| 20 | David + Ravi + Riley | parallel | Implementation |
-| 21 | Diego + Julian | parallel | Packaging + audit (native module compilation) |
-| 22 | Nathan | solo | Documentation |
+| Wave | Owner                | Mode     | Scope                                         |
+| ---- | -------------------- | -------- | --------------------------------------------- |
+| 19   | Riley                | solo     | Phase 5 architecture                          |
+| 20   | David + Ravi + Riley | parallel | Implementation                                |
+| 21   | Diego + Julian       | parallel | Packaging + audit (native module compilation) |
+| 22   | Nathan               | solo     | Documentation                                 |
 
 ## File ownership (Phase 5)
 
-| Owner | Files |
-|---|---|
-| Riley (19 + 20) | `docs/architecture-phase-5.md`, `docs/ocr-engine.md`, additive doc amendments, `src/client/components/modals/scan-modal/` (NEW), `src/client/components/modals/ocr-modal/` (NEW), `src/client/state/slices/ocr-slice.ts` (NEW), thunk additions |
-| David (20) | `src/main/pdf-ops/ocr-engine.ts` (NEW — wraps tesseract.js worker), `src/main/pdf-ops/searchable-pdf-builder.ts` (NEW — composes scanned image + invisible OCR text layer), `src/main/scanner/wia-bridge.ts` (NEW — native WIA invocation), `src/main/scanner/scanner-bridge.test.ts`, 4 new IPC handlers (`scan:listDevices`, `scan:acquire`, `ocr:run`, `ocr:listLanguages`), contracts.ts extension |
-| Ravi (20) | `migrations/0005_phase5_ocr.sql` (optional: OCR cache table to avoid re-OCR'ing same image bytes), `src/db/repositories/ocr-cache-repo.ts` if cache table chosen |
-| Diego (21) | `package.json` deps verification (tesseract.js + any native WIA binding), CI build for native module (Windows host only), electron-builder `extraResources` for tessdata language pack(s), code-signing for the bundled native addon if any |
-| Julian (21) | code-review: native-module security review (any IPC bridge to native scanner = trust boundary; verify input validation), tesseract.js worker sandbox |
-| Nathan (22) | docs updates + phase-5-release-notes.md |
+| Owner           | Files                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Riley (19 + 20) | `docs/architecture-phase-5.md`, `docs/ocr-engine.md`, additive doc amendments, `src/client/components/modals/scan-modal/` (NEW), `src/client/components/modals/ocr-modal/` (NEW), `src/client/state/slices/ocr-slice.ts` (NEW), thunk additions                                                                                                                                                        |
+| David (20)      | `src/main/pdf-ops/ocr-engine.ts` (NEW — wraps tesseract.js worker), `src/main/pdf-ops/searchable-pdf-builder.ts` (NEW — composes scanned image + invisible OCR text layer), `src/main/scanner/wia-bridge.ts` (NEW — native WIA invocation), `src/main/scanner/scanner-bridge.test.ts`, 4 new IPC handlers (`scan:listDevices`, `scan:acquire`, `ocr:run`, `ocr:listLanguages`), contracts.ts extension |
+| Ravi (20)       | `migrations/0005_phase5_ocr.sql` (optional: OCR cache table to avoid re-OCR'ing same image bytes), `src/db/repositories/ocr-cache-repo.ts` if cache table chosen                                                                                                                                                                                                                                       |
+| Diego (21)      | `package.json` deps verification (tesseract.js + any native WIA binding), CI build for native module (Windows host only), electron-builder `extraResources` for tessdata language pack(s), code-signing for the bundled native addon if any                                                                                                                                                            |
+| Julian (21)     | code-review: native-module security review (any IPC bridge to native scanner = trust boundary; verify input validation), tesseract.js worker sandbox                                                                                                                                                                                                                                                   |
+| Nathan (22)     | docs updates + phase-5-release-notes.md                                                                                                                                                                                                                                                                                                                                                                |
 
 ## Risk register (Phase 5)
 

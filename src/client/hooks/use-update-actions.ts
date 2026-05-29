@@ -77,9 +77,7 @@ export function useUpdateActions(): UpdateActions {
       // unsaved-work gate (David H-29.1), which the UpdateStatusArea translates
       // into a Save / Discard-and-install / Cancel confirm dialog.
       const res = await api.update.install(
-        confirmedDiscardUnsaved === undefined
-          ? { version }
-          : { version, confirmedDiscardUnsaved },
+        confirmedDiscardUnsaved === undefined ? { version } : { version, confirmedDiscardUnsaved },
       );
       if (res.ok) return { kind: 'quitting' };
       if (res.error === 'unsaved_work_blocks_install') return { kind: 'blocked-unsaved' };

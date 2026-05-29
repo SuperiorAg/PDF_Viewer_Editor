@@ -25,11 +25,7 @@ Phase 2 stubbed AcroForm handling — pdf-lib's load was lossy and the engine he
 // src/main/pdf-ops/form-engine.ts (NEW, David Wave 12)
 
 import type { PDFDocument, PDFForm } from 'pdf-lib';
-import type {
-  FormFieldDefinition,
-  FormFieldValue,
-  Result,
-} from '@ipc/contracts';
+import type { FormFieldDefinition, FormFieldValue, Result } from '@ipc/contracts';
 
 // ============================================================
 // Detection
@@ -48,9 +44,7 @@ export interface DetectFormsOk {
   warnings: string[];
 }
 
-export type DetectFormsError =
-  | 'load_failed'
-  | 'detect_failed';
+export type DetectFormsError = 'load_failed' | 'detect_failed';
 
 export type DetectFormsResult = Result<DetectFormsOk, DetectFormsError>;
 
@@ -80,7 +74,7 @@ export interface FillFormOk {
 export type FillFormError =
   | 'load_failed'
   | 'form_not_present'
-  | 'field_type_mismatch'              // e.g. trying to set 'text' value on a checkbox field
+  | 'field_type_mismatch' // e.g. trying to set 'text' value on a checkbox field
   | 'serialize_failed';
 
 export type FillFormResult = Result<FillFormOk, FillFormError>;
@@ -129,7 +123,7 @@ export type CreateFieldError =
   | 'load_failed'
   | 'duplicate_field_name'
   | 'invalid_field_definition'
-  | 'unsupported_field_type'           // e.g. 'list-box' (Phase 3.1) or unknown
+  | 'unsupported_field_type' // e.g. 'list-box' (Phase 3.1) or unknown
   | 'page_out_of_range'
   | 'serialize_failed';
 
@@ -151,10 +145,7 @@ export interface RemoveFieldOk {
   warnings: string[];
 }
 
-export type RemoveFieldError =
-  | 'load_failed'
-  | 'field_not_found'
-  | 'serialize_failed';
+export type RemoveFieldError = 'load_failed' | 'field_not_found' | 'serialize_failed';
 
 export type RemoveFieldResult = Result<RemoveFieldOk, RemoveFieldError>;
 
@@ -205,10 +196,17 @@ The replay engine calls into the form engine via wrapper helpers that operate on
 
 ```ts
 // Internal — called by replay engine, NOT by IPC handlers directly
-export function applyFormCommit(form: PDFForm, fieldValues: Record<string, FormFieldValue>): { warnings: string[] };
+export function applyFormCommit(
+  form: PDFForm,
+  fieldValues: Record<string, FormFieldValue>,
+): { warnings: string[] };
 export function applyFormDesignAdd(form: PDFForm, fieldDefinition: FormFieldDefinition): void;
 export function applyFormDesignRemove(form: PDFForm, fieldName: string): void;
-export function applyFormDesignEdit(form: PDFForm, fieldName: string, changes: Partial<FormFieldDefinition>): void;
+export function applyFormDesignEdit(
+  form: PDFForm,
+  fieldName: string,
+  changes: Partial<FormFieldDefinition>,
+): void;
 ```
 
 These mutate the in-flight `PDFForm` and let the replay engine's single `doc.save()` produce final bytes. The standalone public functions (§2.1) wrap these helpers with a load + save shell.
@@ -241,16 +239,16 @@ detectForms(input):
 
 Maps a pdf-lib field object to a `FormFieldDefinition` (per `data-models.md §8`):
 
-| pdf-lib type | `type` mapping | Notes |
-|---|---|---|
-| `PDFTextField` | `'text'` (or `'date'` if `/TU` tooltip contains "(date)") | The date-marker convention is documented in the user-guide |
-| `PDFCheckBox` | `'checkbox'` | |
-| `PDFRadioGroup` | `'radio'` | `options` populated from `getOptions()` |
-| `PDFDropdown` | `'dropdown'` | `options` populated from `getOptions()` |
-| `PDFOptionList` | `'dropdown'` (collapsed type) | Warns: "List-box rendered as dropdown — Phase 3 limitation" |
-| `PDFButton` | SKIPPED | warning: "Push-buttons are not supported in Phase 3" |
-| `PDFSignature` | `'signature'` | Phase 3 reads existing placeholders; signed values are warned about |
-| anything else | SKIPPED | warning: `Unknown form field type: ${typeName}` |
+| pdf-lib type    | `type` mapping                                            | Notes                                                               |
+| --------------- | --------------------------------------------------------- | ------------------------------------------------------------------- |
+| `PDFTextField`  | `'text'` (or `'date'` if `/TU` tooltip contains "(date)") | The date-marker convention is documented in the user-guide          |
+| `PDFCheckBox`   | `'checkbox'`                                              |                                                                     |
+| `PDFRadioGroup` | `'radio'`                                                 | `options` populated from `getOptions()`                             |
+| `PDFDropdown`   | `'dropdown'`                                              | `options` populated from `getOptions()`                             |
+| `PDFOptionList` | `'dropdown'` (collapsed type)                             | Warns: "List-box rendered as dropdown — Phase 3 limitation"         |
+| `PDFButton`     | SKIPPED                                                   | warning: "Push-buttons are not supported in Phase 3"                |
+| `PDFSignature`  | `'signature'`                                             | Phase 3 reads existing placeholders; signed values are warned about |
+| anything else   | SKIPPED                                                   | warning: `Unknown form field type: ${typeName}`                     |
 
 The widget rect comes from `pdfField.acroField.getWidgets()[0].getRectangle()`. For multi-widget fields (rare; same field on multiple pages), the engine emits one definition per widget with `name` suffixed by `:${widgetIndex}` so the renderer can render distinct rects. The first widget keeps the bare name for compatibility.
 
@@ -295,8 +293,10 @@ function applyValueToField(pdfField: PDFField, value: FormFieldValue): void {
       pdfField.setText(value.value);
       break;
     case 'checkbox':
-      if (!(pdfField instanceof PDFCheckBox)) throw new TypeMismatchError('expected checkbox field');
-      if (value.value) pdfField.check(); else pdfField.uncheck();
+      if (!(pdfField instanceof PDFCheckBox))
+        throw new TypeMismatchError('expected checkbox field');
+      if (value.value) pdfField.check();
+      else pdfField.uncheck();
       break;
     case 'radio':
       if (!(pdfField instanceof PDFRadioGroup)) throw new TypeMismatchError('expected radio group');
@@ -312,7 +312,8 @@ function applyValueToField(pdfField: PDFField, value: FormFieldValue): void {
       // Phase 4 will replace this with sign-engine.ts:applySignature(pdfField, value.value).
       break;
     case 'date':
-      if (!(pdfField instanceof PDFTextField)) throw new TypeMismatchError('expected text field for date');
+      if (!(pdfField instanceof PDFTextField))
+        throw new TypeMismatchError('expected text field for date');
       pdfField.setText(value.value); // ISO-8601 string written to /V
       break;
   }
@@ -540,9 +541,7 @@ The order is deterministic and matches `architecture-phase-3.md §5.7`. New `Rep
 ```ts
 export type ReplayError =
   // ...existing variants...
-  | 'form_field_create_failed'
-  | 'form_field_not_found'
-  | 'form_flatten_failed';
+  'form_field_create_failed' | 'form_field_not_found' | 'form_flatten_failed';
 ```
 
 The replay engine's purity contract (`edit-replay-engine.md §2.2`) is preserved.
@@ -687,7 +686,7 @@ async function concatPdfs(filledBytesArray: Uint8Array[]): Promise<Uint8Array> {
   for (const bytes of filledBytesArray) {
     const src = await PDFDocument.load(bytes);
     const copiedPages = await merged.copyPages(src, src.getPageIndices());
-    copiedPages.forEach(p => merged.addPage(p));
+    copiedPages.forEach((p) => merged.addPage(p));
   }
   return await merged.save({ useObjectStreams: true });
 }
@@ -702,6 +701,7 @@ Phase 3.1 perf option: stream-write to a temp file rather than holding `outputs[
 The runner reads a `cancelRequested` flag at the top of each row iteration. The renderer fires `forms:runMailMerge:cancel { jobId }` (sub-channel) which sets the flag on the active job's runner state.
 
 On cancel:
+
 - Folder mode: rows written so far stay on disk; runner returns `{ rowsWritten: i, wasCancelled: true }`.
 - Concat mode: NO output file written (atomic semantics). Runner returns `{ rowsWritten: i, wasCancelled: true, outputPath: null }`.
 
@@ -709,23 +709,23 @@ On cancel:
 
 ## 7. Error modes (full table)
 
-| Error | Source | Renderer surface |
-|---|---|---|
-| `load_failed` | pdf-lib couldn't parse template bytes | Toast: "Couldn't load template PDF — file may be corrupt." |
-| `form_not_present` | fillForm / flattenForms on a doc without AcroForm | Toast: "This PDF has no fillable form fields." |
-| `field_type_mismatch` | fillForm got 'text' value on a checkbox field | Wizard step 3 error inline: "Column '${col}' (string) cannot map to field '${field}' (checkbox)." |
-| `serialize_failed` | pdf-lib save threw | Toast: "Couldn't save the filled PDF — try Save As." |
-| `duplicate_field_name` | createField on existing name | Inspector inline: "A field named '${name}' already exists." |
-| `invalid_field_definition` | createField with bad shape (e.g. radio without options) | Inspector inline: "Radio fields need at least one option." |
-| `unsupported_field_type` | createField with future-type (e.g. list-box) | Designer toolbar greys out the type; if forced via template load, warning toast |
-| `page_out_of_range` | createField at pageIndex >= pageCount | Inspector inline: "Page ${page} doesn't exist in this document." |
-| `field_not_found` | removeField / editField on missing field | Inspector inline: "Field '${name}' no longer exists." |
-| `invalid_changes` | editField with name change or type change | Inspector inline: "Renaming fields isn't supported in Phase 3." |
-| `flatten_failed` | form.flatten() threw | Toast: "Couldn't flatten the form — try export with Chromium engine." |
-| (Mail-merge) `row_fill_failed` | Per-row fillForm failure during merge | Wizard error: "Row ${i} couldn't be filled. Cancel and review the CSV." |
-| (Mail-merge) `data_parse_failed` | csv-parse / exceljs threw | Wizard step 2 inline: "Couldn't parse the data file. Check format." |
-| (Mail-merge) `unmapped_required_field` | A required field has no column mapping | Wizard step 3 inline: "Field '${name}' is required but no column is mapped." |
-| (Mail-merge) `output_path_invalid` | output folder / file path failed sanitizer | Wizard step 4 inline: "Choose a valid output location." |
+| Error                                  | Source                                                  | Renderer surface                                                                                  |
+| -------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `load_failed`                          | pdf-lib couldn't parse template bytes                   | Toast: "Couldn't load template PDF — file may be corrupt."                                        |
+| `form_not_present`                     | fillForm / flattenForms on a doc without AcroForm       | Toast: "This PDF has no fillable form fields."                                                    |
+| `field_type_mismatch`                  | fillForm got 'text' value on a checkbox field           | Wizard step 3 error inline: "Column '${col}' (string) cannot map to field '${field}' (checkbox)." |
+| `serialize_failed`                     | pdf-lib save threw                                      | Toast: "Couldn't save the filled PDF — try Save As."                                              |
+| `duplicate_field_name`                 | createField on existing name                            | Inspector inline: "A field named '${name}' already exists."                                       |
+| `invalid_field_definition`             | createField with bad shape (e.g. radio without options) | Inspector inline: "Radio fields need at least one option."                                        |
+| `unsupported_field_type`               | createField with future-type (e.g. list-box)            | Designer toolbar greys out the type; if forced via template load, warning toast                   |
+| `page_out_of_range`                    | createField at pageIndex >= pageCount                   | Inspector inline: "Page ${page} doesn't exist in this document."                                  |
+| `field_not_found`                      | removeField / editField on missing field                | Inspector inline: "Field '${name}' no longer exists."                                             |
+| `invalid_changes`                      | editField with name change or type change               | Inspector inline: "Renaming fields isn't supported in Phase 3."                                   |
+| `flatten_failed`                       | form.flatten() threw                                    | Toast: "Couldn't flatten the form — try export with Chromium engine."                             |
+| (Mail-merge) `row_fill_failed`         | Per-row fillForm failure during merge                   | Wizard error: "Row ${i} couldn't be filled. Cancel and review the CSV."                           |
+| (Mail-merge) `data_parse_failed`       | csv-parse / exceljs threw                               | Wizard step 2 inline: "Couldn't parse the data file. Check format."                               |
+| (Mail-merge) `unmapped_required_field` | A required field has no column mapping                  | Wizard step 3 inline: "Field '${name}' is required but no column is mapped."                      |
+| (Mail-merge) `output_path_invalid`     | output folder / file path failed sanitizer              | Wizard step 4 inline: "Choose a valid output location."                                           |
 
 ---
 
@@ -739,11 +739,11 @@ import { parse } from 'csv-parse/sync';
 export async function parseCsv(bytes: Uint8Array, options: ParseOptions): Promise<Row[]> {
   const text = new TextDecoder('utf-8').decode(bytes);
   const records = parse(text, {
-    columns: true,                              // first row = headers
-    bom: true,                                  // strip UTF-8 BOM
+    columns: true, // first row = headers
+    bom: true, // strip UTF-8 BOM
     skip_empty_lines: true,
     trim: true,
-    relax_column_count: true,                   // accept rows with fewer columns
+    relax_column_count: true, // accept rows with fewer columns
     relax_quotes: true,
   });
   return records as Row[];
@@ -763,20 +763,22 @@ export async function parseExcel(bytes: Uint8Array): Promise<{ rows: Row[]; warn
   const warnings: string[] = [];
 
   if (workbook.worksheets.length > 1) {
-    warnings.push(`Workbook has ${workbook.worksheets.length} sheets; using sheet 1 only (Phase 3 limitation)`);
+    warnings.push(
+      `Workbook has ${workbook.worksheets.length} sheets; using sheet 1 only (Phase 3 limitation)`,
+    );
   }
 
   const sheet = workbook.worksheets[0];
-  const headerRow = sheet.getRow(1).values as string[];   // [empty, col1, col2, ...]
+  const headerRow = sheet.getRow(1).values as string[]; // [empty, col1, col2, ...]
   const headers = headerRow.slice(1).map(String);
 
   const rows: Row[] = [];
   sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-    if (rowNumber === 1) return;                          // skip header
+    if (rowNumber === 1) return; // skip header
     const obj: Row = {};
     headers.forEach((header, i) => {
       const cell = row.getCell(i + 1);
-      obj[header] = cell.text;                            // .text reads formula's cached value as string
+      obj[header] = cell.text; // .text reads formula's cached value as string
     });
     rows.push(obj);
   });
@@ -811,28 +813,28 @@ Lives in `tests/fixtures/form-engine/`:
 
 ### 9.2 Test categories
 
-| Category | Coverage |
-|---|---|
-| Detection — happy path | For each fixture: detectForms returns the expected `fields` shape |
-| Detection — unsupported types | js-action-form, xfa-only-form, signed-form — assert specific warnings + flags |
-| Fill — single value | Each field type: fill, save, reload, assert /V contains the value |
-| Fill — type mismatch | Fill 'text' value on a checkbox field → field_type_mismatch |
-| Fill — unmatched | Fill a name not in the doc → returns in unmatchedFieldNames, NOT an error |
-| Flatten | Flatten a filled form, reload, assert no /AcroForm dict, assert pages have visible filled content via text-extraction |
-| Create — each type | For text / checkbox / radio / dropdown / signature: create, save, reload, detect, assert presence |
-| Create — duplicate name | createField with name already used → duplicate_field_name |
-| Create — invalid radio | createField with type radio and empty options → invalid_field_definition |
-| Edit — rect change | editField with new rect, reload, assert widget rect updated |
-| Edit — rename rejected | editField with `changes.name` set → invalid_changes |
-| Remove | removeField, reload, assert field gone from /AcroForm and widget gone from page /Annots |
-| Mail-merge — folder mode | 5-row CSV, assert 5 files written, assert each has correct values |
-| Mail-merge — concat mode | Same, assert single output PDF with 5 pages and correct values |
-| Mail-merge — cancellation | Trigger cancel mid-run, assert partial folder output OR no concat output |
-| Mail-merge — unmapped required | Field marked required + no column mapping → unmapped_required_field |
-| Mail-merge — perf | 100-row CSV completes in <30s on the Linux CI runner |
-| Progress events | Capture progress event sequence, assert phases reach 100% monotonically, currentRow increments |
-| Round-trip (golden bytes) | Fill same fixture with same values twice; assert byte-equality (determinism) |
-| Replay-engine integration | Dispatch a `form-commit` op into `replay()`; assert the output PDF has the value at the right field |
+| Category                       | Coverage                                                                                                              |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Detection — happy path         | For each fixture: detectForms returns the expected `fields` shape                                                     |
+| Detection — unsupported types  | js-action-form, xfa-only-form, signed-form — assert specific warnings + flags                                         |
+| Fill — single value            | Each field type: fill, save, reload, assert /V contains the value                                                     |
+| Fill — type mismatch           | Fill 'text' value on a checkbox field → field_type_mismatch                                                           |
+| Fill — unmatched               | Fill a name not in the doc → returns in unmatchedFieldNames, NOT an error                                             |
+| Flatten                        | Flatten a filled form, reload, assert no /AcroForm dict, assert pages have visible filled content via text-extraction |
+| Create — each type             | For text / checkbox / radio / dropdown / signature: create, save, reload, detect, assert presence                     |
+| Create — duplicate name        | createField with name already used → duplicate_field_name                                                             |
+| Create — invalid radio         | createField with type radio and empty options → invalid_field_definition                                              |
+| Edit — rect change             | editField with new rect, reload, assert widget rect updated                                                           |
+| Edit — rename rejected         | editField with `changes.name` set → invalid_changes                                                                   |
+| Remove                         | removeField, reload, assert field gone from /AcroForm and widget gone from page /Annots                               |
+| Mail-merge — folder mode       | 5-row CSV, assert 5 files written, assert each has correct values                                                     |
+| Mail-merge — concat mode       | Same, assert single output PDF with 5 pages and correct values                                                        |
+| Mail-merge — cancellation      | Trigger cancel mid-run, assert partial folder output OR no concat output                                              |
+| Mail-merge — unmapped required | Field marked required + no column mapping → unmapped_required_field                                                   |
+| Mail-merge — perf              | 100-row CSV completes in <30s on the Linux CI runner                                                                  |
+| Progress events                | Capture progress event sequence, assert phases reach 100% monotonically, currentRow increments                        |
+| Round-trip (golden bytes)      | Fill same fixture with same values twice; assert byte-equality (determinism)                                          |
+| Replay-engine integration      | Dispatch a `form-commit` op into `replay()`; assert the output PDF has the value at the right field                   |
 
 ### 9.3 Golden-bytes test pattern
 
@@ -881,33 +883,33 @@ The engine's module shape is designed to absorb these without refactoring `FormF
 
 ## 11. Files this engine creates / extends (Wave 12 ownership, for reference)
 
-| File | Status | Owner |
-|---|---|---|
-| `src/main/pdf-ops/form-engine.ts` | NEW | David |
-| `src/main/pdf-ops/form-engine.test.ts` | NEW | David |
-| `src/main/pdf-ops/mail-merge.ts` | NEW | David |
-| `src/main/pdf-ops/mail-merge.test.ts` | NEW | David |
-| `src/main/pdf-ops/field-dict-authoring.ts` | NEW | David |
-| `src/main/data-sources/csv-source.ts` | NEW | David |
-| `src/main/data-sources/excel-source.ts` | NEW | David |
-| `src/main/pdf-ops/replay-engine.ts` | EDIT | David — adds step 3.6 |
-| `src/ipc/handlers/forms-detect.ts` | NEW | David |
-| `src/ipc/handlers/forms-fill.ts` | NEW | David |
-| `src/ipc/handlers/forms-flatten.ts` | NEW | David |
-| `src/ipc/handlers/forms-design-add.ts` | NEW | David |
-| `src/ipc/handlers/forms-design-remove.ts` | NEW | David |
-| `src/ipc/handlers/forms-list-templates.ts` | NEW | David |
-| `src/ipc/handlers/forms-save-template.ts` | NEW | David |
-| `src/ipc/handlers/forms-load-template.ts` | NEW | David |
-| `src/ipc/handlers/forms-run-mail-merge.ts` | NEW | David |
-| `src/ipc/contracts.ts` | EDIT | David — new channel types per `api-contracts.md §13` |
-| `src/ipc/register.ts` | EDIT | David |
-| `migrations/0003_phase3_forms.sql` | NEW | Ravi |
-| `src/db/repositories/form-templates-repo.ts` | NEW | Ravi |
-| `src/db/repositories/form-templates-repo.test.ts` | NEW | Ravi |
-| `src/db/types.ts` | EDIT | Ravi — `FormTemplateRow` |
-| `tests/fixtures/form-engine/*.pdf` | NEW | David |
-| `tests/fixtures/form-engine/*.csv` / `*.xlsx` | NEW | David |
+| File                                              | Status | Owner                                                |
+| ------------------------------------------------- | ------ | ---------------------------------------------------- |
+| `src/main/pdf-ops/form-engine.ts`                 | NEW    | David                                                |
+| `src/main/pdf-ops/form-engine.test.ts`            | NEW    | David                                                |
+| `src/main/pdf-ops/mail-merge.ts`                  | NEW    | David                                                |
+| `src/main/pdf-ops/mail-merge.test.ts`             | NEW    | David                                                |
+| `src/main/pdf-ops/field-dict-authoring.ts`        | NEW    | David                                                |
+| `src/main/data-sources/csv-source.ts`             | NEW    | David                                                |
+| `src/main/data-sources/excel-source.ts`           | NEW    | David                                                |
+| `src/main/pdf-ops/replay-engine.ts`               | EDIT   | David — adds step 3.6                                |
+| `src/ipc/handlers/forms-detect.ts`                | NEW    | David                                                |
+| `src/ipc/handlers/forms-fill.ts`                  | NEW    | David                                                |
+| `src/ipc/handlers/forms-flatten.ts`               | NEW    | David                                                |
+| `src/ipc/handlers/forms-design-add.ts`            | NEW    | David                                                |
+| `src/ipc/handlers/forms-design-remove.ts`         | NEW    | David                                                |
+| `src/ipc/handlers/forms-list-templates.ts`        | NEW    | David                                                |
+| `src/ipc/handlers/forms-save-template.ts`         | NEW    | David                                                |
+| `src/ipc/handlers/forms-load-template.ts`         | NEW    | David                                                |
+| `src/ipc/handlers/forms-run-mail-merge.ts`        | NEW    | David                                                |
+| `src/ipc/contracts.ts`                            | EDIT   | David — new channel types per `api-contracts.md §13` |
+| `src/ipc/register.ts`                             | EDIT   | David                                                |
+| `migrations/0003_phase3_forms.sql`                | NEW    | Ravi                                                 |
+| `src/db/repositories/form-templates-repo.ts`      | NEW    | Ravi                                                 |
+| `src/db/repositories/form-templates-repo.test.ts` | NEW    | Ravi                                                 |
+| `src/db/types.ts`                                 | EDIT   | Ravi — `FormTemplateRow`                             |
+| `tests/fixtures/form-engine/*.pdf`                | NEW    | David                                                |
+| `tests/fixtures/form-engine/*.csv` / `*.xlsx`     | NEW    | David                                                |
 
 Riley owns nothing in this engine — it's entirely main-process + DB. Riley owns the **callers** in the renderer (`thunks.ts`, the new components in `architecture-phase-3.md §2.3`).
 

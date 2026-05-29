@@ -19,12 +19,13 @@ import { composeScanToPdf } from './scan-to-pdf.js';
 import type { ScanPage, ScanToPdfError } from './scan-to-pdf.js';
 import { loadWiaAddon, type WiaAddon } from './wia-scanner.js';
 
-
 export interface BootstrappedScan {
   addon: WiaAddon | null;
   composeScanToPdf: (
     pages: ScanPage[],
-  ) => Promise<Result<{ bytes: Uint8Array; pageCount: number; warnings: string[] }, ScanToPdfError>>;
+  ) => Promise<
+    Result<{ bytes: Uint8Array; pageCount: number; warnings: string[] }, ScanToPdfError>
+  >;
   registerScannedPdf: (
     bytes: Uint8Array,
     displayName: string,

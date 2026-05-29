@@ -13,14 +13,14 @@ Phase 2 closes the Walking-Skeleton-to-Real-Editor gap. It promotes Save from "p
 
 ### Locked decisions (user, 2026-05-21)
 
-| ID | Decision | Implication |
-|---|---|---|
-| **P2-L-1** | License = MIT. LICENSE file at root, package.json already declares it, LICENSES.md updated. | Handled in Phase 1.1. |
-| **P2-L-2** | **Edit-replay architecture: main keeps original bytes per handle.** Main process retains the loaded PDF `Uint8Array` keyed by `DocumentHandle`. Renderer streams `EditOperation[]` via IPC; main applies via pdf-lib at save time. Renderer holds no large binaries (conventions §10 holds). | This is the lynchpin. Unblocks H-3 Phase-1 limitation. Drives `fs:writePdf` `kind:'ops'` becoming Live. Underpins Print-to-PDF (pdf-lib path) and every Phase-2 mutation. |
-| **P2-L-3** | **Text editing: replace-only, original font.** No reflow, no font substitution, no font subsetting beyond what pdf-lib offers natively. Plus the existing Phase-1 FreeText annotation tool for net-new text. | Sharply bounds the design surface. Existing-text-span replacement is solvable in pdf-lib; reflow + multilanguage shaping is not, and shipping it would be a Phase 4+ effort. |
-| **P2-L-4** | **Image import: both modes.** Insert-as-new-page AND overlay-on-existing-page (signature-stamp UX). Formats: PNG, JPEG, TIFF. | TIFF requires pre-conversion in main (pdf-lib supports PNG + JPEG natively); use `sharp` or a lightweight TIFF→PNG decoder. Two UX entry points (toolbar Insert Image + drag-drop onto a page). |
-| **P2-L-5** | `ARCHITECTURE.md` Phase-1 is **frozen**. Wave 6 creates `ARCHITECTURE-PHASE-2.md` as additions/deltas. Phase-1 readers see the original; Phase-2 readers see the deltas. | Avoids destructive edits to a doc Julian audited against. |
-| **P2-L-6** | Bookmarks authoring: full CRUD + nesting + reorder. Schema migration `0002_phase2_bookmarks.sql` adds `parent_id INTEGER REFERENCES user_bookmarks(id) ON DELETE CASCADE` + `sort_order INTEGER`. (This was deferred from Wave 2; Ravi noted it as a Phase-2 backlog item in his self-improvement entry.) | New migration in Wave 7. Repository methods expand. |
+| ID         | Decision                                                                                                                                                                                                                                                                                                  | Implication                                                                                                                                                                                     |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **P2-L-1** | License = MIT. LICENSE file at root, package.json already declares it, LICENSES.md updated.                                                                                                                                                                                                               | Handled in Phase 1.1.                                                                                                                                                                           |
+| **P2-L-2** | **Edit-replay architecture: main keeps original bytes per handle.** Main process retains the loaded PDF `Uint8Array` keyed by `DocumentHandle`. Renderer streams `EditOperation[]` via IPC; main applies via pdf-lib at save time. Renderer holds no large binaries (conventions §10 holds).              | This is the lynchpin. Unblocks H-3 Phase-1 limitation. Drives `fs:writePdf` `kind:'ops'` becoming Live. Underpins Print-to-PDF (pdf-lib path) and every Phase-2 mutation.                       |
+| **P2-L-3** | **Text editing: replace-only, original font.** No reflow, no font substitution, no font subsetting beyond what pdf-lib offers natively. Plus the existing Phase-1 FreeText annotation tool for net-new text.                                                                                              | Sharply bounds the design surface. Existing-text-span replacement is solvable in pdf-lib; reflow + multilanguage shaping is not, and shipping it would be a Phase 4+ effort.                    |
+| **P2-L-4** | **Image import: both modes.** Insert-as-new-page AND overlay-on-existing-page (signature-stamp UX). Formats: PNG, JPEG, TIFF.                                                                                                                                                                             | TIFF requires pre-conversion in main (pdf-lib supports PNG + JPEG natively); use `sharp` or a lightweight TIFF→PNG decoder. Two UX entry points (toolbar Insert Image + drag-drop onto a page). |
+| **P2-L-5** | `ARCHITECTURE.md` Phase-1 is **frozen**. Wave 6 creates `ARCHITECTURE-PHASE-2.md` as additions/deltas. Phase-1 readers see the original; Phase-2 readers see the deltas.                                                                                                                                  | Avoids destructive edits to a doc Julian audited against.                                                                                                                                       |
+| **P2-L-6** | Bookmarks authoring: full CRUD + nesting + reorder. Schema migration `0002_phase2_bookmarks.sql` adds `parent_id INTEGER REFERENCES user_bookmarks(id) ON DELETE CASCADE` + `sort_order INTEGER`. (This was deferred from Wave 2; Ravi noted it as a Phase-2 backlog item in his self-improvement entry.) | New migration in Wave 7. Repository methods expand.                                                                                                                                             |
 
 ### Headline features (from `docs/project-roadmap.md` Phase 2)
 
@@ -53,6 +53,7 @@ Full briefs are written when each wave opens. This is the headline scope.
 **Brief:** `docs/wave-6-brief.md` (already written).
 
 Deliverables:
+
 - `docs/architecture-phase-2.md` (NEW) — Phase-2 additions and changes
 - `docs/edit-replay-engine.md` (NEW) — main-process pdf-lib replay design (ordering, conflict resolution, partial-failure rollback, atomicity, perf)
 - Append-only updates to `docs/api-contracts.md` (new channels)
@@ -65,6 +66,7 @@ Phase-1 docs are **not destructively edited**. Append a "Phase 2 additions" sect
 ### 2.2 Wave 7 — Parallel implementation
 
 #### David (`backend-engineer`)
+
 - Main-process **edit-replay engine** in `src/main/pdf-ops/replay-engine.ts` (NEW). Accepts a `DocumentHandle` + `EditOperationSerialized[]` + `AnnotationModelSerialized[]`. Loads the original bytes (held since `dialog:openPdf` / `fs:readPdf`), applies each op via pdf-lib, returns new bytes. Honors ordering and the inverse-op contract from `data-models.md` §3.2.
 - Document-byte retention: extend `DocumentStore` (`src/main/pdf-ops/document-store.ts`) to hold the loaded `Uint8Array` keyed by handle. Add a `getBytes(handle)` method. Release on `fs:closePdf`.
 - New IPC handlers + register entries:
@@ -78,6 +80,7 @@ Phase-1 docs are **not destructively edited**. Append a "Phase 2 additions" sect
 - Result-shape hygiene: every new handler uses the H-4 `safeMessage()` helper (Phase 1.1 may close H-4, Phase 2 inherits the pattern; if Phase 1.1 deferred H-4, David closes it in Wave 7).
 
 **Files owned (NEW or substantive edits):**
+
 - `src/main/pdf-ops/replay-engine.ts` (NEW)
 - `src/main/pdf-ops/document-store.ts` (edit — add bytes retention)
 - `src/main/pdf-ops/text-replace.ts` (NEW)
@@ -93,12 +96,14 @@ Phase-1 docs are **not destructively edited**. Append a "Phase 2 additions" sect
 - Test files for each new handler
 
 #### Ravi (`database-specialist`)
+
 - `migrations/0002_phase2_bookmarks.sql` — adds `parent_id INTEGER REFERENCES user_bookmarks(id) ON DELETE CASCADE` and `sort_order INTEGER NOT NULL DEFAULT 0`. Adds index `idx_user_bookmarks_parent_id`. Forward-only migration with example seed test.
 - `src/db/repositories/bookmarks-repo.ts` (edit) — extend `BookmarksRepo` interface with `listTree(fileHash)`, `move(id, newParentId, newSortOrder)`, `rename(id, title)`. Existing `upsert`/`delete` remain backward-compatible.
 - Migration test in `src/db/migrate.test.ts` — applying 0002 over an existing 0001 schema preserves all rows; `parent_id` defaults to NULL; reading via the new `listTree()` returns a hierarchical structure.
 - Update `src/db/types.ts` to add `parent_id`/`sort_order` to `BookmarkRow`. David's adapter (`src/main/db-bridge.ts`) gets the camelCase translation; Riley reads from the contract.
 
 **Files owned:**
+
 - `migrations/0002_phase2_bookmarks.sql` (NEW)
 - `src/db/repositories/bookmarks-repo.ts` (edit)
 - `src/db/types.ts` (edit)
@@ -106,6 +111,7 @@ Phase-1 docs are **not destructively edited**. Append a "Phase 2 additions" sect
 - `src/db/repositories/bookmarks-repo.test.ts` (edit — add tree/move/rename cases)
 
 #### Riley (`front-end-architect`)
+
 - UI for **edit-replay end-to-end**: confirm the existing `applyEdit` funnel and `dirtyOps` accumulator now flow through the real `fs:writePdf` `kind:'ops'` path. Remove the H-3 PHASE-1 INLINE comment + placeholder from `src/client/state/thunks.ts`.
 - **Image import modal** (`src/client/components/modals/image-import-modal/`) — supports both "Insert as new page" and "Overlay on current page". Accepts PNG, JPEG, TIFF. Drag-drop onto a page in the canvas/thumbnail also triggers the overlay path with default placement.
 - **Text-edit overlay** — a dual-mode renderer over the canvas. Mode 1: edit existing text spans (replace-only). Mode 2: existing FreeText annotation tool (already shipped Phase 1). New component `src/client/components/text-edit-overlay/`.
@@ -115,6 +121,7 @@ Phase-1 docs are **not destructively edited**. Append a "Phase 2 additions" sect
 - **Bundle Julian's MEDIUM findings into this wave** — E-1, E-2, G-5, I-2, I-3, I-4 from Phase 1.1 triage (§5.2). They're small UI fixes that align with surfaces being touched anyway.
 
 **Files owned (NEW or substantive edits):**
+
 - `src/client/components/modals/image-import-modal/` (NEW)
 - `src/client/components/text-edit-overlay/` (NEW)
 - `src/client/components/bookmarks-panel/index.tsx` (rewrite)
@@ -131,12 +138,14 @@ Phase-1 docs are **not destructively edited**. Append a "Phase 2 additions" sect
 ### 2.3 Wave 8 — Parallel infra + review + docs-start
 
 #### Diego (`dev-ops-agent`)
+
 - CI updates: new test patterns (Playwright e2e cases for image-import, print dialog, etc.). Verify `electron-builder.yml` still builds.
 - If new native deps (e.g. `sharp` for TIFF) land, verify `electron-builder install-app-deps` covers them.
 - Verify the renderer typecheck remains clean across the Phase-2 surface (TS4023 cascade should remain at 0 from Phase 1.1).
 - Add Playwright component tests for the new Phase-2 modals.
 
 #### Julian (`code-reviewer`)
+
 - Full review of all Wave 7 code. Same template as Wave 2 audit (sections A-I). Mirror the verdict format. Expect HIGH findings — Phase 2 is much larger than Phase 1 implementation.
 - Focus areas:
   - The replay engine's main-process trust boundary (David)
@@ -148,6 +157,7 @@ Phase-1 docs are **not destructively edited**. Append a "Phase 2 additions" sect
 - Output: `docs/code-review.md` is overwritten with the Wave 8 review (or appended with `## Wave 8` section; Julian decides). Phase-2 verdict written into `docs/build-report.md` by Marcus on join.
 
 #### Nathan (`documentation-expert`)
+
 - Starts the docs delta in parallel; final pass is Wave 9 sequential. Reason: many Phase 2 doc additions are predictable once Wave 7 is mid-flight (new IPC channels, new shortcuts) — Nathan can draft the api-reference + dev-guide delta while Julian is auditing.
 
 ### 2.4 Wave 9 — Nathan (sequential) — Final docs
@@ -166,28 +176,28 @@ If Julian's Wave 8 review surfaces HIGH findings (>0), Marcus runs a Phase 2.1 w
 
 One agent per file. Marcus enforces.
 
-| Path | Owner | Note |
-|---|---|---|
-| `docs/architecture-phase-2.md` (NEW) | Riley | Wave 6 |
-| `docs/edit-replay-engine.md` (NEW) | Riley | Wave 6 |
-| `docs/api-contracts.md` (Phase-2 additions section) | Riley | Wave 6; Phase-1 sections frozen |
-| `docs/data-models.md` (Phase-2 additions section) | Riley | Wave 6 |
-| `docs/ui-spec.md` (Phase-2 additions section) | Riley | Wave 6 |
-| `docs/conventions.md` (Phase-2 additions, if any) | Riley | Wave 6 |
-| `docs/wave-7-brief.md` (NEW, future) | Marcus | After Wave 6 closes |
-| `docs/wave-8-brief.md` (NEW, future) | Marcus | After Wave 7 closes |
-| `docs/wave-9-brief.md` (NEW, future) | Marcus | After Wave 8 closes |
-| `docs/build-report.md` (Phase-2 sections) | Marcus | Per-wave append |
-| `docs/code-review.md` | Julian | Wave 8 |
-| `migrations/0002_phase2_bookmarks.sql` (NEW) | Ravi | Wave 7 |
-| `src/db/**` | Ravi | Wave 7 |
-| `src/main/**`, `src/preload/**`, `src/ipc/**` | David | Wave 7 |
-| `src/client/**` (all renderer code) | Riley | Wave 7 |
-| `package.json` (if new deps) | Diego | Wave 7-8; David requests, Diego approves + adds |
-| `electron-builder.yml`, `.github/workflows/**`, `scripts/**` | Diego | Wave 8 |
-| `README.md`, `docs/user-guide.md`, `docs/developer-guide.md`, `docs/api-reference.md`, `LICENSES.md` | Nathan | Wave 8 (draft) + Wave 9 (final) |
-| `.learnings/learnings.jsonl` | Marcus appends serially per Hard-Won Playbook §1 | All waves |
-| `.learnings/locked-instructions.md` | Marcus only | All waves; L-001 must continue holding |
+| Path                                                                                                 | Owner                                            | Note                                            |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------- |
+| `docs/architecture-phase-2.md` (NEW)                                                                 | Riley                                            | Wave 6                                          |
+| `docs/edit-replay-engine.md` (NEW)                                                                   | Riley                                            | Wave 6                                          |
+| `docs/api-contracts.md` (Phase-2 additions section)                                                  | Riley                                            | Wave 6; Phase-1 sections frozen                 |
+| `docs/data-models.md` (Phase-2 additions section)                                                    | Riley                                            | Wave 6                                          |
+| `docs/ui-spec.md` (Phase-2 additions section)                                                        | Riley                                            | Wave 6                                          |
+| `docs/conventions.md` (Phase-2 additions, if any)                                                    | Riley                                            | Wave 6                                          |
+| `docs/wave-7-brief.md` (NEW, future)                                                                 | Marcus                                           | After Wave 6 closes                             |
+| `docs/wave-8-brief.md` (NEW, future)                                                                 | Marcus                                           | After Wave 7 closes                             |
+| `docs/wave-9-brief.md` (NEW, future)                                                                 | Marcus                                           | After Wave 8 closes                             |
+| `docs/build-report.md` (Phase-2 sections)                                                            | Marcus                                           | Per-wave append                                 |
+| `docs/code-review.md`                                                                                | Julian                                           | Wave 8                                          |
+| `migrations/0002_phase2_bookmarks.sql` (NEW)                                                         | Ravi                                             | Wave 7                                          |
+| `src/db/**`                                                                                          | Ravi                                             | Wave 7                                          |
+| `src/main/**`, `src/preload/**`, `src/ipc/**`                                                        | David                                            | Wave 7                                          |
+| `src/client/**` (all renderer code)                                                                  | Riley                                            | Wave 7                                          |
+| `package.json` (if new deps)                                                                         | Diego                                            | Wave 7-8; David requests, Diego approves + adds |
+| `electron-builder.yml`, `.github/workflows/**`, `scripts/**`                                         | Diego                                            | Wave 8                                          |
+| `README.md`, `docs/user-guide.md`, `docs/developer-guide.md`, `docs/api-reference.md`, `LICENSES.md` | Nathan                                           | Wave 8 (draft) + Wave 9 (final)                 |
+| `.learnings/learnings.jsonl`                                                                         | Marcus appends serially per Hard-Won Playbook §1 | All waves                                       |
+| `.learnings/locked-instructions.md`                                                                  | Marcus only                                      | All waves; L-001 must continue holding          |
 
 ### 3.1 Cross-cutting files where parallel-write contention risk is highest
 
@@ -201,12 +211,13 @@ One agent per file. Marcus enforces.
 ### 4.1 HIGH risk: Edit-replay engine correctness
 
 **Risk:** pdf-lib `import-and-modify` does not faithfully round-trip every existing-PDF feature. Common breakage modes:
+
 - Form fields lose their appearance streams
 - Embedded JavaScript actions get stripped
 - Annotations not in pdf-lib's native subtype list disappear
 - Compressed object streams (`/ObjStm`) get rewritten in ways that some viewers don't read
 
-**Detection:** Wave 7 acceptance tests must include a round-trip fidelity matrix — open known-good PDFs (forms, annotated, signed, complex), apply *no edits*, save, diff against original. Any non-trivial diff is a finding.
+**Detection:** Wave 7 acceptance tests must include a round-trip fidelity matrix — open known-good PDFs (forms, annotated, signed, complex), apply _no edits_, save, diff against original. Any non-trivial diff is a finding.
 
 **Mitigation:** the Chromium engine fallback already exists by design (ARCHITECTURE §6). When pdf-lib re-emit produces a diff against `pdflibLoadWarnings`, the heuristic should bias toward the Chromium fallback for that save. The user-facing fallback path is the safety net.
 
@@ -215,15 +226,18 @@ One agent per file. Marcus enforces.
 ### 4.2 HIGH risk: Text-edit replace-only correctness on non-trivial PDFs
 
 **Risk:** Text spans in PDFs are often split across multiple TJ/Tj operators, may use embedded subset fonts, may use multibyte encoding, may be laid out via CID fonts. Replace-only with original font still requires:
+
 - Identifying the text-object boundary
 - Computing the new glyph widths (even without reflow, the new string may not fit in the original box → clip or overflow)
 - Preserving font metrics
 
 Per locked decision P2-L-3, no reflow + no substitution. This makes the feature shippable but introduces edge cases the user can hit:
+
 - "I replaced 'cat' with 'cataclysm' and it ran off the right edge of the box."
 - "I replaced 'résumé' but the original font didn't have those glyphs."
 
 **Mitigation:**
+
 - Wave 6 architecture must specify the failure-mode UX: if the new text doesn't fit, warn the user with a tooltip / inline error. If glyphs are missing, show "missing glyph" indicators in the preview before commit.
 - Test fixtures: a `tests/fixtures/text-replace/` set covering single-line, multi-line, mixed-encoding, missing-glyph cases. Document the documented limitations in the user guide.
 
@@ -234,6 +248,7 @@ Per locked decision P2-L-3, no reflow + no substitution. This makes the feature 
 **Risk:** `sharp` (the highest-fidelity option) pulls native binaries and is `Apache-2.0` but with large binary footprint. `utif` is pure-JS MIT but limited fidelity on uncommon TIFF subtypes. Adding either grows the installer by 10-40 MB.
 
 **Mitigation:**
+
 - Default to `utif` first (pure-JS MIT). Only escalate to `sharp` if real-user TIFFs fail the decode path.
 - Document TIFF support level honestly in user guide: "Common single-page TIFF (LZW, deflate, uncompressed) supported. Multi-page TIFF Phase 3."
 - License check before merge. `utif` is on the allow-list per ARCHITECTURE §3.
@@ -243,6 +258,7 @@ Per locked decision P2-L-3, no reflow + no substitution. This makes the feature 
 ### 4.4 MEDIUM risk: Bookmarks migration on existing user databases
 
 **Risk:** Users who installed Phase 1 have `0001_init.sql` applied. Migration `0002_phase2_bookmarks.sql` must:
+
 - Add `parent_id` and `sort_order` columns without locking the table excessively
 - NULL parent_id is the valid "top-level" state — every existing bookmark becomes a top-level bookmark
 - Forward-only; no rollback expected (per data-models §6.3)
@@ -258,6 +274,7 @@ Per locked decision P2-L-3, no reflow + no substitution. This makes the feature 
 **Risk:** The Phase-1 contract reserved `pdf:export` shape but the engine never ran. Phase 2 wires the real selector. If the heuristic picks pdf-lib when it should pick Chromium (e.g. on a doc with `/Ink` annotations), users get visually-broken output and blame the app.
 
 **Mitigation:**
+
 - Wave 6 specifies the heuristic in extreme detail (already done in ARCHITECTURE §6.1 — but verify the table is exhaustive).
 - Wave 7 test: a corpus of fixture PDFs each tagged with the expected engine choice. CI fails if the heuristic picks the wrong engine.
 - User-override path is shipped (`preference: 'pdf-lib' | 'chromium' | 'auto'` in `pdf:export`); when the heuristic loses, the user can force the other engine.
@@ -363,14 +380,14 @@ These get answered in `docs/architecture-phase-2.md`:
 
 ## 8. Estimated wave durations
 
-| Wave | Agent(s) | Estimated wall-time | Confidence |
-|---|---|---|---|
-| 6 — Phase 2 architecture | Riley solo | 3-5 hours | Medium-high (Riley has done one architecture pass already) |
-| 7 — Implementation | David + Ravi + Riley parallel | 8-12 hours | Medium (replay engine is the unknown) |
-| 8 — Infra + review + docs start | Diego + Julian + Nathan parallel | 4-6 hours | High |
-| 9 — Final docs | Nathan solo | 2-3 hours | High |
-| Phase 2.1 cleanup (if needed) | TBD | 1-3 hours | Conditional |
-| **Total** | | **18-29 hours** | |
+| Wave                            | Agent(s)                         | Estimated wall-time | Confidence                                                 |
+| ------------------------------- | -------------------------------- | ------------------- | ---------------------------------------------------------- |
+| 6 — Phase 2 architecture        | Riley solo                       | 3-5 hours           | Medium-high (Riley has done one architecture pass already) |
+| 7 — Implementation              | David + Ravi + Riley parallel    | 8-12 hours          | Medium (replay engine is the unknown)                      |
+| 8 — Infra + review + docs start | Diego + Julian + Nathan parallel | 4-6 hours           | High                                                       |
+| 9 — Final docs                  | Nathan solo                      | 2-3 hours           | High                                                       |
+| Phase 2.1 cleanup (if needed)   | TBD                              | 1-3 hours           | Conditional                                                |
+| **Total**                       |                                  | **18-29 hours**     |                                                            |
 
 Phase 2 is roughly 2-3x the scope of Phase 1.
 

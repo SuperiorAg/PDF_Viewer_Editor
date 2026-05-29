@@ -35,13 +35,13 @@ Read these BEFORE starting any deliverable. Many of your Phase-2 design choices 
 
 From `docs/phase-2-plan.md` §0:
 
-| ID | Decision | Architecture implication |
-|---|---|---|
+| ID         | Decision                                                                                                                                                                                                                                                     | Architecture implication                                                                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **P2-L-2** | **Edit-replay architecture: main keeps original bytes per handle.** Main retains the loaded PDF `Uint8Array` keyed by `DocumentHandle`. Renderer streams `EditOperation[]` via IPC; main applies via pdf-lib at save time. Renderer holds no large binaries. | Drives `fs:writePdf` `kind:'ops'` Live, drives `DocumentStore.getBytes(handle)` extension, drives Print-to-PDF pdf-lib engine. The lynchpin — every other Phase-2 design choice composes on this. |
-| **P2-L-3** | **Text editing: replace-only with original font.** No reflow, no font substitution. Plus the existing Phase-1 FreeText annotation tool for net-new text. | New `EditOperation` variant `text-replace`. Architecture must specify failure modes (text doesn't fit, missing glyphs) and the UX response (warn/error, not auto-substitute). |
-| **P2-L-4** | **Image import: both modes.** Insert-as-new-page AND overlay-on-existing-page. Formats: PNG, JPEG, TIFF. | New `EditOperation` variants `image-insert` (new page) and `image-overlay` (existing page rect). New IPC channel `pdf:embedImage`. TIFF decoder in main process; PNG/JPEG native to pdf-lib. |
-| **P2-L-5** | `ARCHITECTURE.md` is **frozen**. Write `docs/architecture-phase-2.md` as the Phase-2 additions/deltas doc. Phase-1 readers see the original; Phase-2 readers see the delta. | Append-only edits to api-contracts.md, data-models.md, ui-spec.md, conventions.md — never destructive. New "Phase 2 additions" section in each. |
-| **P2-L-6** | Bookmarks authoring: full CRUD + nesting + reorder. Schema migration `0002_phase2_bookmarks.sql` adds `parent_id` + `sort_order`. | New repo methods, new UI tree component, new EditOperation variants for bookmark mutations (or NO — they may stay outside the document-edit funnel; you decide). |
+| **P2-L-3** | **Text editing: replace-only with original font.** No reflow, no font substitution. Plus the existing Phase-1 FreeText annotation tool for net-new text.                                                                                                     | New `EditOperation` variant `text-replace`. Architecture must specify failure modes (text doesn't fit, missing glyphs) and the UX response (warn/error, not auto-substitute).                     |
+| **P2-L-4** | **Image import: both modes.** Insert-as-new-page AND overlay-on-existing-page. Formats: PNG, JPEG, TIFF.                                                                                                                                                     | New `EditOperation` variants `image-insert` (new page) and `image-overlay` (existing page rect). New IPC channel `pdf:embedImage`. TIFF decoder in main process; PNG/JPEG native to pdf-lib.      |
+| **P2-L-5** | `ARCHITECTURE.md` is **frozen**. Write `docs/architecture-phase-2.md` as the Phase-2 additions/deltas doc. Phase-1 readers see the original; Phase-2 readers see the delta.                                                                                  | Append-only edits to api-contracts.md, data-models.md, ui-spec.md, conventions.md — never destructive. New "Phase 2 additions" section in each.                                                   |
+| **P2-L-6** | Bookmarks authoring: full CRUD + nesting + reorder. Schema migration `0002_phase2_bookmarks.sql` adds `parent_id` + `sort_order`.                                                                                                                            | New repo methods, new UI tree component, new EditOperation variants for bookmark mutations (or NO — they may stay outside the document-edit funnel; you decide).                                  |
 
 ## 2. Deliverables
 
@@ -50,12 +50,15 @@ From `docs/phase-2-plan.md` §0:
 The Phase-2 architecture document. Modeled on `ARCHITECTURE.md`'s structure but only enumerating Phase-2 additions/changes. Specifically must address:
 
 #### 2.1.1 Process model deltas
+
 - `DocumentStore` extended to retain `Uint8Array` per handle. Lifetime contract: held from open (`dialog:openPdf` / `fs:readPdf`) to close (`fs:closePdf`).
 - Memory budget per handle. Single-document Phase-1 invariant still holds in Phase-2 (no multi-document yet).
 - Where the replay engine lives: `src/main/pdf-ops/replay-engine.ts` (NEW, David Wave 7).
 
 #### 2.1.2 EditOperation extensions
+
 List every new variant:
+
 - `{ kind: 'text-replace'; meta: EditMeta; pageIndex: number; objectId: string; oldText: string; newText: string }` (oldText for inverse; objectId is pdf-lib's content-stream operator reference — Riley defines the encoding scheme)
 - `{ kind: 'image-insert'; meta: EditMeta; atIndex: number; image: { bytes: Uint8Array; mimeType: 'image/png' | 'image/jpeg' | 'image/tiff'; width: number; height: number } }`
 - `{ kind: 'image-overlay'; meta: EditMeta; pageIndex: number; rect: PdfRect; image: { ...same... }; overlayId: string }` (overlayId so we can edit/delete a specific overlay later)
@@ -65,25 +68,33 @@ List every new variant:
 For each, specify its **inverse** per data-models §3.2 table format. Add the rows to the data-models doc.
 
 #### 2.1.3 Op-ordering policy
+
 Answer phase-2-plan §7 question 1: **dispatch order**, no topological reorder. Document why (simpler reasoning, undo/redo invariants hold trivially, replay engine is a pure fold). Edge case: a `reorder` op that moves a page that has pending annotations/overlays — the rebind happens in the replay engine, not pre-replay.
 
 #### 2.1.4 Partial-failure rollback policy
+
 Answer phase-2-plan §7 question 2: **whole-save abort**, no partial commit. If op N fails, the original file is untouched (atomic-rename pattern in §2.1.5). Document why: partial-success UX is a trap — the user thinks they saved, half their edits are gone, and the next save mishandles `dirtyOps`. All-or-nothing keeps the contract simple.
 
 #### 2.1.5 Atomic save
+
 Answer phase-2-plan §7 question 3: **write to temp, then rename**. Temp file in same directory as destination (cross-FS rename is non-atomic). Document the failure mode if rename itself fails (rare; surface as `fs_write_failed` with the temp path still on disk for recovery).
 
 #### 2.1.6 Bytes-retention lifetime
+
 Answer phase-2-plan §7 question 4: **bytes held for handle lifetime, no eviction**. Phase-2 is single-document; the memory cost is bounded. Phase-5 (multi-document) will revisit if needed. Document the trade-off.
 
 #### 2.1.7 Image-embedding caching
+
 Answer phase-2-plan §7 question 5: **dedupe by content hash**. Same image dropped on 5 pages → embed once, reference five times via pdf-lib's `embedPng`/`embedJpg` returning a reusable ref. Replay engine maintains an in-flight `Map<sha256, PDFEmbeddedImage>` per save.
 
 #### 2.1.8 Print-to-PDF determinism
+
 Answer phase-2-plan §7 question 6: pdf-lib is deterministic; Chromium is not (timestamps in `/CreationDate` + `/ModDate`). Document the difference. **Decision:** strip timestamps from Chromium output post-emit if `export.deterministic` setting is true (NEW setting key — add to data-models.md §2.3). Default false.
 
 #### 2.1.9 Text-edit span identification
+
 Answer phase-2-plan §7 question 7. UX (defer detail to ui-spec.md addition):
+
 - Click into a text region in the canvas overlay → renderer queries main via NEW channel `pdf:identifyTextSpan` for the operator-level identification at that point.
 - Returns `{ objectId, runBoundingRect, currentText }`.
 - Renderer renders an inline text input over the run; user edits; commit fires `text-replace` EditOperation.
@@ -91,19 +102,25 @@ Answer phase-2-plan §7 question 7. UX (defer detail to ui-spec.md addition):
 This implies a new IPC channel — add it to the api-contracts §7 additions section.
 
 #### 2.1.10 Failure-mode UX for text-replace
+
 Per phase-2-plan §4.2 risk:
+
 - **Text doesn't fit:** detection — preview engine measures the new string with the original font's glyph widths; if it exceeds the original run's bounding box, the preview shows the overflow + a tooltip "Text will be clipped on save. Phase 4 will support reflow." User can cancel or accept.
 - **Missing glyph:** detection — font's glyph map doesn't have the codepoint. Preview shows a tofu (`￿`) or visible-missing-glyph marker. Same tooltip path. No auto-substitution.
 
 #### 2.1.11 Undo/redo activation
+
 Phase-1 has `historyMiddleware` as a passive shim. Phase-2 activates it. Specify:
+
 - Where the inverse computation lives (data-models.md §3.2 already documents the table; you ensure the new EditOperation variants have inverses).
 - How `meta.operationId` flows through the redux history stack.
 - Cap at `undo.maxHistory` setting (already in data-models §2.3).
 - What happens on Save: history is **not** cleared (undo across save is supported in Phase 2).
 
 #### 2.1.12 Print-to-PDF heuristic update
+
 Per phase-2-plan §4.5 risk:
+
 - Update the heuristic table in ARCHITECTURE.md §6.1. New rows for: text-replace ops (pdf-lib safe), image-insert/overlay (pdf-lib safe for PNG+JPEG; TIFF is decoded to PNG first), bookmarks-changed (pdf-lib safe).
 - Specifically, Ink annotations remain the Chromium-fallback trigger. Text-replace with missing-glyph fallback should NOT trigger Chromium (Chromium would substitute the font, which violates locked decision P2-L-3).
 
@@ -112,6 +129,7 @@ Per phase-2-plan §4.5 risk:
 Detailed design of the main-process pdf-lib replay engine that David implements in Wave 7. Must include:
 
 #### Sections required:
+
 1. **Inputs / outputs.** Inputs: `originalBytes: Uint8Array`, `ops: EditOperation[]`, `annotations: AnnotationModel[]`. Output: `Result<{ newBytes: Uint8Array; warnings: string[] }, ReplayError>`.
 2. **Algorithm (high-level).** Step 1: load pdf-lib document. Step 2: build a `PageContext[]` map mirroring the renderer's `PageModel`. Step 3: fold ops in dispatch order. Step 4: emit annotations. Step 5: serialize.
 3. **Op handlers — pseudocode for each variant.** `reorder`, `insert`, `delete`, `rotate`, `annot-add`, `annot-edit`, `annot-delete`, `text-replace`, `image-insert`, `image-overlay`, `image-overlay-edit`, `image-overlay-delete`. Reference pdf-lib API methods explicitly.
@@ -132,7 +150,7 @@ Detailed design of the main-process pdf-lib replay engine that David implements 
      | 'annotation_emit_failed'
      | 'image_decode_failed'
      | 'text_span_not_found'
-     | 'missing_glyph'    // text-replace with no fallback
+     | 'missing_glyph' // text-replace with no fallback
      | 'serialize_failed';
    ```
 10. **Testability.** What David's Wave-7 tests must cover. Specifically: a round-trip fidelity matrix — known-good PDFs with no edits should re-emit byte-identical (modulo pdf-lib's deterministic re-emit metadata). Edits should produce the expected mutations.
@@ -177,6 +195,7 @@ Add a new section `## 11. Phase 2 additions (2026-05-21)`. Document:
 ### 2.6 `docs/conventions.md` — Phase 2 additions (if needed)
 
 Only edit if new patterns emerge. Likely additions:
+
 - **§13 Main-process edit-ops pattern** (NEW section). When a feature touches both renderer (UI + state) and main (pdf-lib op application), the pattern is: (a) renderer dispatches the op via `applyEdit` funnel, (b) op accumulates in `dirtyOps`, (c) `fs:writePdf kind:'ops'` carries the op array to main, (d) main's `ReplayEngine.apply()` runs the op against the loaded bytes, (e) inverse computation lives in the renderer slice (`document-inverses.ts`) for undo, (f) tests live in both layers (renderer slice + main replay-engine test).
 - Document the `Uint8Array` boundary loud and clear: bytes live in main; renderer never holds. Any thunk that needs bytes for any reason routes through an IPC channel.
 
@@ -233,6 +252,6 @@ If any of these surface during your design pass, flag them so Marcus can decide 
 2. Is `utif` (pure-JS MIT) sufficient for TIFF support, or do we need `sharp`? Phase-2 plan §4.3 prefers `utif`; verify before David adds a dep in Wave 7.
 3. Is `pdf:identifyTextSpan` the right channel name, or should it be a sub-method of `pdf:replaceText`? (Naming consistency — your call as the contract designer.)
 4. Should `export.deterministic` default to `false` (current proposal) or `true`? Reproducible-build users want `true`; mainstream users get fresh timestamps from `false`. Pick a default + document.
-5. Are there Phase-2 ops the renderer needs to *preview* before sending (e.g. text-replace clipping detection)? If yes, that requires a renderer-side font-metrics shim — coordinate with David Wave 7 on whether that lives renderer-side or as a `pdf:previewTextReplace` channel.
+5. Are there Phase-2 ops the renderer needs to _preview_ before sending (e.g. text-replace clipping detection)? If yes, that requires a renderer-side font-metrics shim — coordinate with David Wave 7 on whether that lives renderer-side or as a `pdf:previewTextReplace` channel.
 
 These are non-blocking for Wave 6 close, but flag them in your final status row so Marcus has the context.

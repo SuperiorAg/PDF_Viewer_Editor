@@ -26,10 +26,7 @@
 
 import { createHash } from 'node:crypto';
 
-import type {
-  LanguagePackCatalogEntry,
-  OcrLanguagePackSource,
-} from '../../ipc/contracts.js';
+import type { LanguagePackCatalogEntry, OcrLanguagePackSource } from '../../ipc/contracts.js';
 import { fail, ok } from '../../shared/result.js';
 import type { Result } from '../../shared/result.js';
 

@@ -60,9 +60,7 @@ export function ConfirmAndSignStep(): JSX.Element {
       {signing && (
         <div className={styles.spinner}>
           <span aria-live="polite">
-            {options.useTsa
-              ? t('modals:padesSign.signingTsa')
-              : t('modals:padesSign.signing')}
+            {options.useTsa ? t('modals:padesSign.signingTsa') : t('modals:padesSign.signing')}
           </span>
         </div>
       )}

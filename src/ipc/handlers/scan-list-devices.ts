@@ -13,11 +13,7 @@
 //     `scanner_unavailable` Result — NEVER a crash, NEVER a silent no-op.
 //   - Returns `Result<T,E>`; never throws across the IPC bridge.
 
-import {
-  listDevicesVia,
-  type ScanError,
-  type WiaAddon,
-} from '../../main/pdf-ops/wia-scanner.js';
+import { listDevicesVia, type ScanError, type WiaAddon } from '../../main/pdf-ops/wia-scanner.js';
 import { fail, ok } from '../../shared/result.js';
 import type {
   ScanListDevicesError,

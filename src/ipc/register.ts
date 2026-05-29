@@ -24,16 +24,15 @@ import type {
   RasterPageOptions,
 } from '../main/pdf-ops/ocr-engine.js';
 // Phase 5.1 (Wave 5.1, David): WIA scanner wiring.
+import { replay } from '../main/pdf-ops/replay-engine.js';
+import type { ReplayInput } from '../main/pdf-ops/replay-engine.js';
 import type { ScanPage, ScanToPdfError } from '../main/pdf-ops/scan-to-pdf.js';
 import type { WiaAddon } from '../main/pdf-ops/wia-scanner.js';
-import { replay } from '../main/pdf-ops/replay-engine.js';
 // Wave 8 (Diego, D-8.2 + D-8.3): real Chromium export + Electron print
 // dispatch adapters, replacing the Phase-2 conservative stubs below.
-import type { ReplayInput } from '../main/pdf-ops/replay-engine.js';
 import { dispatchPrintViaElectron, exportViaChromium } from '../main/print-window.js';
 import { sanitizeDirectoryPath, sanitizePath } from '../main/security/path-sanitizer.js';
 import type { TelemetryService } from '../main/telemetry.js';
-
 import type { Result } from '../shared/result.js';
 
 import { Channels } from './contracts.js';
@@ -193,7 +192,9 @@ export interface RegisterScanOptions {
   addon: WiaAddon | null;
   composeScanToPdf: (
     pages: ScanPage[],
-  ) => Promise<Result<{ bytes: Uint8Array; pageCount: number; warnings: string[] }, ScanToPdfError>>;
+  ) => Promise<
+    Result<{ bytes: Uint8Array; pageCount: number; warnings: string[] }, ScanToPdfError>
+  >;
   registerScannedPdf: (
     bytes: Uint8Array,
     displayName: string,

@@ -16,11 +16,7 @@
 import { z } from 'zod';
 
 import type { ScanPage, ScanToPdfError } from '../../main/pdf-ops/scan-to-pdf.js';
-import {
-  acquireVia,
-  type ScanError,
-  type WiaAddon,
-} from '../../main/pdf-ops/wia-scanner.js';
+import { acquireVia, type ScanError, type WiaAddon } from '../../main/pdf-ops/wia-scanner.js';
 import { fail, ok } from '../../shared/result.js';
 import type { Result } from '../../shared/result.js';
 import type {
@@ -36,7 +32,9 @@ export interface ScanAcquireDeps {
   /** Compose scanned pages into a single PDF. Production: composeScanToPdf. */
   composeScanToPdf: (
     pages: ScanPage[],
-  ) => Promise<Result<{ bytes: Uint8Array; pageCount: number; warnings: string[] }, ScanToPdfError>>;
+  ) => Promise<
+    Result<{ bytes: Uint8Array; pageCount: number; warnings: string[] }, ScanToPdfError>
+  >;
   /**
    * Register the composed PDF in the document store; returns the handle +
    * display name the renderer opens with. Production wraps documentStore.register.
