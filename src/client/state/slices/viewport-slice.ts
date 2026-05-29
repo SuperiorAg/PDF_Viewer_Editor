@@ -9,7 +9,13 @@ interface ViewportState {
   scrollTop: number;
 }
 
-const ZOOM_LEVELS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 4.0] as const;
+export const ZOOM_LEVELS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 4.0] as const;
+
+// Shared clamp bounds so the wheel handler (PdfViewer) can clamp the transient
+// displayZoom identically to what setZoom commits — keeps the live transform
+// from drifting outside the range the reducer will accept.
+export const ZOOM_MIN = 0.1;
+export const ZOOM_MAX = 8.0;
 
 const initialState: ViewportState = {
   zoom: 1.0,
@@ -23,7 +29,7 @@ export const viewportSlice = createSlice({
   initialState,
   reducers: {
     setZoom(state, action: PayloadAction<number>) {
-      state.zoom = clamp(action.payload, 0.1, 8.0);
+      state.zoom = clamp(action.payload, ZOOM_MIN, ZOOM_MAX);
       state.fitMode = 'custom';
     },
     zoomIn(state) {

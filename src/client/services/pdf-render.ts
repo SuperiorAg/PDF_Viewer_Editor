@@ -130,22 +130,49 @@ function wrapPage(pdfPage: PdfJsPageProxy, pageIndex: number): PdfPageProxy {
           promise: Promise.reject(new Error('canvas_2d_context_unavailable')),
         };
       }
-      const viewport = pdfPage.getViewport({ scale: zoom });
-      // Match the canvas backing-store to the requested viewport so pdf.js
-      // rasterizes at full resolution (no implicit CSS scaling fuzz).
-      canvas.width = Math.floor(viewport.width);
-      canvas.height = Math.floor(viewport.height);
+      // Render at DEVICE-pixel resolution so glyphs stay crisp on HiDPI /
+      // display-scaled Windows screens (125/150/200%). The canvas BITMAP is
+      // sized at zoom*devicePixelRatio; PdfCanvas sets the canvas CSS box to
+      // the logical (zoom) size, so the browser downscales the hi-res bitmap →
+      // crisp. Rendering the bitmap at CSS resolution (the old behavior) let
+      // the display upscale it → blocky/pixelated text at >100% scaling.
+      const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+      const viewport = pdfPage.getViewport({ scale: zoom * dpr });
+
+      // Double-buffer the raster: reassigning the VISIBLE canvas.width/height
+      // clears it to transparent for tens of ms before pdf.js paints (the
+      // "flash"). Instead render into an OFFSCREEN canvas (sized at the same
+      // hi-res zoom*dpr, so the crisp-text fix is preserved) and blit onto the
+      // visible canvas in a single synchronous drawImage on completion, so the
+      // on-screen bitmap is replaced atomically and never left blank.
+      const off = document.createElement('canvas');
+      off.width = Math.floor(viewport.width);
+      off.height = Math.floor(viewport.height);
+      const offCtx = off.getContext('2d');
+      if (offCtx === null) {
+        return {
+          cancel: () => undefined,
+          promise: Promise.reject(new Error('canvas_2d_context_unavailable')),
+        };
+      }
       const task: PdfJsRenderTask = pdfPage.render({
-        canvasContext: ctx,
+        canvasContext: offCtx,
         viewport,
       });
       return {
         cancel: () => task.cancel(),
         // `.promise` resolves on render done, rejects with
-        // `RenderingCancelledException` on cancel. Callers SHOULD swallow the
-        // cancel rejection (e.g. PdfCanvas's effect cleanup); other rejections
-        // bubble.
-        promise: task.promise.then(() => undefined),
+        // `RenderingCancelledException` on cancel. On success we blit the
+        // finished offscreen bitmap onto the visible canvas atomically. On a
+        // cancel rejection the .then short-circuits (the blit never runs) and
+        // the rejection propagates so PdfCanvas's existing swallow logic still
+        // applies; the visible canvas keeps its last good frame (no stale/empty
+        // partial frame). Other rejections bubble unchanged.
+        promise: task.promise.then(() => {
+          canvas.width = off.width;
+          canvas.height = off.height;
+          ctx.drawImage(off, 0, 0);
+        }),
       };
     },
     cleanup(): void {

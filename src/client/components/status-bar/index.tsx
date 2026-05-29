@@ -8,7 +8,7 @@ import {
 import { selectExportInFlight, selectLastEngine } from '../../state/slices/export-selectors';
 import { openModal } from '../../state/slices/ui-slice';
 import { selectCurrentPage, selectZoom } from '../../state/slices/viewport-selectors';
-import { setCurrentPage, setZoom } from '../../state/slices/viewport-slice';
+import { setCurrentPage, setZoom, ZOOM_LEVELS } from '../../state/slices/viewport-slice';
 
 // Phase 6 — small in-progress widget visible when an Office export is running.
 import { ExportStatusBarWidget } from './export-progress';
@@ -24,6 +24,18 @@ export function StatusBar(): JSX.Element {
   const isDirty = useAppSelector(selectIsDirty);
   const exportInFlight = useAppSelector(selectExportInFlight);
   const lastEngine = useAppSelector(selectLastEngine);
+
+  // The <select> reads the COMMITTED zoom (s.viewport.zoom). ctrl+scroll commits
+  // arbitrary values (e.g. 1.21), which are not in ZOOM_LEVELS — an HTML <select>
+  // whose `value` has no matching <option> renders blank. So when the current
+  // zoom is not a preset, prepend a synthetic option for it so the control always
+  // shows the true percentage. Tolerance (1e-6) collapses a committed 1.0000000002
+  // back onto the 100% preset so there is no duplicate option.
+  const isPreset = ZOOM_LEVELS.some((z) => Math.abs(z - zoom) < 1e-6);
+  const presetOptions = ZOOM_LEVELS.map((z) => ({ value: z, label: `${Math.round(z * 100)}%` }));
+  const zoomOptions = isPreset
+    ? presetOptions
+    : [{ value: zoom, label: `${Math.round(zoom * 100)}%` }, ...presetOptions];
 
   return (
     <footer className={styles.statusBar} role="status" aria-live="polite">
@@ -61,9 +73,9 @@ export function StatusBar(): JSX.Element {
               onChange={(e) => dispatch(setZoom(Number(e.target.value)))}
               aria-label={t('common:zoomLevel')}
             >
-              {[0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 4.0].map((z) => (
-                <option key={z} value={z}>
-                  {Math.round(z * 100)}%
+              {zoomOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
                 </option>
               ))}
             </select>

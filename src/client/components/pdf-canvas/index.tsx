@@ -15,6 +15,11 @@ interface PdfCanvasProps {
   page: PageModel;
   index: number;
   zoom: number;
+  // Transient live-zoom ratio (displayZoom / committed zoom) applied as a cheap
+  // GPU CSS transform during a ctrl+scroll gesture. 1 when not actively zooming.
+  // The expensive pdf.js re-raster is keyed off `zoom` only — see the render
+  // effect dep array below — so this ratio never triggers a re-raster.
+  displayScale: number;
   fitMode: FitMode;
 }
 
@@ -131,7 +136,19 @@ export function PdfCanvas(props: PdfCanvasProps): JSX.Element {
     <div
       className={styles.page}
       data-page-index={props.index}
-      style={{ width: screenWidth, height: screenHeight }}
+      // Layout box stays at the COMMITTED zoom size (no per-frame reflow). The
+      // transform scales the whole page — canvas AND the inset:0 absolute
+      // AnnotationLayer — in lockstep during a wheel gesture, giving an instant
+      // GPU visual zoom while pdf.js re-rasters once on debounce-commit.
+      // transformOrigin '0 0' keeps scroll geometry predictable (top-left
+      // anchor). willChange promotes .page to its own compositor layer.
+      style={{
+        width: screenWidth,
+        height: screenHeight,
+        transform: `scale(${props.displayScale})`,
+        transformOrigin: '0 0',
+        willChange: 'transform',
+      }}
       aria-label={`Page ${props.index + 1}`}
     >
       <canvas
