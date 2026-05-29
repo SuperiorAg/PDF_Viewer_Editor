@@ -15,9 +15,15 @@
 //      bridge is alive, Redux store hydrated).
 //   5. Close the app cleanly.
 
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { _electron as electron, expect, test } from '@playwright/test';
+
+// This spec runs as an ES module (package.json `"type": "module"`), where the
+// CommonJS `__dirname` global does not exist. Recreate it from import.meta.url
+// so `resolve(__dirname, '../..')` resolves the project root for Electron's cwd.
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 test('PDF_Viewer_Editor renders the empty state on first launch', async () => {
   const app = await electron.launch({
