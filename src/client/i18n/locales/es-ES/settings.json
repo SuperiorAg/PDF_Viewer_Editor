@@ -41,16 +41,12 @@
   "files": {
     "maxFileSizeLabel": "Tamaño máximo de archivo para abrir (MB)",
     "associationLabel": "Asociación de archivos PDF",
-    "associationChecking": "Comprobando el predeterminado actual...",
-    "associationIsDefault": "PDF_Viewer_Editor ES el visor de PDF predeterminado.",
-    "associationNotDefault": "PDF_Viewer_Editor NO es actualmente el visor de PDF predeterminado.",
-    "makeDefault": "Establecer como predeterminado",
-    "relinquishDefault": "Renunciar a predeterminado",
-    "windowsConfirm": "Windows podría pedirle que confirme.",
+    "associationStatusNote": "El estado se establece en Configuración de Windows → Aplicaciones predeterminadas. No lo leemos desde aquí.",
+    "openOsDefaultsSettings": "Abrir Configuración de aplicaciones predeterminadas de Windows",
+    "redirectedToOsDefaults": "Se abrió Configuración de Windows → Aplicaciones predeterminadas. Elija allí PDF_Viewer_Editor para confirmar.",
+    "notImplementedDefault": "Este sistema operativo no admite cambios de la aplicación predeterminada en tiempo de ejecución. Establezca el valor predeterminado manualmente en la configuración del sistema.",
     "osDenied": "Windows rechazó el cambio.",
-    "unsupportedOs": "No es compatible con esta plataforma.",
-    "nowDefault": "PDF_Viewer_Editor es ahora el visor de PDF predeterminado.",
-    "noLongerDefault": "Ya no es el visor de PDF predeterminado."
+    "unsupportedOs": "No es compatible con esta plataforma."
   },
   "export": {
     "engineLabel": "Motor de impresión a PDF predeterminado",

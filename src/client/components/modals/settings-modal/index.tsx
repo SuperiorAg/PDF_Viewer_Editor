@@ -28,7 +28,6 @@ interface SettingsFormState {
   confirmDelete: boolean;
   commitTextOnBlur: boolean;
   fileAssociationRequested: boolean;
-  isDefaultHandler: boolean | null;
   appVersion: string;
 }
 
@@ -40,7 +39,6 @@ const DEFAULT_FORM: SettingsFormState = {
   confirmDelete: true,
   commitTextOnBlur: true,
   fileAssociationRequested: true,
-  isDefaultHandler: null,
   appVersion: '0.0.0',
 };
 
@@ -84,8 +82,12 @@ export function SettingsModal(): JSX.Element {
       }
       const v = await api.app.getVersion();
       if (v.ok) setForm((curr) => ({ ...curr, appVersion: v.value.appVersion }));
-      const f = await api.app.getDefaultPdfHandlerStatus();
-      if (f.ok) setForm((curr) => ({ ...curr, isDefaultHandler: f.value.isDefault }));
+      // Note: we still ping getDefaultPdfHandlerStatus so the IPC surface stays
+      // exercised, but the result is intentionally unused — the handler is
+      // honestly not_implemented (modern Windows requires the deprecated
+      // IApplicationAssociationRegistration COM API to read this reliably) and
+      // we no longer surface a derived "Currently default" label that could lie.
+      void api.app.getDefaultPdfHandlerStatus();
     })();
   }, []);
 
@@ -110,26 +112,32 @@ export function SettingsModal(): JSX.Element {
     }
   };
 
-  const toggleDefaultHandler = async (): Promise<void> => {
-    const enable = !(form.isDefaultHandler ?? false);
-    const res = await api.app.setDefaultPdfHandler({ enable });
+  const openDefaultHandlerSettings = async (): Promise<void> => {
+    // David's IPC contract (commit 47ccb70): we cannot silently flip the .pdf
+    // default on modern Windows — we open ms-settings:defaultapps and the user
+    // confirms there. `enable` is preserved on the request shape for stability
+    // but ignored by the handler. On ok-path the OS Settings UI was opened
+    // (`prompt: 'shown'`); `isNowDefault` is always false because we genuinely
+    // don't know the post-confirm state. On non-Windows / failure the handler
+    // surfaces `not_implemented` honestly — we tell the user to set it manually
+    // in their OS settings, never imply we "succeeded".
+    const res = await api.app.setDefaultPdfHandler({ enable: true });
     if (!res.ok) {
       const msg =
-        res.error === 'os_denied'
-          ? t('settings:files.osDenied')
-          : res.error === 'unsupported_os'
-            ? t('settings:files.unsupportedOs')
-            : res.message;
+        res.error === 'not_implemented'
+          ? t('settings:files.notImplementedDefault')
+          : res.error === 'os_denied'
+            ? t('settings:files.osDenied')
+            : res.error === 'unsupported_os'
+              ? t('settings:files.unsupportedOs')
+              : res.message;
       dispatch(pushToast({ kind: 'warning', message: msg }));
       return;
     }
-    setForm((curr) => ({ ...curr, isDefaultHandler: res.value.isNowDefault }));
     dispatch(
       pushToast({
         kind: 'success',
-        message: res.value.isNowDefault
-          ? t('settings:files.nowDefault')
-          : t('settings:files.noLongerDefault'),
+        message: t('settings:files.redirectedToOsDefaults'),
       }),
     );
   };
@@ -213,23 +221,19 @@ export function SettingsModal(): JSX.Element {
             </label>
             <div className={styles.field}>
               <span className={styles.fieldLabel}>{t('settings:files.associationLabel')}</span>
-              <p className={styles.fieldHint}>
-                {form.isDefaultHandler === null
-                  ? t('settings:files.associationChecking')
-                  : form.isDefaultHandler
-                    ? t('settings:files.associationIsDefault')
-                    : t('settings:files.associationNotDefault')}
-              </p>
+              {/* Honest UX (Wave 47 follow-up to commit 47ccb70): we cannot read
+                  the current OS default reliably, and we cannot flip it silently
+                  — modern Windows owns that flow. So we drop the toggle and the
+                  derived "Currently default" status, and offer one button that
+                  takes the user to ms-settings:defaultapps where the OS confirms. */}
+              <p className={styles.fieldHint}>{t('settings:files.associationStatusNote')}</p>
               <button
                 type="button"
                 className={styles.secondary}
-                onClick={() => void toggleDefaultHandler()}
+                onClick={() => void openDefaultHandlerSettings()}
               >
-                {form.isDefaultHandler
-                  ? t('settings:files.relinquishDefault')
-                  : t('settings:files.makeDefault')}
+                {t('settings:files.openOsDefaultsSettings')}
               </button>
-              <p className={styles.fieldHint}>{t('settings:files.windowsConfirm')}</p>
             </div>
           </>
         )}

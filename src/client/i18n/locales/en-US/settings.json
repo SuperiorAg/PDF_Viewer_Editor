@@ -41,16 +41,12 @@
   "files": {
     "maxFileSizeLabel": "Max file size to open (MB)",
     "associationLabel": "PDF file association",
-    "associationChecking": "Checking current default...",
-    "associationIsDefault": "PDF_Viewer_Editor IS the default PDF viewer.",
-    "associationNotDefault": "PDF_Viewer_Editor is currently NOT the default PDF viewer.",
-    "makeDefault": "Make default",
-    "relinquishDefault": "Relinquish default",
-    "windowsConfirm": "Windows may ask you to confirm.",
+    "associationStatusNote": "Status is set in Windows Settings → Default apps. We don't read it from here.",
+    "openOsDefaultsSettings": "Open Windows Default apps settings",
+    "redirectedToOsDefaults": "Opened Windows Settings → Default apps. Choose PDF_Viewer_Editor there to confirm.",
+    "notImplementedDefault": "Runtime default-app changes aren't supported on this OS. Set the default manually in your OS settings.",
     "osDenied": "Windows declined the change.",
-    "unsupportedOs": "Not supported on this platform.",
-    "nowDefault": "PDF_Viewer_Editor is now the default PDF viewer.",
-    "noLongerDefault": "No longer the default PDF viewer."
+    "unsupportedOs": "Not supported on this platform."
   },
   "export": {
     "engineLabel": "Default Print-to-PDF engine",

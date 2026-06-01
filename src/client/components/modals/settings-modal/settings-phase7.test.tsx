@@ -8,13 +8,18 @@
 //      renders the HONEST notice (never a fake "up to date").
 //   5. The trust-floor honesty copy is present (telemetry privacy + update
 //      placeholder) and is NOT one of the forbidden overstated sentences.
+//   6. Settings → Files default-PDF-handler honest UX (commit 47ccb70 follow-up):
+//      success path opens Windows Settings (`prompt:'shown'`) — banner says
+//      "redirected"; non-Windows / failure surfaces `not_implemented` honestly;
+//      `getDefaultPdfHandlerStatus` is `not_implemented` so we NEVER show a
+//      "Currently default" label we couldn't truthfully derive.
 
 import { configureStore } from '@reduxjs/toolkit';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ok } from '../../../../shared/result';
+import { fail, ok } from '../../../../shared/result';
 import documentReducer from '../../../state/slices/document-slice';
 import i18nReducer from '../../../state/slices/i18n-slice';
 import telemetryReducer from '../../../state/slices/telemetry-slice';
@@ -49,7 +54,16 @@ function stubBridge(overrides: Record<string, unknown> = {}): void {
     settings: { getAll: settingsGetAll, set: vi.fn().mockResolvedValue(ok({})), get: vi.fn() },
     app: {
       getVersion: vi.fn().mockResolvedValue(ok({ appVersion: '0.7.0' })),
-      getDefaultPdfHandlerStatus: vi.fn().mockResolvedValue(ok({ isDefault: false })),
+      // Honest reality (commit 47ccb70): we cannot read the current OS default
+      // reliably on modern Windows — the handler returns not_implemented. The
+      // renderer MUST NOT display a false "Currently default" status.
+      getDefaultPdfHandlerStatus: vi
+        .fn()
+        .mockResolvedValue(fail('not_implemented', 'reading default pdf handler is not supported')),
+      // Success path: handler opened ms-settings:defaultapps for the user; we
+      // never claim to know the post-confirm state — isNowDefault stays false,
+      // prompt is 'shown'. Renderer surfaces a "redirected" banner.
+      setDefaultPdfHandler: vi.fn().mockResolvedValue(ok({ isNowDefault: false, prompt: 'shown' })),
     },
     i18n: {
       setLocale,
@@ -174,5 +188,67 @@ describe('Settings → About tab update status (not-configured honesty)', () => 
     const notice = await screen.findByText(/Update channel not configured \(placeholder\)/i);
     expect(notice).toBeInTheDocument();
     expect(screen.queryByText(/You are running the latest/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('Settings → Files default-PDF-handler honest UX (commit 47ccb70 follow-up)', () => {
+  it('does NOT show a "Currently default" derived status (getStatus is not_implemented)', async () => {
+    stubBridge();
+    renderSettings();
+    fireEvent.click(screen.getByRole('tab', { name: 'Files' }));
+    // The honest status sentence is present...
+    expect(
+      await screen.findByText(/Status is set in Windows Settings → Default apps/i),
+    ).toBeInTheDocument();
+    // ...and none of the old derived-status / toggle strings leak through.
+    expect(screen.queryByText(/IS the default PDF viewer/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/NOT the default PDF viewer/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Make default$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Relinquish default/i })).not.toBeInTheDocument();
+  });
+
+  it('clicking "Open Windows Default apps settings" calls setDefaultPdfHandler and shows the redirected banner', async () => {
+    stubBridge();
+    const store = renderSettings();
+    fireEvent.click(screen.getByRole('tab', { name: 'Files' }));
+    const btn = await screen.findByRole('button', { name: /Open Windows Default apps settings/i });
+    fireEvent.click(btn);
+    await waitFor(() =>
+      expect(window.pdfApi!.app.setDefaultPdfHandler).toHaveBeenCalledWith({ enable: true }),
+    );
+    await waitFor(() => {
+      const toasts = store.getState().ui.toasts;
+      expect(toasts).toHaveLength(1);
+      expect(toasts[0].kind).toBe('success');
+      expect(toasts[0].message).toMatch(/Opened Windows Settings/i);
+    });
+  });
+
+  it('on not_implemented failure shows the honest fallback toast (never a fake "now default")', async () => {
+    stubBridge({
+      app: {
+        getVersion: vi.fn().mockResolvedValue(ok({ appVersion: '0.7.0' })),
+        getDefaultPdfHandlerStatus: vi
+          .fn()
+          .mockResolvedValue(fail('not_implemented', 'not supported')),
+        setDefaultPdfHandler: vi
+          .fn()
+          .mockResolvedValue(fail('not_implemented', 'shell.openExternal unavailable')),
+      },
+    });
+    const store = renderSettings();
+    fireEvent.click(screen.getByRole('tab', { name: 'Files' }));
+    const btn = await screen.findByRole('button', { name: /Open Windows Default apps settings/i });
+    fireEvent.click(btn);
+    await waitFor(() => {
+      const toasts = store.getState().ui.toasts;
+      expect(toasts).toHaveLength(1);
+      expect(toasts[0].kind).toBe('warning');
+      expect(toasts[0].message).toMatch(/Runtime default-app changes aren't supported/i);
+    });
+    // Never the misleading success banner.
+    expect(
+      screen.queryByText(/PDF_Viewer_Editor is now the default PDF viewer/i),
+    ).not.toBeInTheDocument();
   });
 });
