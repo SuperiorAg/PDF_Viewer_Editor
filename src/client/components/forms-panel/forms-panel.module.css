@@ -1,104 +1,131 @@
+/* Forms panel — sidebar tab content.
+ * Uses the project design tokens defined in src/client/styles/tokens.css.
+ * Previously this file referenced a fictional dark-token namespace
+ * (--surface-0, --text-1, etc.) that did not exist anywhere in the app —
+ * the fallback hex values painted a dark island inside the light sidebar
+ * and produced WCAG-fail contrast (dark text on dark button surfaces) once
+ * the buttons were placed in modals that inherit `--color-text-primary`.
+ * Bug report 2026-06-01: "forms menu has dark buttons that you cannot read
+ * unless you click on it". Fix: route every color through the real tokens
+ * so the panel matches the rest of the chrome and contrast meets WCAG AA.
+ */
+
 .panel {
   display: flex;
   flex-direction: column;
   height: 100%;
-  font-size: 13px;
-  background: var(--surface-1, #1c1c1f);
-  color: var(--text-1, #e5e7eb);
+  font-size: var(--font-size-md);
+  background: var(--color-bg-sidebar);
+  color: var(--color-text-primary);
 }
 
 .banner {
-  padding: 8px 10px;
-  background: var(--surface-2, #25252a);
-  border-bottom: 1px solid var(--border-1, #2e2e34);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border-subtle);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .bannerError {
-  color: var(--danger-400, #ef4444);
+  color: var(--color-accent-red);
 }
 
 .bannerWarning {
-  font-size: 12px;
-  color: var(--warning-400, #f59e0b);
+  font-size: var(--font-size-sm);
+  color: var(--color-accent-amber);
 }
 
 .retryButton {
-  margin-top: 6px;
+  margin-top: var(--space-1);
   align-self: flex-start;
-  background: transparent;
-  color: inherit;
-  border: 1px solid var(--border-1, #2e2e34);
-  padding: 4px 8px;
-  border-radius: 3px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-strong);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
   cursor: pointer;
+}
+
+.retryButton:hover {
+  background: var(--color-bg-hover);
 }
 
 .commitBanner {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 10px;
-  background: var(--accent-900, #1e3a8a);
-  border-bottom: 1px solid var(--border-1, #2e2e34);
-  font-size: 12px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-accent-blue);
+  color: var(--color-text-inverse);
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-sm);
 }
 
 .commitActions {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .commitButton,
 .discardButton {
-  background: var(--surface-0, #131316);
-  color: inherit;
-  border: 1px solid var(--border-1, #2e2e34);
-  padding: 3px 8px;
-  border-radius: 3px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-strong);
+  padding: 3px var(--space-2);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .commitButton:hover {
-  background: var(--accent-700, #2563eb);
+  background: var(--color-accent-blue-hover);
+  color: var(--color-text-inverse);
+  border-color: var(--color-accent-blue-hover);
+}
+
+.discardButton:hover {
+  background: var(--color-bg-hover);
 }
 
 .placeholder {
-  padding: 12px 10px;
-  color: var(--text-2, #9ca3af);
+  padding: var(--space-3) var(--space-3);
+  color: var(--color-text-muted);
 }
 
 .fieldTree {
   list-style: none;
   margin: 0;
-  padding: 4px 0;
+  padding: var(--space-1) 0;
   overflow-y: auto;
   flex: 1;
 }
 
 .pageGroup {
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 .pageHeader {
   width: 100%;
   text-align: left;
   background: transparent;
-  color: inherit;
+  color: var(--color-text-primary);
   border: none;
-  padding: 4px 10px;
+  padding: var(--space-1) var(--space-3);
   cursor: pointer;
   font-weight: 600;
 }
 
+.pageHeader:hover {
+  background: var(--color-bg-hover);
+}
+
 .pageCount {
-  color: var(--text-2, #9ca3af);
+  color: var(--color-text-muted);
   font-weight: 400;
-  margin-left: 4px;
-  font-size: 11px;
+  margin-left: var(--space-1);
+  font-size: var(--font-size-xs);
 }
 
 .fieldList {
@@ -113,15 +140,15 @@
   justify-content: space-between;
   align-items: center;
   background: transparent;
-  color: inherit;
+  color: var(--color-text-primary);
   border: none;
-  padding: 3px 10px;
+  padding: 3px var(--space-3);
   cursor: pointer;
   text-align: left;
 }
 
 .fieldRow:hover {
-  background: var(--surface-2, #25252a);
+  background: var(--color-bg-hover);
 }
 
 .fieldName {
@@ -132,13 +159,13 @@
 }
 
 .required {
-  color: var(--danger-400, #ef4444);
+  color: var(--color-accent-red);
   margin-left: 2px;
 }
 
 .fieldType {
-  color: var(--text-2, #9ca3af);
-  font-size: 11px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
   margin-left: 6px;
 }
 
@@ -146,17 +173,17 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--warning-400, #f59e0b);
+  background: var(--color-accent-amber);
   margin-left: 6px;
 }
 
 .bottomBar {
-  border-top: 1px solid var(--border-1, #2e2e34);
-  padding: 6px 8px;
+  border-top: 1px solid var(--color-border-subtle);
+  padding: var(--space-2) var(--space-2);
   display: flex;
-  gap: 6px;
+  gap: var(--space-2);
   align-items: center;
-  background: var(--surface-2, #25252a);
+  background: var(--color-bg-toolbar);
 }
 
 .templatesGroup {
@@ -166,23 +193,24 @@
 .templateToggle,
 .saveTemplateButton,
 .designerToggle {
-  background: var(--surface-0, #131316);
-  color: inherit;
-  border: 1px solid var(--border-1, #2e2e34);
-  padding: 4px 8px;
-  border-radius: 3px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-strong);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .templateToggle:hover,
 .saveTemplateButton:hover:not(:disabled),
 .designerToggle:hover {
-  background: var(--surface-1, #1c1c1f);
+  background: var(--color-bg-hover);
+  border-color: var(--color-text-secondary);
 }
 
 .saveTemplateButton:disabled {
-  opacity: 0.4;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
@@ -190,14 +218,16 @@
   position: absolute;
   bottom: 100%;
   left: 0;
-  margin-bottom: 4px;
-  background: var(--surface-0, #131316);
-  border: 1px solid var(--border-1, #2e2e34);
-  border-radius: 3px;
+  margin-bottom: var(--space-1);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
   min-width: 180px;
   max-height: 240px;
   overflow-y: auto;
-  z-index: 10;
+  z-index: var(--z-menu-dropdown);
 }
 
 .templatesDropdown ul {
@@ -207,18 +237,18 @@
 }
 
 .templatesEmpty {
-  padding: 10px;
-  color: var(--text-2, #9ca3af);
+  padding: var(--space-3);
+  color: var(--color-text-muted);
   margin: 0;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .templateItem {
   width: 100%;
   background: transparent;
-  color: inherit;
+  color: var(--color-text-primary);
   border: none;
-  padding: 6px 10px;
+  padding: 6px var(--space-3);
   cursor: pointer;
   text-align: left;
   display: flex;
@@ -227,7 +257,7 @@
 }
 
 .templateItem:hover {
-  background: var(--surface-2, #25252a);
+  background: var(--color-bg-hover);
 }
 
 .templateName {
@@ -235,6 +265,6 @@
 }
 
 .templateCount {
-  font-size: 11px;
-  color: var(--text-2, #9ca3af);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
 }

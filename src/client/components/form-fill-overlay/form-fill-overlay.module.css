@@ -1,3 +1,9 @@
+/* Form-fill overlay — sits ON TOP of the rendered PDF canvas, so text colour
+ * must be dark for visibility against the white page background. Routes
+ * through the project tokens; see forms-panel.module.css header for the
+ * 2026-06-01 bug-fix context.
+ */
+
 .overlay {
   position: absolute;
   top: 0;
@@ -11,18 +17,18 @@
 }
 
 .textInput {
-  background: rgba(255, 255, 0, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.7);
-  color: var(--text-1, #111);
-  padding: 0 4px;
+  background: rgba(255, 235, 59, 0.18);
+  border: 1px solid rgba(40, 103, 214, 0.7);
+  color: var(--color-text-primary);
+  padding: 0 var(--space-1);
   box-sizing: border-box;
   font-size: inherit;
   outline: none;
 }
 
 .textInput:focus {
-  background: rgba(255, 255, 0, 0.18);
-  border-color: var(--accent-500, #3b82f6);
+  background: rgba(255, 235, 59, 0.32);
+  border-color: var(--color-accent-blue);
 }
 
 .checkbox {
@@ -30,20 +36,21 @@
 }
 
 .dropdown {
-  background: rgba(255, 255, 0, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.7);
-  color: var(--text-1, #111);
-  padding: 0 4px;
+  background: rgba(255, 235, 59, 0.18);
+  border: 1px solid rgba(40, 103, 214, 0.7);
+  color: var(--color-text-primary);
+  padding: 0 var(--space-1);
   box-sizing: border-box;
 }
 
 .radioGroup {
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 0, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  padding: 2px 4px;
-  font-size: 11px;
+  background: rgba(255, 235, 59, 0.18);
+  border: 1px solid rgba(40, 103, 214, 0.4);
+  color: var(--color-text-primary);
+  padding: 2px var(--space-1);
+  font-size: var(--font-size-xs);
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -51,7 +58,7 @@
 .radioOption {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .signaturePlaceholder {
@@ -62,8 +69,8 @@
     rgba(120, 120, 120, 0.2) 5px,
     rgba(120, 120, 120, 0.2) 10px
   );
-  border: 1px dashed var(--text-2, #6b7280);
-  color: var(--text-2, #6b7280);
+  border: 1px dashed var(--color-text-secondary);
+  color: var(--color-text-secondary);
   cursor: not-allowed;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }

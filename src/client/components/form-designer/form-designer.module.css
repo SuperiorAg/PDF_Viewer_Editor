@@ -1,53 +1,65 @@
+/* Form Designer — toolbar and properties pane.
+ * Tokens routed through src/client/styles/tokens.css so contrast meets WCAG
+ * AA inside the light app chrome. See the note at the top of
+ * forms-panel.module.css for the 2026-06-01 bug-fix context.
+ */
+
 .toolbar {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
-  background: var(--surface-2, #25252a);
-  border-bottom: 1px solid var(--border-1, #2e2e34);
-  font-size: 13px;
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-bg-toolbar);
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-md);
 }
 
 .label {
   font-weight: 600;
-  margin-right: 4px;
+  margin-right: var(--space-1);
 }
 
 .typeButton {
-  background: var(--surface-0, #131316);
-  color: inherit;
-  border: 1px solid var(--border-1, #2e2e34);
-  padding: 3px 8px;
-  border-radius: 3px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-strong);
+  padding: 3px var(--space-2);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .typeButton:hover {
-  background: var(--surface-1, #1c1c1f);
+  background: var(--color-bg-hover);
 }
 
 .typeButtonActive {
-  background: var(--accent-700, #2563eb);
-  border-color: var(--accent-500, #3b82f6);
+  background: var(--color-accent-blue);
+  color: var(--color-text-inverse);
+  border-color: var(--color-accent-blue);
 }
 
 .divider {
   width: 1px;
   height: 18px;
-  background: var(--border-1, #2e2e34);
-  margin: 0 4px;
+  background: var(--color-border-strong);
+  margin: 0 var(--space-1);
 }
 
 .exitButton {
   background: transparent;
-  color: var(--danger-400, #ef4444);
-  border: 1px solid var(--danger-400, #ef4444);
-  padding: 3px 8px;
-  border-radius: 3px;
+  color: var(--color-accent-red);
+  border: 1px solid var(--color-accent-red);
+  padding: 3px var(--space-2);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   margin-left: auto;
+}
+
+.exitButton:hover {
+  background: rgba(198, 58, 58, 0.08);
 }
 
 .canvasOverlay {
@@ -60,26 +72,26 @@
 
 .dragRect {
   position: absolute;
-  border: 2px dashed var(--accent-500, #3b82f6);
-  background: rgba(59, 130, 246, 0.15);
+  border: 2px dashed var(--color-accent-blue);
+  background: rgba(40, 103, 214, 0.15);
   pointer-events: none;
 }
 
 .fieldOutline {
   position: absolute;
-  background: rgba(59, 130, 246, 0.06);
-  border: 1px solid var(--accent-500, #3b82f6);
-  color: inherit;
+  background: rgba(40, 103, 214, 0.06);
+  border: 1px solid var(--color-accent-blue);
+  color: var(--color-text-primary);
   cursor: pointer;
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
   padding: 1px 3px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 
 .fieldOutline:hover {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(40, 103, 214, 0.15);
 }
 
 .fieldLabel {
@@ -88,8 +100,9 @@
 
 /* Properties pane (inside Inspector) */
 .propsPane {
-  padding: 10px;
-  font-size: 13px;
+  padding: var(--space-3);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -101,9 +114,9 @@
 }
 
 .propsType {
-  color: var(--text-2, #9ca3af);
+  color: var(--color-text-muted);
   font-weight: 400;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .propsRow {
@@ -114,83 +127,96 @@
 
 .propsRow label {
   flex: 0 0 80px;
-  color: var(--text-2, #9ca3af);
+  color: var(--color-text-secondary);
 }
 
 .propsRow input[type='text'],
 .propsRow select {
   flex: 1;
-  background: var(--surface-0, #131316);
-  color: inherit;
-  border: 1px solid var(--border-1, #2e2e34);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-strong);
   padding: 3px 6px;
-  border-radius: 3px;
-  font-size: 13px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-md);
 }
 
 .propsHint {
-  color: var(--text-2, #9ca3af);
-  font-size: 12px;
-  margin: 4px 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin: var(--space-1) 0;
 }
 
 .removeButton {
-  margin-top: 8px;
+  margin-top: var(--space-2);
   background: transparent;
-  color: var(--danger-400, #ef4444);
-  border: 1px solid var(--danger-400, #ef4444);
-  padding: 4px 8px;
-  border-radius: 3px;
+  color: var(--color-accent-red);
+  border: 1px solid var(--color-accent-red);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   align-self: flex-start;
+}
+
+.removeButton:hover {
+  background: rgba(198, 58, 58, 0.08);
 }
 
 .optionsEditor {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   margin-top: 6px;
 }
 
 .optionsEditor h4 {
   margin: 0;
-  font-size: 13px;
-  color: var(--text-2, #9ca3af);
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
 }
 
 .optionRow {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   align-items: center;
 }
 
 .optionRow input {
   flex: 1;
-  background: var(--surface-0, #131316);
-  color: inherit;
-  border: 1px solid var(--border-1, #2e2e34);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-strong);
   padding: 3px 6px;
-  border-radius: 3px;
-  font-size: 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
 }
 
 .optionRow button {
   background: transparent;
-  color: var(--danger-400, #ef4444);
-  border: 1px solid var(--border-1, #2e2e34);
+  color: var(--color-accent-red);
+  border: 1px solid var(--color-border-strong);
   width: 24px;
   height: 24px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+}
+
+.optionRow button:hover {
+  background: rgba(198, 58, 58, 0.08);
+  border-color: var(--color-accent-red);
 }
 
 .addOptionButton {
   background: transparent;
-  color: var(--accent-500, #3b82f6);
-  border: 1px dashed var(--accent-500, #3b82f6);
-  padding: 3px 8px;
-  border-radius: 3px;
+  color: var(--color-accent-blue);
+  border: 1px dashed var(--color-accent-blue);
+  padding: 3px var(--space-2);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   align-self: flex-start;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
+}
+
+.addOptionButton:hover {
+  background: rgba(40, 103, 214, 0.08);
 }
