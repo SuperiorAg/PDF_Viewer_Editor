@@ -70,6 +70,13 @@
   z-index: 6;
 }
 
+/* Selection mode — pointer over canvas, not crosshair. Field outlines below
+ * still expose pointer cursor for selection. WCAG-friendly: cursor changes do
+ * not affect keyboard navigation; field outlines remain real <button>s. */
+.canvasOverlaySelect {
+  cursor: default;
+}
+
 .dragRect {
   position: absolute;
   border: 2px dashed var(--color-accent-blue);

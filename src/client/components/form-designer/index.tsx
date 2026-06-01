@@ -35,6 +35,75 @@ const FIELD_TYPES: ReadonlyArray<{ id: FormFieldType; label: string }> = [
   { id: 'date', label: 'Date' },
 ];
 
+/**
+ * Default field sizes in PDF user-space points, used for the click-to-place
+ * path (no drag, or drag < 4×4 px). Phase 3.1 — closes the bug where users
+ * who clicked instead of dragged saw "nothing happens". Sizes chosen as
+ * sensible single-line / square / signature defaults; the user can resize
+ * via handles afterwards (handles land in a later phase).
+ */
+export const DEFAULT_FIELD_SIZE_PTS: Readonly<
+  Record<FormFieldType, { width: number; height: number }>
+> = {
+  text: { width: 144, height: 18 },
+  checkbox: { width: 14, height: 14 },
+  radio: { width: 14, height: 14 },
+  dropdown: { width: 144, height: 18 },
+  signature: { width: 180, height: 36 },
+  date: { width: 100, height: 18 },
+};
+
+/** Below this drag distance (in screen pixels), treat as a click. */
+export const CLICK_THRESHOLD_PX = 4;
+
+export interface ScreenDragRect {
+  start: { x: number; y: number };
+  current: { x: number; y: number };
+}
+
+export interface PdfRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Pure helper — convert a screen-space drag (or click) into a PDF user-space
+ * rect. When the drag distance is below {@link CLICK_THRESHOLD_PX} on either
+ * axis, returns a default-sized rect seeded at the drag start (the click
+ * point) using {@link DEFAULT_FIELD_SIZE_PTS}. Otherwise returns the drag
+ * bounds converted at `zoom` with the standard y-flip.
+ *
+ * Exported for tests so the click-to-place geometry is pinned without
+ * mounting the IPC stack.
+ */
+export function computePlacementPdfRect(args: {
+  drag: ScreenDragRect;
+  fieldType: FormFieldType;
+  zoom: number;
+  pageHeight: number;
+}): PdfRect {
+  const { drag, fieldType, zoom, pageHeight } = args;
+  const dragWidth = Math.abs(drag.current.x - drag.start.x);
+  const dragHeight = Math.abs(drag.current.y - drag.start.y);
+  if (dragWidth < CLICK_THRESHOLD_PX || dragHeight < CLICK_THRESHOLD_PX) {
+    const defaults = DEFAULT_FIELD_SIZE_PTS[fieldType];
+    const x = drag.start.x / zoom;
+    const width = defaults.width;
+    const height = defaults.height;
+    const y = pageHeight - drag.start.y / zoom - height;
+    return { x, y, width, height };
+  }
+  const dragLeft = Math.min(drag.start.x, drag.current.x);
+  const dragTop = Math.min(drag.start.y, drag.current.y);
+  const width = dragWidth / zoom;
+  const height = dragHeight / zoom;
+  const x = dragLeft / zoom;
+  const y = pageHeight - dragTop / zoom - height;
+  return { x, y, width, height };
+}
+
 export function FormDesignerToolbar(): JSX.Element | null {
   const dispatch = useAppDispatch();
   const designerMode = useAppSelector(selectDesignerMode);
@@ -125,39 +194,34 @@ export function FormDesignerCanvas(props: FormDesignerCanvasProps): JSX.Element 
 
   const onMouseUp = useCallback(() => {
     if (!drag) return;
-    const screenLeft = Math.min(drag.start.x, drag.current.x);
-    const screenTop = Math.min(drag.start.y, drag.current.y);
-    const screenWidth = Math.abs(drag.current.x - drag.start.x);
-    const screenHeight = Math.abs(drag.current.y - drag.start.y);
-
-    setDrag(null);
-
-    if (screenWidth < 4 || screenHeight < 4) {
-      // Treat as a click — Phase 3.1 may seed a default-sized rect.
+    // 'select' tool is for picking existing fields, not creating new ones.
+    if (fieldType === 'select') {
+      setDrag(null);
       return;
     }
 
-    // Convert screen rect to PDF user-space (origin bottom-left).
-    const pdfX = screenLeft / zoom;
-    const pdfWidth = screenWidth / zoom;
-    const pdfHeight = screenHeight / zoom;
-    // y flip: screen origin top, PDF origin bottom.
-    const pdfY = props.pageHeight - screenTop / zoom - pdfHeight;
+    const rect = computePlacementPdfRect({
+      drag,
+      fieldType,
+      zoom,
+      pageHeight: props.pageHeight,
+    });
+
+    setDrag(null);
 
     const baseName = nextUnusedName(
       fields.map((f) => f.name),
-      fieldType === 'select' ? 'text' : fieldType,
+      fieldType,
     );
 
-    const resolvedType: 'text' | 'checkbox' | 'radio' | 'dropdown' | 'signature' | 'date' =
-      fieldType === 'select' ? 'text' : fieldType;
+    const resolvedType: FormFieldType = fieldType;
     const fd: FormFieldDefinition =
       resolvedType === 'radio' || resolvedType === 'dropdown'
         ? {
             name: baseName,
             type: resolvedType,
             pageIndex: props.pageIndex,
-            rect: { x: pdfX, y: pdfY, width: pdfWidth, height: pdfHeight },
+            rect,
             label: baseName,
             required: false,
             origin: 'authored',
@@ -168,7 +232,7 @@ export function FormDesignerCanvas(props: FormDesignerCanvasProps): JSX.Element 
             name: baseName,
             type: resolvedType,
             pageIndex: props.pageIndex,
-            rect: { x: pdfX, y: pdfY, width: pdfWidth, height: pdfHeight },
+            rect,
             label: baseName,
             required: false,
             origin: 'authored',
@@ -184,9 +248,18 @@ export function FormDesignerCanvas(props: FormDesignerCanvasProps): JSX.Element 
   // Render existing fields with handles so user can click to select.
   const pageFields = fields.filter((f) => f.pageIndex === props.pageIndex);
 
+  // Crosshair cursor when a placement tool is active; default pointer when in
+  // 'select' mode (existing fields below still expose their own pointer
+  // cursor for selection). Cursor is a visual feedback channel only — does
+  // not affect keyboard accessibility (field outlines are real <button>s).
+  const overlayClass =
+    fieldType === 'select'
+      ? `${styles.canvasOverlay} ${styles.canvasOverlaySelect}`
+      : styles.canvasOverlay;
+
   return (
     <div
-      className={styles.canvasOverlay}
+      className={overlayClass}
       style={{
         width: props.pageWidth * zoom,
         height: props.pageHeight * zoom,
