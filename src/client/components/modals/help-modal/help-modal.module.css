@@ -1,31 +1,119 @@
-/* HelpModal styling — Phase 1.1 R-1.1.
+/* HelpModal styling — Wave 30+ comprehensive expansion.
+ *
+ * Two-level layout:
+ *   1. A horizontal sticky tablist along the top of the modal body.
+ *   2. A scrollable panel below it hosting the active section.
+ *
  * Uses shared tokens from src/client/styles/tokens.css; no new visual
- * primitives (per brief: don't introduce new tokens).
+ * primitives. Tablist + tab-active styling mirrors the SettingsModal
+ * (Wave 28a a11y) for consistency.
  */
 
-.section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-bottom: var(--space-5);
+.intro {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
 }
 
-.section:last-child {
-  margin-bottom: 0;
+/* ── Tablist (horizontal) ─────────────────────────────────────────────── */
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-bg-surface);
+}
+
+.tab {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--color-text-secondary);
+}
+
+.tabActive {
+  color: var(--color-accent-blue);
+  border-bottom-color: var(--color-accent-blue);
+}
+
+/* ── Active-tab content panel ─────────────────────────────────────────── */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  /* The ModalShell body owns the outer scroll; the panel just stacks. */
+  outline: none;
 }
 
 .sectionHeading {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.subsection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.subsection:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.subHeading {
   margin: 0;
   font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-text-primary);
 }
 
-.sectionLead {
+.subBody {
   margin: 0;
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
+  line-height: 1.5;
 }
+
+.bulletList {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.stepsList {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+/* ── Shortcuts table (unchanged from Phase 1.1 R-1.1) ─────────────────── */
 
 .shortcutsTable {
   width: 100%;
@@ -67,26 +155,19 @@
   white-space: nowrap;
 }
 
-.bulletList {
-  margin: 0;
-  padding-left: var(--space-5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
+/* ── Footer ───────────────────────────────────────────────────────────── */
+
+.footnote {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
   line-height: 1.5;
 }
 
-.bulletList li strong {
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.footnote {
-  margin: var(--space-3) 0 0;
+.footerNote {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+  margin-right: auto;
 }
 
 .primary {
