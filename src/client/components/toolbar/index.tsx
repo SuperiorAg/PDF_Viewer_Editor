@@ -1,3 +1,15 @@
+// >200 lines: Toolbar is the single horizontal action strip below the menu
+// bar — selection tools, annotation tools (highlight / strikethrough / sticky /
+// text-box / freehand / shape), measure tools, designer-mode toggle, mail-
+// merge entry, OCR overlay toggle, save / undo / redo. Per convention §3.4 the
+// escape hatch is justified because the file is the canonical WAI-ARIA roving-
+// tabindex toolbar (one focusable element at a time, arrow keys move focus
+// across the whole strip via useRovingToolbar). That a11y contract is a
+// SINGLE-component invariant — splitting per tool-group would force every
+// subcomponent to forward refs into the roving system and duplicate the
+// strip's tabindex bookkeeping, which is exactly what useRovingToolbar exists
+// to centralize. The current shape is the smallest one that keeps the roving
+// contract local.
 import { useRovingToolbar } from '../../hooks/use-roving-toolbar';
 import { useT } from '../../i18n/use-t';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';

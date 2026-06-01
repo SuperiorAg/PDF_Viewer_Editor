@@ -1,3 +1,16 @@
+// >200 lines: ImageImportModal hosts BOTH placement modes (new-page +
+// overlay) plus the drag-drop preload bridge, the file-picker, the per-mode
+// option forms (position selector for new-page; x/y/w/h rect inputs for
+// overlay), and the per-format honesty surfaces (multi-page TIFF warning,
+// unsupported-mime error). Per convention §3.4 the escape hatch is justified
+// because the bytes-lifecycle invariant (conventions §10 + §13.3 — bytes live
+// only in this component's local state until commit, never copied into Redux
+// or history) is a SINGLE-component invariant: every code path that introduces
+// bytes (drag-drop preload, file picker) and every path that consumes them
+// (submit → embedImage; cancel → clearPreload) must live in one file so the
+// "bytes never leak" rule is mechanical to audit. Splitting per mode would
+// duplicate the bytes contract across two components.
+//
 // ImageImportModal — Phase 2 entry point for inserting PNG/JPEG/TIFF images.
 // Per ui-spec.md §11.3.
 //

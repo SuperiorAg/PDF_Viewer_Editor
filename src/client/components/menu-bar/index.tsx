@@ -1,3 +1,14 @@
+// >200 lines: MenuBar is the single top-of-window menu strip for the entire
+// app — File / Edit / View / Insert / Tools / Help. Per the convention §3.4
+// escape hatch, the file is intentionally one component-per-file: each menu's
+// items, shortcuts, enabled-state guards, and dispatched thunks are co-located
+// so the cross-menu invariants (e.g. Save-state availability, designer-mode
+// guards, undo/redo enablement, OCR overlay visibility, mail-merge entry) read
+// top-to-bottom in one pass. Splitting per menu would scatter shared selectors
+// + close-on-click handlers across 6 files and obscure the menu-bar's role as
+// the canonical action surface. Subcomponent extraction was considered and
+// rejected: each menu is a flat list of `<button>`s + dispatchers; there is no
+// reusable interaction logic to factor out without inventing a synthetic shell.
 import { useState } from 'react';
 
 import { useT } from '../../i18n/use-t';
