@@ -42,11 +42,26 @@ export function fail<E extends string>(
 //   - Otherwise (dev / test): returns the raw `Error.message` (or the
 //     fallback if `e` is not an Error).
 //
+// `process.env` is read via the indirection below so this module compiles in
+// both the main (`@types/node`) and renderer (`vite/client`) tsconfigs —
+// `src/shared/**` is on both include paths. In the renderer this helper is
+// effectively dead code (handlers don't run there) but it must still typecheck.
+//
 // Pair with electron-log on the main side keyed by request id when full
 // diagnostics are needed — never via the IPC Result.message.
 // ----------------------------------------------------------------------------
+function readNodeEnv(): string {
+  // `process` is typed by @types/node in the main tsconfig but absent from the
+  // renderer tsconfig (which only includes `vite/client`). `src/shared/**` is
+  // on both include paths, so we read via `globalThis` to compile in both. In
+  // the renderer this branch is dead code (handlers don't run there).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-process global lookup
+  const env = (globalThis as any).process?.env as Record<string, string | undefined> | undefined;
+  return env?.['NODE_ENV'] ?? '';
+}
+
 export function safeMessage(e: unknown, fallback: string): string {
-  if (process.env['NODE_ENV'] === 'production') return fallback;
+  if (readNodeEnv() === 'production') return fallback;
   if (e instanceof Error && typeof e.message === 'string' && e.message.length > 0) {
     return e.message;
   }
