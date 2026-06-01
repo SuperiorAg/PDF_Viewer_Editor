@@ -335,7 +335,22 @@ export const combinePdfsThunk = createAsyncThunk<
   try {
     const res = await api.pdf.combine({ sources });
     if (!res.ok) {
-      dispatch(pushToast({ kind: 'error', message: `Combine failed: ${res.message}` }));
+      // Wave-30 follow-up (H-30.1): map error variants to honest, user-facing
+      // strings. The raw res.message is the safeMessage()-protected detail
+      // (production -> fallback); the variant is the load-bearing signal.
+      const msg =
+        res.error === 'invalid_source'
+          ? 'At least two valid PDF sources are required to combine.'
+          : res.error === 'invalid_page_range'
+            ? 'One of the page ranges is invalid.'
+            : res.error === 'handle_not_found'
+              ? 'One of the source documents is no longer open.'
+              : res.error === 'fs_read_failed'
+                ? 'A source file could not be read.'
+                : res.error === 'pdf_load_failed'
+                  ? 'A source file is not a valid PDF.'
+                  : `Combine failed: ${res.message}`;
+      dispatch(pushToast({ kind: 'error', message: msg }));
       return;
     }
     dispatch(

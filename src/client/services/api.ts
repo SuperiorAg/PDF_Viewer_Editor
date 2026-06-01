@@ -41,6 +41,8 @@ function makeBridgeUnavailableFallback(): PdfApi {
       // Phase 6 — pickExportOutputPath joins the dialog namespace per
       // api-contracts.md §17.9.
       pickExportOutputPath: unavailable,
+      // Wave-30 follow-up (H-30.1): path-only PDF picker for the Combine modal.
+      pickPdfFiles: unavailable,
     },
     fs: {
       readPdf: unavailable,

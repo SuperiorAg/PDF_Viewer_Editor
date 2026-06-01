@@ -2,21 +2,22 @@
   "combine": {
     "title": "Combine PDF files",
     "intro": "Add two or more PDF files to merge them into a single document.",
-    "addFiles": "+ Add file...",
+    "addFiles": "+ Add files...",
+    "picking": "Choosing...",
     "useCurrentlyOpen": "+ Use currently open",
     "currentlyOpenSuffix": "{{name}} (currently open)",
-    "pickPlaceholder": "Pick file... (Phase 2)",
     "outputName": "Output file name",
-    "reorderHint": "Drag to reorder. The combined document follows this order.",
+    "reorderHint": "Reorder with the arrows; the combined document follows this order.",
     "removeSource": "Remove from list",
     "combineButton": "Combine",
+    "combining": "Combining...",
+    "pickerFailed": "Could not open the file picker: {{message}}",
     "empty": "No files yet. Add at least two to combine.",
     "needTwo": "Add at least two files to combine.",
-    "noFileSelected": "No file selected yet — file picking arrives in a later phase.",
     "allPages": "all pages",
     "moveUp": "Move up",
     "moveDown": "Move down",
-    "perRowNote": "Per-row page-range editing arrives in Phase 2."
+    "perRowNote": "Per-row page-range editing arrives in a later phase."
   },
   "confirmClose": {
     "title": "Unsaved changes",

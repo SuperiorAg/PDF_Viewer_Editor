@@ -106,6 +106,11 @@ export type {
   DialogSaveAsError,
   DialogSaveAsValue,
   DialogSaveAsResponse,
+  // Wave-30 follow-up (H-30.1): path-only PDF picker for the Combine modal.
+  DialogPickPdfFilesRequest,
+  DialogPickPdfFilesError,
+  DialogPickPdfFilesValue,
+  DialogPickPdfFilesResponse,
   // §4. fs
   FsReadPdfRequest,
   FsReadPdfError,
