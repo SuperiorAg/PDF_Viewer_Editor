@@ -8783,3 +8783,53 @@ Phase 1.1 R-1.1 shipped a single-screen Help (shortcuts table + Phase 1 limitati
 Edited (Riley-owned): `src/client/components/pdf-viewer/index.tsx`, `src/client/components/pdf-canvas/index.tsx`, `src/client/components/modals/help-modal/index.tsx`, `src/client/components/modals/help-modal/help-modal.module.css`, `src/client/components/modals/help-modal/help-modal.test.tsx`, `src/client/i18n/locales/en-US/modals.json`, `docs/build-report.md` (this section). Created (Riley-owned): `src/client/components/pdf-viewer/pdf-viewer.test.tsx`, `src/client/components/modals/help-modal/help-content.ts`. **Did NOT touch:** `src/main/**` / `src/preload/**` / `src/ipc/**` (David / Julian domain), `src/db/**` (Ravi), `electron-builder.yml` / `.github/workflows/**` / `package.json` (Diego), `docs/user-guide.md` (Nathan), `.learnings/locked-instructions.md`. Per-task commits to `main` (`31de046`, `887b934`); no force-push.
 
 ---
+
+## Wave 30 — Full-project cleanliness + performance audit (Julian, 2026-06-01)
+
+**Status:** COMPLETE 2026-06-01.
+**Mode:** Pure audit pass parallel with Riley's zoom-to-cursor + help-modal expansion; disjoint file ownership held.
+**Scope:** Every non-test `.ts`/`.tsx` >200 LOC in full; mechanical greps for the six structural ratchets across `src/`. Tooling: `node scripts/rebuild-native-for-node.mjs` (L-003), `npm run lint` (clean), `npx vitest run` (1809 PASS), `tsc --noEmit` on `tsconfig.{main,renderer,test}.json` (clean).
+
+### Findings
+
+**0 BLOCKER, 2 HIGH (1 FIXED, 1 FLAGGED), 6 MEDIUM (1 FIXED), 10 LOW, 4 NIT.** Verdict: **GREEN.** Full breakdown in `docs/code-review.md` Wave-30 section.
+
+### Top-3
+
+1. **H-30.1 (FLAGGED) — `pdf:combine` is still the Phase-1 `not_implemented` stub.** Renderer-visible affordance (Combine modal -> "Combine" button) surfaces "Combine failed: Phase 1 stub …" toast in production. Walking-skeleton milestone #6 non-functional. ~150 LOC + tests of follow-up work owned by David (combine.ts + `app:pickPdfPath` channel) + Riley (modal "+ Add file" wiring) + Nathan (help-modal/user-guide if scope narrows).
+2. **H-30.2 (FIXED) — IPC handler catches leaked raw `Error.message` to user toasts in production.** Introduced `safeMessage(e, fallback)` helper in `src/shared/result.ts` (production -> fallback, dev/test -> raw); applied across 16 IPC handlers (commit `7ffa8f9`). Cross-process safe NODE_ENV read (commit `cbaf315`) so the helper compiles in both main + renderer tsconfigs.
+3. **M-30.1 (FLAGGED) — `pdf:getOutline` is dead code (zero call sites in renderer).** Either implement (bookmarks panel could surface document outlines via pdf-lib) or remove the contract type + preload entry + handler stub. Coordinated cross-process change owned by David.
+
+### Six-ratchet compliance
+
+PASS — eighth consecutive ratchet-clean wave (permissive-stubs / sentinel-defaults / stub-with-TODO / code-comment-contradictions / layout-best-effort-claims / structural-PII-guard). Plus the `as any` discipline: zero new casts outside the documented exception set.
+
+### Files changed
+
+**Commit `7ffa8f9`:** 23 files — new `src/shared/result.test.ts` (10 tests); `safeMessage` helper added to `src/shared/result.ts`; 16 IPC handlers updated (`dialog-open-pdf.ts`, `dialog-save-as.ts`, `fs-read-pdf.ts`, `fs-write-pdf.ts`, `bookmarks.ts`, `bookmarks-phase2.ts`, `settings.ts`, `recents-add.ts`, `recents-clear.ts`, `recents-list.ts`, `forms-list-templates.ts`, `forms-load-template.ts`, `forms-save-template.ts`, `forms-design-add.ts`, `i18n-set-locale.ts`, `telemetry-set-opt-in.ts`, `pdf-apply-edit-ops.ts`, `pdf-identify-text-span.ts`, `app.ts`); stale PHASE-1 NOTES rewritten in `src/main/index.ts`; stale Wave-2 TODO rewritten in `src/main/db-bridge.ts`.
+**Commit `cbaf315`:** `src/shared/result.ts` — wrap NODE_ENV read in `(globalThis as any).process?.env` so the renderer tsconfig (no `@types/node`) compiles.
+**Commit `2d424c5`:** `docs/code-review.md` — ~250-line Wave-30 audit section.
+
+### Performance audit — clean
+
+Event listeners paired, document-store memory bounded, telemetry ring buffer capped, cert-store + OCR pool released on `app.before-quit`, Redux selectors memoized correctly, bundle externals registered, wheel-handler hot path coalesced. One WARN: `recents-list.ts` does N synchronous `existsSync` calls (N default 20, cap 200; borderline at cap; M-30.3, document-only).
+
+### L-001 / L-002 / L-003
+
+- **L-001 PASS:** `enableDragDropFiles` override absent in `window-manager.ts`. Default-`true` behavior preserved.
+- **L-002 PASS:** No packaged binary launched (audit pass, not a packaging wave). v0.7.5's `release/wave-v075-icon-verified.png` covers the lock.
+- **L-003 PASS:** Ran `node scripts/rebuild-native-for-node.mjs` (Node 24 -> Node-24-ABI prebuild swap) before vitest. Full suite 1809/1809 PASS.
+
+### Follow-ups for orchestration
+
+- **H-30.1** (David / Riley / Nathan — combine engine + path picker + docs amendment)
+- **M-30.1** (David — getOutline dead code)
+- **M-30.4** (Riley — `// >200 lines:` rationale headers on menu-bar / toolbar / image-import-modal)
+- **M-30.5** (Riley — unify or annotate y-flip algebra in `pdf-coords.ts`)
+- **L-30.10** (Riley — disable Combine modal's "+ Add file" placeholder until H-30.1 lands)
+
+### File ownership
+
+Edited (Julian-owned): `docs/code-review.md`, `docs/build-report.md` (this section). Edited (cross-domain — David's IPC handlers, audited and patched per orchestrator brief): `src/shared/result.ts`, `src/main/index.ts`, `src/main/db-bridge.ts`, and 16 files under `src/ipc/handlers/`. Created (cross-domain test): `src/shared/result.test.ts`. **Did NOT touch:** `src/client/**` (Riley in-flight per orchestrator brief — flagged findings for follow-up instead), `src/db/**` (Ravi), `electron-builder.yml` / `.github/workflows/**` / `package.json` (Diego), `docs/user-guide.md` / `README.md` (Nathan), `.learnings/locked-instructions.md`. Three commits to `main` (`7ffa8f9`, `cbaf315`, `2d424c5`); no force-push; pushed to origin.
+
+---
