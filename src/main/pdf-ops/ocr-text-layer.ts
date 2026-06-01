@@ -33,7 +33,7 @@ import {
 } from 'pdf-lib';
 
 import type { OcrPageResult, OcrWord, PdfRect } from '../../ipc/contracts.js';
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type { Result } from '../../shared/result.js';
 
 // ============================================================================
@@ -236,7 +236,7 @@ export async function composeSearchablePdf(
   } catch (e) {
     return fail<SearchablePdfBuildError>(
       'load_failed',
-      `pdf-lib load threw: ${(e as Error).name ?? 'unknown'}`,
+      `pdf-lib load threw: ${safeMessage(e, 'unknown error')}`,
     );
   }
   const pageCount = doc.getPageCount();
@@ -310,7 +310,7 @@ export async function composeSearchablePdf(
       } catch (e) {
         return fail<SearchablePdfBuildError>(
           'serialize_failed',
-          `drawText threw for page ${pr.pageIndex} word "${word.text.slice(0, 16)}": ${(e as Error).name ?? 'unknown'}`,
+          `drawText threw for page ${pr.pageIndex} word "${word.text.slice(0, 16)}": ${safeMessage(e, 'unknown error')}`,
         );
       }
     }
@@ -334,7 +334,7 @@ export async function composeSearchablePdf(
   } catch (e) {
     return fail<SearchablePdfBuildError>(
       'serialize_failed',
-      `pdf-lib save threw: ${(e as Error).name ?? 'unknown'}`,
+      `pdf-lib save threw: ${safeMessage(e, 'unknown error')}`,
     );
   }
   return ok(newBytes);

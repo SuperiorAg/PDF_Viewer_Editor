@@ -22,7 +22,7 @@
 //   REQUIRED on the ScanEngine interface (no optional stub fallback); the
 //   null-addon path is an explicit, tested degrade, not a silent no-op.
 
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type { Result } from '../../shared/result.js';
 
 // ----------------------------------------------------------------------------
@@ -202,7 +202,10 @@ export async function listDevicesVia(
   try {
     raw = await addon.listDevices();
   } catch (e) {
-    return fail<ScanError>('addon_internal_error', `addon.listDevices threw: ${(e as Error).name}`);
+    return fail<ScanError>(
+      'addon_internal_error',
+      `addon.listDevices threw: ${safeMessage(e, 'unknown error')}`,
+    );
   }
   if (raw.__wiaError) {
     return fail<ScanError>(mapNativeError(raw.__wiaError), raw.detail ?? raw.__wiaError);
@@ -236,7 +239,10 @@ export async function acquireVia(
   try {
     raw = await addon.acquire(options);
   } catch (e) {
-    return fail<ScanError>('addon_internal_error', `addon.acquire threw: ${(e as Error).name}`);
+    return fail<ScanError>(
+      'addon_internal_error',
+      `addon.acquire threw: ${safeMessage(e, 'unknown error')}`,
+    );
   }
   if (raw.__wiaError) {
     return fail<ScanError>(mapNativeError(raw.__wiaError), raw.detail ?? raw.__wiaError);

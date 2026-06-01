@@ -18,7 +18,7 @@ import {
   type RasterPageOptions,
 } from '../../main/pdf-ops/ocr-engine.js';
 import { detectPriorPadesSignatures } from '../../main/pdf-ops/pades-detect.js';
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   DocumentHandle,
   OcrRunOnPageError,
@@ -101,7 +101,7 @@ export async function handleOcrRunOnPage(
   } catch (e) {
     return fail<OcrRunOnPageError>(
       'pdf_render_failed',
-      `pdf-lib load threw: ${(e as Error).name ?? 'unknown'}`,
+      `pdf-lib load threw: ${safeMessage(e, 'unknown error')}`,
     );
   }
   const signedFields = detectPriorPadesSignatures(doc);
@@ -127,7 +127,7 @@ export async function handleOcrRunOnPage(
   } catch (e) {
     return fail<OcrRunOnPageError>(
       'pdf_render_failed',
-      `rasterize failed: ${(e as Error).name ?? 'unknown'}`,
+      `rasterize failed: ${safeMessage(e, 'unknown error')}`,
     );
   }
   const pageDims = await deps.pageDimensions(data.handle, data.pageIndex);

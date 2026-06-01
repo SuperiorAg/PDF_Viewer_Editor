@@ -96,6 +96,8 @@ function makeBridgeUnavailableFallback(): PdfApi {
       setDefaultPdfHandler: unavailable,
       getDefaultPdfHandlerStatus: unavailable,
       openExternal: unavailable,
+      // David 2026-06-01: OCR runtime introspection (no UI surface yet).
+      diagnoseOcr: unavailable,
     },
     window: {
       minimize: unavailable,

@@ -37,7 +37,7 @@ import type {
   OcrWord,
   PreprocessOptions,
 } from '../../ipc/contracts.js';
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type { Result } from '../../shared/result.js';
 
 import type { LanguagePackManager } from './language-pack-manager.js';
@@ -182,7 +182,7 @@ export function createOcrWorkerPool(opts: CreateOcrWorkerPoolOptions): OcrWorker
       } catch (e) {
         return fail<OcrEngineError>(
           'worker_init_failed',
-          `worker init failed: ${(e as Error).name ?? 'unknown'}`,
+          `worker init failed: ${safeMessage(e, 'unknown error')}`,
         );
       }
     },
@@ -303,7 +303,7 @@ export async function runOcrOnPage(
     }
     return fail<OcrEngineError>(
       'ocr_engine_failed',
-      `recognize threw: ${(e as Error).name ?? 'unknown'}`,
+      `recognize threw: ${safeMessage(e, 'unknown error')}`,
     );
   }
 
@@ -441,7 +441,12 @@ export async function runOcrOnDocument(
         signal,
       });
     } catch (e) {
-      const errMsg = `rasterize page ${p} failed: ${(e as Error).name ?? 'unknown'}`;
+      // Hard-Won (David, 2026-06-01): use `.message` (via safeMessage), not
+      // `.name`. `.name` defaults to the constructor name ('Error') and tells
+      // the user NOTHING about the failure; users were seeing toasts ending
+      // in literal "Error" with zero diagnostic value. safeMessage returns
+      // the underlying message in dev/test and a generic fallback in prod.
+      const errMsg = `rasterize page ${p} failed: ${safeMessage(e, 'unknown error')}`;
       emit({
         jobId,
         phase: 'failed',
@@ -512,7 +517,7 @@ export async function runOcrOnDocument(
   try {
     newBytes = await deps.composeSearchablePdf(originalBytes, pageResults);
   } catch (e) {
-    const errMsg = `compose failed: ${(e as Error).name ?? 'unknown'}`;
+    const errMsg = `compose failed: ${safeMessage(e, 'unknown error')}`;
     emit({
       jobId,
       phase: 'failed',

@@ -25,7 +25,7 @@ import {
   type RasterPageOptions,
 } from '../../main/pdf-ops/ocr-engine.js';
 import { detectPriorPadesSignatures } from '../../main/pdf-ops/pades-detect.js';
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   DocumentHandle,
   EditMeta,
@@ -233,7 +233,7 @@ export async function handleOcrRunOnDocument(
   } catch (e) {
     return fail<OcrRunOnDocumentError>(
       'ocr_engine_failed',
-      `pdf-lib load threw: ${(e as Error).name ?? 'unknown'}`,
+      `pdf-lib load threw: ${safeMessage(e, 'unknown error')}`,
     );
   }
   const signedFields = detectPriorPadesSignatures(doc);
@@ -415,14 +415,14 @@ export async function handleOcrRunOnDocument(
       deps.ocrJobsRepo.updateStatus(jobId, {
         status: 'failed',
         completed_at: clock(),
-        error_message: (e as Error).name ?? 'unknown',
+        error_message: safeMessage(e, 'unknown error'),
       });
     }
     job.terminal = 'failed';
     activeJobs.delete(jobId);
     return fail<OcrRunOnDocumentError>(
       'ocr_engine_failed',
-      `unexpected: ${(e as Error).name ?? 'unknown'}`,
+      `unexpected: ${safeMessage(e, 'unknown error')}`,
     );
   }
 }

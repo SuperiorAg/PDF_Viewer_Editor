@@ -9,6 +9,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 import { Channels } from '../ipc/contracts.js';
 import type {
+  AppDiagnoseOcrRequest,
+  AppDiagnoseOcrResponse,
   AppGetDefaultPdfHandlerStatusResponse,
   AppGetVersionResponse,
   AppOpenExternalRequest,
@@ -270,6 +272,9 @@ const pdfApi: PdfApi = {
       ) as Promise<AppGetDefaultPdfHandlerStatusResponse>,
     openExternal: (req: AppOpenExternalRequest) =>
       ipcRenderer.invoke(Channels.AppOpenExternal, req) as Promise<AppOpenExternalResponse>,
+    // David 2026-06-01: OCR runtime introspection (no UI surface yet).
+    diagnoseOcr: (req: AppDiagnoseOcrRequest) =>
+      ipcRenderer.invoke(Channels.AppDiagnoseOcr, req) as Promise<AppDiagnoseOcrResponse>,
   },
   window: {
     minimize: () =>

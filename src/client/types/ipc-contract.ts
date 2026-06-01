@@ -189,6 +189,11 @@ export type {
   AppOpenExternalRequest,
   AppOpenExternalError,
   AppOpenExternalResponse,
+  // David 2026-06-01 — OCR runtime introspection (no UI surface yet).
+  AppDiagnoseOcrRequest,
+  AppDiagnoseOcrError,
+  AppDiagnoseOcrValue,
+  AppDiagnoseOcrResponse,
   // §10. window (David added per CLAUDE.md Wave 2 brief; not in api-contracts.md §1-§9)
   WindowMinimizeRequest,
   WindowMinimizeError,

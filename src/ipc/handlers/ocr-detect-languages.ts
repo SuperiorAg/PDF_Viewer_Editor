@@ -10,7 +10,7 @@
 import { z } from 'zod';
 
 import type { LanguagePackManager } from '../../main/pdf-ops/language-pack-manager.js';
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   LanguagePack,
   OcrDetectLanguagesError,
@@ -60,7 +60,7 @@ export async function handleOcrDetectLanguages(
   } catch (e) {
     return fail<OcrDetectLanguagesError>(
       'catalog_load_failed',
-      `catalog load threw: ${(e as Error).name ?? 'unknown'}`,
+      `catalog load threw: ${safeMessage(e, 'unknown error')}`,
     );
   }
 }

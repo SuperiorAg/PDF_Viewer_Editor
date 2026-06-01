@@ -17,6 +17,10 @@
 
 import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
+  AppDiagnoseOcrError,
+  AppDiagnoseOcrRequest,
+  AppDiagnoseOcrResponse,
+  AppDiagnoseOcrValue,
   AppGetDefaultPdfHandlerStatusRequest,
   AppGetDefaultPdfHandlerStatusResponse,
   AppGetVersionRequest,
@@ -46,6 +50,13 @@ export interface AppDeps {
    * MUST return false so the handler can surface `not_implemented` honestly.
    */
   openDefaultAppsSettings: () => Promise<boolean>;
+  /**
+   * David 2026-06-01: OCR runtime introspection. Returns ground-truth booleans
+   * for every dep `rasterizePageProd` needs. Production wires this to
+   * `diagnoseOcr()` from `ocr-bootstrap.ts`; tests inject a synthetic so the
+   * handler shape can be asserted without standing up the real OCR engine.
+   */
+  diagnoseOcr: () => Promise<AppDiagnoseOcrValue>;
 }
 
 export function handleAppGetVersion(
@@ -127,4 +138,28 @@ export function handleAppGetDefaultPdfHandlerStatus(
     'not_implemented',
     'Default-app status cannot be read on modern Windows; check Windows Settings -> Default apps.',
   );
+}
+
+// ----------------------------------------------------------------------------
+// app:diagnoseOcr — David 2026-06-01
+//
+// One-shot OCR runtime probe. No UI surface yet (intentional; brief says
+// "callable from devtools or future Diagnostics tile"). The handler simply
+// forwards to the injected `deps.diagnoseOcr()` and wraps the result in a
+// Result envelope. Any unexpected throw collapses to `diagnose_failed` with
+// `safeMessage()` discipline (production never leaks the raw error string).
+// ----------------------------------------------------------------------------
+export async function handleAppDiagnoseOcr(
+  _req: AppDiagnoseOcrRequest,
+  deps: AppDeps,
+): Promise<AppDiagnoseOcrResponse> {
+  try {
+    const snapshot = await deps.diagnoseOcr();
+    return ok(snapshot);
+  } catch (e) {
+    return fail<AppDiagnoseOcrError>(
+      'diagnose_failed',
+      safeMessage(e, 'OCR diagnostic probe failed unexpectedly.'),
+    );
+  }
 }

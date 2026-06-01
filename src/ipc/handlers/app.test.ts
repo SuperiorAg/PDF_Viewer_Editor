@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  handleAppDiagnoseOcr,
   handleAppGetDefaultPdfHandlerStatus,
   handleAppGetVersion,
   handleAppOpenExternal,
@@ -23,6 +24,13 @@ function makeDeps(over: Partial<AppDeps> = {}): AppDeps {
     showInExplorer: vi.fn().mockResolvedValue(true),
     getDocumentPath: vi.fn().mockReturnValue('C:/x.pdf'),
     openDefaultAppsSettings: vi.fn().mockResolvedValue(true),
+    diagnoseOcr: vi.fn().mockResolvedValue({
+      canvasModuleResolvable: true,
+      canvasModuleLoadError: null,
+      pdfjsLoadable: true,
+      tesseractCoreReachable: true,
+      documentStoreCount: 0,
+    }),
     ...over,
   };
 }
@@ -76,5 +84,45 @@ describe('app handlers', () => {
   it('getDefaultPdfHandlerStatus stub returns not_implemented', () => {
     const res = handleAppGetDefaultPdfHandlerStatus({});
     expectErr(res, 'not_implemented');
+  });
+
+  // David 2026-06-01: OCR runtime introspection (no UI surface yet).
+  it('diagnoseOcr returns the full snapshot shape on success', async () => {
+    const deps = makeDeps();
+    const res = await handleAppDiagnoseOcr({}, deps);
+    const value = expectOk(res);
+    expect(value.canvasModuleResolvable).toBe(true);
+    expect(value.canvasModuleLoadError).toBeNull();
+    expect(value.pdfjsLoadable).toBe(true);
+    expect(value.tesseractCoreReachable).toBe(true);
+    expect(value.documentStoreCount).toBe(0);
+    expect(deps.diagnoseOcr).toHaveBeenCalledTimes(1);
+  });
+
+  it('diagnoseOcr surfaces canvas-load failure detail (the v0.7.9 user report path)', async () => {
+    // Simulates the packaged-build scenario: @napi-rs/canvas .node binary in
+    // app.asar.unpacked/ but Windows refuses to dlopen it.
+    const deps = makeDeps({
+      diagnoseOcr: vi.fn().mockResolvedValue({
+        canvasModuleResolvable: false,
+        canvasModuleLoadError:
+          '@napi-rs/canvas: ERR_DLOPEN_FAILED — The specified module could not be found.',
+        pdfjsLoadable: true,
+        tesseractCoreReachable: true,
+        documentStoreCount: 1,
+      }),
+    });
+    const res = await handleAppDiagnoseOcr({}, deps);
+    const value = expectOk(res);
+    expect(value.canvasModuleResolvable).toBe(false);
+    expect(value.canvasModuleLoadError).toContain('ERR_DLOPEN_FAILED');
+  });
+
+  it('diagnoseOcr returns diagnose_failed when the probe throws', async () => {
+    const deps = makeDeps({
+      diagnoseOcr: vi.fn().mockRejectedValue(new Error('synthetic-probe-fail')),
+    });
+    const res = await handleAppDiagnoseOcr({}, deps);
+    expectErr(res, 'diagnose_failed');
   });
 });

@@ -27,7 +27,7 @@
 import { createHash } from 'node:crypto';
 
 import type { LanguagePackCatalogEntry, OcrLanguagePackSource } from '../../ipc/contracts.js';
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type { Result } from '../../shared/result.js';
 
 // ============================================================================
@@ -290,7 +290,10 @@ export function createLanguagePackManager(opts: LanguagePackManagerOptions): Lan
       try {
         await filesys.mkdir(paths.userTessdataDir(), true);
       } catch (e) {
-        return fail<LanguagePackError>('disk_write_failed', `mkdir failed: ${(e as Error).name}`);
+        return fail<LanguagePackError>(
+          'disk_write_failed',
+          `mkdir failed: ${safeMessage(e, 'unknown error')}`,
+        );
       }
       const dest = userPathFor(lang);
       const url = `${catalog.baseUrl}/${lang}.traineddata.gz`;
@@ -303,13 +306,19 @@ export function createLanguagePackManager(opts: LanguagePackManagerOptions): Lan
         } catch {
           /* ignore */
         }
-        const name = (e as Error).name ?? 'unknown';
-        if (name === 'AbortError' || signal.aborted) {
+        // Detect abort via the Error name (stable across Node versions for
+        // AbortError) before falling back to message-based diagnostics. We
+        // STILL avoid echoing the URL or path (conventions §16.6 anti-pattern
+        // — logs may reveal local FS layout); safeMessage returns a generic
+        // fallback in production.
+        const errName = e instanceof Error ? e.name : '';
+        if (errName === 'AbortError' || signal.aborted) {
           return fail<LanguagePackError>('cancelled', 'download aborted');
         }
-        // Do NOT echo the URL or path in the message (conventions §16.6
-        // anti-pattern — logs may reveal local FS layout).
-        return fail<LanguagePackError>('network_error', `download failed: ${name}`);
+        return fail<LanguagePackError>(
+          'network_error',
+          `download failed: ${safeMessage(e, 'unknown error')}`,
+        );
       }
       // Read back and verify SHA-256 BEFORE inserting state (R-W19-B).
       let actualSha: string;
@@ -324,7 +333,7 @@ export function createLanguagePackManager(opts: LanguagePackManagerOptions): Lan
         }
         return fail<LanguagePackError>(
           'disk_write_failed',
-          `read-back failed: ${(e as Error).name}`,
+          `read-back failed: ${safeMessage(e, 'unknown error')}`,
         );
       }
       // "TBD-FILL-AT-RELEASE" is the sentinel from the seed catalog ship —
@@ -345,7 +354,10 @@ export function createLanguagePackManager(opts: LanguagePackManagerOptions): Lan
       try {
         stat = await filesys.stat(dest);
       } catch (e) {
-        return fail<LanguagePackError>('disk_write_failed', `stat failed: ${(e as Error).name}`);
+        return fail<LanguagePackError>(
+          'disk_write_failed',
+          `stat failed: ${safeMessage(e, 'unknown error')}`,
+        );
       }
       const record: LanguagePackRecord = {
         lang,
@@ -379,7 +391,10 @@ export function createLanguagePackManager(opts: LanguagePackManagerOptions): Lan
       try {
         await filesys.unlink(rec.filePath);
       } catch (e) {
-        return fail<LanguagePackError>('disk_unlink_failed', `unlink failed: ${(e as Error).name}`);
+        return fail<LanguagePackError>(
+          'disk_unlink_failed',
+          `unlink failed: ${safeMessage(e, 'unknown error')}`,
+        );
       }
       inMemoryRecords.delete(lang);
       return ok({ removed: true });

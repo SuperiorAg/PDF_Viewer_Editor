@@ -9351,3 +9351,36 @@ Edited (Diego-owned): `package.json` (version 0.7.8 → 0.7.9), `scripts/wave-v0
 - **The drag-only-with-no-click-fallback pattern is a recurring UX trap.** When a tool requires a drag of N pixels minimum and offers no click fallback, users with imprecise mouse control, touchpads, or who instinctively click before discovering "you have to drag" will report "nothing happens." Always offer a sensible default for the click path — this is what Photoshop/Illustrator/Figma all do. Annotation-layer has the same pattern; flagged for the next forms/annotations wave.
 - **Pure-helper extraction pays for itself in test surface.** Lifting `computePlacementPdfRect()` out of the React component meant 6 geometric assertions (defaults, threshold boundary, zoom semantics, type completeness) without mocking `window.pdfApi` or the thunk dispatch chain. Same pattern as `nextUnusedName` already in the file. Worth doing whenever a callback contains nontrivial math.
 - **Parallel-wave file-ownership friction.** David's in-progress edits touched `src/client/types/ipc-contract.ts` (Riley's ownership column) with a `// David 2026-06-01 — OCR runtime introspection` marker — necessary because the renderer needs the type re-exports, but it crossed the file-ownership line. Mitigated by clear comment attribution + stash-around-push. For future cross-wave coordination of shared contract files, the cleaner option is a small Riley-owned commit that adds the type re-exports first, then David follows with the handler impl.
+
+---
+
+## 2026-06-01 — David: surface real OCR rasterize failure (`.message` not `.name`) + `app:diagnoseOcr` IPC
+
+**Commit:** (this commit) — `fix(ocr): surface real rasterize failure (msg not name) + diagnose-ocr IPC for debugging`
+
+**Files:** 16 changed (+357 / -60). Core fix in `src/main/pdf-ops/{ocr-engine,ocr-text-layer,ocr-bootstrap,language-pack-manager,wia-scanner}.ts` + `src/ipc/handlers/ocr-{detect-languages,run-on-page,run-on-document}.ts`. New channel: `src/ipc/contracts.ts` + `src/ipc/handlers/app.ts` + `src/ipc/register.ts` + `src/preload/index.ts` + renderer re-exports. Tests: `src/main/pdf-ops/ocr-engine.test.ts` + `src/ipc/handlers/app.test.ts`.
+
+**User-reported bug (v0.7.9, verbatim toast):** `rasterize page 0 failed: Error / OCR failed: rasterize page 0 failed: Error`.
+
+**Root cause (reporting layer):** 13 sites across the OCR subsystem used `${(e as Error).name ?? 'unknown'}` instead of `.message` (or `safeMessage()`). `Error.name` defaults to the constructor name — literal `"Error"` for every `throw new Error(msg)` — and conveys NOTHING about the failure. The CI test for this propagation path (`engine.test.ts:397`) asserted only `r.error === 'pdf_render_failed'`, never the `r.message` body, so the "Error" suffix was invisible to vitest.
+
+**Root cause (suspected underlying):** in the packaged v0.7.9 binary, the bare `try {} catch {}` around `require('@napi-rs/canvas')` in `ocr-bootstrap.ts` collapsed BOTH `MODULE_NOT_FOUND` AND `ERR_DLOPEN_FAILED` into the same generic "canvas adapter not installed" message. Without the `.message` propagation upstream, the user (and we) had no way to tell which.
+
+**Fix:**
+
+1. Replaced every `(e as Error).name ?? 'unknown'` in pdf-ops + ocr handlers with `safeMessage(e, 'unknown error')` from `src/shared/result.ts` (Julian's production-safe helper — `.message` in dev/test, generic fallback in prod). Held the signatures handlers' deliberate `.name` usage (those have a PII rationale documented at source).
+2. Hardened `ocr-bootstrap.ts` canvas-load: extracted `tryLoadCanvas()` helper that distinguishes `ERR_DLOPEN_FAILED` from `MODULE_NOT_FOUND` and caches the result. `ERR_DLOPEN_FAILED` now produces an explicit "packaging issue, not a runtime config issue — reinstall the app or report to dev" message naming asarUnpack as the likely culprit.
+3. Added `app:diagnoseOcr` IPC channel (no UI yet — devtools-callable via `await window.pdfApi.app.diagnoseOcr({})`). Returns `{canvasModuleResolvable, canvasModuleLoadError, pdfjsLoadable, tesseractCoreReachable, documentStoreCount}`. Lets the next user report produce a one-paste triage.
+4. Updated the rasterize-throws regression test to assert `r.message.contains('synthetic-raster-fail')` so the "Error" suffix bug can never silently re-land.
+
+**Flagged to Marcus — Diego follow-up needed?** Inspected `electron-builder.yml`:78-104 — the asarUnpack rules ALREADY include `node_modules/@napi-rs/canvas/**/*` AND `**/*.node`. So the asar config is correct in source. **If real users still hit `ERR_DLOPEN_FAILED` in v0.7.9, the root cause is somewhere else** (likely: AV quarantine of the .node, missing VC++ runtime on the user's machine, or a corrupted install). Recommend Diego adds NO change to `electron-builder.yml` until we have a confirmed reproducer; the new `app:diagnoseOcr` channel gives us the diagnostic we need to triage the next report. **NO Diego dispatch required yet.** Suggested asarUnpack pattern if a future report DOES point at a missing file: `- "node_modules/@napi-rs/canvas-win32-x64-msvc/**/*"` (the per-platform subpackage tree, currently caught only by the generic `**/*.node` glob).
+
+**Tests:** `npx vitest run src/main/pdf-ops/ocr-engine.test.ts src/ipc/handlers/app.test.ts src/ipc/handlers/ocr-run-on-page.test.ts src/ipc/handlers/ocr-run-on-document.test.ts src/ipc/handlers/ocr-detect-languages.test.ts` → 47/47 green. `npm run typecheck` → all 3 tsconfigs clean. `npm run lint` → 0 warnings.
+
+**File ownership note:** Touched one line in `src/client/services/api.ts` (Riley's `src/client/**`) to add `diagnoseOcr: unavailable` to the `bridge_unavailable` fallback — required for the renderer typecheck after the `PdfApi.app` shape expanded. Pure shim, no behavior change. Marcus pre-authorized renderer re-exports in `src/client/types/ipc-contract.ts`; the api.ts shim is the structural twin (one-line `unavailable` fallback) and necessary for green CI.
+
+### Field notes
+
+- **`.name` vs `.message` is the recurring lesson.** `Error.name` is for programmatic error-type discrimination (e.g. `if (e.name === 'AbortError')`). Anything that reaches a user — toast, log, build-report row — MUST use `.message` (or `safeMessage()` for the production-PII-safe variant). The copy-paste anti-pattern propagated through 13 sites; the hard-won learning is "every user-facing error string flows through safeMessage()."
+- **CI didn't catch this because the test never inspected the message.** The `propagates pdf_render_failed when rasterizer throws` test was strong on the discriminant (`r.error`), silent on the body (`r.message`). Lesson: when asserting an error path, assert BOTH the discriminant AND that the message contains the originating error string — otherwise a `.name`-vs-`.message` typo at any catch site never surfaces.
+- **Diagnostic IPC over UI surface.** Building a Settings → Diagnostics tile now would be premature — the user report rate is one ticket. A devtools-callable channel costs ~80 lines, captures every dep state in one shot, and gives us a triage tool for the next report without growing the renderer surface. Good ratio of leverage to scope.

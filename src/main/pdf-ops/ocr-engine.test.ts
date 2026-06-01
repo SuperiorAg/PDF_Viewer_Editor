@@ -394,7 +394,11 @@ describe('runOcrOnDocument', () => {
     if (!r.ok) expect(r.error).toBe('cancelled');
   });
 
-  it('propagates pdf_render_failed when rasterizer throws', async () => {
+  it('propagates pdf_render_failed when rasterizer throws (surfaces underlying message, not "Error")', async () => {
+    // Regression for the v0.7.9 user-facing bug: the engine used `(e as Error).name`
+    // instead of `.message`, so users saw "rasterize page 0 failed: Error" with
+    // zero diagnostic value. The fix uses safeMessage(); in dev/test the actual
+    // message reaches the renderer.
     const { factory } = makeFactory();
     const pool = createOcrWorkerPool({
       workerFactory: factory,
@@ -424,7 +428,14 @@ describe('runOcrOnDocument', () => {
       },
     );
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toBe('pdf_render_failed');
+    if (!r.ok) {
+      expect(r.error).toBe('pdf_render_failed');
+      // The underlying error message MUST appear in the user-facing string —
+      // not just the literal word "Error" (which is `Error.name` for plain
+      // `new Error(...)` and conveys nothing about the failure).
+      expect(r.message).toContain('synthetic-raster-fail');
+      expect(r.message).toContain('rasterize page 0 failed');
+    }
   });
 
   it('propagates output_serialize_failed when composeSearchablePdf throws', async () => {

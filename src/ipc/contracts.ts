@@ -1075,6 +1075,32 @@ export interface AppOpenExternalRequest {
 export type AppOpenExternalError = 'handle_not_found' | 'os_failed' | 'not_implemented';
 export type AppOpenExternalResponse = Result<Record<string, never>, AppOpenExternalError>;
 
+// ----------------------------------------------------------------------------
+// app:diagnoseOcr — David 2026-06-01, follow-up to v0.7.9 rasterize-page-0 bug.
+//
+// One-shot main-process introspection that reports whether every OCR runtime
+// dep is reachable from the packaged binary. No UI surface yet — callable from
+// devtools (`await window.pdfApi.app.diagnoseOcr({})`) or a future Settings
+// -> Diagnostics tile. Designed for "user pastes the JSON back to support".
+// ----------------------------------------------------------------------------
+export interface AppDiagnoseOcrRequest {
+  /* no args */
+}
+export type AppDiagnoseOcrError = 'diagnose_failed';
+export interface AppDiagnoseOcrValue {
+  /** True if `require('@napi-rs/canvas')` or `require('canvas')` succeeds. */
+  canvasModuleResolvable: boolean;
+  /** Concatenated load-attempt errors when canvasModuleResolvable=false. */
+  canvasModuleLoadError: string | null;
+  /** True if pdfjs-dist's legacy build can be dynamically imported. */
+  pdfjsLoadable: boolean;
+  /** True if `require.resolve('tesseract.js-core')` succeeds. */
+  tesseractCoreReachable: boolean;
+  /** Documents currently held in the main-process document store. */
+  documentStoreCount: number;
+}
+export type AppDiagnoseOcrResponse = Result<AppDiagnoseOcrValue, AppDiagnoseOcrError>;
+
 // ============================================================================
 // 10. Window-control channels (renderer chrome buttons)
 // ============================================================================
@@ -2921,6 +2947,8 @@ export const Channels = {
   AppSetDefaultPdfHandler: 'app:setDefaultPdfHandler',
   AppGetDefaultPdfHandlerStatus: 'app:getDefaultPdfHandlerStatus',
   AppOpenExternal: 'app:openExternal',
+  // David 2026-06-01: OCR runtime introspection (no UI surface yet).
+  AppDiagnoseOcr: 'app:diagnoseOcr',
   // window
   WindowMinimize: 'window:minimize',
   WindowMaximize: 'window:maximize',
@@ -3051,6 +3079,9 @@ export interface PdfApi {
     ) => Promise<AppSetDefaultPdfHandlerResponse>;
     getDefaultPdfHandlerStatus: () => Promise<AppGetDefaultPdfHandlerStatusResponse>;
     openExternal: (req: AppOpenExternalRequest) => Promise<AppOpenExternalResponse>;
+    // David 2026-06-01: one-shot OCR runtime diagnostic. No UI yet — invoke
+    // via devtools (`await window.pdfApi.app.diagnoseOcr({})`).
+    diagnoseOcr: (req: AppDiagnoseOcrRequest) => Promise<AppDiagnoseOcrResponse>;
   };
   window: {
     minimize: () => Promise<WindowMinimizeResponse>;

@@ -20,6 +20,7 @@ import { combinePdfs } from '../main/pdf-ops/combine.js';
 import { documentStore } from '../main/pdf-ops/document-store.js';
 import { computeBufferHash, computeFileHash } from '../main/pdf-ops/file-hash.js';
 import type { LanguagePackManager } from '../main/pdf-ops/language-pack-manager.js';
+import { diagnoseOcr as diagnoseOcrProd } from '../main/pdf-ops/ocr-bootstrap.js';
 import type {
   OcrEngineError,
   OcrWorkerPool,
@@ -52,6 +53,7 @@ import {
   handleAnnotationsSetMeasureCalibration,
 } from './handlers/annotations-measure-calibration.js';
 import {
+  handleAppDiagnoseOcr,
   handleAppGetDefaultPdfHandlerStatus,
   handleAppGetVersion,
   handleAppOpenExternal,
@@ -641,6 +643,8 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
         return false;
       }
     },
+    // David 2026-06-01: wire the OCR runtime probe to its production impl.
+    diagnoseOcr: () => diagnoseOcrProd(),
   };
 
   ipcMain.handle(Channels.AppGetVersion, (_evt, payload) =>
@@ -655,6 +659,9 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
   );
   ipcMain.handle(Channels.AppGetDefaultPdfHandlerStatus, (_evt, payload) =>
     handleAppGetDefaultPdfHandlerStatus(payload ?? {}),
+  );
+  ipcMain.handle(Channels.AppDiagnoseOcr, (_evt, payload) =>
+    handleAppDiagnoseOcr(payload ?? {}, appDeps),
   );
 
   // ============================================================================

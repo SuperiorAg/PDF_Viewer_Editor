@@ -101,8 +101,11 @@ function createTesseractWorkerFactory(): TesseractWorkerFactory {
         // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
         mod = require(moduleName) as TesseractJsModule;
       } catch (e) {
+        // Use `.message` so the operator sees WHY require failed
+        // (MODULE_NOT_FOUND vs ERR_DLOPEN_FAILED vs syntax error).
+        const cause = e instanceof Error ? e.message : 'unknown';
         throw new Error(
-          `tesseract.js module not found — Diego Wave 21 must install it. (${(e as Error).name})`,
+          `tesseract.js module not found — Diego Wave 21 must install it. (${cause})`,
         );
       }
       const cachePath = pathJoin(app.getPath('userData'), 'tessdata-cache');
@@ -175,6 +178,91 @@ async function loadPdfJs(): Promise<PdfJsModule> {
   return mod;
 }
 
+// ============================================================================
+// Canvas adapter loader (extracted from rasterizePageProd so the diagnose-ocr
+// IPC handler can introspect it without running a full rasterize).
+//
+// HARDENING (David, 2026-06-01): the v0.7.9 bug report showed users hitting
+// "rasterize page 0 failed: Error" when the canvas .node binary is in the
+// packaged binary but Windows refuses to dlopen it. The original catch was a
+// bare `catch {}` that hid every loader failure behind a generic
+// "@napi-rs/canvas or canvas required" message. We now:
+//   1. Catch `MODULE_NOT_FOUND` (require resolution miss) and
+//      `ERR_DLOPEN_FAILED` (Windows-side .node load failure) DISTINCTLY so
+//      the operator sees an actionable message.
+//   2. Cache both the loaded module reference AND the failure error so the
+//      diagnose-ocr handler can report ground truth without re-attempting.
+// ============================================================================
+
+type CreateCanvasFn = (
+  w: number,
+  h: number,
+) => { getContext: (kind: '2d') => unknown; toBuffer: (mime: string) => Buffer };
+
+interface CanvasLoadOk {
+  ok: true;
+  source: '@napi-rs/canvas' | 'canvas';
+  createCanvas: CreateCanvasFn;
+}
+interface CanvasLoadErr {
+  ok: false;
+  /** Concatenated diagnostic from BOTH @napi-rs/canvas and canvas attempts. */
+  errorMessage: string;
+  /** True when at least one attempt failed with ERR_DLOPEN_FAILED (Windows asar miss). */
+  dlopenFailed: boolean;
+}
+type CanvasLoadResult = CanvasLoadOk | CanvasLoadErr;
+
+// Cached load result so the diagnose handler doesn't double-attempt.
+let _canvasLoadResult: CanvasLoadResult | null = null;
+
+function describeLoadError(e: unknown): { code: string; message: string } {
+  const code =
+    e && typeof e === 'object' && 'code' in e && typeof (e as { code: unknown }).code === 'string'
+      ? (e as { code: string }).code
+      : 'unknown';
+  const message = e instanceof Error ? e.message : String(e);
+  return { code, message };
+}
+
+export function tryLoadCanvas(): CanvasLoadResult {
+  if (_canvasLoadResult !== null) return _canvasLoadResult;
+  const attempts: string[] = [];
+  let dlopenFailed = false;
+  try {
+    const moduleName = '@napi-rs/canvas';
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+    const canvasMod = require(moduleName) as { createCanvas: CreateCanvasFn };
+    _canvasLoadResult = {
+      ok: true,
+      source: '@napi-rs/canvas',
+      createCanvas: canvasMod.createCanvas,
+    };
+    return _canvasLoadResult;
+  } catch (e) {
+    const { code, message } = describeLoadError(e);
+    if (code === 'ERR_DLOPEN_FAILED') dlopenFailed = true;
+    attempts.push(`@napi-rs/canvas: ${code} — ${message}`);
+  }
+  try {
+    const moduleName = 'canvas';
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+    const canvasMod = require(moduleName) as { createCanvas: CreateCanvasFn };
+    _canvasLoadResult = { ok: true, source: 'canvas', createCanvas: canvasMod.createCanvas };
+    return _canvasLoadResult;
+  } catch (e) {
+    const { code, message } = describeLoadError(e);
+    if (code === 'ERR_DLOPEN_FAILED') dlopenFailed = true;
+    attempts.push(`canvas: ${code} — ${message}`);
+  }
+  _canvasLoadResult = {
+    ok: false,
+    errorMessage: attempts.join('; '),
+    dlopenFailed,
+  };
+  return _canvasLoadResult;
+}
+
 /**
  * Production rasterizer. Renders a page to a PNG-equivalent ImageData buffer
  * at the requested DPI. The output is the raw pixel bytes Tesseract accepts.
@@ -197,34 +285,26 @@ export async function rasterizePageProd(opts: RasterPageOptions): Promise<Uint8A
   const scale = opts.dpi / 72;
   const viewport = page.getViewport({ scale });
 
-  // Canvas adapter — lazy-load. Wave 21 Diego installs `@napi-rs/canvas`
-  // or `canvas` (both MIT) so this works in production. If not installed,
-  // we throw a typed error the engine maps to `pdf_render_failed`.
-  let createCanvasFn: (
-    w: number,
-    h: number,
-  ) => { getContext: (kind: '2d') => unknown; toBuffer: (mime: string) => Buffer };
-  try {
-    const moduleName = '@napi-rs/canvas';
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-    const canvasMod = require(moduleName) as {
-      createCanvas: typeof createCanvasFn;
-    };
-    createCanvasFn = canvasMod.createCanvas;
-  } catch {
-    try {
-      const moduleName = 'canvas';
-      // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-      const canvasMod = require(moduleName) as {
-        createCanvas: typeof createCanvasFn;
-      };
-      createCanvasFn = canvasMod.createCanvas;
-    } catch {
+  // Canvas adapter — lazy-load via the shared tryLoadCanvas() helper. The
+  // helper distinguishes MODULE_NOT_FOUND (dep truly missing) from
+  // ERR_DLOPEN_FAILED (Windows refused to dlopen the .node file inside asar
+  // — almost always a packaging/asarUnpack issue) so the user sees an
+  // actionable message instead of a bare "Error".
+  //
+  // 2026-06-01 (David): hardened in response to v0.7.9 user report where the
+  // toast read "rasterize page 0 failed: Error" with no diagnostic.
+  const loaded = tryLoadCanvas();
+  if (!loaded.ok) {
+    if (loaded.dlopenFailed) {
       throw new Error(
-        'canvas adapter not installed (@napi-rs/canvas or canvas required for OCR rasterization)',
+        `@napi-rs/canvas native binding could not be loaded in the packaged app. This is a packaging issue (the .node file failed to dlopen — likely missing from asarUnpack or blocked by AV/permissions), not a runtime config issue. Reinstall the app or report to dev. Details: ${loaded.errorMessage}`,
       );
     }
+    throw new Error(
+      `canvas adapter not installed (@napi-rs/canvas or canvas required for OCR rasterization). Details: ${loaded.errorMessage}`,
+    );
   }
+  const createCanvasFn = loaded.createCanvas;
   const canvas = createCanvasFn(Math.ceil(viewport.width), Math.ceil(viewport.height));
   const ctx = canvas.getContext('2d');
   await page.render({ canvasContext: ctx, viewport }).promise;
@@ -429,5 +509,58 @@ export function bootstrapOcr(): BootstrappedOcr {
     },
     watchdogMs: 60_000,
     rasterDpi: 300,
+  };
+}
+
+// ============================================================================
+// Diagnostic introspection (David, 2026-06-01)
+//
+// Used by the `app:diagnoseOcr` IPC channel. Returns a snapshot of every
+// runtime dependency the OCR pipeline needs. Safe to call from any context:
+// it never throws and never mutates state (loadPdfJs IS a cached lazy import,
+// but reading the cache is read-only).
+// ============================================================================
+
+export interface DiagnoseOcrSnapshot {
+  /** True if `require('@napi-rs/canvas')` or `require('canvas')` succeeds. */
+  canvasModuleResolvable: boolean;
+  /** Concatenated load-attempt errors when canvasModuleResolvable=false. */
+  canvasModuleLoadError: string | null;
+  /** True if pdfjs-dist legacy build can be dynamically imported. */
+  pdfjsLoadable: boolean;
+  /** True if tesseract.js-core is reachable from the runtime resolver. */
+  tesseractCoreReachable: boolean;
+  /** Number of documents currently held in the main-process document store. */
+  documentStoreCount: number;
+}
+
+export async function diagnoseOcr(): Promise<DiagnoseOcrSnapshot> {
+  const canvas = tryLoadCanvas();
+  let pdfjsLoadable = false;
+  try {
+    await loadPdfJs();
+    pdfjsLoadable = true;
+  } catch {
+    pdfjsLoadable = false;
+  }
+  let tesseractCoreReachable = false;
+  try {
+    const moduleName = 'tesseract.js' + '-core';
+    // We only require the *resolve*, not the full load — tesseract.js-core
+    // ships a sizeable WASM blob and we don't want to materialise it just to
+    // answer a diagnostic. require.resolve throws iff the module's package
+    // root can't be located.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require.resolve(moduleName);
+    tesseractCoreReachable = true;
+  } catch {
+    tesseractCoreReachable = false;
+  }
+  return {
+    canvasModuleResolvable: canvas.ok,
+    canvasModuleLoadError: canvas.ok ? null : canvas.errorMessage,
+    pdfjsLoadable,
+    tesseractCoreReachable,
+    documentStoreCount: documentStore.size(),
   };
 }
