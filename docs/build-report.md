@@ -8833,3 +8833,59 @@ Event listeners paired, document-store memory bounded, telemetry ring buffer cap
 Edited (Julian-owned): `docs/code-review.md`, `docs/build-report.md` (this section). Edited (cross-domain — David's IPC handlers, audited and patched per orchestrator brief): `src/shared/result.ts`, `src/main/index.ts`, `src/main/db-bridge.ts`, and 16 files under `src/ipc/handlers/`. Created (cross-domain test): `src/shared/result.test.ts`. **Did NOT touch:** `src/client/**` (Riley in-flight per orchestrator brief — flagged findings for follow-up instead), `src/db/**` (Ravi), `electron-builder.yml` / `.github/workflows/**` / `package.json` (Diego), `docs/user-guide.md` / `README.md` (Nathan), `.learnings/locked-instructions.md`. Three commits to `main` (`7ffa8f9`, `cbaf315`, `2d424c5`); no force-push; pushed to origin.
 
 ---
+
+## Wave 30 follow-up — Riley closure of L-30.10 + M-30.4 + M-30.5 (Combine modal wire-up + rationale headers + pdf-coords unification, 2026-06-01)
+
+**Status:** COMPLETE 2026-06-01.
+**Mode:** Renderer-side wave parallel with David's `pdf:combine` engine + `dialog:pickPdfFiles` IPC channel. Disjoint file ownership held — Riley only edited `src/client/**` + `docs/build-report.md`; David's `src/ipc/**` + `src/main/pdf-ops/combine.ts` + `src/preload/**` arrived on disk independently while this wave ran.
+
+### Top-3
+
+1. **H-30.1 / L-30.10 — Combine modal wired end-to-end via `dialog:pickPdfFiles`.** The placeholder-pushing `addFromPicker` (which queued empty `{ kind: 'path', path: '' }` entries that failed validation only at Submit) is replaced with a real path-only picker call into David's new `dialog:pickPdfFiles` channel. The renderer never reads bytes; `pdf:combine` reads them main-side under the same sanitization rules. Picked paths become real `Entry { kind: 'path', path, label: basenameFromPath(p) }` rows. De-dup across re-picks compares absolute path strings. `Submit` is gated on `entries.length >= 2`; on success the thunk reads `setDocument(buildInitialDocument(res.value))` (re-using the open-document pattern); on error each `PdfCombineError` variant maps to an honest user-facing string. The "Phase 1 stub: combine engine ships in Wave 2 follow-up" string is GONE from any renderer toast (grep `Phase 1 stub` against `src/client/state/thunks.ts` returns zero hits).
+2. **M-30.4 — `// >200 lines:` rationale headers added to the 3 flagged modals.** `menu-bar/index.tsx` (427 LOC), `toolbar/index.tsx` (424 LOC), `image-import-modal/index.tsx` (417 LOC). The justifications are not boilerplate — each header explains the SINGLE-component invariant that splitting would dissolve (shared selectors + close-on-click for menu-bar; the WAI-ARIA roving-tabindex contract for toolbar; the bytes-lifecycle "bytes never leak to Redux" invariant per conventions §10 + §13.3 for image-import-modal). Convention §3.4 audit is now mechanical: grep `// >200 lines:` against any `.tsx` >200 LOC and you get a one-to-one match.
+3. **M-30.5 — `pdf-coords.ts` y-flip algebra unified behind two helpers.** `flipYPdfToScreen` and `flipYScreenToPdf` carry the math; the four public conversion functions (rect + point in each direction) now dispatch through them (point = rect of height 0). A multi-line lemma comment at the top of the y-flip block proves the algebraic equivalence between the previously-divergent forms so future readers do NOT re-derive it. Pure refactor — all 7 existing `pdf-coords.test.ts` cases pass unchanged.
+
+### Implementation surface
+
+- `src/client/components/modals/combine-modal/index.tsx` — rewrite: drop `Entry.isPlaceholder`, replace `addFromPicker` with `api.dialog.pickPdfFiles({ multi: true })` call, add `picking`/`submitting` in-flight guards, de-dup re-picks by absolute path, honest "needTwo" hint when 0 < entries < 2.
+- `src/client/state/thunks.ts` — `combinePdfsThunk` maps each `PdfCombineError` variant (`invalid_source`, `invalid_page_range`, `handle_not_found`, `fs_read_failed`, `pdf_load_failed`) to its expected user-facing string; the previously-passing `res.message` is the fallback for unknown variants.
+- `src/client/types/ipc-contract.ts` — re-export `DialogPickPdfFilesRequest|Error|Value|Response` via the renderer gatekeeper (mirrors the §3 dialog re-exports).
+- `src/client/services/api.ts` — fallback bridge now declares `dialog.pickPdfFiles = unavailable` so a missing preload returns a Result-shaped `bridge_unavailable` instead of a TypeError.
+- `src/client/i18n/locales/en-US/modals.json` — `combine` block now honest: drop stale `pickPlaceholder` + `noFileSelected` keys; add `picking`, `combining`, `pickerFailed`. Updated `addFiles` to plural "+ Add files..." (multi-select default). Removed the "(Phase 2)" suffix from `pickPlaceholder`.
+- `src/client/services/pdf-coords.ts` — extract `flipYPdfToScreen` / `flipYScreenToPdf`; lemma comment block proves algebraic equivalence.
+- `src/client/components/menu-bar/index.tsx` / `toolbar/index.tsx` / `modals/image-import-modal/index.tsx` — `// >200 lines:` rationale headers (comment-only delta).
+
+### Tests
+
+- **NEW** `src/client/components/modals/combine-modal/combine-modal.test.tsx` — 10 specs:
+  1. Renders title + `+ Add files` button; no placeholder rows; aria-invalid count is 0 (the L-30.10 mechanism is GONE).
+  2. Clicking `+ Add files` invokes `dialog.pickPdfFiles({ multi: true })` and appends real path rows.
+  3. `user_cancelled` from the picker is silent — no toast.
+  4. Submit dispatches `pdf.combine` with the expected `sources` payload; on success `setDocument` fires with the new handle/displayName/pageCount.
+  5. Each `PdfCombineError` variant maps to its expected toast string (5 parameterised cases via `it.each`); `Phase 1 stub` / `Wave 2 follow-up` strings do NOT appear in any toast (negative assertion pinned).
+  6. Re-picking de-duplicates by absolute path.
+- All 7 existing `pdf-coords.test.ts` cases pass after the refactor.
+
+### Verification
+
+- **`npm run typecheck`** — clean across all three configs (main + preload + renderer). David's parallel work landed `src/preload/index.ts` adding `pickPdfFiles` to the bridge surface, matching the renderer's expectations.
+- **`npx vitest run src/client`** — **607 / 607 green** across 67 test files (+10 from the new combine-modal suite).
+- **`npx eslint src/client`** — clean (warnings are 0 after the `import/order` fix; husky pre-commit gate passed on all 3 commits).
+- **i18n tests** — `extraction-regression.test.ts` (45 cases) + `resolve.test.ts` (8 cases) + `coverage.test.ts` (3 cases) all green; en-US baseline ~957 keys; es-ES coverage 58% (unchanged, well above the 40% floor — the dropped combine keys were English-only placeholders, no regression).
+
+### Open follow-ups
+
+- **Per-source `pageRange` UI in the Combine modal.** David's `pdf:combine` engine carries `pageRange` in the request type but the Phase-1 engine ignores it (and the modal does not author it). The schema is in place; the UI is a polish wave item.
+- **Drag-to-reorder.** Today the modal uses up/down buttons (the existing pattern, no dnd-kit cost). If user feedback wants drag-to-reorder, the rows are already `<li>` and the `moveUp/moveDown` reducers are pure functions — drop-in with `@dnd-kit/sortable` (already a project dep used by thumbnail-strip).
+- **Help-modal + user-guide copy** describing Combine (`help-content.ts:160-`, `docs/user-guide.md` Combine section) is honest _today_ about the multi-file flow but predates the new picker UX. If Nathan's next pass touches the user-guide, the picker text could become more specific ("Click + Add files to choose any number of PDFs at once"). Comment-only — not a behavior bug.
+
+### Self-improvement notes
+
+- **Parallel-wave "scaffold against the contract, re-sync after the parallel agent lands"** worked exactly as the brief described. David's `dialog:pickPdfFiles` types were in `contracts.ts` when I started, but his preload bridge had not yet exposed it. I added the gatekeeper re-exports + the `api.ts` fallback for `pickPdfFiles` (renderer-owned), then the runtime code in the modal + thunk. By the time I finished, David's preload + handler + engine had landed on disk independently and typecheck/lint/test all came up clean across the three configs — no contract drift, no double-edit conflict.
+- **The "Phase 1 stub" string was the canonical detection grep.** Removing it from every renderer surface was the most reliable signal that the H-30.1 fix was complete. The honest-stub pattern (loud `not_implemented` in main) made the renderer-side cleanup mechanical.
+
+### File ownership
+
+Edited (Riley-owned): `src/client/components/modals/combine-modal/index.tsx`, `src/client/state/thunks.ts`, `src/client/types/ipc-contract.ts`, `src/client/services/api.ts`, `src/client/i18n/locales/en-US/modals.json`, `src/client/services/pdf-coords.ts`, `src/client/components/menu-bar/index.tsx`, `src/client/components/toolbar/index.tsx`, `src/client/components/modals/image-import-modal/index.tsx`, `docs/build-report.md` (this section). Created (Riley-owned): `src/client/components/modals/combine-modal/combine-modal.test.tsx`. **Did NOT touch:** `src/ipc/**`, `src/main/**`, `src/preload/**` (David's parallel scope — read his `contracts.ts` once for types), `src/db/**` (Ravi), `electron-builder.yml` / `.github/workflows/**` / `package.json` (Diego), `docs/user-guide.md` / `README.md` / `docs/code-review.md` (Nathan / Julian), `.learnings/locked-instructions.md`. Three commits to `main` (`1ca9a82`, `f7d28d6`, `277f7a3`); no force-push.
+
+---
