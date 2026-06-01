@@ -9163,3 +9163,37 @@ Method: `dist/main/index.js` launched via Playwright `_electron.launch({ args: [
 Edited (Diego-owned): `package.json` (version bump 0.7.6 → 0.7.7), `release/verify-v077.mjs` (NEW — L-002 in-app verification script), `release/verify-v077-regression.mjs` (NEW — regression checks), `docs/build-report.md` (this section), `.learnings/learnings.jsonl` (post-flight). **Did NOT touch:** `src/**` (David + Riley's fix commits already landed pre-wave), `README.md` / `docs/user-guide.md` / `docs/developer-guide.md` / `docs/api-reference.md` (Nathan), `docs/code-review.md` (Julian), `ARCHITECTURE.md` / `docs/api-contracts.md` / `docs/data-models.md`, `.learnings/locked-instructions.md`. New artifacts under `release/`: 5 verification PNGs (`wave-v077-{settings-files-tab,success-banner,windows-settings-opened,about-v077,pdf-rendered,help-modal}.png`) + `wave-v077-findings.json`.
 
 ---
+
+## Wave — v0.7.7 hotfix (David, 2026-06-01)
+
+**Status:** COMPLETE 2026-06-01
+**Trigger:** User-reported UI bug on the freshly-installed v0.7.7 binary — two stacked menu bars at the top of the window. Top row was Electron's default native application menu (File / Edit / View / Window / Help); lower row was Riley's custom React `MenuBar` (File / Edit / Insert / View / Tools / Help). Marcus routed to David as a surgical main-process fix.
+
+### Root cause
+
+`src/main/window-manager.ts` never set `autoHideMenuBar`, and `src/main/index.ts` never called `Menu.setApplicationMenu(null)`. With both omitted, Electron's built-in app menu auto-attaches to every `BrowserWindow` and renders above the renderer DOM (so above Riley's custom MenuBar). Grep confirmed zero pre-existing matches for either pattern across `src/main/**`.
+
+### Fix
+
+| File                              | Change                                                                                                                                                                                                                                                |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/main/window-manager.ts`      | Added `autoHideMenuBar: true` to the `BrowserWindowConstructorOptions` literal in `createMainWindow`. Belt: prevents Alt from revealing the default menu on Windows even if the suspenders below regress.                                             |
+| `src/main/index.ts`               | Added `Menu` to the `electron` import and call `Menu.setApplicationMenu(null)` once at the top of the `app.whenReady().then(...)` handler, before `installCsp()`. Suspenders: removes the default menu entirely so no future window inherits it.      |
+| `src/main/window-manager.test.ts` | Added a third `describe` block asserting `autoHideMenuBar === true` on the `BrowserWindow` options. Re-uses the existing `vi.mock('electron')` capture pattern.                                                                                       |
+| `src/main/index.test.ts` (NEW)    | Boot-time test that mocks `electron` + every transitive collaborator import, imports `./index.js` to trigger `bootstrap()`, flushes microtasks for the `whenReady().then(...)` handler, and asserts `Menu.setApplicationMenu` was called with `null`. |
+
+### Verification
+
+| Step                    | Command                    | Result                                                                                                             |
+| ----------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Main-process tests      | `npx vitest run src/main/` | **47 files, 532 tests, 0 failures** in 4.86s (+2 from the new menu assertions: window-manager 2→3, index.test NEW) |
+| Lint                    | `npm run lint`             | 0 warnings (`--max-warnings 0`)                                                                                    |
+| Typecheck (3 tsconfigs) | `npm run typecheck`        | clean (main + preload + renderer)                                                                                  |
+
+L-002 visual re-verification of the duplicate-menu fix on the packaged binary is Diego's responsibility when he cuts v0.7.8 — out of David's scope.
+
+### File ownership
+
+Edited (David-owned): `src/main/window-manager.ts`, `src/main/index.ts`, `src/main/window-manager.test.ts`, `src/main/index.test.ts` (NEW), `docs/build-report.md` (this row), `.learnings/learnings.jsonl` (post-flight). **Did NOT touch:** `src/client/**` (Riley's MenuBar is correct — bug was main-process menu suppression, not the custom React menu), `src/ipc/**` (no IPC change), `package.json` (Diego owns version bumps — v0.7.8 cut deferred to Diego), `.learnings/locked-instructions.md`.
+
+---

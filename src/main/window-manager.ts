@@ -33,6 +33,14 @@ export function createMainWindow(opts: CreateMainWindowOptions = {}): BrowserWin
     show: false,
     title: 'PDF Viewer / Editor',
     backgroundColor: '#1e1e1e',
+    // Suppress Electron's default native application menu (File / Edit / View /
+    // Window / Help). Riley's custom React MenuBar in src/client/components/
+    // menu-bar/ is the sole user-visible menu surface. Without this flag, the
+    // native menu renders ABOVE the custom MenuBar (v0.7.7 bug: two stacked
+    // menu bars). Belt for the suspenders `Menu.setApplicationMenu(null)` call
+    // in src/main/index.ts — autoHideMenuBar also prevents Alt-key from
+    // revealing a hidden default menu on Windows.
+    autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

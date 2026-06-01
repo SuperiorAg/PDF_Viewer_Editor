@@ -96,3 +96,24 @@ describe('L-001 enforcement — webPreferences.enableDragDropFiles', () => {
     expect(webPreferences['allowRunningInsecureContent']).toBe(false);
   });
 });
+
+describe('createMainWindow — autoHideMenuBar (no duplicate native menu)', () => {
+  beforeEach(() => {
+    browserWindowCalls.length = 0;
+  });
+
+  // v0.7.7 bug: Electron's default application menu (File/Edit/View/Window/Help)
+  // rendered above Riley's custom React MenuBar, producing two stacked menu
+  // bars. Belt-and-suspenders fix: (1) autoHideMenuBar:true here so Alt cannot
+  // re-reveal the default; (2) Menu.setApplicationMenu(null) at app boot in
+  // src/main/index.ts so the default never exists in the first place. This
+  // test pins the belt.
+  it('createMainWindow MUST set autoHideMenuBar: true', async () => {
+    const { createMainWindow } = await import('./window-manager.js');
+    createMainWindow({ preloadPath: '/fake/preload.js' });
+
+    expect(browserWindowCalls.length).toBeGreaterThanOrEqual(1);
+    const opts = browserWindowCalls[0]!;
+    expect(opts['autoHideMenuBar']).toBe(true);
+  });
+});

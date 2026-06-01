@@ -49,7 +49,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 
 import { initDatabase } from '../db/connection.js';
 import { createBookmarksRepo } from '../db/repositories/bookmarks-repo.js';
@@ -136,6 +136,14 @@ function bootstrap(): void {
   // Step 2 — wait for app ready
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   app.whenReady().then(() => {
+    // Suppress Electron's default native application menu (File / Edit / View
+    // / Window / Help). Riley's custom React MenuBar in src/client/components/
+    // menu-bar/ is the sole user-visible menu surface; the native menu would
+    // stack above it (v0.7.7 bug). Done once at boot before any BrowserWindow
+    // is created so no window ever inherits the default menu. Pairs with
+    // `autoHideMenuBar: true` in window-manager.ts (defense in depth).
+    Menu.setApplicationMenu(null);
+
     // Step 3 — CSP first
     installCsp();
 
