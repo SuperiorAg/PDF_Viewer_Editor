@@ -1,6 +1,6 @@
 {
   "name": "pdf-viewer-editor",
-  "version": "0.7.8",
+  "version": "0.7.9",
   "private": true,
   "description": "Cross-platform desktop PDF viewer + editor (Phase 7 polish — auto-update client + opt-in telemetry + WCAG 2.1 AA a11y + i18next localization + mac/linux config; all permissive OSS only)",
   "author": "PDF_Viewer_Editor swarm",
