@@ -1,8 +1,22 @@
 # CI pipeline — PDF_Viewer_Editor. Diego owns.
 #
 # Triggers on PR + push to main. Matrix runs:
-#   - windows-latest (primary; only platform that runs Playwright Electron + packaging)
-#   - ubuntu-latest  (lint + typecheck + Vitest smoke; no packaging, no e2e)
+#   - windows-2025-vs2026 (primary; only platform that runs Playwright Electron + packaging)
+#   - ubuntu-latest       (lint + typecheck + Vitest smoke; no packaging, no e2e)
+#
+# Windows runner pin (2026-06-01, Diego):
+#   GitHub Actions is migrating `windows-latest` AND `windows-2025` to the
+#   Windows Server 2025 + Visual Studio 2026 image between 2026-06-08 and
+#   2026-06-15 (actions/runner-images issue #14017). Both labels then carry the
+#   same image. We pin to the explicit forward label `windows-2025-vs2026` now
+#   so (a) the informational "windows-latest requests are being redirected to
+#   windows-2025-vs2026" NOTICE annotation that has been printed on every run
+#   stops appearing, and (b) the image we test against is the same image that
+#   will be served by `windows-latest` post-cutover — no surprise change in
+#   tooling on June 15. (Pinning to `windows-2025` would NOT clear the notice:
+#   per issue #14017 that label also redirects to the VS2026 image.) To revert
+#   to VS2022 if a tooling break is found post-cutover, the documented escape
+#   hatch is `windows-2022` — NOT `windows-2025` (which will also have VS2026).
 #
 # Cache strategy:
 #   - npm via setup-node's `cache: npm` (uses package-lock.json)
@@ -62,7 +76,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-2025-vs2026, ubuntu-latest]
 
     steps:
       - name: Checkout
@@ -112,8 +126,8 @@ jobs:
   # Electron in CI Linux needs xvfb wrapping which adds complexity for no gain.
   # ==========================================================================
   e2e:
-    name: Playwright e2e (windows-latest)
-    runs-on: windows-latest
+    name: Playwright e2e (windows-2025-vs2026)
+    runs-on: windows-2025-vs2026
     needs: check
     steps:
       - name: Checkout
@@ -171,7 +185,7 @@ jobs:
   # ==========================================================================
   build:
     name: Build Windows artifacts
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     needs: [check, e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:

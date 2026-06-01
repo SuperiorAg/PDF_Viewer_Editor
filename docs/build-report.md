@@ -8613,3 +8613,29 @@ Edited (Diego-owned): `package.json` (version 0.7.4 → 0.7.5), `electron-builde
 Edited (Diego-owned): `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `docs/build-report.md` (this section). **Did NOT touch:** app Node version (`.nvmrc` / `engines.node` — L-003 stays), `src/**`, `package.json` deps, other agents' docs, `.learnings/locked-instructions.md`. Additive commit to `main`; no force-push.
 
 ---
+
+## CI Maintenance — pin Windows runner to `windows-2025-vs2026` (clear redirect NOTICE) (Diego, 2026-06-01)
+
+**Why:** Every CI run was still carrying the informational annotation `NOTICE: windows-latest requests are being redirected to windows-2025-vs2026 by June 15, 2026` (one per Windows job, confirmed via `gh api .../check-runs/<id>/annotations` on the most recent green run `26651903659`). The user explicitly reversed the prior "leave as-is" decision and asked for a proactive pin.
+
+**Label verified empirically (did NOT guess):**
+
+1. `gh api repos/actions/runner-images/contents/images/windows --jq '.[].name'` — confirms both `Windows2025-Readme.md` AND `Windows2025-VS2026-Readme.md` exist as distinct images today.
+2. `gh api repos/actions/runner-images/issues/14017` — the canonical announcement: "The `windows-latest` and `windows-2025` labels in GitHub Actions will be migrated to use Visual Studio 2026 by default" between 2026-06-08 and 2026-06-15. **Pinning to `windows-2025` would NOT clear the notice — both labels redirect.** The only forward-explicit label is `windows-2025-vs2026`. Documented VS2022 escape hatch (if needed post-cutover): `windows-2022`.
+
+**Pinned label:** `windows-2025-vs2026` — applied uniformly to (a) `ci.yml` matrix `os` entry, (b) `ci.yml` `e2e` job `runs-on`, (c) `ci.yml` `build` job `runs-on`, (d) `release.yml` `release-windows` job `runs-on`. Both files re-validated as YAML (`js-yaml`) and the runs-on values inspected programmatically (`runs-on: windows-2025-vs2026` on every Windows job; `ubuntu-latest` preserved on the Linux matrix leg).
+
+**Tool-version note from the pinned image** (`Windows2025-VS2026-Readme.md`, image 20260525.121.1, OS 10.0.26100):
+
+- **Visual Studio 2026 (18.5\*)** replaces VS 2022 (17.14\*). Removed VS components include `Microsoft.VisualStudio.Component.Azure.ServiceFabric.Tools`, the ARM-targeted VC/MFC/ATL tools, and the coded-UI / web-load test tools. **We do not consume any of those** (this is a pure-JS Electron/TypeScript build — no native MSVC compile step on CI; `better-sqlite3` is fetched as a prebuild, not compiled from source per L-003). MSVC `v143` (toolset 14.44.17.14) is added back for compatibility, so any future native compile path remains intact.
+- **CMake** bumps from 3.31.6 → 4.3.2 (we don't invoke CMake in CI).
+- **Android Command Line Tools** 16.0 → 19.0 (N/A — not used).
+- **Node** preinstalled is 22.22.3 on both images — irrelevant: `actions/setup-node` installs Node 20 (L-003) via `node-version: '20'` (ci.yml) / `node-version-file: .nvmrc` (release.yml), so the preinstalled Node is never used.
+
+**Verification:** push to `main` triggered `ci.yml` run — confirmed (a) run still concluded **success** (the runner pin doesn't break anything — preinstalled tool set is a strict superset of what we consume) and (b) the `windows-latest → windows-2025-vs2026` redirect NOTICE annotation is **GONE** from the run's job annotations (`gh api .../check-runs/<id>/annotations` returns `[]` for each Windows job). Node-20-runtime deprecation annotations remain absent (from the previous wave). `release.yml` won't run without a tag push — its identical pin was statically validated and takes effect on the next real release.
+
+### File ownership
+
+Edited (Diego-owned): `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `docs/build-report.md` (this section). **Did NOT touch:** app Node version (`.nvmrc` / `engines.node` — L-003 stays), `src/**`, `package.json` deps, other agents' docs, `.learnings/locked-instructions.md`. Additive commit to `main`; no force-push.
+
+---

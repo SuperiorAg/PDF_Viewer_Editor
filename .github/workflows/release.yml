@@ -17,6 +17,17 @@
 #   requires first running the binary on real hardware + the L-002 screenshot
 #   drill — a Phase 7.1 step.
 #
+# WINDOWS RUNNER PIN (2026-06-01, Diego)
+#   Pinned to `windows-2025-vs2026` (NOT `windows-latest`, NOT `windows-2025`).
+#   Per actions/runner-images issue #14017, BOTH `windows-latest` AND
+#   `windows-2025` redirect to the Windows Server 2025 + Visual Studio 2026
+#   image between 2026-06-08 and 2026-06-15. Using the explicit forward label
+#   (a) clears the informational redirect-NOTICE annotation, and (b) locks the
+#   image to the same one `windows-latest` will serve post-cutover, so the
+#   release binary built today matches the release binary built post-cutover.
+#   Mirror of the same pin in ci.yml. To revert to VS2022 (escape hatch), the
+#   documented label is `windows-2022` — NOT `windows-2025`.
+#
 # WHY DRAFT (publish safety)
 #   electron-builder.yml sets `releaseType: draft`. The artifacts upload to a
 #   DRAFT GitHub Release; a human promotes it to live (gh release edit <tag>
@@ -63,13 +74,14 @@ permissions:
 
 jobs:
   # ==========================================================================
-  # Build + publish the Windows release. windows-latest is the only runner
-  # (P7-L-1). Produces NSIS installer + portable .exe + latest.yml, uploaded to
-  # the DRAFT GitHub Release for the pushed tag.
+  # Build + publish the Windows release. windows-2025-vs2026 is the only runner
+  # (P7-L-1; pin rationale in the header block above). Produces NSIS installer
+  # + portable .exe + latest.yml, uploaded to the DRAFT GitHub Release for the
+  # pushed tag.
   # ==========================================================================
   release-windows:
     name: Build + publish Windows release
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     steps:
       - name: Checkout
         uses: actions/checkout@v5
