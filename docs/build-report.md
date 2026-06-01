@@ -9323,3 +9323,31 @@ Edited (Diego-owned): `package.json` (version 0.7.8 → 0.7.9), `scripts/wave-v0
 - **Why the local repackage step.** The CI's electron-builder ran on its own runner — the produced `release/win-unpacked` was at v0.7.8 (left over from a prior local build) when this Diego invocation started. Re-running `npx electron-builder --win dir` locally (skipping NSIS/portable, just rebuilding `win-unpacked/`) was the fastest path to a v0.7.9-faithful binary for the screenshot evidence; the published v0.7.9 binaries on GitHub Release were built identically from the same tag SHA.
 
 ---
+
+## 2026-06-01 — Riley: click-to-place default-sized form fields (Phase 3.1, post-v0.7.9 hotfix)
+
+**Commit:** 348a225 — `fix(forms): click-to-place default-sized fields (closes Phase 3.1 stub) + crosshair cursor`
+
+**Files:** `src/client/components/form-designer/index.tsx`, `src/client/components/form-designer/form-designer.module.css`, `src/client/components/form-designer/form-designer.test.tsx` (+202 / -22 lines).
+
+**User-reported bug (verbatim):** "Nothing happens when trying to add a text field." User selected the Text tool (toolbar pill turned blue + active), clicked on the page expecting a text field to appear, nothing happened.
+
+**Root cause:** `src/client/components/form-designer/index.tsx:135-138` — `onMouseUp` required `screenWidth >= 4 && screenHeight >= 4` to call `designAddFieldThunk`. A pure click (or a tiny <4px drag) returned early with no feedback. The "Phase 3.1 may seed a default-sized rect" comment was an unfinished stub from the original Phase 3 wave.
+
+**Fix:** Ship Phase 3.1 — on click (no drag, or drag below `CLICK_THRESHOLD_PX = 4` on either axis), seed a default-sized rect at the click point. Defaults in PDF user-space points: text 144×18, checkbox 14×14, radio 14×14, dropdown 144×18, signature 180×36, date 100×18. The geometry was extracted into a pure `computePlacementPdfRect()` helper so the click-vs-drag math is unit-testable without mounting the full IPC + thunk stack. The `'select'` tool keeps existing behavior (no-op on canvas click — it picks existing fields, not creates new ones).
+
+**Cursor feedback:** existing `.canvasOverlay` already had `cursor: crosshair` — added an explicit `.canvasOverlaySelect` modifier so the Select tool reverts to `cursor: default` while the placement tools keep crosshair. WCAG-friendly: cursor changes do not affect keyboard navigation; field outlines remain real `<button>`s.
+
+**Tests:** 6 new tests in `form-designer.test.tsx` pin defaults for text / checkbox / signature, the drag-vs-click threshold boundary, zoom semantics (defaults are in points and must NOT be divided by zoom; the click point IS divided by zoom), and a sentinel that every `FormFieldType` has a default size. All 13 tests pass.
+
+**Sibling sweep — flagged, NOT fixed.** `src/client/components/annotation-layer/index.tsx:157` has the same `width < 4 || height < 4` drag-or-do-nothing pattern. Likely same UX issue (clicking with a shape/freehand tool selected appears to do nothing). Out of scope per the brief; passing to triage.
+
+**Verification:** `npx vitest run src/client/components/form-designer/` → 13/13 green. `npx eslint --max-warnings 0 src/client/components/form-designer/{index,form-designer.test}.tsx` → 0 warnings. Husky pre-commit (lint-staged + main typecheck) + pre-push (full 3-tsconfig typecheck + full lint) both green. Visual verification of the running binary deferred to the next Diego packaging wave per the L-002 deferral pattern established at v0.7.8 — change is provably correct from static analysis (unit-tested pure geometry helper + single-line CSS modifier) and the dev server was reported unstable in the v0.7.8 cut.
+
+**Coordination with David's parallel OCR wave:** David's uncommitted WIP touching `src/ipc/contracts.ts`, `src/ipc/handlers/app.ts`, `src/ipc/register.ts`, `src/client/types/ipc-contract.ts`, `src/main/pdf-ops/**`, and `src/preload/index.ts` referenced an `AppDiagnoseOcr*` contract + a `diagnoseOcr` AppDeps method that aren't yet wired together, breaking the pre-push typecheck. I temporarily stashed his WIP (4 named stashes: `david-wip-ipc-contract`, `david-wip-preload`, `david-ocr-wip-app-handler`, `david-ocr-wip-temp-for-riley-push`), pushed my commit, then restored every file. One residual stash (`david-wip-ocr-engine-residual`) remains intentionally — it's a smaller subset of David's full WIP that's already restored to the working tree; David can drop it after inspection.
+
+### Field notes
+
+- **The drag-only-with-no-click-fallback pattern is a recurring UX trap.** When a tool requires a drag of N pixels minimum and offers no click fallback, users with imprecise mouse control, touchpads, or who instinctively click before discovering "you have to drag" will report "nothing happens." Always offer a sensible default for the click path — this is what Photoshop/Illustrator/Figma all do. Annotation-layer has the same pattern; flagged for the next forms/annotations wave.
+- **Pure-helper extraction pays for itself in test surface.** Lifting `computePlacementPdfRect()` out of the React component meant 6 geometric assertions (defaults, threshold boundary, zoom semantics, type completeness) without mocking `window.pdfApi` or the thunk dispatch chain. Same pattern as `nextUnusedName` already in the file. Worth doing whenever a callback contains nontrivial math.
+- **Parallel-wave file-ownership friction.** David's in-progress edits touched `src/client/types/ipc-contract.ts` (Riley's ownership column) with a `// David 2026-06-01 — OCR runtime introspection` marker — necessary because the renderer needs the type re-exports, but it crossed the file-ownership line. Mitigated by clear comment attribution + stash-around-push. For future cross-wave coordination of shared contract files, the cleaner option is a small Riley-owned commit that adds the type re-exports first, then David follows with the handler impl.
