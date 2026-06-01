@@ -19,7 +19,14 @@ interface PdfCanvasProps {
   // GPU CSS transform during a ctrl+scroll gesture. 1 when not actively zooming.
   // The expensive pdf.js re-raster is keyed off `zoom` only — see the render
   // effect dep array below — so this ratio never triggers a re-raster.
-  displayScale: number;
+  displayScale?: number;
+  // Per-page transform-origin override. Set by PdfViewer to a `${x}px ${y}px`
+  // value when the wheel cursor is over THIS page during a ctrl+wheel zoom —
+  // gives Acrobat-style cursor anchoring (the content point under the cursor
+  // stays under the cursor). Undefined / absent = use the default '50% 0'
+  // (horizontal-center, top) origin, which is the right default for pages NOT
+  // under the cursor + for committed (non-gesture) state.
+  transformOriginOverride?: string;
   fitMode: FitMode;
 }
 
@@ -58,6 +65,16 @@ export function PdfCanvas(props: PdfCanvasProps): JSX.Element {
 
   const screenWidth = Math.round(baseWidth * props.zoom);
   const screenHeight = Math.round(baseHeight * props.zoom);
+  // `displayScale` is optional (Wave 30+ — older PdfCanvas callers + tests
+  // don't pass it; only PdfViewer does during the wheel gesture). Default 1
+  // = identity (no transform during steady-state / unit-tests).
+  const displayScale = props.displayScale ?? 1;
+  // Cursor-anchored zoom (Wave 30+, Acrobat-style): when the wheel cursor is
+  // over THIS page, PdfViewer passes the cursor's page-local CSS-px point as
+  // `transformOriginOverride`; the visual scale anchors at that point so the
+  // content under the cursor stays pinned through the gesture. Other pages
+  // (and steady state) keep the original '50% 0' (horizontal-center, top).
+  const transformOrigin = props.transformOriginOverride ?? '50% 0';
 
   // H-2 fix (2026-05-21): selectAnnotationsForPage is a parameterized memoized
   // selector; call it as `(state, pageIndex)` rather than the old factory shape.
@@ -145,15 +162,15 @@ export function PdfCanvas(props: PdfCanvasProps): JSX.Element {
       style={{
         width: screenWidth,
         height: screenHeight,
-        transform: `scale(${props.displayScale})`,
-        // Scale from the page's horizontal CENTER (not top-left) so the page
-        // stays centered in the window during a wheel gesture — the .viewer is
-        // a flex column with align-items:center, so its committed layout centers
-        // each page horizontally; matching that with a 50%-x origin removes the
-        // off-center drift + the "snap back to center" on commit. Vertical
-        // origin stays at the top so the page grows downward from a fixed top
-        // edge (predictable for tall pages / scroll position).
-        transformOrigin: '50% 0',
+        transform: `scale(${displayScale})`,
+        // Default '50% 0' (horizontal-center, top) keeps the page centered in
+        // the window during a wheel gesture for pages NOT under the cursor —
+        // the .viewer is a flex column with align-items:center, so committed
+        // layout centers each page horizontally; matching with a 50%-x origin
+        // removes off-center drift + "snap back" on commit. The cursor-page
+        // receives an explicit override (page-local CSS-px point under the
+        // cursor) from PdfViewer for Acrobat-style anchoring during gesture.
+        transformOrigin,
         willChange: 'transform',
       }}
       aria-label={`Page ${props.index + 1}`}
