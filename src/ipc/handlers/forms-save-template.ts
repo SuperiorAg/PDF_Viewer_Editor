@@ -6,7 +6,7 @@
 // DEPENDS ON: Ravi's form-templates-repo via db-bridge.formTemplates.
 
 import type { FormTemplatesRepo } from '../../main/db-bridge.js';
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   DocumentHandle,
   FormsSaveTemplateError,
@@ -56,6 +56,9 @@ export async function handleFormsSaveTemplate(
     }
     return ok({ id: saveResult.id, warnings: [] });
   } catch (e) {
-    return fail<FormsSaveTemplateError>('db_unavailable', (e as Error).message);
+    return fail<FormsSaveTemplateError>(
+      'db_unavailable',
+      safeMessage(e, 'Database is unavailable'),
+    );
   }
 }

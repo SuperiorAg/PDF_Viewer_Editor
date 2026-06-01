@@ -1,6 +1,6 @@
 // Handler: recents:clear
 
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type { RecentsClearError, RecentsClearRequest, RecentsClearResponse } from '../contracts.js';
 
 export interface RecentsClearDeps {
@@ -15,6 +15,6 @@ export function handleRecentsClear(
     const cleared = deps.clearRows();
     return ok({ cleared });
   } catch (e) {
-    return fail<RecentsClearError>('db_unavailable', (e as Error).message);
+    return fail<RecentsClearError>('db_unavailable', safeMessage(e, 'Database is unavailable'));
   }
 }

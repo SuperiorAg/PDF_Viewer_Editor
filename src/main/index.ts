@@ -21,26 +21,29 @@
 //    'second-instance' (focus existing window), 'activate' (re-create window
 //    on macOS dock click).
 //
-// PHASE 1 NOTES
-// -------------
-// - The DB bridge is the in-memory fallback today; once Ravi's repos land
-//    (`src/db/repositories/*` in Wave 2), this file's startup will switch to
-//    `setDbBridge(createSqliteBridge(...))`. Marked with a TODO.
-// - Renderer entry resolution (Vite vs file://) is Diego's call in Wave 3.
-//    For now we honor `VITE_DEV_SERVER_URL` env var if set, else load
-//    `../client/index.html` relative to the compiled main output.
-// - File-association registration: stub channel returns `not_implemented`
-//    until the Wave 3 packaging brief reveals whether NSIS owns the install-
-//    time path or this file owns the runtime path. Both will be wired.
-// - Auto-updater: explicitly NOT wired in Phase 1. Phase 7 work.
+// IMPLEMENTATION NOTES (current, post-Phase-7)
+// --------------------------------------------
+// - The DB bridge wires Ravi's real SQLite repos at Step 3.5 below
+//    (`setDbBridge({ recents, bookmarks, settings, formTemplates, signatureAudit,
+//    ocrJobs, ocrResults, languagePacks, exportJobs })`). Phase-N repos that
+//    haven't yet landed in a given wave fall back to the memory-backed
+//    bridge — see `db-bridge.ts` for the per-slot DI shape.
+// - Renderer entry resolution honors `VITE_DEV_SERVER_URL` for dev; packaged
+//    builds load `../renderer/index.html` relative to the compiled main output
+//    (Diego's electron-vite layout).
+// - File-association registration: handled by NSIS at install-time, with a
+//    runtime toggle via `app:setDefaultPdfHandler` (see `register.ts`).
+// - Auto-updater: wired in Phase 7 below (`createAutoUpdateController`). The
+//    publish target reads from the bundled `app-update.yml`; absence routes
+//    every check to the honest `update_not_configured`.
 //
 // PLAYBOOK NOTES
 // --------------
 // - Entry-point detection (Playbook #1): not applicable — Electron's binary
 //    chooses the main entry from package.json `main`, never via
 //    `import.meta.url === \`file://...\``.
-// - Env file loading (Playbook #4): `.env` is dev-only here. Diego adds the
-//    `--env-file-if-exists` flag in package.json scripts when wiring `tsx`.
+// - Env file loading (Playbook #4): `.env` is dev-only here. Diego's
+//    package.json scripts handle `--env-file-if-exists` for `tsx`.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';

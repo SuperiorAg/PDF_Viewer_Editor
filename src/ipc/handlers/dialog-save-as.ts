@@ -4,7 +4,7 @@
 
 import { basename } from 'node:path';
 
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   DialogSaveAsError,
   DialogSaveAsRequest,
@@ -61,6 +61,6 @@ export async function handleDialogSaveAs(
     };
     return ok(value);
   } catch (e) {
-    return fail<DialogSaveAsError>('invalid_path', (e as Error).message);
+    return fail<DialogSaveAsError>('invalid_path', safeMessage(e, 'Unable to show save dialog'));
   }
 }

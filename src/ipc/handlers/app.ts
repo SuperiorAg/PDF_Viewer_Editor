@@ -1,12 +1,14 @@
 // Handlers: app:getVersion, app:quit, app:openExternal,
 // app:setDefaultPdfHandler, app:getDefaultPdfHandlerStatus.
 //
-// File-association handlers are Phase 1 stubs that return 'not_implemented'
-// with the correct shape. Full implementation lands before Wave 3 packaging
-// (see CLAUDE.md Wave 2 brief — Diego's installer covers the install-time
-// path; David's runtime path is the IPC toggle).
+// File-association handlers remain honest stubs that return 'not_implemented'.
+// Install-time path is handled by Diego's NSIS installer
+// (electron-builder.yml) — the registry write happens at install. The runtime
+// IPC toggle (this handler) is intentionally not wired: the renderer UI in
+// Settings → General surfaces the not_implemented result honestly rather than
+// claiming a no-op success. Tracked in app.test.ts as the explicit contract.
 
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   AppGetDefaultPdfHandlerStatusRequest,
   AppGetDefaultPdfHandlerStatusResponse,
@@ -61,7 +63,7 @@ export async function handleAppOpenExternal(
     if (!okFlag) return fail<AppOpenExternalError>('os_failed', 'shell call returned false');
     return ok({});
   } catch (e) {
-    return fail<AppOpenExternalError>('os_failed', (e as Error).message);
+    return fail<AppOpenExternalError>('os_failed', safeMessage(e, 'Unable to open in Explorer'));
   }
 }
 
@@ -69,17 +71,22 @@ export async function handleAppOpenExternal(
 // File-association stubs (Phase 1: typed channel + not-implemented response)
 // ----------------------------------------------------------------------------
 
+// File-association honest stubs.
+// Install-time path: NSIS installer (electron-builder.yml) writes
+// HKCU\Software\Classes\.pdf at install.
+// Runtime toggle (these handlers): not implemented — the renderer surfaces
+// the honest not_implemented result rather than claim a no-op success.
 export function handleAppSetDefaultPdfHandler(
   _req: AppSetDefaultPdfHandlerRequest,
 ): AppSetDefaultPdfHandlerResponse {
   return fail<AppSetDefaultPdfHandlerError>(
     'not_implemented',
-    'Phase 1 stub: runtime .pdf association toggle lands before Wave 3 packaging',
+    'Runtime .pdf association toggle is not implemented; use the installer or OS settings.',
   );
 }
 
 export function handleAppGetDefaultPdfHandlerStatus(
   _req: AppGetDefaultPdfHandlerStatusRequest,
 ): AppGetDefaultPdfHandlerStatusResponse {
-  return fail('not_implemented', 'Phase 1 stub');
+  return fail('not_implemented', 'Runtime .pdf association status is not implemented.');
 }

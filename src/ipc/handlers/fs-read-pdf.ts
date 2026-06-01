@@ -6,7 +6,7 @@
 
 import { basename } from 'node:path';
 
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   DialogOpenPdfValue,
   FsReadPdfError,
@@ -56,7 +56,7 @@ export async function handleFsReadPdf(
     try {
       metadata = await deps.loadPdfMetadata(bytes);
     } catch (e) {
-      return fail<FsReadPdfError>('invalid_pdf', (e as Error).message);
+      return fail<FsReadPdfError>('invalid_pdf', safeMessage(e, 'File is not a valid PDF'));
     }
     const fileHash = await deps.computeFileHash(safe);
     const displayName = basename(safe);
@@ -78,6 +78,6 @@ export async function handleFsReadPdf(
     };
     return ok(value);
   } catch (e) {
-    return fail<FsReadPdfError>('fs_read_failed', (e as Error).message);
+    return fail<FsReadPdfError>('fs_read_failed', safeMessage(e, 'Failed to read the file'));
   }
 }

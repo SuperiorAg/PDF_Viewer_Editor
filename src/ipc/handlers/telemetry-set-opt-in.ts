@@ -8,7 +8,7 @@
 import { z } from 'zod';
 
 import type { TelemetryService } from '../../main/telemetry.js';
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type { TelemetrySetOptInError, TelemetrySetOptInResponse } from '../contracts.js';
 
 const requestSchema = z
@@ -33,6 +33,9 @@ export async function handleTelemetrySetOptIn(
     const { optIn, bufferCleared } = deps.service.setOptIn(parsed.data.optIn);
     return ok({ optIn, bufferCleared });
   } catch (e) {
-    return fail<TelemetrySetOptInError>('settings_write_failed', (e as Error).message);
+    return fail<TelemetrySetOptInError>(
+      'settings_write_failed',
+      safeMessage(e, 'Failed to update telemetry setting'),
+    );
   }
 }

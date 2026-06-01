@@ -5,7 +5,7 @@
 // snake_case repo through db-bridge.ts (see adaptBookmarksRepo in that file).
 
 import type { MoveBookmarkResult } from '../../main/db-bridge.js';
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   BookmarksListTreeError,
   BookmarksListTreeRequest,
@@ -48,7 +48,10 @@ export function handleBookmarksListTree(
   try {
     return ok({ tree: deps.repo.listTree(req.fileHash) });
   } catch (e) {
-    return fail<BookmarksListTreeError>('db_unavailable', (e as Error).message);
+    return fail<BookmarksListTreeError>(
+      'db_unavailable',
+      safeMessage(e, 'Database is unavailable'),
+    );
   }
 }
 
@@ -117,7 +120,7 @@ export function handleBookmarksMove(
       }
     }
   } catch (e) {
-    return fail<BookmarksMoveError>('db_unavailable', (e as Error).message);
+    return fail<BookmarksMoveError>('db_unavailable', safeMessage(e, 'Database is unavailable'));
   }
 }
 
@@ -138,6 +141,6 @@ export function handleBookmarksRename(
     }
     return ok({});
   } catch (e) {
-    return fail<BookmarksRenameError>('db_unavailable', (e as Error).message);
+    return fail<BookmarksRenameError>('db_unavailable', safeMessage(e, 'Database is unavailable'));
   }
 }

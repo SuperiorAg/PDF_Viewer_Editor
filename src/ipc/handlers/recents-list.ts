@@ -1,6 +1,6 @@
 // Handler: recents:list
 
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   RecentsListError,
   RecentsListItem,
@@ -29,6 +29,6 @@ export function handleRecentsList(
     const items = rows.map((r) => ({ ...r, fileStillExists: deps.fileExists(r.path) }));
     return ok({ items });
   } catch (e) {
-    return fail<RecentsListError>('db_unavailable', (e as Error).message);
+    return fail<RecentsListError>('db_unavailable', safeMessage(e, 'Database is unavailable'));
   }
 }

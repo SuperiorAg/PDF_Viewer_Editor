@@ -1,6 +1,6 @@
 // Handler: recents:add — typically called internally on open; exposed for completeness.
 
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type { RecentsAddError, RecentsAddRequest, RecentsAddResponse } from '../contracts.js';
 
 const FILE_HASH_RE = /^[a-f0-9]{64}$/;
@@ -25,6 +25,6 @@ export function handleRecentsAdd(req: RecentsAddRequest, deps: RecentsAddDeps): 
     deps.upsertRow({ path: safe, displayName: req.displayName, fileHash: req.fileHash });
     return ok({});
   } catch (e) {
-    return fail<RecentsAddError>('db_unavailable', (e as Error).message);
+    return fail<RecentsAddError>('db_unavailable', safeMessage(e, 'Database is unavailable'));
   }
 }

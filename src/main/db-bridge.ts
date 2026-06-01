@@ -1,13 +1,14 @@
 // DB bridge — gives David's IPC handlers a stable interface to Ravi's repositories.
 //
-// Wave 2 dispatch is parallel; Ravi's files at `src/db/repositories/*` may not exist
-// at the moment David's handlers compile. This bridge gives them a typed surface
-// they can call now; the actual implementation imports the real repos at runtime
-// once Ravi's code lands (or installs a memory-backed stub for tests).
+// Originally introduced in Wave 2 (parallel dispatch — Ravi's repos at
+// `src/db/repositories/*` may not have existed yet when David's handlers
+// compiled). Now (post-Phase 7) Ravi's repos ARE present and the bridge is
+// wired via `setDbBridge({ recents: adaptRecentsRepo(...), ... })` in
+// `src/main/index.ts` Step 3.5. The memory-backed default (`createMemoryDbBridge`)
+// stays in place as the test/fallback path — see `db-bridge.ts` getters and
+// the per-Phase optional-import shape in `src/main/index.ts`.
 //
-// TODO(Wave 2 join): replace the in-memory fallback with require('../db/...') wiring.
-// Riley & Ravi locked the interfaces in docs/data-models.md §4; the surfaces here
-// mirror them 1:1.
+// Repo interfaces mirror `docs/data-models.md §4` 1:1.
 
 import type {
   BookmarkRow,

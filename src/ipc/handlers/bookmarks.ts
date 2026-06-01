@@ -1,6 +1,6 @@
 // Handlers: bookmarks:list, bookmarks:upsert, bookmarks:delete.
 
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   BookmarkRow,
   BookmarksDeleteError,
@@ -44,7 +44,7 @@ export function handleBookmarksList(
   try {
     return ok({ items: deps.repo.listByFile(req.fileHash) });
   } catch (e) {
-    return fail<BookmarksListError>('db_unavailable', (e as Error).message);
+    return fail<BookmarksListError>('db_unavailable', safeMessage(e, 'Database is unavailable'));
   }
 }
 
@@ -76,11 +76,11 @@ export function handleBookmarksUpsert(
     });
     return ok({ id });
   } catch (e) {
-    const msg = (e as Error).message || '';
-    if (/unique/i.test(msg)) {
-      return fail<BookmarksUpsertError>('duplicate', msg);
+    const raw = (e as Error).message || '';
+    if (/unique/i.test(raw)) {
+      return fail<BookmarksUpsertError>('duplicate', safeMessage(e, 'Bookmark already exists'));
     }
-    return fail<BookmarksUpsertError>('db_unavailable', msg);
+    return fail<BookmarksUpsertError>('db_unavailable', safeMessage(e, 'Database is unavailable'));
   }
 }
 
@@ -96,6 +96,6 @@ export function handleBookmarksDelete(
     if (!found) return fail<BookmarksDeleteError>('not_found', `bookmark id ${req.id} not found`);
     return ok({});
   } catch (e) {
-    return fail<BookmarksDeleteError>('db_unavailable', (e as Error).message);
+    return fail<BookmarksDeleteError>('db_unavailable', safeMessage(e, 'Database is unavailable'));
   }
 }

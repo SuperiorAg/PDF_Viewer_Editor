@@ -6,7 +6,7 @@
 
 import { basename } from 'node:path';
 
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   DialogOpenPdfError,
   DialogOpenPdfRequest,
@@ -62,14 +62,14 @@ export async function handleDialogOpenPdf(
     try {
       bytes = await deps.readFile(safe);
     } catch (e) {
-      return fail<DialogOpenPdfError>('fs_read_failed', (e as Error).message);
+      return fail<DialogOpenPdfError>('fs_read_failed', safeMessage(e, 'Failed to read the file'));
     }
 
     let metadata: { pageCount: number; warnings: string[] };
     try {
       metadata = await deps.loadPdfMetadata(bytes);
     } catch (e) {
-      return fail<DialogOpenPdfError>('invalid_pdf', (e as Error).message);
+      return fail<DialogOpenPdfError>('invalid_pdf', safeMessage(e, 'File is not a valid PDF'));
     }
 
     const fileHash = await deps.computeFileHash(safe);
@@ -95,6 +95,6 @@ export async function handleDialogOpenPdf(
     };
     return ok(value);
   } catch (e) {
-    return fail<DialogOpenPdfError>('fs_read_failed', (e as Error).message);
+    return fail<DialogOpenPdfError>('fs_read_failed', safeMessage(e, 'Failed to open the file'));
   }
 }

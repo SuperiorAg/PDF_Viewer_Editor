@@ -3,7 +3,7 @@
 // All three are grouped in a single file (they share validation helpers and
 // stay well below the 200-line modularization rule). Settings repo is injected.
 
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   SettingKey,
   SettingValue,
@@ -88,7 +88,7 @@ export function handleSettingsGet<K extends SettingKey>(
     const value = deps.repo.get<K>(req.key);
     return ok({ value });
   } catch (e) {
-    return fail<SettingsGetError>('db_unavailable', (e as Error).message);
+    return fail<SettingsGetError>('db_unavailable', safeMessage(e, 'Database is unavailable'));
   }
 }
 
@@ -106,7 +106,7 @@ export function handleSettingsSet<K extends SettingKey>(
     deps.repo.set<K>(req.key, req.value);
     return ok({});
   } catch (e) {
-    return fail<SettingsSetError>('db_unavailable', (e as Error).message);
+    return fail<SettingsSetError>('db_unavailable', safeMessage(e, 'Database is unavailable'));
   }
 }
 
@@ -118,6 +118,6 @@ export function handleSettingsGetAll(
     const entries = deps.repo.getAll();
     return ok({ entries });
   } catch (e) {
-    return fail<SettingsGetAllError>('db_unavailable', (e as Error).message);
+    return fail<SettingsGetAllError>('db_unavailable', safeMessage(e, 'Database is unavailable'));
   }
 }

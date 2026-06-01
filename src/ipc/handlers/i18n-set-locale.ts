@@ -8,7 +8,7 @@
 import { z } from 'zod';
 
 import { isSupportedLocale } from '../../main/i18n-locales.js';
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type { AppLocale, I18nSetLocaleError, I18nSetLocaleResponse } from '../contracts.js';
 
 // Accept any string at the structural level; the semantic locale check follows.
@@ -42,6 +42,9 @@ export async function handleI18nSetLocale(
     deps.persistLocale(locale);
     return ok({ locale });
   } catch (e) {
-    return fail<I18nSetLocaleError>('settings_write_failed', (e as Error).message);
+    return fail<I18nSetLocaleError>(
+      'settings_write_failed',
+      safeMessage(e, 'Failed to save locale setting'),
+    );
   }
 }

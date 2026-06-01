@@ -8,7 +8,7 @@
 // SQLite implementation lands.
 
 import type { FormTemplatesRepo } from '../../main/db-bridge.js';
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   FormsListTemplatesError,
   FormsListTemplatesRequest,
@@ -27,6 +27,9 @@ export async function handleFormsListTemplates(
     const items = deps.repo.list();
     return ok({ items });
   } catch (e) {
-    return fail<FormsListTemplatesError>('db_unavailable', (e as Error).message);
+    return fail<FormsListTemplatesError>(
+      'db_unavailable',
+      safeMessage(e, 'Database is unavailable'),
+    );
   }
 }

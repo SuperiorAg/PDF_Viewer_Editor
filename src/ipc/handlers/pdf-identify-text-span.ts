@@ -59,7 +59,7 @@
 
 import { PDFDocument, PDFRawStream, decodePDFRawStream } from 'pdf-lib';
 
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   DocumentHandle,
   PdfIdentifyTextSpanError,
@@ -115,7 +115,7 @@ export async function handlePdfIdentifyTextSpan(
   } catch (e) {
     return fail<PdfIdentifyTextSpanError>(
       'invalid_payload',
-      `pdf-lib load failed: ${(e as Error).message}`,
+      safeMessage(e, 'Unable to load the document for text identification'),
     );
   }
 

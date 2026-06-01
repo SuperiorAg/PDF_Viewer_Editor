@@ -12,7 +12,7 @@
 import { dirname, basename, join } from 'node:path';
 
 import type { ReplayInput, ReplayOk } from '../../main/pdf-ops/replay-engine.js';
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   FsApplyEditOpsError,
   FsApplyEditOpsRequest,
@@ -126,9 +126,13 @@ export async function handleFsApplyEditOps(
     await deps.unlink(tempPath).catch(() => {});
     const code = (e as NodeJS.ErrnoException).code;
     if (code === 'ENOSPC') {
-      return fail<FsApplyEditOpsError>('disk_full', (e as Error).message, { tempPath });
+      return fail<FsApplyEditOpsError>('disk_full', safeMessage(e, 'Disk full'), { tempPath });
     }
-    return fail<FsApplyEditOpsError>('fs_write_failed', (e as Error).message, { tempPath });
+    return fail<FsApplyEditOpsError>(
+      'fs_write_failed',
+      safeMessage(e, 'Failed to write the file'),
+      { tempPath },
+    );
   }
 
   // ---- Post-save bytes refresh (edit-replay-engine.md §13.1) -------------

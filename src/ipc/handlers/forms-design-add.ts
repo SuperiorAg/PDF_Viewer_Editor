@@ -9,7 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { PDFDocument } from 'pdf-lib';
 
 import { detectForms } from '../../main/pdf-ops/form-engine.js';
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   DocumentHandle,
   EditOperation,
@@ -91,7 +91,10 @@ export async function handleFormsDesignAdd(
     pageW = page.getWidth();
     pageH = page.getHeight();
   } catch (e) {
-    return fail<FormsDesignAddError>('invalid_payload', `pdf load failed: ${(e as Error).message}`);
+    return fail<FormsDesignAddError>(
+      'invalid_payload',
+      safeMessage(e, 'Unable to load the document'),
+    );
   }
 
   // Detect existing fields to enforce uniqueness

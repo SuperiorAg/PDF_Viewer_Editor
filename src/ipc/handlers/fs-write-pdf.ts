@@ -5,7 +5,7 @@
 // real bytes; the legacy `applyOpsToBytes` shim is kept for tests but the
 // production wiring in `register.ts` supplies the replay engine directly.
 
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   FsWritePdfError,
   FsWritePdfRequest,
@@ -101,8 +101,11 @@ export async function handleFsWritePdf(
   try {
     await deps.writeFile(dest.path, bytesToWrite);
   } catch (e) {
-    const msg = (e as NodeJS.ErrnoException).code === 'ENOSPC' ? 'disk_full' : 'fs_write_failed';
-    return fail<FsWritePdfError>(msg, (e as Error).message);
+    const code = (e as NodeJS.ErrnoException).code === 'ENOSPC' ? 'disk_full' : 'fs_write_failed';
+    return fail<FsWritePdfError>(
+      code,
+      safeMessage(e, code === 'disk_full' ? 'Disk full' : 'Failed to write the file'),
+    );
   }
 
   // Phase 2: refresh stored bytes post-save so undo-across-save works

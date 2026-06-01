@@ -4,7 +4,7 @@
 // `form-design-add` ops onto the current document (each is undoable).
 
 import type { FormTemplatesRepo } from '../../main/db-bridge.js';
-import { fail, ok } from '../../shared/result.js';
+import { fail, ok, safeMessage } from '../../shared/result.js';
 import type {
   FormsLoadTemplateError,
   FormsLoadTemplateRequest,
@@ -37,6 +37,9 @@ export async function handleFormsLoadTemplate(
       lastColumnMappings: dto.lastColumnMappings,
     });
   } catch (e) {
-    return fail<FormsLoadTemplateError>('db_unavailable', (e as Error).message);
+    return fail<FormsLoadTemplateError>(
+      'db_unavailable',
+      safeMessage(e, 'Database is unavailable'),
+    );
   }
 }
