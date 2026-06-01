@@ -9067,3 +9067,21 @@ Edited (Nathan-owned): `README.md`, `docs/api-reference.md`, `docs/developer-gui
 When an agent is closing a packaging release and finds uncommitted edits in another agent's owned files at the working-tree level, **do not silently commit them** (Diego's correct restraint here) **and do not discard them** (the next-best wrong move). The right move is what Diego did: stash with a self-describing label (`nathan-docs-pending-v076-not-mine-to-commit`), keep the tree clean for the release cut, surface the gap in the build-report's gaps + handoffs section, and let the orchestrator dispatch the owning agent with the stash hash + a single-task brief. This kept the release atomic AND preserved the docs work AND respected the file-ownership boundary — three things that would otherwise compete.
 
 ---
+
+## v0.7.7-dev — Make-default bug fix (David, backend) — 2026-06-01
+
+**Outcome:** **GREEN.** Closed the Settings -> General "Make default" runtime-stub bug. Before: the button surfaced the Phase-1 honest `not_implemented` Result ("Runtime .pdf association toggle is not implemented") as a warning toast. After: clicking the button opens the Windows Default-apps Settings page (`ms-settings:defaultapps?registeredAppName=PDF%20Viewer%20Editor`) so the user can confirm the association in the OS UI, and the handler returns `ok({ isNowDefault: false, prompt: 'shown' })`. Same flow Edge / Adobe Reader / Chrome use — modern Windows 10/11 won't let an app silently flip the default handler; the OS gates it behind a user-confirmation flow. Non-Windows platforms (CI runners) keep the honest `not_implemented` Result with an updated message. `getDefaultPdfHandlerStatus` remains an honest `not_implemented` stub (reading the current default reliably on modern Windows would require the deprecated `IApplicationAssociationRegistration` COM interface).
+
+**What landed (backend scope only):** new `openDefaultAppsSettings: () => Promise<boolean>` field on `AppDeps` (`src/ipc/handlers/app.ts`); the production wiring in `src/ipc/register.ts` calls `shell.openExternal('ms-settings:defaultapps?registeredAppName=...')` gated on `process.platform === 'win32'` and returns false elsewhere. `handleAppSetDefaultPdfHandler` is now `async` + accepts `AppDeps`; on success returns `ok({ isNowDefault: false, prompt: 'shown' })`; on false / throw returns `fail('not_implemented', ...)` with an updated honest message. `AppSetDefaultPdfHandlerRequest.enable` is kept on the contract for stability but is now MOOT and ignored (one-line comment in the handler explains). Tests: replaced the "stub returns not_implemented" case with two cases (ok-when-ms-settings-opens; fallback-when-OS-UI-unavailable); kept the `getDefaultPdfHandlerStatus` test untouched. Three tsconfigs green; vitest `src/ipc/handlers` 47 files / 344 tests green; eslint --max-warnings 0 green; husky pre-commit + pre-push gated green.
+
+### Riley follow-up (renderer scope — not mine to commit)
+
+- `src/client/components/modals/settings-modal/index.tsx` toast copy on the success branch — replace `t('settings:files.nowDefault')` / `noLongerDefault` with a new "you have been redirected to Windows Settings -> Default apps; confirm there" string keyed off `res.value.prompt === 'shown'`. The current code maps the ok-path to "now default" / "no longer default" which is now misleading (we don't actually know).
+- `src/client/i18n/locales/en-US/settings.json` + `es-ES/settings.json` — add the new i18n keys for the redirected-to-Settings copy.
+- `src/client/components/modals/settings-modal/settings-phase7.test.tsx` — update the `toggleDefaultHandler` expectations to assert the new "redirected" success copy instead of the now-removed `nowDefault` / `noLongerDefault` strings.
+
+### File ownership
+
+Edited (David-owned): `src/ipc/handlers/app.ts`, `src/ipc/handlers/app.test.ts`, `src/ipc/register.ts`, `docs/build-report.md` (this section — append-only). **Did NOT touch:** `src/client/**`, `src/client/i18n/**`, `docs/api-contracts.md` (Riley), `ARCHITECTURE.md` / `docs/conventions.md`, `.learnings/locked-instructions.md`, `package.json` (no version bump — pre-release dev row), `electron-builder.yml` / `.github/**` (Diego). The `AppSetDefaultPdfHandlerRequest` zod shape in `contracts.ts` is unchanged on purpose to keep the renderer contract stable for Riley's follow-up.
+
+---

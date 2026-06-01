@@ -627,6 +627,20 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
       return true;
     },
     getDocumentPath: (handle: number): string | null => documentStore.get(handle)?.path ?? null,
+    // Opens Windows Settings -> Default apps for this app, scoped via the
+    // `registeredAppName` query so the user lands on our app's row. Modern
+    // Windows 10/11 require the user to confirm in this UI; an app cannot
+    // silently flip the default handler. Non-Windows platforms return false
+    // so the handler surfaces an honest not_implemented response.
+    openDefaultAppsSettings: async (): Promise<boolean> => {
+      if (process.platform !== 'win32') return false;
+      try {
+        await shell.openExternal('ms-settings:defaultapps?registeredAppName=PDF%20Viewer%20Editor');
+        return true;
+      } catch {
+        return false;
+      }
+    },
   };
 
   ipcMain.handle(Channels.AppGetVersion, (_evt, payload) =>
@@ -637,7 +651,7 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
     handleAppOpenExternal(payload, appDeps),
   );
   ipcMain.handle(Channels.AppSetDefaultPdfHandler, (_evt, payload) =>
-    handleAppSetDefaultPdfHandler(payload),
+    handleAppSetDefaultPdfHandler(payload, appDeps),
   );
   ipcMain.handle(Channels.AppGetDefaultPdfHandlerStatus, (_evt, payload) =>
     handleAppGetDefaultPdfHandlerStatus(payload ?? {}),

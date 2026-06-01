@@ -22,6 +22,7 @@ function makeDeps(over: Partial<AppDeps> = {}): AppDeps {
     requestQuit: vi.fn(),
     showInExplorer: vi.fn().mockResolvedValue(true),
     getDocumentPath: vi.fn().mockReturnValue('C:/x.pdf'),
+    openDefaultAppsSettings: vi.fn().mockResolvedValue(true),
     ...over,
   };
 }
@@ -57,8 +58,18 @@ describe('app handlers', () => {
     expectOk(res);
   });
 
-  it('setDefaultPdfHandler stub returns not_implemented', () => {
-    const res = handleAppSetDefaultPdfHandler({ enable: true });
+  it('setDefaultPdfHandler returns ok when ms-settings opens', async () => {
+    const deps = makeDeps({ openDefaultAppsSettings: vi.fn().mockResolvedValue(true) });
+    const res = await handleAppSetDefaultPdfHandler({ enable: true }, deps);
+    const value = expectOk(res);
+    expect(value.isNowDefault).toBe(false);
+    expect(value.prompt).toBe('shown');
+    expect(deps.openDefaultAppsSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it('setDefaultPdfHandler falls back to not_implemented when the OS UI is unavailable', async () => {
+    const deps = makeDeps({ openDefaultAppsSettings: vi.fn().mockResolvedValue(false) });
+    const res = await handleAppSetDefaultPdfHandler({ enable: true }, deps);
     expectErr(res, 'not_implemented');
   });
 
