@@ -15,6 +15,8 @@ import { getDbBridge } from '../main/db-bridge.js';
 import { type ExportEngine } from '../main/export/export-engine.js';
 import { createExportQueue } from '../main/export/export-queue.js';
 import { releaseAll as releaseAllCerts } from '../main/pdf-ops/cert-store.js';
+// Wave-30 follow-up (H-30.1, David 2026-06-01): real combine engine.
+import { combinePdfs } from '../main/pdf-ops/combine.js';
 import { documentStore } from '../main/pdf-ops/document-store.js';
 import { computeBufferHash, computeFileHash } from '../main/pdf-ops/file-hash.js';
 import type { LanguagePackManager } from '../main/pdf-ops/language-pack-manager.js';
@@ -68,6 +70,7 @@ import {
 } from './handlers/bookmarks.js';
 import { handleDialogOpenPdf } from './handlers/dialog-open-pdf.js';
 import { handleDialogPickExportOutputPath } from './handlers/dialog-pick-export-output-path.js';
+import { handleDialogPickPdfFiles } from './handlers/dialog-pick-pdf-files.js';
 import { handleDialogSaveAs } from './handlers/dialog-save-as.js';
 import { handleExportCancelJob } from './handlers/export-cancel-job.js';
 import { handleExportListFormats } from './handlers/export-list-formats.js';
@@ -105,10 +108,13 @@ import { handleOcrRunOnDocument } from './handlers/ocr-run-on-document.js';
 import { handleOcrRunOnPage } from './handlers/ocr-run-on-page.js';
 import { handleFsApplyEditOps } from './handlers/pdf-apply-edit-ops.js';
 import type { FsApplyEditOpsDeps } from './handlers/pdf-apply-edit-ops.js';
+import { handlePdfCombine } from './handlers/pdf-combine.js';
 import { handlePdfEmbedImage } from './handlers/pdf-embed-image.js';
 import { defaultPickEngine, handlePdfExport } from './handlers/pdf-export-pdf.js';
 import { handlePdfIdentifyTextSpan } from './handlers/pdf-identify-text-span.js';
-import { handlePdfCombine, handlePdfGetOutline } from './handlers/pdf-ops.js';
+import { handlePdfGetOutline } from './handlers/pdf-ops.js';
+// Wave-30 follow-up (H-30.1, David 2026-06-01): real combine handler +
+// path-only file picker. Replaces the Phase-1 `not_implemented` stub.
 import { handlePdfPrint } from './handlers/pdf-print.js';
 import { handlePdfReplaceText } from './handlers/pdf-replace-text.js';
 import { handleRecentsAdd } from './handlers/recents-add.js';
@@ -504,8 +510,35 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
     handleBookmarksDelete(payload, { repo: getDbBridge().bookmarks }),
   );
 
-  ipcMain.handle(Channels.PdfCombine, (_evt, payload) => handlePdfCombine(payload));
+  // Wave-30 follow-up (H-30.1, David 2026-06-01): real combine handler.
+  // Replaces the Phase-1 `not_implemented` stub. Uses the same per-handler
+  // DI shape as dialog-open-pdf so the real sanitizer + documentStore +
+  // computeBufferHash are honestly wired (no permissive passthrough).
+  ipcMain.handle(Channels.PdfCombine, (_evt, payload) =>
+    handlePdfCombine(payload, {
+      readFile: async (p) => new Uint8Array(await fsPromises.readFile(p)),
+      sanitizePath: (raw) => sanitizePath(raw),
+      getBytesByHandle: (h) => documentStore.getBytes(h),
+      computeBufferHash,
+      combineEngine: combinePdfs,
+      registerHandle: (rec) => documentStore.register(rec),
+    }),
+  );
+  // M-30.1 disposition: kept as honest `not_implemented` stub; zero callers
+  // outside the api.ts unavailable-fallback. See pdf-ops.ts file header.
   ipcMain.handle(Channels.PdfGetOutline, (_evt, payload) => handlePdfGetOutline(payload));
+
+  // Wave-30 follow-up (H-30.1, David 2026-06-01): path-only PDF picker for
+  // the Combine modal. Returns sanitized absolute paths; no read, no handle.
+  ipcMain.handle(Channels.DialogPickPdfFiles, (_evt, payload) =>
+    handleDialogPickPdfFiles(payload ?? {}, {
+      showOpenDialog: async (opts) => {
+        const win = getMainWindow();
+        return win ? dialog.showOpenDialog(win, opts) : dialog.showOpenDialog(opts);
+      },
+      sanitizePath: (raw) => sanitizePath(raw),
+    }),
+  );
 
   // Phase 2 (api-contracts.md §12.1-§12.4 + §12.5-§12.7): new pdf:* and bookmarks:* channels.
   ipcMain.handle(Channels.PdfEmbedImage, (_evt, payload) =>

@@ -30,6 +30,9 @@ import type {
   BookmarksUpsertRequest,
   BookmarksUpsertResponse,
   DialogOpenPdfResponse,
+  // Wave-30 follow-up (H-30.1, David 2026-06-01): path-only PDF picker.
+  DialogPickPdfFilesRequest,
+  DialogPickPdfFilesResponse,
   DialogSaveAsRequest,
   DialogSaveAsResponse,
   FsApplyEditOpsRequest,
@@ -188,6 +191,9 @@ const pdfApi: PdfApi = {
         Channels.DialogPickExportOutputPath,
         req,
       ) as Promise<DialogPickExportOutputPathResponse>,
+    // Wave-30 follow-up (H-30.1, David 2026-06-01): path-only PDF picker.
+    pickPdfFiles: (req: DialogPickPdfFilesRequest) =>
+      ipcRenderer.invoke(Channels.DialogPickPdfFiles, req) as Promise<DialogPickPdfFilesResponse>,
   },
   fs: {
     readPdf: (req: FsReadPdfRequest) =>

@@ -1,16 +1,30 @@
-// Handlers: pdf:combine, pdf:export, pdf:getOutline.
+// Handlers: pdf:export, pdf:getOutline.
 //
-// All three are Phase-1 stubs that validate their inputs and return
-// 'not_implemented' so the renderer can wire calls now without hitting an
-// unknown-channel error. Real combine logic lands in src/main/pdf-ops/combine.ts
-// in Wave 2 follow-up after Riley's renderer-side pdf-lib code lands;
-// export engines land in Phase 2 (ARCHITECTURE §6).
+// Wave-30 follow-up (H-30.1, David 2026-06-01): `handlePdfCombine` is GONE
+// from this file — the real implementation lives in
+// `src/ipc/handlers/pdf-combine.ts` (engine in `src/main/pdf-ops/combine.ts`).
+// The "Phase 1 stub" / "Wave 2 follow-up" comment that lived here is also
+// removed — all references to the stub are deleted (only the live handler
+// remains, wired via register.ts).
+//
+// What's left in this module:
+//   - `handlePdfExport` — a thin pre-validation gate retained for the legacy
+//     `pdf-ops.test.ts` cases; the Phase-2 LIVE export handler lives in
+//     `src/ipc/handlers/pdf-export-pdf.ts` and is what register.ts wires.
+//     (Same disposition documented before this wave — unchanged.)
+//   - `handlePdfGetOutline` — Wave-30 audit flagged this as dead code (zero
+//     renderer call sites — only `api.ts`'s bridge-unavailable fallback
+//     references the property). DISPOSITION (M-30.1): leave the stub in
+//     place returning the same `not_implemented` Result, but the file-header
+//     comment that previously claimed "Wave 2 follow-up" is removed. The
+//     contract types remain on the wire because the renderer's `PdfApi`
+//     fallback in `src/client/services/api.ts` still references the property
+//     (that file is Riley's; an additive Riley-owned change can remove the
+//     fallback in a subsequent wave, after which David can delete the
+//     contract types). See `docs/build-report.md` Wave-30-followup row.
 
 import { fail } from '../../shared/result.js';
 import type {
-  PdfCombineError,
-  PdfCombineRequest,
-  PdfCombineResponse,
   PdfExportError,
   PdfExportRequest,
   PdfExportResponse,
@@ -20,27 +34,6 @@ import type {
 } from '../contracts.js';
 
 const ENGINE_PREFS = new Set(['auto', 'pdf-lib', 'chromium']);
-
-export function handlePdfCombine(req: PdfCombineRequest): PdfCombineResponse {
-  if (!Array.isArray(req.sources) || req.sources.length < 2) {
-    return fail<PdfCombineError>('invalid_source', 'sources[] must have ≥ 2 entries');
-  }
-  for (const s of req.sources) {
-    if (s.kind !== 'handle' && s.kind !== 'path') {
-      return fail<PdfCombineError>('invalid_source', 'source.kind must be handle | path');
-    }
-    if (s.pageRange) {
-      const { start, end } = s.pageRange;
-      if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start) {
-        return fail<PdfCombineError>('invalid_page_range', 'pageRange invalid');
-      }
-    }
-  }
-  return fail<PdfCombineError>(
-    'not_implemented',
-    'Phase 1 stub: combine engine ships in Wave 2 follow-up',
-  );
-}
 
 /**
  * Phase 1 stub retained as a thin pre-validation gate. The Phase-2 Live
@@ -65,12 +58,19 @@ export function handlePdfExport(req: PdfExportRequest): PdfExportResponse {
   return fail<PdfExportError>('cancelled', 'pdf:export stub — Phase-2 handler not wired');
 }
 
+/**
+ * Dead-code stub (M-30.1) retained to keep the IPC contract surface stable.
+ * Zero renderer call sites; only the `api.ts` bridge-unavailable fallback
+ * references the property. When that fallback is removed (Riley-owned
+ * follow-up), this handler + the channel registration + the contract types
+ * can be deleted in a coordinated cross-process change.
+ */
 export function handlePdfGetOutline(req: PdfGetOutlineRequest): PdfGetOutlineResponse {
   if (typeof req.handle !== 'number' || !Number.isInteger(req.handle)) {
     return fail<PdfGetOutlineError>('handle_not_found', 'handle must be an integer');
   }
   return fail<PdfGetOutlineError>(
     'not_implemented',
-    'Phase 1 stub: outline parsing ships in Wave 2 follow-up',
+    'pdf:getOutline has no renderer caller; see M-30.1 disposition.',
   );
 }

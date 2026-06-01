@@ -553,6 +553,39 @@ export interface DialogSaveAsValue {
 }
 export type DialogSaveAsResponse = Result<DialogSaveAsValue, DialogSaveAsError>;
 
+// ----------------------------------------------------------------------------
+// dialog:pickPdfFiles — Wave-30 follow-up (H-30.1, David 2026-06-01)
+//
+// Lightweight "pick file path(s) without reading" companion to dialog:openPdf.
+// Unlike dialog:openPdf, this channel does NOT register a handle, does NOT
+// read bytes, and does NOT touch recents — it only surfaces the native file
+// dialog and returns sanitized absolute paths so the renderer (initially the
+// Combine modal) can build a multi-source request that `pdf:combine` then
+// reads under the same sanitization rules.
+//
+// Why a separate channel (chose option B over option A "extend openPdf"):
+//   - dialog:openPdf is documented as the canonical "open + read + register"
+//     entry point. Overloading it with a `multi: true` branch that returns
+//     a DIFFERENT shape (paths only, no handle) would break the discriminated-
+//     response invariant.
+//   - The combine flow does NOT want to pre-read every source — pdf:combine
+//     reads them itself with proper error mapping per source. A dedicated
+//     path-only picker keeps responsibilities cleanly split.
+//   - Future scan-then-combine / batch-import flows can reuse this channel.
+//
+// `multi: false` (the default) returns 0 or 1 paths; `multi: true` returns 0..N.
+// Sanitization runs in the handler before returning paths to the renderer.
+export interface DialogPickPdfFilesRequest {
+  /** When true, allow multi-select; default false. */
+  multi?: boolean;
+}
+export type DialogPickPdfFilesError = 'user_cancelled' | 'invalid_path';
+export interface DialogPickPdfFilesValue {
+  /** Absolute paths, already sanitized via path-sanitizer.ts. May be empty. */
+  paths: string[];
+}
+export type DialogPickPdfFilesResponse = Result<DialogPickPdfFilesValue, DialogPickPdfFilesError>;
+
 // Wave 10 / Phase 2.5 (D-10.3): image-bearing ops at the IPC boundary.
 // ---------------------------------------------------------------------------
 // Renderer dispatches the raw image-insert op (with `image.bytes`) on undo.
@@ -886,17 +919,29 @@ export interface PdfCombineRequest {
 // instead of carrying its own indexed-access workaround.
 // Added by Diego in Wave 3 to absorb Marcus's Wave-2 integration delta #4.
 export type PdfCombineSource = PdfCombineRequest['sources'][number];
+// Wave-30 follow-up (H-30.1, David 2026-06-01): real combine engine surfaces
+// these variants. `not_implemented` is REMOVED — the Phase-1 stub is gone.
+// Engine-only variants (`combine_no_inputs`, `combine_invalid_source`,
+// `combine_output_too_large`) ride alongside the original validator codes
+// (`invalid_source`, `invalid_page_range`) which still gate request shape.
 export type PdfCombineError =
   | 'invalid_source'
   | 'handle_not_found'
   | 'fs_read_failed'
+  | 'path_rejected'
   | 'pdf_load_failed'
   | 'invalid_page_range'
-  | 'not_implemented';
+  | 'combine_no_inputs'
+  | 'combine_invalid_source'
+  | 'combine_output_too_large';
 export interface PdfCombineValue {
   handle: DocumentHandle;
   pageCount: number;
   displayName: string;
+  /** SHA-256 over the combined output bytes (hex, 64 chars). */
+  fileHash: FileHash;
+  /** Non-fatal warnings from pdf-lib load/copy (e.g. stripped JS, recovered xref). */
+  warnings: string[];
 }
 export type PdfCombineResponse = Result<PdfCombineValue, PdfCombineError>;
 
@@ -2833,6 +2878,9 @@ export const Channels = {
   // dialog
   DialogOpenPdf: 'dialog:openPdf',
   DialogSaveAs: 'dialog:saveAs',
+  // Wave-30 follow-up (H-30.1, David 2026-06-01): path-only file picker for
+  // the Combine modal. Returns sanitized absolute paths; no read, no handle.
+  DialogPickPdfFiles: 'dialog:pickPdfFiles',
   // fs
   FsReadPdf: 'fs:readPdf',
   FsWritePdf: 'fs:writePdf',
@@ -2951,6 +2999,10 @@ export interface PdfApi {
     pickExportOutputPath: (
       req: DialogPickExportOutputPathRequest,
     ) => Promise<DialogPickExportOutputPathResponse>;
+    // Wave-30 follow-up (H-30.1, David 2026-06-01): path-only PDF picker
+    // (single or multi). Returns sanitized absolute paths so the renderer
+    // can populate the Combine modal without pre-reading bytes.
+    pickPdfFiles: (req: DialogPickPdfFilesRequest) => Promise<DialogPickPdfFilesResponse>;
   };
   fs: {
     readPdf: (req: FsReadPdfRequest) => Promise<FsReadPdfResponse>;

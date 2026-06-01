@@ -1,34 +1,13 @@
 import { describe, it } from 'vitest';
 
-import { handlePdfCombine, handlePdfExport, handlePdfGetOutline } from './pdf-ops.js';
+import { handlePdfExport, handlePdfGetOutline } from './pdf-ops.js';
 import { expectErr } from './test-support.js';
 
-describe('pdf:combine (Phase 1 stub)', () => {
-  it('rejects < 2 sources', () => {
-    const res = handlePdfCombine({ sources: [] });
-    expectErr(res, 'invalid_source');
-  });
-
-  it('rejects invalid page range', () => {
-    const res = handlePdfCombine({
-      sources: [
-        { kind: 'handle', handle: 1, pageRange: { start: 5, end: 1 } },
-        { kind: 'handle', handle: 2 },
-      ],
-    });
-    expectErr(res, 'invalid_page_range');
-  });
-
-  it('valid request returns not_implemented (typed stub)', () => {
-    const res = handlePdfCombine({
-      sources: [
-        { kind: 'handle', handle: 1 },
-        { kind: 'handle', handle: 2 },
-      ],
-    });
-    expectErr(res, 'not_implemented');
-  });
-});
+// Wave-30 follow-up (H-30.1, David 2026-06-01): the original `pdf:combine`
+// Phase-1 stub was removed from pdf-ops.ts. The real combine handler lives
+// in `pdf-combine.ts` and its tests in `pdf-combine.test.ts`. This file now
+// covers only the residual stubs in pdf-ops.ts (pdf:export validator, pdf:
+// getOutline M-30.1 honest stub).
 
 describe('pdf:export (Phase 1 stub-validator)', () => {
   // Phase 2 (Wave 7): the real export logic lives in
@@ -60,7 +39,7 @@ describe('pdf:export (Phase 1 stub-validator)', () => {
   });
 });
 
-describe('pdf:getOutline (Phase 1 stub)', () => {
+describe('pdf:getOutline (M-30.1 honest stub — zero callers)', () => {
   it('returns not_implemented for valid handle', () => {
     const res = handlePdfGetOutline({ handle: 1 });
     expectErr(res, 'not_implemented');

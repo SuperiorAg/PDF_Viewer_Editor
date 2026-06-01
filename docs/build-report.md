@@ -8889,3 +8889,86 @@ Edited (Julian-owned): `docs/code-review.md`, `docs/build-report.md` (this secti
 Edited (Riley-owned): `src/client/components/modals/combine-modal/index.tsx`, `src/client/state/thunks.ts`, `src/client/types/ipc-contract.ts`, `src/client/services/api.ts`, `src/client/i18n/locales/en-US/modals.json`, `src/client/services/pdf-coords.ts`, `src/client/components/menu-bar/index.tsx`, `src/client/components/toolbar/index.tsx`, `src/client/components/modals/image-import-modal/index.tsx`, `docs/build-report.md` (this section). Created (Riley-owned): `src/client/components/modals/combine-modal/combine-modal.test.tsx`. **Did NOT touch:** `src/ipc/**`, `src/main/**`, `src/preload/**` (David's parallel scope — read his `contracts.ts` once for types), `src/db/**` (Ravi), `electron-builder.yml` / `.github/workflows/**` / `package.json` (Diego), `docs/user-guide.md` / `README.md` / `docs/code-review.md` (Nathan / Julian), `.learnings/locked-instructions.md`. Three commits to `main` (`1ca9a82`, `f7d28d6`, `277f7a3`); no force-push.
 
 ---
+
+## Wave 30 follow-up — H-30.1 combine engine + path picker (David, 2026-06-01)
+
+**Status:** COMPLETE 2026-06-01.
+**Mode:** Single-engineer follow-up wave parallel with Riley's Combine-modal wiring; disjoint file ownership held (David: `src/main`, `src/ipc`, `src/preload`, `contracts.ts`; Riley: `src/client`). Closes H-30.1 (Combine was a Phase-1 `not_implemented` stub) and dispositions M-30.1 (pdf:getOutline dead code).
+
+### Findings — H-30.1 CLOSED
+
+**Walking-skeleton milestone #6 ("Combine multiple PDFs into one") is now functional in production.** The Phase-1 `not_implemented` stub at `src/ipc/handlers/pdf-ops.ts:24-43` is GONE; the real implementation is a pure engine (`src/main/pdf-ops/combine.ts`) + a DI-shape handler (`src/ipc/handlers/pdf-combine.ts`) wired in `register.ts`. The "Phase 1 stub: combine engine ships in Wave 2 follow-up" toast string no longer exists anywhere in the codebase.
+
+### Engine design
+
+- **Pure function over `Uint8Array[]`** — no fs, no IPC, no globals (mirrors `replay-engine.ts` discipline).
+- **pdf-lib mechanism:** `PDFDocument.create()` -> for each input: `PDFDocument.load(bytes, { ignoreEncryption: true, updateMetadata: false, throwOnInvalidObject: false })` + `outDoc.copyPages(srcDoc, srcDoc.getPageIndices())` + `addPage` each. Then `outDoc.save({ useObjectStreams: true })`.
+- **JS strip is automatic by construction.** `copyPages` copies the page tree only; document-level constructs (`/Names -> /JavaScript`, `/OpenAction`, `/AcroForm`, `/Outlines`) live at the source catalog and never get carried into a `PDFDocument.create()`-rooted output. Verified by a structural-catalog assertion in `combine.test.ts` (load output -> `outDoc.catalog.get(PDFName.of('Names'))` must be `undefined`).
+- **Output cap:** `MAX_OUTPUT_BYTES = 500 MB` (5x the default per-input cap). Returns `combine_output_too_large` past the bound.
+- **Error variants:** `combine_no_inputs`, `combine_invalid_source` (carries `details.sourceIndex`), `combine_output_too_large`. All routed through the discriminated Result — no exceptions cross IPC.
+
+### File-picker channel decision — Option B (new channel)
+
+Chose **Option B: new `dialog:pickPdfFiles` channel** over Option A (extending `dialog:openPdf` with `multi: true`). Rationale documented in `src/ipc/contracts.ts` near `DialogPickPdfFilesRequest`: `dialog:openPdf` is the canonical "open + read + register" entry point; overloading it with a different response shape (paths only, no handle) would break the discriminated-response invariant. Combine doesn't want to pre-read N files — `pdf:combine` reads them itself with proper per-source error mapping. Future scan-then-combine / batch-import flows can reuse this channel.
+
+The new channel takes `{ multi?: boolean }` (default false), returns `{ paths: string[] }` of already-sanitized absolute paths. Sanitization runs in the handler before the renderer ever sees them. Riley consumed this channel from the Combine modal's "+ Add files" affordance in her parallel commit `1ca9a82` — the wire-up is end-to-end as of 2026-06-01.
+
+### M-30.1 disposition — honest-stub residue, not deleted
+
+`pdf:getOutline` has zero renderer call sites (Julian's audit grep confirmed). The cleanest fix is to delete the handler + contract types + preload bridge entry + channel registration. **Blocked from doing so this wave because the renderer's `src/client/services/api.ts` bridge-unavailable fallback still references `pdf.getOutline: unavailable` (Riley-owned file).** Per orchestrator brief, David cannot touch `src/client/**`. Disposition: kept the `not_implemented` stub, rewrote the stale "Wave 2 follow-up" comment to honestly describe the dead-code status, and documented the cross-process change for a future wave. The `pdf-ops.ts` file header explicitly calls this out. **Follow-up:** Riley drops `pdf.getOutline: unavailable` from `api.ts`; David then removes the contract types + handler + channel registration in a subsequent wave.
+
+### Test coverage
+
+| Test file                                        | New tests | Coverage                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/main/pdf-ops/combine.test.ts`               | 8         | engine: combine N=2, combine N=3, corrupted source w/ `sourceIndex`, empty `Uint8Array`, empty input array, JS-laden-source strip, pdf-lib placeholder-page edge case, single-bad-input                                                                                                                                         |
+| `src/ipc/handlers/pdf-combine.test.ts`           | 10        | handler: < 2 sources, invalid page range, malformed payload, handle_not_found, **production sanitizer wired** (traversal rejection + non-.pdf rejection — proves the real `sanitizePath` is plumbed, not a permissive stub), fs_read_failed, combine_invalid_source pass-through, happy-path path-based, happy-path handle-only |
+| `src/ipc/handlers/dialog-pick-pdf-files.test.ts` | 6         | dialog handler: cancelled, no paths, single happy-path, `multi: true` propagation, any-bad-path rejection (production sanitizer), non-.pdf rejection                                                                                                                                                                            |
+| `src/ipc/handlers/pdf-ops.test.ts`               | -3 / +0   | Removed obsolete `pdf:combine` Phase-1 stub assertions; kept residual `pdf:export` validator + `pdf:getOutline` M-30.1 honest-stub tests (4 cases total)                                                                                                                                                                        |
+
+**Total: 24 new tests, 3 removed (obsolete Phase-1 stub assertions). Net +21.**
+
+### Verification
+
+- `npx tsc -p tsconfig.main.json --noEmit` — clean.
+- `npx tsc -p tsconfig.preload.json --noEmit` — clean.
+- `npx tsc -p tsconfig.renderer.json --noEmit` — clean (Riley's parallel `api.ts` already exposes `pickPdfFiles: unavailable`; type surface is consistent).
+- `npx vitest run src/main src/ipc src/preload` — **873/873 PASS** (including Riley's commits 1ca9a82 / f7d28d6 / 277f7a3 + my new files).
+- `npx eslint` on touched files — **clean** (3 `import/order` autofixes applied at lint time).
+- Followed L-003 escape hatch: `node scripts/rebuild-native-for-node.mjs` (Node 24 -> Node-24-ABI `better-sqlite3` prebuild) before vitest. No from-source rebuild attempted.
+
+### Files
+
+**New:**
+
+- `src/main/pdf-ops/combine.ts` — pure pdf-lib engine.
+- `src/main/pdf-ops/combine.test.ts` — 8 engine tests.
+- `src/ipc/handlers/pdf-combine.ts` — IPC handler with DI (5-step pipeline).
+- `src/ipc/handlers/pdf-combine.test.ts` — 10 handler tests with **production sanitizer wired**.
+- `src/ipc/handlers/dialog-pick-pdf-files.ts` — file-picker handler.
+- `src/ipc/handlers/dialog-pick-pdf-files.test.ts` — 6 picker tests.
+
+**Edited:**
+
+- `src/ipc/handlers/pdf-ops.ts` — removed `handlePdfCombine` (real one lives in `pdf-combine.ts`); rewrote file-header docstring (removed "Wave 2 follow-up" stale comment; documented M-30.1 disposition). `handlePdfExport` validator + `handlePdfGetOutline` honest-stub remain unchanged in BEHAVIOR.
+- `src/ipc/handlers/pdf-ops.test.ts` — removed 3 obsolete `pdf:combine` Phase-1 stub tests; kept residual `pdf:export` + `pdf:getOutline` cases.
+- `src/ipc/register.ts` — replaced stub call-site with real handler DI wiring; added `dialog:pickPdfFiles` channel registration.
+- `src/preload/index.ts` — added `dialog.pickPdfFiles` bridge method.
+- `src/ipc/contracts.ts` — added `DialogPickPdfFilesRequest`/`Response`/`Error` types + `Channels.DialogPickPdfFiles` entry; extended `PdfCombineError` with `combine_no_inputs` / `combine_invalid_source` / `combine_output_too_large` / `path_rejected`; removed `not_implemented` from `PdfCombineError`; extended `PdfCombineValue` with `fileHash` + `warnings`; added `pickPdfFiles` to `PdfApi.dialog`.
+
+### Cross-wave handoffs
+
+- **Riley (parallel — landed in commits `1ca9a82` / `f7d28d6` / `277f7a3` while this wave ran):** consumed `window.pdfApi.dialog.pickPdfFiles({ multi: true })` from the Combine modal. Closed L-30.10 (placeholder "+ Add file" rows) + M-30.4 (rationale headers) + M-30.5 (pdf-coords y-flip unification) in the same wave. End-to-end Combine works.
+- **Julian (re-audit):** the `not_implemented` stub for `pdf:combine` is GONE; the production sanitizer is honestly wired in the handler tests; no new `as any` casts; six-ratchet compliance preserved.
+- **David (future wave, M-30.1 close):** after Riley drops `pdf.getOutline: unavailable` from `api.ts`, remove `PdfGetOutline*` contract types + preload bridge entry + `handlePdfGetOutline` handler + channel registration.
+
+### Self-improvement notes
+
+- **Schema-first parallel-wave discipline worked exactly as the brief described.** Shipping `contracts.ts` edits FIRST (the new `DialogPickPdfFilesRequest|Response`, the extended `PdfCombineError`/`PdfCombineValue`) unblocked Riley's parallel renderer wave inside the same hour. Her commits landed mid-wave; my typecheck+test came up clean against the composed state with zero rework — proves the discriminated-Result + zod-boundary + DI-shape pattern from earlier waves scales to live parallel collaboration.
+- **The "Phase 1 stub" canonical grep is now a permanent ratchet candidate.** Both Riley's renderer toasts and my main-process handler/contract are clean of the string; a future agent re-introducing a `not_implemented` Result in an IPC handler that the renderer can REACH would be caught by `grep -rn "Phase 1 stub\|Wave 2 follow-up" src/`. (Honest `not_implemented` stubs with zero renderer callers, like `pdf:getOutline`, are acceptable per the existing six-ratchet stub-with-TODO rule.)
+
+### File ownership
+
+Edited (David-owned): `src/main/pdf-ops/combine.ts` (NEW), `src/main/pdf-ops/combine.test.ts` (NEW), `src/ipc/handlers/pdf-combine.ts` (NEW), `src/ipc/handlers/pdf-combine.test.ts` (NEW), `src/ipc/handlers/dialog-pick-pdf-files.ts` (NEW), `src/ipc/handlers/dialog-pick-pdf-files.test.ts` (NEW), `src/ipc/handlers/pdf-ops.ts`, `src/ipc/handlers/pdf-ops.test.ts`, `src/ipc/register.ts`, `src/preload/index.ts`, `src/ipc/contracts.ts`, `docs/build-report.md` (this section). **Did NOT touch:** `src/client/**` (Riley parallel — Combine modal + thunks + `api.ts` + her tests), `src/db/**` (Ravi), `electron-builder.yml` / `.github/workflows/**` / `package.json` (Diego), `docs/code-review.md` / `docs/user-guide.md` / `README.md` (Julian/Nathan), `.learnings/locked-instructions.md`.
+
+---
