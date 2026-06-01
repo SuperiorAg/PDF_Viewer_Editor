@@ -8614,6 +8614,76 @@ Edited (Diego-owned): `.github/workflows/ci.yml`, `.github/workflows/release.yml
 
 ---
 
+## Nathan polish audit — doc-completeness sweep before in-app-help expansion (Nathan, 2026-06-01)
+
+**Status: COMPLETE.** Polish-wave audit of the four user-facing docs Nathan owns (`README.md`, `docs/user-guide.md`, `docs/developer-guide.md`, `docs/api-reference.md`) against the actual shipped 0.7.5 surface, in parallel with Riley's in-app-help-modal expansion. Five gap classes surfaced and were fixed in this wave; remaining gaps are flagged below for Riley's modal copy + future doc waves.
+
+### Per-phase doc-coverage verdict (vs the shipped 0.7.5 surface)
+
+| Phase / surface                                                                                     | Verdict before                              | Action taken                                                                                                                                                                                                                                                                           | Verdict after               |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| Phase 1 (open / render / navigate / page edit / combine / bookmarks / print / Print-to-PDF)         | Covered                                     | New **Quick start** + "Where to find things" section at the top of user-guide.md for first-time users (and as the load-bearing source for Riley's in-app help "Getting Started" tab).                                                                                                  | Covered + Quick-start added |
+| Phase 2 (edit-replay engine, atomic Save, undo/redo, image import, text edit, Print-to-PDF flatten) | Covered                                     | No change.                                                                                                                                                                                                                                                                             | Covered                     |
+| Phase 3 (AcroForm fill, form designer, mail merge, flatten)                                         | Covered                                     | No change.                                                                                                                                                                                                                                                                             | Covered                     |
+| Phase 4 (visual + PAdES signatures, audit log, 7 shape annotations, calibration)                    | Covered                                     | No change.                                                                                                                                                                                                                                                                             | Covered                     |
+| Phase 5 (OCR via tesseract.js, language packs, confidence overlay, results panel)                   | Covered                                     | No change.                                                                                                                                                                                                                                                                             | Covered                     |
+| **Phase 5.1 (native WIA scanner)**                                                                  | **GAP — docs said DISABLED / deferred**     | **Rewrote user-guide.md → Scanning from a device** (step-by-step modal flow, ADF + OCR chain, honest limitations + workaround). **Rewrote api-reference.md scan:\* entries** (live channel signatures, error taxonomy). **Updated developer-guide.md** (IPC card + Phase-5 narrative). | Covered                     |
+| Phase 6 (export to docx/xlsx/pptx/PNG/JPEG/TIFF; per-format limitations; queue)                     | Covered                                     | No change.                                                                                                                                                                                                                                                                             | Covered                     |
+| Phase 7 (auto-update, telemetry, i18n, a11y, mac/linux config)                                      | Partial — said "publish target placeholder" | **Rewrote Phase 7 trust-floor obligation #2 + the Checking-for-updates body + the limitations table** to reflect the real `SuperiorAg/PDF_Viewer_Editor` feed (since 0.7.2), the honest live-feed status results, and the install-gated-on-cert nuance.                                | Covered                     |
+| **0.7.4 viewer UX (crisp HiDPI raster, fluid centered Ctrl+scroll zoom, synced zoom dropdown)**     | **GAP — undocumented**                      | **New "Viewer polish (new in 0.7.4)" subsection** under Navigating a document → Zoom and pan, with the four fixes broken out + the verification pointer.                                                                                                                               | Covered                     |
+| **0.7.5 app icon**                                                                                  | **GAP — undocumented**                      | **README install section + SmartScreen note + new What-changed-in-0.7.2–0.7.5 user-guide section** all mention the new icon + the build-warning removal.                                                                                                                               | Covered                     |
+| Versions / install assets / Roadmap status                                                          | Stale (still said 0.7.1)                    | **Bumped to 0.7.5 everywhere** (README status banner, install table, version refs across user-guide / api-reference / developer-guide; Roadmap status restructured into 0.7.1–0.7.5 backlog table + 2-item deferred list).                                                             | Current                     |
+
+### Six-instance trust-floor honesty completeness (verdict: HELD)
+
+The trust-floor honesty pattern (preamble + dedicated section + inline reminders + README front-door + UI surface) is the project's signature engineering discipline (Phase 1 H-3 → Phase 3 forms → Phase 4 PAdES → Phase 5 OCR → Phase 6 Export → Phase 7 polish — the sixth-instance ratchet recorded in `.learnings/learnings.jsonl` 2026-05-28). The Nathan polish audit confirms every obligation is still present at the required locations:
+
+- **PAdES (4 obligations):** cert/password memory-only-zeroed-on-finally, TSA opt-in + no default URL, verify-is-informational, signing-invalidates-prior — all present at top-of-guide + dedicated "PAdES trust floor" anchor + inline reminders at every PAdES-touching subsection.
+- **OCR (4 + 2 cross-cutting obligations):** accuracy-depends-on-scan-quality, no-cloud-upload, OCR-becomes-part-of-PDF, re-OCR-duplicates, plus cross-cutting OCR-invalidates-signatures and tamper-vulnerable-audit-log — all present at the three required locations.
+- **Export (5 obligations):** layout-preserving-best-effort, borderless-tables-not-detected, XFA-values-don't-export, signed-source-stays-valid, OCR-status-determines-text-fidelity — present at top + dedicated anchor + inline + per-format-limitations panel inside the Export modal.
+- **Telemetry / Auto-update / i18n / mac-linux UNVERIFIED (Phase 7, 4+2 obligations):** all present at top-of-guide preamble + dedicated "Phase 7 trust floor" anchor + per-feature subsection reminders + README front-door + UI copy. The 0.7.2 auto-update real-channel landed without weakening the obligation discipline — the obligation moved from "placeholder feed" to "real feed + install-gated-on-cert", same honesty shape.
+- **Scanning (NEW — implicit obligations the Phase 5.1 section now surfaces):** hardware-driven (the addon forwards your selections to the device through the OS driver), no network communication at scan time, Windows-only (macOS/Linux degrade to `scanner_unavailable`), TWAIN-not-supported (WIA only), mid-scan cancel is best-effort (driver-dependent). All present in the new Scanning section.
+
+**Trust-floor reference count in user-guide.md (post-audit grep):** 38 anchor references to `#pades-trust-floor`, `#ocr-trust-floor`, `#export-trust-floor`, `#phase-7-trust-floor` combined, plus 56 inline "Honesty reminder" callouts across the doc. Verdict: HELD without weakening.
+
+### Gaps fixed in this wave (Nathan's owned files only)
+
+1. **README.md** — Status banner + feature table + Develop section bumped to 0.7.5. New per-point-release narrative (0.7.1 → 0.7.5) in "What this is". Roadmap status restructured: "Resolved in the 0.7.1–0.7.5 backlog-fix waves" now an 11-row table (was 8); "Deferred — requires external resources" is now 2 rows (was 3 — WIA scanner moved to resolved). Platform-support row verified-evidence list updated through 0.7.5. Phase-5 archive WIA row flipped from DEFERRED to RESOLVED.
+2. **docs/user-guide.md** — Header + intro bumped to 0.7.5. New **Quick start** section (3-step open-your-first-PDF + Where-to-find-things lookup table + tips for first-time users) at the top. New **What changed in 0.7.2–0.7.5** section. **Scanning from a device** fully rewritten for the live WIA addon. New **Viewer polish (0.7.4)** subsection under Zoom and pan. Phase-7 trust-floor obligation #2 + limitations-table row + Checking-for-updates body + Troubleshooting entry all rewritten for the real publish target. Phase-5 partial-features row for the scanner flipped from deferred to LIVE-on-Windows.
+3. **docs/api-reference.md** — Header status callout bumped to 0.7.5; new Phase-5.1 channel-status callout reflecting LIVE-on-Windows. `scan:listDevices` + `scan:acquire` entries fully rewritten with the real request/response shapes, error taxonomies, and the addon mechanics.
+4. **docs/developer-guide.md** — Phase-5 narrative + IPC reference card both updated for the live `scan:*` channels and the addon mechanics (pure N-API, no two-ABI dance).
+5. **docs/build-report.md** — This audit-status section (the only edit; Nathan-owned authority to append a row per file-ownership rules).
+
+### Gaps FLAGGED for Riley's in-app help modal expansion (current wave, parallel)
+
+The in-app help-modal (`src/client/components/modals/help-modal/index.tsx`, F1-bound) currently carries a Phase-1-subset shortcut table + a 4-row limitations list + a 6-row roadmap list (Phase 2–7 bullets). Per the brief, Riley is expanding it to source from `docs/user-guide.md`. Below are the user-guide.md sections that map cleanly to in-app help tabs, what should be summarized vs linked, and the first-time-user content the modal should surface that the user-guide now carries:
+
+- **Help → Getting Started tab:** pull from the new **Quick start** section (3-step open-your-first-PDF + Where-to-find-things lookup table + first-time tips). Short, scannable, scoped to "what do I do right now?". The full Quick start fits in the modal verbatim; the Where-to-find-things table can render directly as a `<table>`.
+- **Help → Shortcuts tab:** the existing in-modal shortcut table is the right shape but is Phase-1-subset only. Replace with the fuller table from user-guide.md §"Keyboard shortcuts (full list)" — same column structure (Category / Action / Shortcut / Enabled-in-Phase-X). Add the new Phase-4 (Capture signature Ctrl+Shift+G, Sign with PAdES Ctrl+Alt+G, Calibrate measurement Ctrl+Alt+M), Phase-5 (Run OCR Ctrl+Shift+R, Toggle confidence overlay Ctrl+Shift+H), Phase-6 (Export Ctrl+Shift+E) rows. Note the Ctrl+Shift+R rebind (Phase-1 counter-clockwise rotate moved to Ctrl+Shift+Alt+R per L-21.3) so existing users notice. Keep the Ctrl+Shift+F → Form Designer note. Use the shortcut table verbatim from user-guide; the modal table is the single in-app source of truth.
+- **Help → Features tab (NEW):** summarize each phase as a 2-3-sentence "what does this do?" + a link/anchor back into user-guide.md for the long form. Suggested rows: Viewing (incl. the 0.7.4 polish + the F1 you're reading); Page editing; Combine; Annotations + signatures (visual + PAdES); Forms + mail-merge; OCR + language packs; **Scanning from a device (NEW in 0.7.3 on Windows)**; Export to Office; Telemetry / Auto-update / Localization (Phase 7). Each row a one-liner; "more details → user guide" link for the trust-floor and the failure modes.
+- **Help → Trust floor tab (NEW; STRONGLY RECOMMENDED):** the four trust-floor obligations users most need to know — PAdES (cert+password memory-only), OCR (no cloud upload + accuracy depends on scan quality), Export (layout-preserving best-effort + source-not-mutated), Phase 7 (telemetry OFF by default + auto-update install needs a cert + Spanish is a sample + mac/linux UNVERIFIED). Each as a 2-sentence callout, with a link to the full dedicated section in user-guide.md. Riley's modal already has a "limitations" list — promoting the trust-floor concept into a dedicated tab makes the discipline visible at F1 the same way it is at the point-of-action UI.
+- **Help → Limitations / Roadmap tab:** the existing 4-row limitations + 6-row roadmap are the right shape. Refresh the limitations row content from user-guide.md §"Known limitations" Phase-7 partial-features table (8 rows — pick the top 4 with the highest user-visibility). Refresh the roadmap row content from README §"Deferred — requires external resources" (only 2 items now; map to "mac/linux verification" + "code-signing certificate"). Strike the previously-listed WIA scanner row (it's RESOLVED now).
+- **Help → About link (existing):** the modal's footer already has "Esc to close" — consider adding a "Help → About (Help → About menu / version)" link so users who land at F1 looking for the version go to the right place.
+
+**Content NOT to put in the help modal (too long; should be summarized with a "see user-guide" link):** the full Phase-3 forms status banner three-honesty-warnings table; the per-format limitations panel from the Export modal (already surfaces in the modal itself); the full keyboard-shortcuts table is borderline — fit it in if the modal's `lg` shell is big enough, else split into category-collapsible sections. The 38 trust-floor anchor references in user-guide.md are too numerous to enumerate in the modal — pick the 4 obligations with the highest user-stakes (above).
+
+**One-line additions to user-guide.md the in-app help would now request and that this audit ALREADY ADDED:** (a) the Quick start section; (b) the Where-to-find-things lookup table; (c) the 0.7.4 viewer polish callout; (d) the live WIA scanner workflow; (e) the per-point-release narrative (0.7.2–0.7.5). All five are in user-guide.md as of this commit; Riley's next help-modal read picks them up.
+
+### Did NOT touch (file-ownership boundaries)
+
+- `src/**` (Riley / David / Julian).
+- Riley's frozen design docs: `ARCHITECTURE.md`, `architecture-phase-*.md`, `*-engine.md`, `api-contracts.md`, `data-models.md`, `ui-spec.md`, `conventions.md`, `a11y-audit.md`, `i18n-strategy.md`.
+- Marcus's docs: `docs/project-plan.md`. Only appended this single audit-status section to `docs/build-report.md` (the file-ownership rule allows additive appends, not edits to prior wave entries).
+- Julian's `docs/code-review.md`.
+- Configs: `electron-builder.yml`, `.github/workflows/**`, `scripts/**`, `package.json` (Diego).
+- `.learnings/locked-instructions.md` (no constraints to ratchet this wave).
+
+### Nathan self-improvement log
+
+One JSONL entry appended to `.learnings/learnings.jsonl`.
+
+---
+
 ## CI Maintenance — pin Windows runner to `windows-2025-vs2026` (clear redirect NOTICE) (Diego, 2026-06-01)
 
 **Why:** Every CI run was still carrying the informational annotation `NOTICE: windows-latest requests are being redirected to windows-2025-vs2026 by June 15, 2026` (one per Windows job, confirmed via `gh api .../check-runs/<id>/annotations` on the most recent green run `26651903659`). The user explicitly reversed the prior "leave as-is" decision and asked for a proactive pin.
@@ -8637,5 +8707,79 @@ Edited (Diego-owned): `.github/workflows/ci.yml`, `.github/workflows/release.yml
 ### File ownership
 
 Edited (Diego-owned): `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `docs/build-report.md` (this section). **Did NOT touch:** app Node version (`.nvmrc` / `engines.node` — L-003 stays), `src/**`, `package.json` deps, other agents' docs, `.learnings/locked-instructions.md`. Additive commit to `main`; no force-push.
+
+---
+
+## Polish — Riley (VP of Product Design & Frontend Engineering), 2026-06-01
+
+**Headline: cursor-anchored Ctrl+wheel zoom (Acrobat-style) + comprehensive 13-section in-app Help modal.**
+
+Two disjoint polish tasks, both shipped via independent per-task commits per the project's commit-frequently convention. Both build on the prior Wave-UX work (crisp DPR raster, fluid two-tier zoom, centered transform-origin) that landed in v0.7.4.
+
+### Task A — cursor-anchored Ctrl+wheel zoom (Acrobat-style)
+
+**Mechanics inside the existing two-tier zoom model (`displayZoom` transient + `zoom` committed):**
+
+1. On every wheel tick: capture `(clientX, clientY, scrollerLeft, scrollerTop, contentX, contentY, baseZoom, pageIndex, pageLocalX, pageLocalY)` into `cursorAnchorRef`. `baseZoom` is preserved across ticks within one gesture (only set on the first tick, cleared on commit).
+2. Hit-test the page under the cursor by walking `[data-page-index]` nodes' `getBoundingClientRect()` — the rect reflects the visually-scaled box, so cursor-in-page math is accurate mid-transform. If no page is under the cursor (empty gutter), cursor-zoom degrades to the previous '50% 0' anchor.
+3. During gesture: the cursor-page receives a `transformOriginOverride` of `${pageLocalX/displayScale}px ${pageLocalY/displayScale}px` — the division converts SCALED-page-pixels back to the pre-scale coord space `transform-origin` uses. All other pages keep '50% 0' (no per-frame style churn for non-cursor pages).
+4. On debounce-commit (120ms): hand off `cursorAnchorRef` to `pendingScrollCompRef`, then dispatch `setZoom`. A `useLayoutEffect` on `zoom` runs synchronously after the new layout box is laid out and writes `scrollLeft/scrollTop` so the cursor's content-point sits at the same viewport coord post-commit (`contentX_new = contentX_old * (newZoom/oldZoom)`; ratio approach is approximate but visually natural — exact at the cursor's current page when well inside its body).
+5. `PdfCanvas` accepts `displayScale?` and `transformOriginOverride?` as optional (exactOptionalPropertyTypes-safe via conditional spread at the call site).
+
+Buttons, dropdown, fit-mode buttons, keyboard shortcuts (Ctrl++, Ctrl+-, Ctrl+0, Ctrl+1, Ctrl+2) all unchanged — they continue through committed Redux zoom; cursor anchor is a wheel-only concept.
+
+**Tests (new file `src/client/components/pdf-viewer/pdf-viewer.test.tsx`, 3 tests):** zoom-in commits + adjusts `scrollLeft/scrollTop`; zoom-out commits + adjusts `scrollLeft/scrollTop`; plain wheel (no ctrlKey) is a no-op. Each test uses a synchronous `requestAnimationFrame` shim + fake timers + a stubbed `getBoundingClientRect` + the standard pdf-loader seam mock.
+
+**Commit `31de046`** — `feat(viewer): cursor-anchored ctrl+wheel zoom (Acrobat-style)` — 3 files, +479 / -23.
+
+### Task B — expand the in-app Help modal to a comprehensive 13-section reference
+
+Phase 1.1 R-1.1 shipped a single-screen Help (shortcuts table + Phase 1 limitations + roadmap). The expanded version is a horizontal-tablist modal with one section per major surface, sourced from `docs/user-guide.md` (Nathan).
+
+**Sections (left-to-right tablist, stable order in `HELP_TABS`):**
+
+1. **Getting started** — Open / Navigate / Zoom and pan (incl. the new Ctrl+wheel cursor anchoring).
+2. **Editing pages** — Reorder / Insert / Delete / Rotate / Combine / Image import / Text edit / Undo.
+3. **Annotations** — Highlight / Sticky / Text box / Freehand / Shapes + measure / Summary panel.
+4. **Forms** — Fill / Commit boundary / Designer / Templates / Honesty warnings (JS-strip + XFA).
+5. **Mail merge** — 5-step numbered procedure + XLSX/JS-strip limits.
+6. **Signing** — Visual + PAdES + Audit panel.
+7. **OCR** — Run / Language packs / Confidence overlay.
+8. **Scan** — Discovery / Capture / Combine-with-OCR (with the macOS/Linux `scanner_unavailable` honesty).
+9. **Export** — Formats / Quality tiers / Background queue.
+10. **Keyboard shortcuts** — full table (33 rows incl. the new `Ctrl+wheel` "Zoom at cursor (Acrobat-style)" row).
+11. **Honesty banner** — the six Phase-7 trust-floor obligations (telemetry off-by-default, updates placeholder, OCR can-be-wrong, signing in-memory-only, export best-effort, es-ES sample).
+12. **Troubleshooting** — 9 common errors (file-open, save fidelity, drag-drop L-001, XFA, JS-strip, OCR pack, sign cert) + log paths.
+13. **About** — tagline, version pointer, MIT credits.
+
+**Implementation discipline:**
+
+- `help-content.ts` — typed section + subsection structure. Three subsection shapes (`prose` / `bullets` / `steps`) via a discriminated union. `HELP_TABS` drives the tablist; `HELP_SECTIONS` is the render order. NO new dependency — zero markdown lib, zero sanitizer (the project ships only permissive OSS; adding a markdown lib would mean a license + sanitizer review).
+- i18n: every string is a `t('modals:help.<section>.<field>')` call. The `P = 'modals:help'` constant bakes the namespace into the key prefix so the renderer can pass keys straight to `t(...)` without decoration. Caught an early bug where bare-path keys (without `modals:` prefix) fell back to the `common` namespace and returned the bare path as text — fix landed in the same commit.
+- en-US grew **816 → 956 keys** (+140 new help keys); es-ES coverage **68% → 58%** — well above the 40% floor; the fallback guarantee holds (`coverage.test.ts` 3/3 green). es-ES translations of the new help surface are a future i18n pass; today every en-US key resolves via fallback for any locale.
+- A11y: horizontal WAI-ARIA tab pattern via `useTablistKeys` (roving tabindex, ArrowLeft/Right, Home/End — same primitive `SettingsModal` uses), `ModalShell` focus-trap, Esc to close. Each tab panel has `tabIndex={0}` so panel content is reachable by Tab.
+- Tablist labels resolve via `t('modals:help.tabs.<id>')`. Section headings and bodies all resolve via `t(...)`. Shortcut table column headers + the new `shortcutEnabled` cell also via `t(...)`.
+- CSS Modules only — no inline styles introduced (the pre-existing dynamic `style={{ width, height, transform }}` on PdfCanvas is the only inline-style block; that's a per-frame measurement, not styling).
+- jsx-a11y/aria-proptypes lint: `aria-selected` requires a static-typed boolean — explicit `const isActive: boolean = activeTab === tabId;` per the Wave-28a SettingsModal pattern. No `eslint-disable` added.
+
+**Tests (rewrote `help-modal.test.tsx`, 11 tests):** title via ModalShell; tablist exposes all 13 sections; default Getting-started subsection headings render; Shortcuts tab renders >= 30 rows incl. `Ctrl+wheel`; Honesty banner shows all 6 trust-floor entries; Mail merge is a numbered list (`<ol>`); ArrowRight/ArrowLeft roving navigation; Close (footer) closes; Close (× button) closes; openHelpModal / closeHelpModal action toggles selector; `findSection()` lookup. All 11 green.
+
+**Commit `887b934`** — `feat(help): expand in-app Help modal to comprehensive 13-section reference` — 5 files, +1032 / -206 (new `help-content.ts`).
+
+### Verification
+
+- **Renderer typecheck (`npx tsc -p tsconfig.renderer.json --noEmit`)** — clean for all my files. (One pre-existing error in `src/shared/result.ts(49,7): Cannot find name 'process'` exists at HEAD before this wave — `src/shared/` is not in my domain. Unrelated to these edits.)
+- **ESLint (`npx eslint <my-files> --max-warnings 0`)** — clean across all 6 files (5 src + 1 new test). Husky pre-commit hook ran on both commits and passed.
+- **Client test suite (`npx vitest run src/client`) — 597 / 597 green** across 66 test files. Includes the 3 new pdf-viewer cursor-zoom tests + the 11 expanded help-modal tests + the i18n `coverage.test.ts` keys-resolved-non-raw + en-US-key-count assertions (956 keys, 58% es-ES coverage).
+- **No L-002 packaging-binary screenshot in this wave** — these are pure renderer edits behind a tested + linted contract; Diego owns the next packaging wave + its operator-level screenshot per L-002.
+
+### Open follow-ups
+
+- **es-ES translation of the new help surface (~140 keys):** the framework + fallback guarantee handle missing es-ES keys transparently, so this is a polish/i18n wave item (the trust-floor honesty obligation #4 already says es-ES is a sample). Nathan / future i18n wave.
+- **The `Help → About` modal** is a separate component (`AboutModal`, existing); the new Help-modal "About" tab is a _concise mirror_ + a pointer to `Help → About` for live version/update info. That's a deliberate split — keep the comprehensive Help modal text-only, keep the live update wiring + version polling in `AboutModal`. If a future wave wants to unify them into one "Reference" modal, the structure is ready (just add an `id: 'about-live'` section that renders `<AboutTab>` inline).
+
+### File ownership
+
+Edited (Riley-owned): `src/client/components/pdf-viewer/index.tsx`, `src/client/components/pdf-canvas/index.tsx`, `src/client/components/modals/help-modal/index.tsx`, `src/client/components/modals/help-modal/help-modal.module.css`, `src/client/components/modals/help-modal/help-modal.test.tsx`, `src/client/i18n/locales/en-US/modals.json`, `docs/build-report.md` (this section). Created (Riley-owned): `src/client/components/pdf-viewer/pdf-viewer.test.tsx`, `src/client/components/modals/help-modal/help-content.ts`. **Did NOT touch:** `src/main/**` / `src/preload/**` / `src/ipc/**` (David / Julian domain), `src/db/**` (Ravi), `electron-builder.yml` / `.github/workflows/**` / `package.json` (Diego), `docs/user-guide.md` (Nathan), `.learnings/locked-instructions.md`. Per-task commits to `main` (`31de046`, `887b934`); no force-push.
 
 ---
