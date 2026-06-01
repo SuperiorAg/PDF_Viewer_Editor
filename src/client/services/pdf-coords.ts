@@ -27,6 +27,56 @@ export interface PageViewport {
   scale: number;
 }
 
+// ----------------------------------------------------------------------------
+// Y-flip algebra — single source (M-30.5 unification, Wave 30 follow-up).
+//
+// The four conversion functions below share ONE underlying y-flip identity.
+// Both directions express the same fact: the top of the rect in screen space
+// is the bottom of the rect's y-extent in PDF space.
+//
+//   Forward (pdf -> screen):
+//     screenY = viewport.height - (pdf.y + pdf.height) * sy
+//
+//   Inverse (screen -> pdf, with sy_inv = page.height / viewport.height):
+//     pdfY = page.height - (screen.y + screen.height) * sy_inv      [form A]
+//          = (viewport.height - (screen.y + screen.height)) * sy_inv [form B, point variant]
+//
+// Lemma (algebraic equivalence of form A and form B):
+//   sy_inv = page.height / viewport.height
+//   page.height - (screen.y + h) * sy_inv
+//     = (viewport.height * sy_inv) - (screen.y + h) * sy_inv    [substitute page.height]
+//     = (viewport.height - screen.y - h) * sy_inv
+//   For a 0-height rect (i.e. a point with h = 0):
+//     = (viewport.height - screen.y) * sy_inv      [form B]
+//   For a non-zero-height rect:
+//     = (viewport.height - (screen.y + h)) * sy_inv [form A in (screen.y + h) shape]
+//
+// Both rect and point conversions go through these helpers so the algebra
+// lives in ONE place. If the rect/point split ever diverges, that is a bug.
+// ----------------------------------------------------------------------------
+
+function flipYPdfToScreen(
+  pdfY: number,
+  pdfHeight: number,
+  sy: number,
+  viewportHeight: number,
+): number {
+  // Anchors the screen rect's TOP-LEFT corner on the PDF rect's top edge.
+  return viewportHeight - (pdfY + pdfHeight) * sy;
+}
+
+function flipYScreenToPdf(
+  screenY: number,
+  screenHeight: number,
+  syInv: number,
+  pageHeight: number,
+): number {
+  // Inverse: anchors the PDF rect's BOTTOM-LEFT corner on the screen rect's
+  // bottom edge. Equivalent to (viewportHeight - (screenY + screenHeight)) * syInv
+  // — see the lemma above. For points, pass screenHeight = 0.
+  return pageHeight - (screenY + screenHeight) * syInv;
+}
+
 /**
  * Convert a PDF-space rect (bottom-left origin) to screen-space (top-left).
  * `page` provides the page's intrinsic dimensions in PDF user-space units.
@@ -39,13 +89,9 @@ export function pdfRectToScreen(
   // Scale factor from PDF user-space units to CSS pixels.
   const sx = viewport.width / page.width;
   const sy = viewport.height / page.height;
-  const screenX = rect.x * sx;
-  // y-flip: PDF y is measured from the bottom. Add rect.height so we anchor
-  // the top-left corner of the screen rect on the top edge of the PDF rect.
-  const screenY = viewport.height - (rect.y + rect.height) * sy;
   return {
-    x: screenX,
-    y: screenY,
+    x: rect.x * sx,
+    y: flipYPdfToScreen(rect.y, rect.height, sy, viewport.height),
     width: rect.width * sx,
     height: rect.height * sy,
   };
@@ -62,12 +108,12 @@ export function screenRectToPdf(
 ): PdfRect {
   const sx = page.width / viewport.width;
   const sy = page.height / viewport.height;
-  const pdfX = rect.x * sx;
-  const pdfWidth = rect.width * sx;
-  const pdfHeight = rect.height * sy;
-  // y-flip in reverse.
-  const pdfY = page.height - (rect.y + rect.height) * sy;
-  return { x: pdfX, y: pdfY, width: pdfWidth, height: pdfHeight };
+  return {
+    x: rect.x * sx,
+    y: flipYScreenToPdf(rect.y, rect.height, sy, page.height),
+    width: rect.width * sx,
+    height: rect.height * sy,
+  };
 }
 
 export interface Point2D {
@@ -78,13 +124,15 @@ export interface Point2D {
 export function pdfPointToScreen(pt: Point2D, page: PageModel, viewport: PageViewport): Point2D {
   const sx = viewport.width / page.width;
   const sy = viewport.height / page.height;
-  return { x: pt.x * sx, y: viewport.height - pt.y * sy };
+  // Point = rect of height 0; the helper collapses to viewportHeight - pt.y * sy.
+  return { x: pt.x * sx, y: flipYPdfToScreen(pt.y, 0, sy, viewport.height) };
 }
 
 export function screenPointToPdf(pt: Point2D, page: PageModel, viewport: PageViewport): Point2D {
   const sx = page.width / viewport.width;
   const sy = page.height / viewport.height;
-  return { x: pt.x * sx, y: (viewport.height - pt.y) * sy };
+  // Point = rect of height 0; the helper collapses to (viewportHeight - pt.y) * sy.
+  return { x: pt.x * sx, y: flipYScreenToPdf(pt.y, 0, sy, page.height) };
 }
 
 /**
