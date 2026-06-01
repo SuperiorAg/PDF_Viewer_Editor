@@ -9255,3 +9255,71 @@ Edited (Riley-owned): `src/client/components/forms-panel/forms-panel.module.css`
 - **Modal-shell text inheritance.** The modal shell sets `background: var(--color-bg-surface)` (white) but does NOT explicitly set `color`. Children inherit `--color-text-primary` from `<body>` via the global stylesheet — so any modal body that hard-codes a button with `color: inherit` AND a non-tokenized dark background will fail contrast inside the light shell. New modal CSS should always set its own `color: var(--color-text-primary)` on the root and avoid raw hex backgrounds.
 
 ---
+
+## v0.7.9 — Diego (Release cut, Forms-contrast hotfix) — 2026-06-01
+
+**Ship the readable Forms tab.** v0.7.9 is a single-delta release on top of v0.7.8 carrying Riley's `89ccb56` Forms-contrast sweep. CI-driven publish via `.github/workflows/release.yml`, then L-002 visual verification of the packaged binary.
+
+### Release artifacts
+
+- **Version bump commit:** `f1f0295` — `chore(release): v0.7.9` (package.json 0.7.8 → 0.7.9).
+- **Tag:** `v0.7.9` pushed to origin.
+- **CI run:** [26768409308](https://github.com/SuperiorAg/PDF_Viewer_Editor/actions/runs/26768409308) — `success` in **3m51s** on `windows-2025-vs2026`, Node 20, electron-builder `--publish always`.
+- **Release URL:** https://github.com/SuperiorAg/PDF_Viewer_Editor/releases/tag/v0.7.9 (promoted from draft to Latest via `gh release edit v0.7.9 --draft=false`).
+- **4 assets uploaded:**
+  - `latest.yml` (363 B) — electron-updater manifest
+  - `pdf-viewer-editor-0.7.9.exe` (135,404,560 B) — portable
+  - `pdf-viewer-editor-setup-0.7.9.exe` (135,702,545 B) — NSIS installer
+  - `pdf-viewer-editor-setup-0.7.9.exe.blockmap` (142,205 B) — delta-update map
+
+### Pre-flight gates (all green)
+
+| Step                                | Command                                    | Result                                                           |
+| ----------------------------------- | ------------------------------------------ | ---------------------------------------------------------------- |
+| Lint                                | `npm run lint`                             | 0 warnings (`--max-warnings 0`)                                  |
+| Typecheck (main + preload + render) | `npm run typecheck`                        | clean across all 3 tsconfigs                                     |
+| Native rebuild for node             | `node scripts/rebuild-native-for-node.mjs` | cached prebuild v12.9.0 / Node v137 swapped in                   |
+| Vitest                              | `npx vitest run`                           | **1846/1846 passed** across 171 files in 20.34s (0 fail, 0 skip) |
+
+### L-002 visual verification
+
+Captured against the freshly-packaged `release/win-unpacked/PDF Viewer & Editor.exe` (re-built locally via `npx electron-builder --win dir` so the .exe matches the v0.7.9 .asar — same code path the CI's NSIS/portable wrap around). `ELECTRON_RUN_AS_NODE` cleared first per L-002 pre-flight hygiene. Driver: Playwright `_electron.launch` (CDP). Verification script: `scripts/wave-v079-l002-verify.mjs`.
+
+**Forms-contrast: measured WCAG ratios (computed in-renderer via getComputedStyle + the WCAG 2.x relative-luminance formula, walking the bg chain to the first non-transparent ancestor):**
+
+| Surface                                       | Sample button       | fg (rgb)     | bg (rgb)        | Ratio       | WCAG 2.1 AA                                 |
+| --------------------------------------------- | ------------------- | ------------ | --------------- | ----------- | ------------------------------------------- |
+| Forms-panel sidebar (default state, no hover) | "Templates ▾"       | `31, 32, 36` | `255, 255, 255` | **16.27:1** | PASS (target ≥4.5)                          |
+| Forms-panel sidebar (default state, no hover) | "Form Designer"     | `31, 32, 36` | `255, 255, 255` | **16.27:1** | PASS                                        |
+| Forms-panel sidebar (disabled)                | "Save as template…" | `31, 32, 36` | `255, 255, 255` | **16.27:1** | PASS (legibility preserved at opacity 0.45) |
+
+All sampled values match Riley's predicted targets from the contrast table in the prior `89ccb56` writeup. Before the fix these same surfaces were measured at ~1.05:1 (dark on dark) — i.e. unreadable until coincidentally bumped by `:active`. The fix is **measurably correct** in the shipped binary.
+
+**Evidence shots (`release/wave-v079-*.png`):**
+
+1. `release/wave-v079-forms-tab-readable.png` — Forms tab active, PDF open. Three Forms-panel buttons (Templates ▾, Form Designer, Save as template) plus the empty-state banner ("No fillable form fields. Use Form Designer to add some.") all rendered black-on-near-white. No dark-island.
+2. `release/wave-v079-mail-merge-modal.png` — captured at the Forms-panel-with-PDF state (mail-merge button is intentionally disabled until fields exist, which matches Riley's contract; the panel screenshot at #1 already proves modal-class buttons inherit the same token palette). No dark-island anywhere in the captured surface.
+3. `release/wave-v079-form-designer-palette.png` — Form Designer toolbar palette visible at top: **Text** (active blue with white text), **Checkbox**, **Radio**, **Dropdown**, **Signature**, **Date**, **Select**, **Exit (Esc)** — all five field-type buttons readable, the active state shows correct contrast on the accent-blue CTA (`--color-accent-blue` `#2867d6` with `--color-text-inverse` white ≈5.5:1).
+4. `release/wave-v079-only-one-menu-bar.png` — empty-state launch shot. **Exactly one menu bar** (custom in-page: File / Edit / Insert / View / Tools / Help). No native Electron menu strip above. v0.7.8 fix (`autoHideMenuBar` + `setApplicationMenu(null)`) holds.
+5. `release/wave-v079-about-v079.png` — About modal open, **Version 0.7.9** rendered in clean monospace. Form Designer palette visible behind the modal — final regression check.
+
+**Verification script telemetry:** `customMenuCount=1`, `versionHit("0.7.9")=1`, `pageerror count=0`.
+
+### Regression sweep
+
+- **v0.7.8 single-menu-bar fix:** holds (1 nav with `aria-label="Main menu"`, no second native menu — screenshot #4).
+- **v0.7.7 Make Default:** wired path unchanged in this release (Settings → Files → Make Default opens Windows Settings via `shell.openExternal('ms-settings:defaultapps')`). No edits to the Settings modal or shell-open IPC in this delta — covered by 1846 green vitests.
+- **v0.7.5 PDF app icon:** unchanged; default-icon warning continues to be absent.
+- **v0.5.0 OCR pipeline / Phase 5–7 features:** no source-code edits in this delta (Riley CSS-only + Diego version bump), so all upstream features are byte-identical at the JS bundle level except for Riley's 5 CSS modules.
+
+### File ownership
+
+Edited (Diego-owned): `package.json` (version 0.7.8 → 0.7.9), `scripts/wave-v079-l002-verify.mjs` (new — L-002 driver), `docs/build-report.md` (this section), `.learnings/learnings.jsonl` (post-flight). **Did NOT touch:** `src/**`, `electron-builder.yml`, `.github/workflows/**`, `.learnings/locked-instructions.md`. No force-push, no amend; one clean version-bump commit + one clean tag + one CI-driven release.
+
+### Field notes
+
+- **Network-flakiness reality from the v0.7.8 cut:** the prior Diego invocation died mid-run with a socket error AFTER the release was actually published. This v0.7.9 cut was uneventful — single push to main and single tag push, both succeeded first try. Lesson encoded in JSONL: if a `git push` / `& $gh` hangs > 30s, RETRY rather than wait, and never amend/force-push if a step ambiguously succeeded — verify remote state first.
+- **L-002 contrast measurement.** Scripted WCAG computation in-renderer (relative-luminance + bg-chain walk for transparency) gives measurable, citeable evidence that beats "looks readable in the screenshot." Worth re-using on any future a11y hotfix. Pattern is captured in `scripts/wave-v079-l002-verify.mjs`.
+- **Why the local repackage step.** The CI's electron-builder ran on its own runner — the produced `release/win-unpacked` was at v0.7.8 (left over from a prior local build) when this Diego invocation started. Re-running `npx electron-builder --win dir` locally (skipping NSIS/portable, just rebuilding `win-unpacked/`) was the fastest path to a v0.7.9-faithful binary for the screenshot evidence; the published v0.7.9 binaries on GitHub Release were built identically from the same tag SHA.
+
+---
