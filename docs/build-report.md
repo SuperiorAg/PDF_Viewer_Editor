@@ -9042,3 +9042,28 @@ Method: `release/win-unpacked/PDF Viewer & Editor.exe` launched via Playwright `
 Edited (Diego-owned): `package.json` (version bump 0.7.5 -> 0.7.6), `scripts/wave-v076-l002-verify.mjs` (NEW — L-002 verification script), `docs/build-report.md` (this section). **Did NOT touch:** `src/**` (the polish + Combine commits already landed pre-wave), `README.md` / `docs/user-guide.md` / `docs/developer-guide.md` / `docs/api-reference.md` (Nathan), `docs/code-review.md` (Julian), `.learnings/locked-instructions.md`. New artifacts under `release/`: 6 verification PNGs.
 
 ---
+
+## v0.7.6 docs refresh — Nathan — 2026-06-01
+
+**Outcome:** **GREEN.** The four docs files Diego stashed at the release cut (`nathan-docs-pending-v076-not-mine-to-commit`) were promoted to `main` (commit `e63d459`). README + api-reference + developer-guide + user-guide are now stamped at 0.7.6 and accurately describe the three headline 0.7.6 deltas (cursor-anchored Ctrl+wheel zoom; the 13-section in-app Help modal; the H-30.1 Combine-PDFs end-to-end closure). The cross-roster-stash hand-off pattern Diego flagged in the gaps + handoffs section is closed.
+
+**What landed:**
+
+- **README.md** — bumped 0.7.5 → 0.7.6 in the status banner, the feature-state table, the install section, the platform-support row, and the develop section. Added three new rows to "Resolved in the 0.7.1–0.7.6 backlog-fix waves" for H-30.1 (Combine), cursor-anchored zoom, and the 13-section Help modal. Added 0.7.6 evidence callouts to the install-section visual-proof prose.
+- **docs/api-reference.md** — bumped the Phase 7 channel-status banner to "current at 0.7.6"; rewrote the `pdf:combine` section from "Stub" to "Live end-to-end (since 0.7.6 — H-30.1 closure)" with the JS-strip-by-construction note and the new `dialog:pickPdfFiles` channel; corrected the `scan:*` summary table (LIVE on Windows since 0.7.3, not a Phase 5.1 placeholder); refreshed the `update:*` summary cell to drop the "placeholder feed" language.
+- **docs/developer-guide.md** — bumped the example version-bump in the release-process step from `0.7.4 → 0.7.5` to `0.7.5 → 0.7.6`; extended the Phase 7 quick-reference bullet to enumerate all six post-roadmap point releases (0.7.1 → 0.7.6) with their concrete deltas; retired the stale "publish target is a placeholder" framing now that 0.7.2's real feed is the canonical state.
+- **docs/user-guide.md** — bumped title + opening paragraph + honesty banner to 0.7.6; renamed the "What changed in 0.7.2–0.7.5" section to 0.7.2–0.7.6 with a new top bullet describing the three 0.7.6 deltas; added a "Cursor-anchored zoom (new in 0.7.6)" sub-section under Zoom and pan; rewrote the Combining PDFs section to reflect the H-30.1 closure (was claimed-to-work-but-stubbed; now actually works) with the honest per-source error mapping + the JS/open-action strip note; updated the F1 / Help shortcut row to list the 13 sections.
+
+**Why this matters:**
+
+The README on the GitHub repo home page is what a user lands on after seeing the v0.7.6 release notification. Until this commit, that README still claimed 0.7.5 polish + omitted both the cursor-anchored zoom delta and the H-30.1 Combine closure — meaning a user who clicked "Combine PDFs…" in 0.7.5 docs and then ran 0.7.6 would have correct binary behavior but stale docs that didn't tell them the feature now works. The four docs are now in sync with the live binary.
+
+### File ownership
+
+Edited (Nathan-owned): `README.md`, `docs/api-reference.md`, `docs/developer-guide.md`, `docs/user-guide.md`, `docs/build-report.md` (this section — append-only). **Did NOT touch:** `src/**`, any other doc, `.github/**`, `package.json`, `.learnings/locked-instructions.md`. All four content edits originated in Diego's stash; the version-bump-and-weave deltas (0.7.5 → 0.7.6 with the three 0.7.6 headline deltas woven in) are mine. Husky pre-commit (lint-staged + prettier on markdown) gated green; pre-push (full typecheck + lint --max-warnings 0) gated green.
+
+### Hand-off pattern that worked
+
+When an agent is closing a packaging release and finds uncommitted edits in another agent's owned files at the working-tree level, **do not silently commit them** (Diego's correct restraint here) **and do not discard them** (the next-best wrong move). The right move is what Diego did: stash with a self-describing label (`nathan-docs-pending-v076-not-mine-to-commit`), keep the tree clean for the release cut, surface the gap in the build-report's gaps + handoffs section, and let the orchestrator dispatch the owning agent with the stash hash + a single-task brief. This kept the release atomic AND preserved the docs work AND respected the file-ownership boundary — three things that would otherwise compete.
+
+---
