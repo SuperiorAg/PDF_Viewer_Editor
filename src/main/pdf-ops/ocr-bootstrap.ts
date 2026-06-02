@@ -225,6 +225,42 @@ function describeLoadError(e: unknown): { code: string; message: string } {
   return { code, message };
 }
 
+/**
+ * Install Canvas2D / Web-Image globals onto `globalThis` from the loaded canvas
+ * module. pdf.js's legacy build resolves `Image`, `Path2D`, `ImageData`,
+ * `DOMMatrix`, and `DOMPoint` via `globalThis` at render time. Both
+ * `@napi-rs/canvas` and `node-canvas` ship these as NAMED EXPORTS but do NOT
+ * auto-install them on `globalThis` — so without this step pdf.js falls back to
+ * its internal polyfills (e.g. it builds its own `Path` class) which the native
+ * 2d context rejects.
+ *
+ * Two symptoms in the wild before this install ran:
+ *   1. Text pages: `Value is none of these types String, Path` from
+ *      `ctx.fill(path)` because pdf.js handed it the internal Path polyfill.
+ *      (Already fixed for EXPORT in export-bootstrap.registerExportCanvasGlobals
+ *      via Path2D/DOMMatrix/ImageData/DOMPoint — but the OCR rasterizer was
+ *      missing the same step, regression v0.7.10.)
+ *   2. Image XObjects: `Value is none of these types String, Path` from
+ *      @napi-rs/canvas's `Image` constructor when pdf.js does `new Image()` and
+ *      then assigns image data via property setters. @napi-rs/canvas's `Image`
+ *      requires constructor args (String filepath or Path filesystem object) —
+ *      installing the class on globalThis lets pdf.js's image-XObject decoder
+ *      take its alternate code path that uses the named constructor signature.
+ *      (User-reported in v0.7.10 on a real text-bearing PDF.)
+ *
+ * The `=== undefined` guards prevent stomping on real globals if some other
+ * code (Electron renderer, polyfill loader, test setup) already installed them.
+ * Idempotent — safe to call multiple times.
+ */
+function installCanvasGlobals(napi: Record<string, unknown>): void {
+  const g = globalThis as unknown as Record<string, unknown>;
+  for (const key of ['Image', 'Path2D', 'ImageData', 'DOMMatrix', 'DOMPoint']) {
+    if (g[key] === undefined && typeof napi[key] === 'function') {
+      g[key] = napi[key];
+    }
+  }
+}
+
 export function tryLoadCanvas(): CanvasLoadResult {
   if (_canvasLoadResult !== null) return _canvasLoadResult;
   const attempts: string[] = [];
@@ -232,7 +268,10 @@ export function tryLoadCanvas(): CanvasLoadResult {
   try {
     const moduleName = '@napi-rs/canvas';
     // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-    const canvasMod = require(moduleName) as { createCanvas: CreateCanvasFn };
+    const canvasMod = require(moduleName) as Record<string, unknown> & {
+      createCanvas: CreateCanvasFn;
+    };
+    installCanvasGlobals(canvasMod);
     _canvasLoadResult = {
       ok: true,
       source: '@napi-rs/canvas',
@@ -247,7 +286,10 @@ export function tryLoadCanvas(): CanvasLoadResult {
   try {
     const moduleName = 'canvas';
     // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-    const canvasMod = require(moduleName) as { createCanvas: CreateCanvasFn };
+    const canvasMod = require(moduleName) as Record<string, unknown> & {
+      createCanvas: CreateCanvasFn;
+    };
+    installCanvasGlobals(canvasMod);
     _canvasLoadResult = { ok: true, source: 'canvas', createCanvas: canvasMod.createCanvas };
     return _canvasLoadResult;
   } catch (e) {
@@ -335,7 +377,7 @@ export async function pageDimensionsProd(
 // HTTP streamer (production)
 // ============================================================================
 
-function createNodeHttpsStreamer(): HttpStreamer {
+export function createNodeHttpsStreamer(): HttpStreamer {
   return {
     async download(
       url: string,
@@ -351,7 +393,20 @@ function createNodeHttpsStreamer(): HttpStreamer {
         const writeStream = createWriteStream(destPath);
         let totalBytes = 0;
         let bytesDownloaded = 0;
+        // Hoist writeStream listeners BEFORE `nodeHttps.get` so a synchronous
+        // 'error' emit from createWriteStream (e.g. read-only destination,
+        // EACCES, ENOSPC) is captured by `reject` instead of crashing the main
+        // process. Audit finding 2026-06-02 — same pattern as `tsa-client.ts:183`.
+        writeStream.on('error', (err) => reject(err));
+        writeStream.on('finish', () => {
+          writeStream.close();
+          resolve(bytesDownloaded);
+        });
         const req = nodeHttps.get(url, { timeout: 30_000 }, (res) => {
+          // Attach the response error handler FIRST — TLS truncation / mid-stream
+          // ECONNRESET emits 'error' on `res`, and without a listener Node
+          // crashes the main process. Mirrors `tsa-client.ts:183`.
+          res.on('error', (err) => reject(err));
           const contentLength = parseInt(res.headers['content-length'] ?? '0', 10);
           totalBytes = isNaN(contentLength) ? 0 : contentLength;
           res.on('data', (chunk: Buffer) => {
@@ -359,11 +414,6 @@ function createNodeHttpsStreamer(): HttpStreamer {
             onProgress(bytesDownloaded, totalBytes);
           });
           res.pipe(writeStream);
-          writeStream.on('finish', () => {
-            writeStream.close();
-            resolve(bytesDownloaded);
-          });
-          writeStream.on('error', (err) => reject(err));
         });
         req.on('error', (err) => reject(err));
         req.on('timeout', () => {

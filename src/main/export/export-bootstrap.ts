@@ -476,7 +476,13 @@ function registerExportCanvasGlobals(): void {
   // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
   const canvasMod = require(moduleName) as Record<string, unknown>;
   const g = globalThis as unknown as Record<string, unknown>;
-  for (const key of ['Path2D', 'DOMMatrix', 'ImageData', 'DOMPoint']) {
+  // `Image` was added 2026-06-02 alongside the OCR pipeline polyfill (David,
+  // v0.7.11 fix). pdf.js's image-XObject decoder calls `new Image()` and then
+  // assigns image data via property setters; @napi-rs/canvas's `Image`
+  // constructor accepts that shape but rejects pdf.js's internal polyfill,
+  // surfacing as "Value is none of these types String, Path" on any PDF page
+  // that contains an embedded raster. Pin it on globalThis up front.
+  for (const key of ['Image', 'Path2D', 'DOMMatrix', 'ImageData', 'DOMPoint']) {
     if (g[key] === undefined && typeof canvasMod[key] === 'function') {
       g[key] = canvasMod[key];
     }
