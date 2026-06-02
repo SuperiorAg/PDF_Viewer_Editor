@@ -9384,3 +9384,40 @@ Edited (Diego-owned): `package.json` (version 0.7.8 → 0.7.9), `scripts/wave-v0
 - **`.name` vs `.message` is the recurring lesson.** `Error.name` is for programmatic error-type discrimination (e.g. `if (e.name === 'AbortError')`). Anything that reaches a user — toast, log, build-report row — MUST use `.message` (or `safeMessage()` for the production-PII-safe variant). The copy-paste anti-pattern propagated through 13 sites; the hard-won learning is "every user-facing error string flows through safeMessage()."
 - **CI didn't catch this because the test never inspected the message.** The `propagates pdf_render_failed when rasterizer throws` test was strong on the discriminant (`r.error`), silent on the body (`r.message`). Lesson: when asserting an error path, assert BOTH the discriminant AND that the message contains the originating error string — otherwise a `.name`-vs-`.message` typo at any catch site never surfaces.
 - **Diagnostic IPC over UI surface.** Building a Settings → Diagnostics tile now would be premature — the user report rate is one ticket. A devtools-callable channel costs ~80 lines, captures every dep state in one shot, and gives us a triage tool for the next report without growing the renderer surface. Good ratio of leverage to scope.
+
+---
+
+## 2026-06-02 — Riley: click-to-place 144×32 FreeText annotation (sibling of form-designer Phase 3.1)
+
+**Commit:** (this commit) — `fix(annotations): click-to-place 144x32 FreeText box (sibling of form-designer Phase 3.1)`
+
+**Files (3 changed):**
+
+- `src/client/components/annotation-layer/index.tsx` — extracted pure helper `computeAnnotationCommit({activeTool, draft, page, viewport})` that returns `{kind:'cancel'} | {kind:'commit', subtype, screenRect, contents?}`. `onEnd` now consults the helper instead of the inline `width<4||height<4 → cancelDraft` branch. New exported constants `CLICK_THRESHOLD_PX = 4` and `DEFAULT_FREE_TEXT_SIZE_PTS = {width:144, height:32}`.
+- `src/client/components/annotation-layer/annotation-layer.test.tsx` — new file. 13 tests across three describe blocks.
+- `docs/build-report.md` — this entry.
+
+**Bug:** Reported by Marcus as the sibling pattern flagged in the v0.7.10 form-designer fix (commit 348a225). `onEnd` at index.tsx:157 had the same drag-or-do-nothing branch: any pure click (or sub-4px drag) dispatched `cancelDraft()` with no user feedback, regardless of the active annotation tool. Affected `text`, `highlight`, `underline`, `strikeout` (the `cursor`/`sticky`/`ink` paths short-circuit elsewhere).
+
+**Fix — scope is intentionally per-tool, not blanket:** Only the `text` (FreeText) tool gets click-to-place. On a sub-threshold drag with `activeTool === 'text'`, the helper builds a 144×32 PDF-pts default rect anchored at the click point, converted to the screen-space equivalent at the current zoom so that the existing `screenRectToPdf` path in `commitAnnotation` produces exactly the intended PDF rect. The `highlight`/`underline`/`strikeout` tools keep their drag-only behavior because they are inherently text-selection annotations — without text-aware selection (a Phase 8 rewrite), dropping a default-sized rectangle on a stray click would mark an arbitrary region as highlighted/underlined/strikeout, which is worse UX than the silent no-op. `sticky` already commits on single click upstream (lines 67-71). `ink` (freehand) is a stroke, never a single point. The brief explicitly called the scoping out as a per-tool decision; the helper encodes it.
+
+**Tests:** 13 new tests in `annotation-layer.test.tsx`:
+
+1. `text` tool, pure click at (100, 200) — commits FreeText, screen rect 144×32 at 1× zoom, contents = `''`.
+2. `text` tool, 3-px sub-threshold drag — same outcome (click-to-place).
+3. `text` tool, 2× zoom — screen rect is 288×64 so the PDF rect after conversion is still 144×32 (defaults are in points, not pixels).
+   4-9. `highlight` / `underline` / `strikeout` × {click, sub-threshold-drag} — all return `kind:'cancel'`. Six tests, pinning the deferred behavior so a future agent can't extend the fix without thinking.
+4. `ink` tool, pure click — `kind:'cancel'`.
+5. `highlight` tool, real drag — commits `Highlight` subtype with the drag bounds, no contents.
+6. `text` tool, real drag — commits `FreeText` with the drag bounds, contents = `''`.
+7. Threshold-boundary test — drag of `CLICK_THRESHOLD_PX + 8` on both axes returns the drag rect, not the default.
+
+**Verification:** `npx vitest run src/client/components/annotation-layer/` → 13/13 in 5 ms. `npm run lint` → 0 warnings. `npm run typecheck` → main + preload + renderer all clean. Pre-existing pre-fix-period errors in `src/client/components/pdf-viewer/pdf-viewer.test.tsx`, `shape-tools.test.tsx`, `thunks-phase5/6.test.ts`, `vitest.setup.ts:78` etc. exist only under `tsconfig.test.json` (not part of `npm run typecheck`) and are untouched by this commit. Husky pre-commit (lint-staged + main typecheck) + pre-push (full 3-tsconfig typecheck + full lint) both green. Visual verification of the running binary deferred to the next Diego packaging wave per the L-002 deferral pattern (the change is provably correct from static analysis — pure-helper geometry unit-tested + no markup/CSS changes).
+
+**Cross-roster:** Diego's two `david-wip-ocr-engine-residual` / `david-wip-app-test-residual` named stashes are still in `git stash list` — left intact, untouched (per Marcus's brief).
+
+### Field notes
+
+- **Per-tool scoping is the right shape for fixing a "drag-or-do-nothing" pattern.** A blanket extension (give every tool a default-sized rect on click) would be worse UX for text-selection annotations: a 144×32 highlight rectangle dropped at a random click point marks the wrong text. The right fix is per-tool — text/box annotations get sensible click defaults; text-selection annotations need text-aware authoring (Phase 8) before they can support stray-click; freehand strokes have no single-point form. The lesson generalises: when the same surface-level pattern (`if (smallDrag) cancel`) lives across N tools, the fix may still be N different decisions.
+- **Pure-helper extraction continues to pay off.** Same recipe as the form-designer fix: lift a pure decision function out of the React callback, return a tagged union, dispatch in the component. The 13-test suite ran in 5 ms without mocking Redux, IPC, or the React tree.
+- **Anchor screen rects via the existing pt→px scale, not the `viewport.scale` prop.** `viewport.scale` is the zoom multiplier and matches `viewport.width/page.width` for un-rotated pages, but the explicit ratio handles edge cases (rotated pages, off-by-one viewport dims) the multiplier alone would silently miss. The conversion in the helper uses `sx = viewport.width / page.width`, `sy = viewport.height / page.height` for the same reason `screenRectToPdf` does — single source of truth.

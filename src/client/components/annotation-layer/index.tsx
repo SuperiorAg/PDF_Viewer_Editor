@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 import { useT } from '../../i18n/use-t';
-import { screenRectToPdf, type PageViewport } from '../../services/pdf-coords';
+import { screenRectToPdf, type PageViewport, type ScreenRect } from '../../services/pdf-coords';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import {
   selectActiveTool,
@@ -37,6 +37,103 @@ const TOOL_LABEL_KEYS: Record<Exclude<AnnotationTool, 'cursor'>, string> = {
   strikeout: 'toolbar:strikethrough',
   ink: 'toolbar:freehand',
 };
+
+/** Below this drag distance (in screen pixels), treat as a click. */
+export const CLICK_THRESHOLD_PX = 4;
+
+/**
+ * Default FreeText (text-box) annotation size in PDF user-space points.
+ * Approximately 2" × ~0.5" — a single-line text box wide enough to be useful
+ * without resizing. The user can resize via the Inspector after placement.
+ *
+ * Phase 3.1 sibling of {@link ../form-designer/index.tsx DEFAULT_FIELD_SIZE_PTS}.
+ * Scope is intentionally text-only: highlight / underline / strikeout are
+ * inherently text-selection annotations — without text-aware selection (a
+ * Phase 8 rewrite), dropping a default-sized rectangle on a stray click would
+ * mark an arbitrary region as highlighted/underlined/strikeout, which is worse
+ * UX than the silent no-op. Sticky already commits on single click upstream.
+ * Ink is a stroke, never a single point.
+ */
+export const DEFAULT_FREE_TEXT_SIZE_PTS: Readonly<{ width: number; height: number }> = {
+  width: 144,
+  height: 32,
+};
+
+/**
+ * Outcome of a draw-end event for the annotation layer.
+ * - `cancel` — silently drop the draft (stray click on a non-text tool).
+ * - `commit` — emit an annotation of `subtype` covering `screenRect`.
+ */
+export type AnnotationCommitDecision =
+  | { kind: 'cancel' }
+  | { kind: 'commit'; subtype: AnnotationSubtype; screenRect: ScreenRect; contents?: string };
+
+/**
+ * Pure helper — given the active tool, the in-progress draft, and the page
+ * geometry, decide whether to commit an annotation and (if so) what its
+ * screen-space rect should be. The screen rect is what {@link commitAnnotation}
+ * funnels through {@link screenRectToPdf} on the happy path.
+ *
+ * Phase 3.1 (Riley 2026-06-02, sibling of form-designer 348a225):
+ *   The text/FreeText tool gets click-to-place — sub-threshold drags seed a
+ *   {@link DEFAULT_FREE_TEXT_SIZE_PTS}-sized rect anchored at the click point.
+ *   All other tools keep the original drag-only behavior; see
+ *   {@link DEFAULT_FREE_TEXT_SIZE_PTS} for the per-tool scoping rationale.
+ *
+ * Exported for tests so the click-to-place + per-tool scoping is pinned
+ * without mounting React + Redux + IPC.
+ */
+export function computeAnnotationCommit(args: {
+  activeTool: AnnotationTool;
+  draft: { startX: number; startY: number; currentX: number; currentY: number };
+  page: PageModel;
+  viewport: PageViewport;
+}): AnnotationCommitDecision {
+  const { activeTool, draft, page, viewport } = args;
+  const x = Math.min(draft.startX, draft.currentX);
+  const y = Math.min(draft.startY, draft.currentY);
+  const width = Math.abs(draft.currentX - draft.startX);
+  const height = Math.abs(draft.currentY - draft.startY);
+
+  if (width < CLICK_THRESHOLD_PX || height < CLICK_THRESHOLD_PX) {
+    // Click-or-near-click. Only the FreeText tool gets a sensible default;
+    // every other tool stays a silent no-op (see DEFAULT_FREE_TEXT_SIZE_PTS
+    // doc for why highlight/underline/strikeout are deferred).
+    if (activeTool === 'text') {
+      // Convert the 144×32 PDF-pts default to its screen-space equivalent at
+      // the current zoom so that screenRectToPdf in commitAnnotation produces
+      // exactly the intended PDF rect. sx = viewport.width / page.width and
+      // sy = viewport.height / page.height are the pt→px scale factors.
+      const sx = viewport.width / page.width;
+      const sy = viewport.height / page.height;
+      const screenWidth = DEFAULT_FREE_TEXT_SIZE_PTS.width * sx;
+      const screenHeight = DEFAULT_FREE_TEXT_SIZE_PTS.height * sy;
+      return {
+        kind: 'commit',
+        subtype: 'FreeText',
+        screenRect: {
+          x: draft.startX,
+          y: draft.startY,
+          width: screenWidth,
+          height: screenHeight,
+        },
+        contents: '',
+      };
+    }
+    return { kind: 'cancel' };
+  }
+
+  // Drag path — happy case. Map active tool → subtype.
+  let subtype: AnnotationSubtype = 'FreeText';
+  if (activeTool === 'highlight') subtype = 'Highlight';
+  if (activeTool === 'text') subtype = 'FreeText';
+  return {
+    kind: 'commit',
+    subtype,
+    screenRect: { x, y, width, height },
+    ...(subtype === 'FreeText' ? { contents: '' } : {}),
+  };
+}
 
 interface AnnotationLayerProps {
   pageIndex: number;
@@ -150,25 +247,23 @@ export function AnnotationLayer(props: AnnotationLayerProps): JSX.Element {
       dispatch(cancelDraft());
       return;
     }
-    const x = Math.min(draft.startX, draft.currentX);
-    const y = Math.min(draft.startY, draft.currentY);
-    const width = Math.abs(draft.currentX - draft.startX);
-    const height = Math.abs(draft.currentY - draft.startY);
-    if (width < 4 || height < 4) {
-      // Ignore stray clicks.
+    const decision = computeAnnotationCommit({
+      activeTool,
+      draft,
+      page: props.page,
+      viewport: props.viewport,
+    });
+    if (decision.kind === 'cancel') {
       dispatch(cancelDraft());
       return;
     }
-    let subtype: AnnotationSubtype = 'FreeText';
-    if (activeTool === 'highlight') subtype = 'Highlight';
-    if (activeTool === 'text') subtype = 'FreeText';
-    commitAnnotation(subtype, { x, y, width, height }, subtype === 'FreeText' ? '' : undefined);
+    commitAnnotation(decision.subtype, decision.screenRect, decision.contents);
     dispatch(cancelDraft());
     // commitAnnotation depends on closure-captured values; eslint complains about
     // useCallback exhaustive deps. The function is intentionally invoked only
     // here so we leave it out of the dep array.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTool, dispatch, draft, isAuthoring]);
+  }, [activeTool, dispatch, draft, isAuthoring, props.page, props.viewport]);
 
   const draftRect =
     draft && draft.pageIndex === props.pageIndex
