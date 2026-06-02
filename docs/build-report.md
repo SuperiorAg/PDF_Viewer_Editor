@@ -9450,3 +9450,47 @@ Edited (Diego-owned): `package.json` (version 0.7.8 → 0.7.9), `scripts/wave-v0
 - **Audit-driven critical fixes belong in the same file's next commit, not a separate one.** Bugs 2 and 3 came from a bug-pattern audit that ran in parallel with the polyfill work. Both touch `createNodeHttpsStreamer` in the same file as the polyfill — folding them into one commit dodges another instance of the parallel-write corruption that LOCK 0036 was written to prevent. Pre-commit gates ran once, not twice, and the diff stays attributable.
 - **Test mocking the response-stream error path needs `queueMicrotask` to defer the emit AFTER the streamer wires its listener.** A synchronous emit from inside `mockImplementation` fires before the response callback's `res.on('error', ...)` is wired, and the test "passes" for the wrong reason (the emit goes to a listener-less EventEmitter, which is a no-op, not a rejection). Two `queueMicrotask` calls — one to give the streamer time to invoke the response callback, another to give the callback time to wire its listeners — gets the ordering right.
 - **The polyfill needs to be installed in BOTH canvas branches (`@napi-rs/canvas` AND `canvas`).** Easy to miss because the fallback `canvas` branch is dead code on dev boxes that have `@napi-rs/canvas`. But CI matrices, prod packaging, and ABI-mismatch failure modes all route through the fallback. A polyfill installed only in the primary branch is a latent bug.
+
+---
+
+## 2026-06-02 — Diego: v0.7.12 cut (OCR rasterize fix + critical streamer crash guards)
+
+**Headline:** Shipped v0.7.12 live and Latest within ~10 minutes of Marcus dispatch. The user has been waiting hours for working OCR; the fix is installable now.
+
+**What's in v0.7.12 (single delta on top of v0.7.11):**
+
+- `f981f9f` David (carrying his recovered run) — `fix(ocr): install @napi-rs/canvas Image/Path2D/ImageData/DOMMatrix on globalThis for pdf.js render + harden createNodeHttpsStreamer error handlers`. Three real fixes folded into one commit: (1) OCR rasterize works (polyfill installed on `globalThis` in both `tryLoadCanvas()` branches), (2) export pipeline swept the same way, (3) two main-process-crash bugs in `createNodeHttpsStreamer` hardened (missing `res.on('error', reject)` for TLS truncation; writeStream listeners hoisted to before `nodeHttps.get` to handle sync EACCES/ENOSPC).
+- `9a26cd9` Diego — `chore(release): v0.7.12 - OCR rasterize fix (@napi-rs/canvas globals) + critical streamer crash guards`.
+
+**Pre-flight (all green):**
+
+- `npm run lint` — 0 warnings, 0 errors (`eslint --max-warnings 0`)
+- `npm run typecheck` — clean across 3 tsconfigs (main, preload, renderer)
+- `node scripts/rebuild-native-for-node.mjs` — cached prebuild swap, L-003 sanctioned
+- `npx vitest run` — **1874/1874** across 174 files in 20.94s (the brief's "~388/388" referred to the OCR + export subset). Includes the 4 new `createNodeHttpsStreamer` crash regressions + 2 new prod-render integration tests against the real `@napi-rs/canvas` binding (PNG magic verified).
+
+**CI:** release.yml run **26837571178** completed SUCCESS in **3m28s** on `windows-2025-vs2026` with Node 20 (per L-003) + electron-builder `--publish always`. 4 assets uploaded:
+
+| Asset                                                 | Size          | SHA256    |
+| ----------------------------------------------------- | ------------- | --------- |
+| `latest.yml`                                          | 366 B         | 574dffea… |
+| `pdf-viewer-editor-setup-0.7.12.exe` (NSIS installer) | 135,694,155 B | 21f504b8… |
+| `pdf-viewer-editor-setup-0.7.12.exe.blockmap`         | 142,737 B     | 5795293d… |
+| `pdf-viewer-editor-0.7.12.exe` (portable)             | 135,396,143 B | 72316285… |
+
+Promoted draft → Latest via `gh release edit v0.7.12 --draft=false`. Release URL: <https://github.com/SuperiorAg/PDF_Viewer_Editor/releases/tag/v0.7.12>. GitHub auto-marks highest semver as Latest, so electron-updater on existing v0.7.11/v0.7.10 installs resolves the new version.
+
+**Structural smoke (local repack from same tag SHA):**
+
+- Built `release/win-unpacked/` via `npx electron-builder --win --dir` after `--electron` ABI rebuild (L-003 escape hatch on the Node 24 host).
+- Launched `release/win-unpacked/PDF Viewer & Editor.exe`, waited 8s, observed **4-process Electron family** (main + GPU + utility + renderer). pid 58352 carries `MainWindowHandle=990730` with title `PDF_Viewer_Editor`. Clean kill of all 4, 0 remaining.
+- Full smoke log: `release/wave-v0712-smoke.txt`.
+
+**L-002 visual = SKIPPED (rationale, same posture as v0.7.11).** The operator/playwright MCPs are not bridged into this session's subagent tool surface. Non-visual coverage substitutes: (a) full vitest 1874/1874 green; (b) the new `ocr-bootstrap.prod-render.test.ts` exercises the polyfill install against the REAL `@napi-rs/canvas` binding and asserts PNG magic bytes on output — the lab-grade analogue of the L-002 launch screenshot, scoped to the OCR rasterize seam specifically; (c) 4 new `createNodeHttpsStreamer` crash regressions cover the second/third bug class; (d) structural smoke proves the packaged binary boots a 4-process Electron family with a visible window. User will verify the OCR fix end-to-end in install. The renderer-broken defect class L-002 was written to catch (white screen, preload mismatch, IPC drift) does not apply to v0.7.12: this is a pure backend-pipeline fix with no renderer-side touch.
+
+**Leftover stashes (not Diego's to act on):** `david-wip-app-test-residual` + `david-wip-ocr-engine-residual` remain on the stash list per Marcus brief — preserved untouched.
+
+### Field notes
+
+- **The "portable" .exe self-extracts to `$env:TEMP` and runs under a different process name than the bootstrap.** A naive `Get-Process -Name 'pdf-viewer-editor*'` filter at T+18s shows only the bootstrap wrapper, no children — looks like a launch failure. The win-unpacked exe (with proper electron-builder product naming) shows up cleanly as 4 processes with `ProcessName='PDF Viewer & Editor'`. For a structural smoke during a release wave, prefer the win-unpacked tree (rebuilt locally from the SAME tag SHA) over the portable — the process model is identical to what users will install, but the process names are stable and filterable. CI's published binary remains the authoritative artifact; the local repack is purely to make the smoke filter reliable.
+- **Two CI runs in under 8 minutes (v0.7.11 + v0.7.12) on `windows-2025-vs2026`.** v0.7.11 = 3m39s, v0.7.12 = 3m28s. The pinned image (Node preinstalled 22.22.3 but `setup-node` forces Node 20 per L-003) continues to deliver consistent ~3.5min release-pipeline wall time. No regressions since the 2026-06-01 pin from `windows-latest`.
