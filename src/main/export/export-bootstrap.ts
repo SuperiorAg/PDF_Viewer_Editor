@@ -527,8 +527,14 @@ function makeNodeDataFactory(absDir: string): PdfJsDataFactory {
  * rasterizes BLANK (v0.6.1 L-002). Resolving from the package root keeps the
  * paths correct in both dev and packaged (electron-builder ships pdfjs-dist
  * unpacked from the asar via `asarUnpack` — Diego's packaging concern).
+ *
+ * **Exported (Phase 5.2 — David, 2026-06-04):** the OCR rasterizer
+ * (`ocr-bootstrap.ts:rasterizePageProd`) consumes this exact factory to fix the
+ * SAME blank-text class for non-image-only PDFs. Any new pdf.js consumer in
+ * the main process MUST go through this helper rather than re-implement —
+ * see the Phase-5.2 lesson note in `D:\Vault\Agents\Learnings`.
  */
-function resolveExportFontData(): {
+export function resolveExportFontData(): {
   standardFontDataUrl: string;
   cMapUrl: string;
   StandardFontDataFactory: PdfJsDataFactory;

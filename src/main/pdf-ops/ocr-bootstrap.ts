@@ -35,6 +35,14 @@ import type * as ElectronModule from 'electron';
 
 import type { OcrPageResult } from '../../ipc/contracts.js';
 import { safeMessage } from '../../shared/result.js';
+// Phase 5.2 (David, 2026-06-04 — Item B): STATIC import of the export
+// bootstrap's font-data resolver. MUST stay static — a runtime `require()` of
+// this in-tree module would be tree-shaken by vite and ENOENT at runtime in
+// the packaged binary (RCA: `.learnings/failures/2026-05-27-runtime-require-
+// vite-tree-shake-packaging-gap.md`). The export bootstrap is already a
+// static-import dependency of `src/main/index.ts`, so adding a second
+// static-import edge here is free.
+import { resolveExportFontData } from '../export/export-bootstrap.js';
 
 import { documentStore } from './document-store.js';
 import {
@@ -235,13 +243,105 @@ interface PdfJsDoc {
   getPage: (n: number) => Promise<PdfJsPage>;
 }
 
+/**
+ * Phase 5.2 (David, 2026-06-04): standard-font + CMap data factory shape mirrored
+ * from `src/main/export/pdfjs-source.ts:PdfJsDataFactory`. pdf.js constructs it
+ * with `{ baseUrl }` and calls `fetch({ filename })`. Used to override pdf.js's
+ * default Node loader (which fails on file:// URL strings — the v0.6.1 L-002
+ * blank-text class previously fixed for the EXPORT path; this fix extends it to
+ * the OCR rasterizer per the Phase-5.2 brief Item B).
+ */
+interface OcrPdfJsDataFactory {
+  new (opts: { baseUrl: string | null }): {
+    fetch(opts: { filename: string; compressionType?: number }): Promise<Uint8Array>;
+  };
+}
+
+/**
+ * getDocument opts subset the OCR rasterizer cares about. Mirrors the export
+ * path's `PdfJsGetDocumentOpts` so the SAME `resolveExportFontData()` helper
+ * works for BOTH consumers (Phase 5.2 — David).
+ */
+interface OcrGetDocumentOpts {
+  data: Uint8Array;
+  standardFontDataUrl?: string;
+  cMapUrl?: string;
+  cMapPacked?: boolean;
+  StandardFontDataFactory?: OcrPdfJsDataFactory;
+  CMapReaderFactory?: OcrPdfJsDataFactory;
+}
+
 interface PdfJsModule {
-  getDocument: (params: { data: Uint8Array }) => { promise: Promise<PdfJsDoc> };
+  getDocument: (params: OcrGetDocumentOpts) => { promise: Promise<PdfJsDoc> };
   GlobalWorkerOptions?: { workerSrc?: string };
 }
 
 // Cached pdfjs module reference; lazy-loaded on first OCR.
 let _pdfjs: PdfJsModule | null = null;
+
+// ============================================================================
+// Phase 5.2 (David, 2026-06-04 — Item B): standard-font + CMap factory cache.
+//
+// pdf.js resolves non-embedded standard fonts (Helvetica / Times / Symbol — the
+// PDF 1.7 base-14 set) via the `standardFontDataUrl` + `StandardFontDataFactory`
+// passed to `getDocument`. Without these, every standard-font glyph rasterizes
+// BLANK, OCR sees a near-empty image, and Tesseract returns very few words at
+// collapsed confidence. The export path was fixed for the same defect in
+// v0.6.1 L-002 / Wave 24; the OCR rasterizer was missed because at the time it
+// was only used on scanned image-only PDFs. Phase 5.2 closes the parity gap.
+//
+// We import the SAME helper the export path uses (`resolveExportFontData`,
+// exported from `export-bootstrap.ts` 2026-06-04) so there is exactly ONE
+// source of truth for the path resolution. Project convention now:
+//   "Any pdf.js consumer in main MUST mirror the export-bootstrap
+//    font-factory wiring or text rasterizes blank."
+// Cross-reference: `D:\Vault\Agents\Learnings\2026-06-04-ocr-chain-closure-v0717.md`
+// + the Phase-5.2 Vault note added by this commit.
+//
+// The factory load itself can fail in test environments that have a partial
+// pdfjs-dist install (missing `standard_fonts/` directory). We cache both the
+// success and failure paths so the per-page rasterize stays cheap, and degrade
+// to the default factory (which still works for image-only PDFs) on failure.
+// ============================================================================
+
+interface OcrFontDataOk {
+  ok: true;
+  standardFontDataUrl: string;
+  cMapUrl: string;
+  StandardFontDataFactory: OcrPdfJsDataFactory;
+  CMapReaderFactory: OcrPdfJsDataFactory;
+}
+interface OcrFontDataErr {
+  ok: false;
+  errorMessage: string;
+}
+type OcrFontDataResult = OcrFontDataOk | OcrFontDataErr;
+
+let _fontDataResult: OcrFontDataResult | null = null;
+
+function tryResolveOcrFontData(): OcrFontDataResult {
+  if (_fontDataResult !== null) return _fontDataResult;
+  try {
+    const fd = resolveExportFontData();
+    _fontDataResult = {
+      ok: true,
+      standardFontDataUrl: fd.standardFontDataUrl,
+      cMapUrl: fd.cMapUrl,
+      StandardFontDataFactory: fd.StandardFontDataFactory as unknown as OcrPdfJsDataFactory,
+      CMapReaderFactory: fd.CMapReaderFactory as unknown as OcrPdfJsDataFactory,
+    };
+    return _fontDataResult;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    _fontDataResult = { ok: false, errorMessage: msg };
+    return _fontDataResult;
+  }
+}
+
+/** Test-only reset for the font-data cache. */
+export const _resetOcrFontDataCacheForTests = (): void => {
+  _fontDataResult = null;
+};
 
 async function loadPdfJs(): Promise<PdfJsModule> {
   if (_pdfjs !== null) return _pdfjs;
@@ -637,7 +737,26 @@ export async function rasterizePageProd(opts: RasterPageOptions): Promise<Uint8A
   // already parsed the bytes far enough to call paintChar. `new Uint8Array(x)`
   // allocates a fresh buffer and memcpy's the bytes, so pdf.js can transfer
   // its copy freely while ours stays intact.
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(rec.bytes) }).promise;
+  // Phase 5.2 (David, 2026-06-04 — Item B): pass standard-font + CMap factories
+  // so PDFs that reference non-embedded base-14 fonts (Helvetica/Times/Symbol)
+  // rasterize their glyphs instead of returning blank pages. Without this,
+  // Tesseract sees a near-empty image and returns very few words at collapsed
+  // confidence (the user's invoice symptom: 22 words at 28.5 confidence, 81.8%
+  // low-confidence). Mirrors the SAME fix the export path applies via
+  // `resolveExportFontData()` (v0.6.1 L-002). If the helper fails to load (test
+  // environment missing pdfjs-dist's standard_fonts/), we degrade silently — the
+  // image-only path still works without the factories, just text rasterizes
+  // blank as before.
+  const fontData = tryResolveOcrFontData();
+  const getDocOpts: OcrGetDocumentOpts = { data: new Uint8Array(rec.bytes) };
+  if (fontData.ok) {
+    getDocOpts.standardFontDataUrl = fontData.standardFontDataUrl;
+    getDocOpts.cMapUrl = fontData.cMapUrl;
+    getDocOpts.cMapPacked = true;
+    getDocOpts.StandardFontDataFactory = fontData.StandardFontDataFactory;
+    getDocOpts.CMapReaderFactory = fontData.CMapReaderFactory;
+  }
+  const doc = await pdfjs.getDocument(getDocOpts).promise;
   if (opts.pageIndex >= doc.numPages) {
     throw new Error(`pageIndex ${opts.pageIndex} >= numPages ${doc.numPages}`);
   }
@@ -670,6 +789,32 @@ export async function rasterizePageProd(opts: RasterPageOptions): Promise<Uint8A
   const canvas = createCanvasFn(canvasWidth, canvasHeight);
   const ctx = canvas.getContext('2d');
   try {
+    // Phase 5.2 (David, 2026-06-04 — Item B follow-on): force pdf.js to
+    // resolve every font referenced by the page BEFORE `render()` paints.
+    // `getOperatorList()` walks the content stream to completion, which awaits
+    // the lazy `standardFontDataUrl` fetch + builds the glyph-path generators
+    // synchronously into the page's cache. Without this, `render()` can hit
+    // text ops whose font isn't resolved yet and either throw `getPathGenerator
+    // ... isn't resolved yet <Font>_path_<n>` (in Node) or silently paint
+    // blank for that glyph run. Same fix the export rasterizer applies — see
+    // `src/main/export/pdfjs-source.ts:615` (FONT-READINESS GATE).
+    //
+    // Type-cast: the OCR PdfJsPage interface above doesn't declare
+    // getOperatorList because pre-5.2 we never needed it. We add the cast
+    // here rather than extending the type — gate is intentionally lazy /
+    // optional, and the rasterize still works on pdf.js versions that don't
+    // expose it (page just won't be pre-warmed).
+    const pageWithOps = page as PdfJsPage & {
+      getOperatorList?: () => Promise<unknown>;
+    };
+    if (typeof pageWithOps.getOperatorList === 'function') {
+      try {
+        await pageWithOps.getOperatorList();
+      } catch {
+        // Best-effort — render() will surface a more useful error if the page
+        // is actually broken. Don't fail rasterize on a pre-warm hiccup.
+      }
+    }
     await page.render({ canvasContext: ctx, viewport }).promise;
   } catch (originalErr) {
     // Hard-Won (David, 2026-06-04 — v0.7.13): synthetic PDFs reproduce
