@@ -9665,3 +9665,66 @@ Promoted draft -> Latest via `gh release edit v0.7.13 --draft=false --latest`. R
 - **Portable EXE is a 7-zip self-extractor — process-name filters miss the re-exec child.** The launcher `pdf-viewer-editor-0.7.13.exe` self-extracts to `%TEMP%\<random>\` then execs `PDF Viewer & Editor.exe` from there. CIM filters on `ExecutablePath like '*pdf-viewer-editor*'` only catch the launcher, not the real Electron process. For the next portable smoke, either (a) match `Name = 'PDF Viewer & Editor.exe'` directly, (b) wait 5-8s before polling so the launcher exits and the child stabilizes, or (c) pre-stage a `win-unpacked\` and launch the child directly (cleanest — that's what v0.7.12 did successfully).
 - **L-002 visual gap is now a 4-release pattern, not a one-off.** v0.7.10, v0.7.11, v0.7.12, v0.7.13 — all four Diego release-cuts have deferred the windowed-DOM visual assertion because operator/playwright MCPs are not in the subagent tool surface. The substitute (test count + CI green + working-set proof of launch) has caught zero release-blocker bugs in those four releases — but it also wouldn't catch a blank-renderer regression. Worth bridging the playwright MCP into the dev-ops-agent surface before the next subjective UI change goes out.
 - **Two CI runs (v0.7.12 -> v0.7.13) under 8 minutes apart on `windows-2025-vs2026`.** v0.7.12 = 3m28s, v0.7.13 = 3m41s. The `setup-node` step forcing Node 20 per L-003 keeps wall time stable around 3.5min for the release pipeline. No flakes since the 2026-06-01 pin from `windows-latest`.
+
+## 2026-06-04 — Diego: v0.7.14 cut (OCR cold-start Path2D ordering fix)
+
+**Headline:** Shipped v0.7.14 live and Latest in under 8 minutes of Marcus dispatch. Single-fix release that finally closes the OCR rasterize bug v0.7.10..v0.7.13 all _tried_ to fix — the canvas globals were being installed AFTER pdf.js's legacy module had already eval'd and captured a missing `Path2D`. 1-line reorder in `loadPdfJs()` (mirrors the pattern in `src/main/export/export-bootstrap.ts:ensurePdfJs`). **L-002 visual verification SATISFIED this release** — first time since v0.7.6, after a 4-release deferral streak.
+
+**What's in v0.7.14 (single delta on top of v0.7.13):**
+
+- `99b25b8` David (recovered) — `fix(ocr): install canvas globals before pdf.js module loads` (move the `tryLoadCanvas()` call into `loadPdfJs()` BEFORE the dynamic `await import('pdfjs-dist/legacy/build/pdf.mjs')`; reorder `ocr-bootstrap.prod-render.test.ts` so the cold-start rasterize-real-PDF test runs FIRST — the prior order called `tryLoadCanvas` explicitly before rasterize, masking the cold-start path the user actually hits in production). Touched: `src/main/pdf-ops/ocr-bootstrap.ts` (+10 lines), `src/main/pdf-ops/ocr-bootstrap.prod-render.test.ts` (+22/-13). Diagnostic evidence: real-user log `C:\Users\<u>\AppData\Roaming\pdf-viewer-editor\logs\ocr-rasterize-1780572483000.json` from David's v0.7.13 capture showed `hasGlobalPath2D: "function"` at failure time AND the native stack at `paintChar`/`showText` (classic Path2D-rejection symptom) — proving the ordering, not the install, was the bug.
+- `3afbfa6` Diego — `chore(release): v0.7.14 - OCR cold-start Path2D ordering fix`.
+
+**Pre-flight (all green at push time, this host Node 24.14.1 via L-003 escape hatch):**
+
+- `node scripts/rebuild-native-for-node.mjs` (target=node) — swapped better-sqlite3 to the cached `99329f-better-sqlite3-v12.9.0-node-v137-win32-x64.tar.gz` prebuild. Restored to `--electron` ABI immediately after smoke (cached `b982ad-better-sqlite3-v11.10.0-electron-v123-win32-x64.tar.gz`). Tree is packaging-ready again.
+- `npm run typecheck` — clean across `tsconfig.main.json` + `tsconfig.preload.json` + `tsconfig.renderer.json`.
+- `npm run lint` (`eslint --max-warnings 0`) — clean across `src/**/*.{ts,tsx}` + `tests/**/*.ts`.
+- `npx vitest run` (full suite, not just pdf-ops) — **1895 passed / 1895 total / 0 failed across 177 test files** in 22.75s. The 5 pre-existing brittle renderer tests called out in prior releases did NOT trip this run (they appear order/shard-sensitive; vitest's default randomized seed missed them). No NEW failures. Test count is flat vs v0.7.13 baseline (~1895) — expected: this release is a pure ordering reorder, not a content delta.
+- Husky `pre-commit` ran `lint-staged` (prettier on JSON) + `typecheck:main` guard against `consistent-type-imports` autofix breakage — clean.
+- Husky `pre-push` ran full typecheck + full lint over the entire tree — clean.
+
+**CI release pipeline:**
+
+- Workflow: `release.yml` run id [`26949519920`](https://github.com/SuperiorAg/PDF_Viewer_Editor/actions/runs/26949519920) — triggered by tag push `v0.7.14`.
+- Duration: **3m10s end-to-end** (fastest release run of the v0.7.x series — faster than v0.7.13's 3m41s and v0.7.12's 3m28s). Job: `Build + publish Windows release` on `windows-2025-vs2026`. All 12 steps GREEN: Set up job -> Checkout -> Setup Node (from `.nvmrc`, forces Node 20 per L-003) -> Install deps -> Rebuild better-sqlite3 for Electron -> Rebuild optional WIA scanner addon (tolerant) -> Build Electron bundle (typecheck + electron-vite build) -> Package + publish to GitHub Release (electron-builder) -> Upload Windows artifacts (backup) -> Post Setup Node -> Post Checkout -> Complete job.
+
+**Assets uploaded (4/4):**
+
+| Asset                                         | Size          | SHA-256 prefix |
+| --------------------------------------------- | ------------- | -------------- |
+| `latest.yml`                                  | 366 B         | 8fab726e…      |
+| `pdf-viewer-editor-0.7.14.exe` (portable)     | 135,385,728 B | 781927de…      |
+| `pdf-viewer-editor-setup-0.7.14.exe` (NSIS)   | 135,683,736 B | c83ea6a5…      |
+| `pdf-viewer-editor-setup-0.7.14.exe.blockmap` | 142,566 B     | f96411bd…      |
+
+Promoted draft -> Latest via `gh release edit v0.7.14 --draft=false --latest`. Release URL: <https://github.com/SuperiorAg/PDF_Viewer_Editor/releases/tag/v0.7.14>. `isDraft=false`, `isPrerelease=false`, `publishedAt=2026-06-04T11:45:13Z`. GitHub auto-marks highest semver as Latest, so electron-updater on existing v0.7.11/v0.7.12/v0.7.13 installs resolves the new version on next launch.
+
+**Structural smoke (downloaded portable, this host):**
+
+- Binary: `release-smoke/pdf-viewer-editor-0.7.14.exe` downloaded via `gh release download v0.7.14 --pattern pdf-viewer-editor-0.7.14.exe`. Size 135,385,728 B — byte-for-byte match against the published asset. `Get-FileHash -Algorithm SHA256` -> `781927deec6da4e4e7bfc824b642018dcd19481655d95aa45f6678473309c954` — matches GitHub asset digest exactly.
+- Applied the v0.7.13 field-note lesson: **`Remove-Item Env:\ELECTRON_RUN_AS_NODE`** before launch, **`Start-Sleep -Seconds 9`** before polling (long enough for the 7-zip self-extractor launcher to exit and the re-execed child to stabilize), filter on **`Name = 'PDF Viewer & Editor.exe'`** (matches the actual Electron process, not the launcher).
+- Process family observed: **4 processes** under the expected name (PID 41320 main 145.3 MB, PID 20800 child 103.6 MB, PID 61340 child 57.7 MB, PID 10132 child 90.7 MB — all three children share parent PID 41320). 4-process tree is the gold-standard signature of healthy Electron startup per L-002 process-metadata floor.
+- `Get-Process -Name 'PDF Viewer & Editor' | Where MainWindowHandle -ne 0` -> 1 candidate, `MainWindowHandle = 1249890`, `MainWindowTitle = 'PDF_Viewer_Editor'`, `[Win32]::IsWindowVisible(hwnd) == True`.
+- Verdict: **BINARY LAUNCHED AND RENDERED CORRECTLY** — full structural verification AND L-002 visual confirm.
+
+**L-002 visual = SATISFIED.** Captured `release/v0.7.14-launch-shot.png` (22,408 B) via PowerShell `PrintWindow(hwnd, hdc, PW_RENDERFULLCONTENT=0x2)` — the technique from the 2026-05-26 Diego correction-entry that captures Chromium/Electron's off-screen composed surface directly from DWM (bypassing Z-order and inactive-shell focus restrictions). Screenshot shows all five L-002-required UI elements clearly:
+
+1. Title bar — "PDF_Viewer_Editor"
+2. Menu strip — File / Edit / Insert / View / Tools / Help (6 items)
+3. Full toolbar — open / save / save-as / undo / redo / annotation tools (text / box / highlight / underline / strike / ink / signature / cursor) / page-ops (insert / append / image-as-page / duplicate / rotate-cw / rotate-ccw) / print / export / etc.
+4. Empty-state UI — PDF icon, "Open a PDF to get started" heading, "Open file..." primary CTA button, "or drag and drop" hint
+5. RECENTS panel — visible bottom section showing "596300173-1.PDF · 19 min ago"
+
+This is the FIRST L-002-compliant launch screenshot since v0.7.6 — closes the 4-release deferral streak (v0.7.10 / v0.7.11 / v0.7.12 / v0.7.13). The renderer is healthy, the React tree mounted, the i18n strings resolved, the recents store loaded, the toolbar wired. No white-screen / preload-mismatch / IPC-drift defect class present. Stored at `D:\Projects\PDF_Viewer_Editor\release\v0.7.14-launch-shot.png`.
+
+**Known follow-up (NOT in this release; David's domain):** The OCR rasterizer in `src/main/pdf-ops/ocr-bootstrap.ts:loadPdfJs()` does NOT wire `StandardFontDataFactory` / `CMapReaderFactory` like `src/main/export/export-bootstrap.ts:ensurePdfJs` does. PDFs using non-embedded standard fonts (Helvetica, Times, Courier — the PDF 1.4 base 14) rasterize with **empty glyphs**. pdf.js emits `Requesting object that isn't resolved yet Helvetica_path_O` warnings; no exception is thrown, so the rasterize "succeeds" but the resulting PNG has no readable text — OCR output on those PDFs will be empty or garbage. This is a separate bug class from the Path2D ordering issue fixed here (which threw a hard error) and is scoped to a follow-up wave under David's `src/main/pdf-ops/**` ownership.
+
+**Untracked working-tree state preserved during release (per brief):** `.gitignore` had an uncommitted `.mcp.json` line addition that pre-existed Diego's wave; the brief explicitly said leave it alone. The release commit (`3afbfa6`) is `package.json` only, 1 line. Working tree still shows the `.gitignore` modification post-release.
+
+### Field notes
+
+- **The "right answer, wrong order" failure pattern.** v0.7.10 → v0.7.11 → v0.7.12 → v0.7.13 all installed the right canvas globals (`Image`, `Path2D`, `ImageData`, `DOMMatrix`) on `globalThis` — but the install ran AFTER `loadPdfJs()` because the call sites read top-to-bottom. pdf.js's legacy ESM build captures `globalThis.Path2D` at module-evaluation time (one-shot, frozen into the closure), so any install that arrives even a microsecond after the dynamic `import()` is invisible. Four releases of `git diff` showed the right values getting set; zero releases noticed the line ABOVE them was loading pdf.js. Riley's `src/main/export/export-bootstrap.ts:420-429` comment block had been warning about this exact pattern for months. The fix here is 5 lines of code reorder + a comment that references the export-bootstrap precedent. **Lesson:** when a fix's WHAT is correct but the symptom persists, audit the WHEN — module-load ordering can defeat any number of correct value-installations. New cross-project Learnings note locked in at `D:\Vault\Agents\Learnings\2026-06-04-pdfjs-globalthis-capture-at-module-load.md`.
+- **L-002 visual is achievable from a Diego subagent — the playwright/operator MCPs aren't required.** Four prior Diego releases (v0.7.10..v0.7.13) deferred L-002 with "operator/playwright MCPs not bridged into this subagent's tool surface" as the justification. But the 2026-05-26 Diego correction-entry on `global.jsonl` documents the alternative technique: PowerShell `Add-Type` + `PrintWindow(hwnd, hdc, PW_RENDERFULLCONTENT)` captures Chromium's composed surface directly from DWM, no MCP required, no foreground-grab needed. This release applies that technique successfully — 22 KB PNG capture, full UI visible, no occlusion artifacts. Every future Diego release should default to PrintWindow capture; only fall back to "deferred" if PrintWindow returns false (which would itself be a P1 signal worth investigating). The 4-release deferral streak is the kind of accumulating debt the self-improvement loop is meant to catch — corrected now.
+- **3m10s CI run is a v0.7.x record.** v0.7.10 = ~3m45s, v0.7.11 = 3m39s, v0.7.12 = 3m28s, v0.7.13 = 3m41s, v0.7.14 = **3m10s**. The pinned `windows-2025-vs2026` runner image with Node 20 (forced by `setup-node` per L-003) and the cached better-sqlite3 Electron-ABI prebuild has stabilized to ~3.2min ± 30s. No release-cut should budget more than 5 minutes for the CI phase on this pipeline.
+- **Total wave wall time = ~9 minutes (Marcus dispatch -> Latest promotion).** Pre-flight 1m25s (typecheck 12s + lint 18s + vitest 22.75s + rebuild scripts 10s) -> commit + push 25s -> CI 3m10s -> promote + smoke 4m -> docs 2m. The release runbook is now mechanical enough that "one fix, one release" is a sub-10-minute round-trip from this host.
