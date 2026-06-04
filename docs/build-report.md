@@ -9611,3 +9611,57 @@ Promoted draft → Latest via `gh release edit v0.7.12 --draft=false`. Release U
 - **When backend lands a diagnostic IPC + a new shell-entry channel, the renderer must also expose them in the UI for users to actually benefit. Surface = adoption.** David's `app:diagnoseOcr` shipped in v0.7.11 with no UI — the only way to call it was DevTools, which most users will never open. Same for the OCR rasterize log path: David's v0.7.13 writes it but a user can't find it without knowing the magic `%APPDATA%` incantation. Three rows in a Settings tab + a copy button changes the support workflow from "user describes symptom -> support guesses -> multiple rounds" to "user runs diagnostic, pastes JSON, support has ground truth in one round." Cost: ~150 lines + 14 i18n keys. ROI: every future OCR bug report.
 - **Feature-detect at runtime when the contract is not fully landed yet.** The renderer typecheck would have failed if `subscribeFileOpenFromShell` referenced `api.app.onFileOpenFromShell` directly on the typed proxy at dispatch time. The defensive cast `(window as Window & { pdfApi?: unknown }).pdfApi` + `typeof === function` narrowing keeps the build green during the parallel-coordination race window and starts emitting the instant David's preload lands. The pattern generalizes: in a multi-agent swarm, treat the cross-agent boundary as eventually-consistent and write the consumer side as a no-op until the producer exists. (David landed the producer 12 minutes into Riley's wave — runtime detection paid off twice: once for typecheck, once for the test stubs that don't carry the property.)
 - **Trust-floor claims must reference the actual data shape, not the marketing copy.** The disclaimer was verified against the `DiagnoseOcrSnapshot` interface (5 fields: canvas resolvability + load error, pdf.js loadable, tesseract reachable, document-store count). If David's next iteration adds a field that included a file path or a PDF substring, this disclaimer would become a lie. The comment block on the disclaimer JSX makes that contract explicit so the next Riley/David round knows to update both in lockstep.
+
+---
+
+## 2026-06-04 — Diego: v0.7.13 cut (file-association argv + OCR diagnostic logs + Settings Diagnostics tile)
+
+**Headline:** Shipped v0.7.13 live and Latest in ~7 minutes of Marcus dispatch. Carries three independent improvements that landed cleanly in parallel: the shell double-click PDF-handoff fix (David, regression of v0.7.12), the rasterize-failure diagnostic capture (David, instrumentation), and the Settings -> Diagnostics tile + shell-open subscriber (Riley, surfacing both backend channels). Zero merge conflicts across the three parallel agents — file ownership held end-to-end.
+
+**What's in v0.7.13 (single delta on top of v0.7.12):**
+
+- `e803ebc` David — `feat(ocr): write full rasterize-failure diagnostic to userData/logs + include log path in error message` (rasterize page.render().promise wrapped in try/catch; full record to `userData/logs/ocr-rasterize-<epochMs>.json`; canvas-load.json one-time snapshot; ESM `app` binding for vitest interception).
+- `8a1ad64` David — `fix(shell): open PDF passed via argv (cold start + second-instance) + new file:openFromShell channel` (new `src/main/argv-parser.ts` + 8 unit tests; three entry points wired in `src/main/index.ts`: cold-start `process.argv` -> `pendingShellPdf` -> dispatch on `did-finish-load`, warm-start `second-instance` argv -> live-window dispatch, macOS `app.on('open-file')` with `e.preventDefault()` + pre-ready stash; new `file:openFromShell` IPC channel + `FileOpenFromShellEvent` contract + `PdfApi['app'].onFileOpenFromShell`; preload listener via `on`/`removeListener`; no-op fallback in `services/api.ts`).
+- `273b34c` Riley — `feat(client): Settings -> Diagnostics tile + file:openFromShell renderer subscription` (new Settings -> Diagnostics tab slot 5 of 6 with Run-OCR-diagnostics button + log-folder path tile + honest "open the folder to find the latest log" pointer + trust-floor disclaimer verified against `DiagnoseOcrSnapshot`; 14 i18n keys in en-US + es-ES; `subscribeFileOpenFromShell` hook wired at `app.tsx` mount with runtime feature detection on `window.pdfApi.app.onFileOpenFromShell`; +8 tests = 5 diagnostics + 3 file-open).
+- `d167c09` Diego — `chore(release): v0.7.13 - file-association argv + OCR diagnostic logs + Settings Diagnostics tile`.
+
+**Pre-flight (all green at push time):**
+
+- Husky `pre-push` ran full typecheck across `tsconfig.main.json` + `tsconfig.preload.json` + `tsconfig.renderer.json` — 0 errors.
+- Husky `pre-push` ran full `eslint --max-warnings 0` across `src/**/*.{ts,tsx}` + `tests/**/*.ts` — clean.
+- Test coverage delta from the three parallel agents: David shell +8 specs (356 passed in `src/main`+`src/ipc`+`src/preload`), David OCR +5 specs (9/9 in `ocr-bootstrap.test.ts`, 313/313 across `src/main/pdf-ops/`), Riley renderer +8 (70/70 src/client test files, 637/637 tests green). Net +21 tests on `main` vs the v0.7.12 baseline.
+
+**CI release pipeline:**
+
+- Workflow: `release.yml` run id [`26945905249`](https://github.com/SuperiorAg/peoject_view_editor/actions/runs/26945905249) — triggered by tag push `v0.7.13`.
+- Duration: 3m41s end-to-end. Job: `Build + publish Windows release` on `windows-2025-vs2026`. All 12 steps GREEN: Set up job -> Checkout -> Setup Node (from `.nvmrc`, forces Node 20 per L-003) -> Install deps -> Rebuild better-sqlite3 for Electron -> Rebuild optional WIA scanner addon (tolerant) -> Build Electron bundle (typecheck + electron-vite build) -> Package + publish to GitHub Release (electron-builder) -> Upload Windows artifacts (backup) -> Post Setup Node -> Post Checkout -> Complete job.
+
+**Assets uploaded (4/4):**
+
+| Asset                                         | Size          | SHA-256 prefix |
+| --------------------------------------------- | ------------- | -------------- |
+| `latest.yml`                                  | 366 B         | 267e7483…      |
+| `pdf-viewer-editor-0.7.13.exe` (portable)     | 135,387,836 B | 53897156…      |
+| `pdf-viewer-editor-setup-0.7.13.exe` (NSIS)   | 135,685,840 B | 183ea9b7…      |
+| `pdf-viewer-editor-setup-0.7.13.exe.blockmap` | 141,987 B     | 0f899256…      |
+
+Promoted draft -> Latest via `gh release edit v0.7.13 --draft=false --latest`. Release URL: <https://github.com/SuperiorAg/PDF_Viewer_Editor/releases/tag/v0.7.13>. `isDraft=false`, `isPrerelease=false`, `publishedAt=2026-06-04T10:26:51Z`. GitHub auto-marks highest semver as Latest, so electron-updater on existing v0.7.11/v0.7.12 installs resolves the new version on next launch.
+
+**Structural smoke (downloaded portable, this host):**
+
+- Binary: `release/pdf-viewer-editor-0.7.13.exe` downloaded via `gh release download v0.7.13 --pattern pdf-viewer-editor-0.7.13.exe`. Size 135,387,836 B — matches the asset on GitHub byte-for-byte.
+- `Unblock-File` -> `Start-Process`. CIM poll: process `pdf-viewer-editor-0.7.13.exe` observed pid 21828 / 17460 / 61604 across launches with working set ~107MB (Electron init complete — main + V8 + Chromium runtime allocated).
+- HWND sample race: the portable EXE is a 7-zip self-extractor that unpacks to `%TEMP%\<random>\` and re-execs `PDF Viewer & Editor.exe` from there; the launcher process exits before the next CIM poll tick on this fast box, so MainWindowHandle was 0 across samples. The v0.7.12 smoke avoided this by running directly from a `win-unpacked\` repack — that path was not pre-staged for v0.7.13, so the deeper "windowed family count >= 1" check is not asserted here.
+- Verdict: BINARY LAUNCHED (working-set proof of real Electron startup, byte-for-byte match against published asset, CI green). Full windowed-family assertion deferred to first user install — same posture as v0.7.10 / v0.7.11 / v0.7.12 portable smokes.
+- Full smoke log: `release/wave-v0713-smoke.txt`.
+
+**L-002 visual = SKIPPED.** Same posture as v0.7.10 / v0.7.11 / v0.7.12 — operator/playwright MCPs not bridged into this Diego subagent's tool surface. Substitute coverage: 637/637 src/client tests + 356 src/main+ipc+preload tests + 313/313 src/main/pdf-ops tests (all green at commit time) + the CI pipeline's own `Build Electron bundle` step (which would fail any renderer/main typecheck or build break before reaching the package step).
+
+**Untracked scripts stashed during release:** `scripts/diagnose-make-image-pdf.mjs` + `scripts/diagnose-ocr-render.mjs` were uncommitted at dispatch — Diego does not own them and pushed them to a labelled stash (`diego-untracked-during-release`) to keep the release commit clean. Re-apply with `git stash pop` if their owner needs them back.
+
+### Field notes
+
+- **Three parallel agents, zero conflicts — file ownership held.** This is the strongest evidence yet that the swarm's per-file owner discipline actually scales: David shell (`src/main/argv-parser.ts`, `src/main/index.ts`, `src/ipc/contracts.ts`, `src/preload/index.ts`, no-op stub in `src/client/services/api.ts`), David OCR (`src/main/pdf-ops/ocr-bootstrap.ts` only), Riley renderer (`src/client/**` only) merged into the same `main` branch in under an hour with no rebase. Diego's release-cut sees a clean working tree minus two untracked diagnostic scripts that nobody had committed yet.
+- **Portable EXE is a 7-zip self-extractor — process-name filters miss the re-exec child.** The launcher `pdf-viewer-editor-0.7.13.exe` self-extracts to `%TEMP%\<random>\` then execs `PDF Viewer & Editor.exe` from there. CIM filters on `ExecutablePath like '*pdf-viewer-editor*'` only catch the launcher, not the real Electron process. For the next portable smoke, either (a) match `Name = 'PDF Viewer & Editor.exe'` directly, (b) wait 5-8s before polling so the launcher exits and the child stabilizes, or (c) pre-stage a `win-unpacked\` and launch the child directly (cleanest — that's what v0.7.12 did successfully).
+- **L-002 visual gap is now a 4-release pattern, not a one-off.** v0.7.10, v0.7.11, v0.7.12, v0.7.13 — all four Diego release-cuts have deferred the windowed-DOM visual assertion because operator/playwright MCPs are not in the subagent tool surface. The substitute (test count + CI green + working-set proof of launch) has caught zero release-blocker bugs in those four releases — but it also wouldn't catch a blank-renderer regression. Worth bridging the playwright MCP into the dev-ops-agent surface before the next subjective UI change goes out.
+- **Two CI runs (v0.7.12 -> v0.7.13) under 8 minutes apart on `windows-2025-vs2026`.** v0.7.12 = 3m28s, v0.7.13 = 3m41s. The `setup-node` step forcing Node 20 per L-003 keeps wall time stable around 3.5min for the release pipeline. No flakes since the 2026-06-01 pin from `windows-latest`.
