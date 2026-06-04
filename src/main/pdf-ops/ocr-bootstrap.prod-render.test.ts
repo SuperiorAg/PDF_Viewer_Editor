@@ -96,6 +96,39 @@ run('OCR production rasterizer (real @napi-rs/canvas binding)', () => {
     }
   });
 
+  it('preserves documentStore bytes across rasterize (no ArrayBuffer detach)', async () => {
+    // Regression guard for the v0.7.14 "No PDF header found" bug. pdf.js v4's
+    // fake-worker transport (legacy build) calls postMessage with the input
+    // buffer in transferList, detaching the original ArrayBuffer. If
+    // rasterizePageProd hands `rec.bytes` directly to pdfjs.getDocument, the
+    // document-store's view becomes zero-length after rasterize — breaking
+    // every later consumer (composeSearchablePdf, PAdES re-check, save).
+    // The fix is to pass a fresh `new Uint8Array(rec.bytes)` copy. This test
+    // proves the original bytes still parse after a rasterize call.
+    const bytes = await makeTextPdf();
+    const originalLength = bytes.byteLength;
+    const headerCheck = bytes.slice(0, 5);
+    const rec = documentStore.register({
+      path: null,
+      displayName: 'test-bytes-survival.pdf',
+      fileHash: '0'.repeat(64),
+      bytes,
+      pageCount: 1,
+      pdflibLoadWarnings: [],
+    });
+    try {
+      await rasterizePageProd({ handle: rec.handle, pageIndex: 0, dpi: 72 });
+      const after = documentStore.getBytes(rec.handle);
+      expect(after).not.toBeNull();
+      // If pdf.js detached the buffer, byteLength would be 0 here.
+      expect(after?.byteLength).toBe(originalLength);
+      // And the %PDF- magic must still be at offset 0.
+      expect(Array.from(after!.slice(0, 5))).toEqual(Array.from(headerCheck));
+    } finally {
+      documentStore.release(rec.handle);
+    }
+  });
+
   it('installs Image/Path2D/ImageData/DOMMatrix on globalThis after tryLoadCanvas', () => {
     const r = tryLoadCanvas();
     expect(r.ok).toBe(true);

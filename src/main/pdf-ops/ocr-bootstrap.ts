@@ -557,7 +557,19 @@ export async function rasterizePageProd(opts: RasterPageOptions): Promise<Uint8A
   const rec = documentStore.get(opts.handle);
   if (!rec) throw new Error(`handle ${opts.handle} not in document store`);
   const pdfjs = await loadPdfJs();
-  const doc = await pdfjs.getDocument({ data: rec.bytes }).promise;
+  // Pass a COPY to pdf.js. pdf.js v4's fake-worker transport (legacy build,
+  // workerSrc unset) calls postMessage with the buffer in its transferList,
+  // which DETACHES the underlying ArrayBuffer. If we hand pdf.js `rec.bytes`
+  // directly, the document-store's Uint8Array view becomes zero-length after
+  // this call returns. Any subsequent consumer reading `rec.bytes` — the OCR
+  // composer's `PDFDocument.load(originalBytes)`, the PAdES re-check, the
+  // pdf-lib save path — then sees an empty buffer and throws "No PDF header
+  // found". The v0.7.13 rasterize-failure diagnostic captured exactly this:
+  // `pdfBytes_length: 0` at the moment of error, even though pdf.js had
+  // already parsed the bytes far enough to call paintChar. `new Uint8Array(x)`
+  // allocates a fresh buffer and memcpy's the bytes, so pdf.js can transfer
+  // its copy freely while ours stays intact.
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(rec.bytes) }).promise;
   if (opts.pageIndex >= doc.numPages) {
     throw new Error(`pageIndex ${opts.pageIndex} >= numPages ${doc.numPages}`);
   }
