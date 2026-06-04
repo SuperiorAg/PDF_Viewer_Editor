@@ -330,7 +330,7 @@ describe('thunks-phase5', () => {
       });
     });
 
-    it('hydrates a nullable-late-init summary from the latest job DTO', async () => {
+    it('hydrates summary AND chains ocr:listResultsByJob to populate pageResults (Phase 5.2)', async () => {
       const jobDto: OcrJobRowDto = {
         id: 99,
         docHash: DOC.fileHash,
@@ -346,21 +346,82 @@ describe('thunks-phase5', () => {
         invalidatedSignatures: false,
         createdAt: 0,
       };
+      const samplePageResult = {
+        pageIndex: 0,
+        imgDimsPx: { widthPx: 1700, heightPx: 2200 },
+        totalWords: 1,
+        lowConfidenceWords: 0,
+        meanConfidence: 88,
+        words: [
+          {
+            text: 'hello',
+            confidence: 88,
+            imgRect: { x0: 0, y0: 0, x1: 30, y1: 12 },
+            pdfRect: { x: 10, y: 760, width: 30, height: 12 },
+          },
+        ],
+        durationMs: 100,
+      };
       const listJobs = vi.fn().mockResolvedValue({
         ok: true,
         value: { jobs: [jobDto], total: 1 },
       });
-      vi.stubGlobal('pdfApi', { ocr: { listJobs } });
+      const listResultsByJob = vi.fn().mockResolvedValue({
+        ok: true,
+        value: { pageResults: [samplePageResult] },
+      });
+      vi.stubGlobal('pdfApi', { ocr: { listJobs, listResultsByJob } });
       const store = makeStore();
       store.dispatch(setDocument(DOC));
       await dispatchThunk(store, loadOcrResultsThunk());
       const summary = getOcr(store).currentSummary;
       expect(summary).not.toBeNull();
-      // The listJobs response is a SUMMARY dto, NOT the per-page words. Per
-      // conventions §16.3.2, pageResults is null until a fresh runOnDocument
-      // populates them. Critical: NOT a sentinel empty array.
-      expect(summary?.pageResults).toBeNull();
+      // Phase 5.2: pageResults now comes from the chained call, NOT null.
+      expect(summary?.pageResults).toHaveLength(1);
       expect(summary?.totalWords).toBe(250);
+      // listResultsByJob MUST be invoked with the resolved jobId.
+      expect(listResultsByJob).toHaveBeenCalledWith({ jobId: 99 });
+      // The slice's setCurrentSummary reducer must have indexed the page
+      // results into pageResultsByPage for the overlay subscription.
+      expect(getOcr(store).pageResultsByPage[0]).toBeDefined();
+      expect(getOcr(store).pageResultsByPage[0]?.words[0]?.text).toBe('hello');
+    });
+
+    it('falls back to null pageResults if listResultsByJob fails (Phase 5.2 degradation)', async () => {
+      const jobDto: OcrJobRowDto = {
+        id: 42,
+        docHash: DOC.fileHash,
+        pageRange: { start: 0, end: 0 },
+        langs: ['eng'],
+        preprocess: { deskew: false, denoise: false, contrastBoost: false },
+        status: 'completed',
+        startedAt: 0,
+        completedAt: 1000,
+        meanConfidence: 88,
+        totalWords: 100,
+        errorMessage: null,
+        invalidatedSignatures: false,
+        createdAt: 0,
+      };
+      const listJobs = vi.fn().mockResolvedValue({
+        ok: true,
+        value: { jobs: [jobDto], total: 1 },
+      });
+      const listResultsByJob = vi.fn().mockResolvedValue({
+        ok: false,
+        error: 'job_not_found',
+        message: 'race with delete',
+      });
+      vi.stubGlobal('pdfApi', { ocr: { listJobs, listResultsByJob } });
+      const store = makeStore();
+      store.dispatch(setDocument(DOC));
+      await dispatchThunk(store, loadOcrResultsThunk());
+      const summary = getOcr(store).currentSummary;
+      expect(summary).not.toBeNull();
+      // Degradation: summary still hydrates, but pageResults is null per
+      // conventions §16.3.2 late-init contract.
+      expect(summary?.pageResults).toBeNull();
+      expect(summary?.totalWords).toBe(100);
     });
   });
 

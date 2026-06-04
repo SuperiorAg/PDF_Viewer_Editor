@@ -18,6 +18,7 @@ import { apiOcr } from '../services/api';
 import {
   type DocumentHandle,
   type OcrLanguagePackDownloadProgressEvent,
+  type OcrPageResult,
   type OcrProgressEvent,
   type OcrRunOnDocumentValue,
   type OcrRunOnPageValue,
@@ -252,17 +253,34 @@ export const loadOcrResultsThunk = createAsyncThunk<
       dispatch(setCurrentSummary(null));
       return;
     }
-    // The DTO doesn't carry the full per-page OcrPageResult[] (those live in
-    // ocr_results); we set a minimal summary so the results panel can show a
-    // "OCR was run on this document" indicator. Loading the per-page rows
-    // would be a separate channel (ocr:listResultsByJob) — out of Phase 5
-    // scope; Phase 5.2 candidate per architecture §10.3.
     const job = res.value.jobs[0];
     if (!job) {
       // res.value.jobs.length > 0 was just verified, but TS's noUncheckedIndexedAccess
       // still narrows [0] to T | undefined. Belt-and-suspenders bail-out.
       dispatch(setCurrentSummary(null));
       return;
+    }
+    // Phase 5.2 (Marcus + David, 2026-06-04): chain `ocr:listResultsByJob` to
+    // hydrate the per-page word lists. Without this, `pageResultsByPage` stays
+    // empty on reopen and the confidence overlay paints nothing until the user
+    // re-runs OCR. The slice's `setCurrentSummary` reducer already populates
+    // `pageResultsByPage` from `payload.pageResults`, so dispatching one
+    // summary with the parsed `pageResults` array is enough — the overlay
+    // repaints automatically because it subscribes to `pageResultsByPage`.
+    let pageResults: OcrPageResult[] | null = null;
+    try {
+      const resultsRes = await apiOcr.listResultsByJob({ jobId: job.id });
+      if (resultsRes.ok) {
+        // Non-empty array on the happy path; empty array on the "job exists,
+        // no per-page rows recoverable" degraded state. We pass the empty
+        // array through (rather than null) so the slice's `if (pageResults)`
+        // branch still clears any stale `pageResultsByPage` from a prior doc.
+        pageResults = resultsRes.value.pageResults;
+      }
+      // `!resultsRes.ok` (e.g. `job_not_found` from a race with delete) is
+      // swallowed — the summary indicator still renders without per-page words.
+    } catch {
+      // Best-effort hydration; swallow.
     }
     dispatch(
       setCurrentSummary({
@@ -276,8 +294,9 @@ export const loadOcrResultsThunk = createAsyncThunk<
         totalWords: job.totalWords ?? 0,
         meanConfidence: job.meanConfidence ?? 0,
         totalDurationMs: job.completedAt !== null ? job.completedAt - job.startedAt : 0,
-        // Nullable late-init — no sentinel-empty-array. Conventions §16.3.2.
-        pageResults: null,
+        // Phase 5.2 — `null` if the per-page fetch failed (preserves the late-init
+        // contract per conventions §16.3.2); the parsed array otherwise.
+        pageResults,
       }),
     );
   } catch {
