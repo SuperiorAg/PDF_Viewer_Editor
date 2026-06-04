@@ -67,21 +67,75 @@ import { loadPdfMetadata } from './pdf-metadata-loader.js';
 // handles, not a process crash.
 // ============================================================================
 
+interface TesseractJsWord {
+  text: string;
+  confidence: number;
+  bbox: { x0: number; y0: number; x1: number; y1: number };
+}
+interface TesseractJsLine {
+  words: TesseractJsWord[];
+}
+interface TesseractJsParagraph {
+  lines: TesseractJsLine[];
+}
+interface TesseractJsBlock {
+  paragraphs: TesseractJsParagraph[];
+}
+
 interface TesseractJsWorker {
-  recognize: (image: Uint8Array | Buffer | string) => Promise<{
+  // tesseract.js v6+ output API: pass a third `output` arg listing which
+  // categories to return. The default output set DROPPED `words` as a
+  // top-level field in v6 -- word-level data now lives nested at
+  // `data.blocks[].paragraphs[].lines[].words[]`. `imageWidth`/`imageHeight`
+  // were also removed; we read PNG dimensions from the input bytes instead.
+  recognize: (
+    image: Uint8Array | Buffer | string,
+    options?: Record<string, unknown>,
+    output?: Record<string, boolean>,
+  ) => Promise<{
     data: {
-      words: Array<{
-        text: string;
-        confidence: number;
-        bbox: { x0: number; y0: number; x1: number; y1: number };
-      }>;
-      // tesseract.js v6+ exposes the recognized image dimensions on the data
-      // result; we fall back to defaults if absent.
-      imageWidth?: number;
-      imageHeight?: number;
+      blocks: TesseractJsBlock[] | null;
     };
   }>;
   terminate: () => Promise<void>;
+}
+
+/**
+ * Read width/height from a PNG byte stream. tesseract.js v7 no longer exposes
+ * imageWidth/imageHeight on the result, and the OCR composer needs both to map
+ * recognized-word pixel rects back to PDF user space. We rasterize to PNG
+ * upstream of the worker, so reading the IHDR header is the lossless source of
+ * truth.
+ *
+ * PNG layout (RFC 2083 / W3C PNG spec): 8-byte signature, then IHDR chunk
+ * starting with 4-byte length (13), 4-byte type ("IHDR"), then 4-byte
+ * big-endian width at bytes [16..19] and 4-byte big-endian height at [20..23].
+ *
+ * Returns `null` if `imageBytes` is too short or doesn't have the PNG magic --
+ * the caller treats that as 0/0 and the composer's defensive guard skips word
+ * placement.
+ */
+function readPngDimensions(imageBytes: Uint8Array): { widthPx: number; heightPx: number } | null {
+  if (imageBytes.byteLength < 24) return null;
+  if (
+    imageBytes[0] !== 0x89 ||
+    imageBytes[1] !== 0x50 ||
+    imageBytes[2] !== 0x4e ||
+    imageBytes[3] !== 0x47
+  ) {
+    return null;
+  }
+  const w =
+    ((imageBytes[16] ?? 0) << 24) |
+    ((imageBytes[17] ?? 0) << 16) |
+    ((imageBytes[18] ?? 0) << 8) |
+    (imageBytes[19] ?? 0);
+  const h =
+    ((imageBytes[20] ?? 0) << 24) |
+    ((imageBytes[21] ?? 0) << 16) |
+    ((imageBytes[22] ?? 0) << 8) |
+    (imageBytes[23] ?? 0);
+  return { widthPx: w >>> 0, heightPx: h >>> 0 };
 }
 
 interface TesseractJsModule {
@@ -124,15 +178,28 @@ function createTesseractWorkerFactory(): TesseractWorkerFactory {
       return {
         async recognize(imageBytes: Uint8Array) {
           // tesseract.js accepts a Uint8Array / Buffer / file path / data URL.
-          const r = await raw.recognize(imageBytes);
+          // v7 dropped `words`/`imageWidth`/`imageHeight` from the default
+          // output. Opt in to `blocks` (which carries the nested word tree)
+          // and flatten; read PNG dimensions from the input bytes ourselves.
+          const r = await raw.recognize(imageBytes, undefined, { blocks: true });
+          const words: TesseractJsWord[] = [];
+          const blocks = r.data.blocks ?? [];
+          for (const b of blocks) {
+            for (const p of b.paragraphs) {
+              for (const l of p.lines) {
+                for (const w of l.words) words.push(w);
+              }
+            }
+          }
+          const dims = readPngDimensions(imageBytes);
           return {
-            words: r.data.words.map((w) => ({
+            words: words.map((w) => ({
               text: w.text,
               confidence: w.confidence,
               bbox: w.bbox,
             })),
-            imageWidthPx: r.data.imageWidth ?? 0,
-            imageHeightPx: r.data.imageHeight ?? 0,
+            imageWidthPx: dims?.widthPx ?? 0,
+            imageHeightPx: dims?.heightPx ?? 0,
           };
         },
         async terminate() {
@@ -541,6 +608,7 @@ export const __test = {
     return _canvasLoadSnapshotWritten;
   },
   writeCanvasLoadSnapshot,
+  readPngDimensions,
 };
 
 /**

@@ -400,3 +400,54 @@ describe('writeCanvasLoadSnapshot — one-time canvas-load fingerprint', () => {
     expect(mocks.writeFileSync).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('readPngDimensions — IHDR header parsing', () => {
+  // tesseract.js v7 dropped imageWidth/imageHeight from the result. We read
+  // PNG dimensions from the rasterizer output bytes ourselves; the OCR
+  // composer needs both to map recognized-word pixel rects back to PDF user
+  // space. This test pins the parser against the PNG spec's IHDR layout.
+
+  function makePngBytes(width: number, height: number): Uint8Array {
+    const bytes = new Uint8Array(24);
+    // 8-byte PNG signature.
+    bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 0);
+    // 4-byte IHDR length (always 13). We don't care about the value for the
+    // reader test, but populate it to mirror real bytes.
+    bytes.set([0x00, 0x00, 0x00, 0x0d], 8);
+    // 4-byte IHDR type "IHDR".
+    bytes.set([0x49, 0x48, 0x44, 0x52], 12);
+    // 4-byte big-endian width at [16..19].
+    bytes[16] = (width >>> 24) & 0xff;
+    bytes[17] = (width >>> 16) & 0xff;
+    bytes[18] = (width >>> 8) & 0xff;
+    bytes[19] = width & 0xff;
+    // 4-byte big-endian height at [20..23].
+    bytes[20] = (height >>> 24) & 0xff;
+    bytes[21] = (height >>> 16) & 0xff;
+    bytes[22] = (height >>> 8) & 0xff;
+    bytes[23] = height & 0xff;
+    return bytes;
+  }
+
+  it('reads width/height for a typical OCR raster (3301×2550 at 300dpi)', () => {
+    const png = makePngBytes(3301, 2550);
+    const dims = __test.readPngDimensions(png);
+    expect(dims).toEqual({ widthPx: 3301, heightPx: 2550 });
+  });
+
+  it('reads width/height for a small page (200×200 at 72dpi)', () => {
+    const png = makePngBytes(200, 200);
+    expect(__test.readPngDimensions(png)).toEqual({ widthPx: 200, heightPx: 200 });
+  });
+
+  it('returns null for bytes shorter than 24 bytes', () => {
+    expect(__test.readPngDimensions(new Uint8Array(8))).toBeNull();
+    expect(__test.readPngDimensions(new Uint8Array(0))).toBeNull();
+  });
+
+  it('returns null for bytes without the PNG magic prefix', () => {
+    const notPng = new Uint8Array(32);
+    notPng.set([0xff, 0xd8, 0xff, 0xe0], 0); // JPEG magic
+    expect(__test.readPngDimensions(notPng)).toBeNull();
+  });
+});
