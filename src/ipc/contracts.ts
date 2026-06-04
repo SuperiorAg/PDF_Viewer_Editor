@@ -1076,6 +1076,31 @@ export type AppOpenExternalError = 'handle_not_found' | 'os_failed' | 'not_imple
 export type AppOpenExternalResponse = Result<Record<string, never>, AppOpenExternalError>;
 
 // ----------------------------------------------------------------------------
+// file:openFromShell — David 2026-06-04, follow-up to v0.7.12 shell-launch bug.
+//
+// Emit-only main->renderer event. Fired when the OS shell hands us a .pdf path
+// at launch (Windows Explorer double-click, macOS Finder Open With,
+// Linux .desktop file association). Three sources:
+//
+//   - 'argv'              cold-start: process.argv carried the path
+//   - 'second-instance'   warm-start: requestSingleInstanceLock's
+//                          second-instance handler received forwarded argv
+//   - 'open-file'         macOS only: app.on('open-file') fired before
+//                          requestSingleInstanceLock could handle it
+//   - 'open-url'          reserved for a future custom URL handler (pdf://)
+//
+// Renderer subscribes via window.pdfApi.app.onFileOpenFromShell(cb) and
+// dispatches the existing openDroppedPath thunk to feed `fs:readPdf` (same
+// trust-boundary path drag-drop uses). The absolute path has already been
+// sanitized in main (src/main/argv-parser.ts) before this event is dispatched.
+// ----------------------------------------------------------------------------
+export interface FileOpenFromShellEvent {
+  /** Sanitized absolute path to the .pdf the OS shell asked us to open. */
+  absolutePath: string;
+  source: 'argv' | 'second-instance' | 'open-file' | 'open-url';
+}
+
+// ----------------------------------------------------------------------------
 // app:diagnoseOcr — David 2026-06-01, follow-up to v0.7.9 rasterize-page-0 bug.
 //
 // One-shot main-process introspection that reports whether every OCR runtime
@@ -2949,6 +2974,10 @@ export const Channels = {
   AppOpenExternal: 'app:openExternal',
   // David 2026-06-01: OCR runtime introspection (no UI surface yet).
   AppDiagnoseOcr: 'app:diagnoseOcr',
+  // David 2026-06-04: emit-only main->renderer event for shell-launched PDF
+  // path handoff (Explorer double-click, second-instance argv forward,
+  // macOS open-file). See FileOpenFromShellEvent + src/main/argv-parser.ts.
+  FileOpenFromShell: 'file:openFromShell',
   // window
   WindowMinimize: 'window:minimize',
   WindowMaximize: 'window:maximize',
@@ -3082,6 +3111,10 @@ export interface PdfApi {
     // David 2026-06-01: one-shot OCR runtime diagnostic. No UI yet — invoke
     // via devtools (`await window.pdfApi.app.diagnoseOcr({})`).
     diagnoseOcr: (req: AppDiagnoseOcrRequest) => Promise<AppDiagnoseOcrResponse>;
+    // David 2026-06-04: emit-only event listener for shell-launched PDF paths
+    // (Explorer double-click / second-instance argv / macOS open-file).
+    // Returns an unsubscribe disposer. See FileOpenFromShellEvent.
+    onFileOpenFromShell: (cb: (event: FileOpenFromShellEvent) => void) => () => void;
   };
   window: {
     minimize: () => Promise<WindowMinimizeResponse>;

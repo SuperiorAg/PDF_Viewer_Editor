@@ -35,6 +35,8 @@ import type {
   // Wave-30 follow-up (H-30.1, David 2026-06-01): path-only PDF picker.
   DialogPickPdfFilesRequest,
   DialogPickPdfFilesResponse,
+  // David 2026-06-04: shell-launched PDF event (Explorer double-click etc).
+  FileOpenFromShellEvent,
   DialogSaveAsRequest,
   DialogSaveAsResponse,
   FsApplyEditOpsRequest,
@@ -275,6 +277,15 @@ const pdfApi: PdfApi = {
     // David 2026-06-01: OCR runtime introspection (no UI surface yet).
     diagnoseOcr: (req: AppDiagnoseOcrRequest) =>
       ipcRenderer.invoke(Channels.AppDiagnoseOcr, req) as Promise<AppDiagnoseOcrResponse>,
+    // David 2026-06-04: shell-launched PDF event listener. Mirrors the
+    // existing on(...)/removeListener pattern used by OCR/export/update.
+    onFileOpenFromShell: (cb: (event: FileOpenFromShellEvent) => void) => {
+      const wrapped = (_e: unknown, event: FileOpenFromShellEvent): void => cb(event);
+      ipcRenderer.on(Channels.FileOpenFromShell, wrapped);
+      return () => {
+        ipcRenderer.removeListener(Channels.FileOpenFromShell, wrapped);
+      };
+    },
   },
   window: {
     minimize: () =>

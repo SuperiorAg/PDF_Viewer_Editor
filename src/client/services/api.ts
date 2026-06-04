@@ -98,6 +98,9 @@ function makeBridgeUnavailableFallback(): PdfApi {
       openExternal: unavailable,
       // David 2026-06-01: OCR runtime introspection (no UI surface yet).
       diagnoseOcr: unavailable,
+      // David 2026-06-04: shell-launched PDF event listener. Fallback returns
+      // a no-op disposer so renderer cleanup paths don't blow up under Vitest.
+      onFileOpenFromShell: () => () => undefined,
     },
     window: {
       minimize: unavailable,
@@ -408,3 +411,11 @@ export const apiDialogPhase6: PdfApiDialogPhase6 = new Proxy({} as PdfApiDialogP
     return live[prop];
   },
 }) as PdfApiDialogPhase6;
+
+// cross-roster: minimal hook so v0.7.13 ships the user-reported double-click fix; Riley owns the proper UX
+// David 2026-06-04 — the renderer-side subscriber lives in
+// `src/client/state/file-open-from-shell.ts` (wired into app.tsx by a parallel
+// agent). This file only needs the no-op `onFileOpenFromShell` in
+// `makeBridgeUnavailableFallback` (above) — the live bridge call belongs to
+// that hook so there's a single useEffect subscription with a clean unsub
+// lifecycle. No module-load side effect here; no double-dispatch on shell open.

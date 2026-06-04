@@ -9527,3 +9527,49 @@ Promoted draft → Latest via `gh release edit v0.7.12 --draft=false`. Release U
 - **When a bug needs the user's data to reproduce, bake the diagnostic INTO the app — don't ask the user to run an external script.** App-side log capture + a known log path surfaced in the error toast turns every user bug report into a self-service diagnostic. v0.7.10 → v0.7.11 → v0.7.12 each shipped a guess based on synthetic repro; v0.7.13 ships an instrument that will give us the real native stack on the user's PDF the first time they hit the bug. The cost is ~280 lines and one extra fs.writeFileSync per failure (already a failure path — performance is irrelevant).
 - **`vi.mock('electron', ...)` intercepts ESM imports, NOT CJS `require('electron')` from inside the module under test.** Initial test run failed with `Cannot read properties of undefined (reading 'getPath')` because the diagnostic helper used a lazy CJS require. Switched to the top-level ESM `app` binding (already imported); the mock then took effect and all tests went green. Generalizable rule: when a function needs to be testable AND lives in an Electron main-process module, reach for the top-level import, not a defensive lazy `require`.
 - **The diagnostic record's `error.cause` walk handles three shapes (Error instance, string, anything-else-via-JSON.stringify).** pdf.js's render rejections sometimes carry an Error in `.cause`, sometimes a bare string token from the native binding, sometimes nothing at all. Stringifying the cause defensively keeps the JSON write robust against shapes we haven't seen yet.
+
+---
+
+## 2026-06-04 — David: shell-launched PDF handoff fix (v0.7.13 candidate)
+
+**User-reported bug:** double-clicking a `.pdf` in Windows Explorer launches `PDF_Viewer_Editor.exe` but the document never opens. File -> Open and drag-drop both work, masking the regression in dev.
+
+**Root cause** (pre-existing in `src/main/index.ts`, ~lines 120-130): `app.requestSingleInstanceLock()` was acquired and a `second-instance` handler was registered, BUT the handler's `argv` parameter was discarded AND on first-launch `process.argv` was never inspected for a `.pdf` path. The shell handed us the path; we threw it away.
+
+**Fix — one coherent commit across the IPC boundary:**
+
+1. `src/main/argv-parser.ts` (NEW) — `parseShellPdfPath(argv, { isPackaged })` helper. Skips argv[0] (executable) unconditionally and argv[1] (entry script) in dev mode. Scans for the first arg whose extension is `.pdf` (case-insensitive), survives `sanitizePath()` (UNC / device-namespace / control-char / reserved-DOS / suspicious-Unicode all gated), and resolves to an existing file on disk (`existsSync` + `statSync().isFile()` after sanitization). Returns the normalized absolute path or null. Never throws.
+2. `src/main/argv-parser.test.ts` (NEW, 8 tests) — empty argv -> null; only-executable argv -> null; no `.pdf` -> null; nonexistent `.pdf` path -> null; valid path -> sanitized absolute; uppercase `.PDF` accepted (case-insensitive); dev-mode argv[1] skip; first match wins on multi-PDF argv.
+3. `src/main/index.ts` — wired three entry points feeding the new channel:
+   - **Cold-start (argv):** parse `process.argv` synchronously at bootstrap, stash in `pendingShellPdf`, dispatch on `did-finish-load` so the renderer's `onFileOpenFromShell` subscription is wired before we send.
+   - **Warm-start (second-instance):** the previously-discarded `argv` arg is now parsed; if a valid PDF is found, dispatch immediately to the existing primary's renderer (still focus/restore the window first).
+   - **macOS open-file:** `app.on('open-file', (e, path) => { e.preventDefault(); ... })`. Dispatches immediately if the window is loaded, otherwise stashes in `pendingShellPdf` for the cold-start dispatch path.
+4. `src/ipc/contracts.ts` — new `FileOpenFromShellEvent { absolutePath: string; source: 'argv' | 'second-instance' | 'open-file' | 'open-url' }`, new `Channels.FileOpenFromShell = 'file:openFromShell'`, new `PdfApi['app'].onFileOpenFromShell(cb): () => void` (emit-only main->renderer, returns disposer).
+5. `src/preload/index.ts` — exposes the listener via the existing `ipcRenderer.on` / `removeListener` pattern (mirrors OCR / export / update progress event listeners in the same file).
+6. `src/client/services/api.ts` — added `onFileOpenFromShell: () => () => undefined` to the bridge-unavailable fallback so Vitest renderer tests survive. The live subscription is owned by a parallel renderer hook (`src/client/state/file-open-from-shell.ts`, wired into `app.tsx` by a parallel agent) — single useEffect subscription, clean unsubscribe lifecycle, dispatches `openDroppedPathThunk(absolutePath)` so shell opens reuse the EXACT same `fs:readPdf` security + load pathway as drag-drop (no special branch, single code path).
+
+**Behaviour matrix (post-fix):**
+
+| Entry point                          | Cold start (no instance)     | Warm start (existing instance) |
+| ------------------------------------ | ---------------------------- | ------------------------------ |
+| Explorer double-click `.pdf`         | argv -> open                 | second-instance argv -> open   |
+| `PDF_Viewer_Editor.exe path.pdf` CLI | argv -> open                 | second-instance argv -> open   |
+| macOS Finder Open With               | open-file -> open            | open-file -> open              |
+| Drag onto dock / taskbar             | argv (Win) / open-file (mac) | second-instance / open-file    |
+
+**Cross-roster coordination:** a parallel agent independently created `src/client/state/file-open-from-shell.ts` and wired the `subscribeFileOpenFromShell` useEffect into `app.tsx` with runtime feature-detection of `window.pdfApi.app.onFileOpenFromShell`. My contract change exposes the API the hook feature-detects for. The hook reads only `event.absolutePath`, so the additional `source` field on the event payload is harmless and ignored. No double-dispatch — I removed a redundant module-load subscription in `api.ts` once I noticed the parallel hook in the working tree.
+
+**Pre-flight (all green, MY-SCOPE ONLY):**
+
+- `npx eslint` on every touched file — 0 warnings, 0 errors.
+- `npx tsc --noEmit` — clean across all 3 tsconfigs (main, preload, renderer).
+- `npx vitest run src/main src/ipc src/preload` — **356 passed** scoped to my touched domains (49 files). The 8 new `argv-parser.test.ts` cases all green. Two pre-existing OCR-bootstrap test failures (untracked `ocr-bootstrap.prod-render.test.ts` + uncommitted mods to `ocr-bootstrap.ts/.test.ts` from a prior agent run) are NOT caused by this change — confirmed by `git stash` + re-run showing those tests pass at the stashed baseline.
+
+**Concurrent-write hygiene:** at commit time the working tree had ~14 modified/untracked files from at least three parallel agent runs (the diagnostic-capture David, the settings-modal Diagnostics tab subagent, the file-open-from-shell renderer hook subagent). Staged only my five files explicitly by name — no `git add -A` or `git add .` — per LOCK 0036's parallel-write doctrine. Same discipline the diagnostic-capture entry above field-tested.
+
+### Field notes
+
+- **Single-instance-lock argv MUST be parsed.** The `(_event, argv, _cwd) => ...` signature on `app.on('second-instance', ...)` is the warm-start handoff path; discarding `argv` silently breaks every file-association double-click after the first launch. Same trap on cold-start with `process.argv`. Both paths must run the same sanitized parser so the renderer's open-flow stays single-codepath.
+- **macOS `open-file` MUST `e.preventDefault()` AND tolerate pre-window-ready firing.** Finder pre-resolves the file path and fires the event before `app.whenReady()` resolves on a cold launch. Stash to a module-scope `pendingShellPdf` for the cold-start dispatch path; only call `webContents.send` when both `getMainWindow()` returns truthy AND `webContents.isLoading()` is false.
+- **`did-finish-load` is the correct rendezvous for cold-start shell-handoff.** Earlier reading attempts (e.g. dispatching at `app.whenReady()` -> immediately after `createMainWindow`) race the renderer's React-mount `useEffect` that subscribes to the channel. The renderer wires its subscription inside the first `useEffect` after mount, which fires AFTER the load events. `did-finish-load` is the documented signal that the page (and its scripts) are fully loaded — that's when the subscription is guaranteed wired.
+- **The renderer-side subscription belongs in app.tsx, not api.ts.** I initially placed the subscription in `services/api.ts` at module-load time (using a dynamic `import('../state/store')` to dodge the circular dep). A parallel agent placed it in `state/file-open-from-shell.ts` + an `app.tsx` `useEffect`. The latter is correct: `useEffect` returns a proper unsubscribe, ties the listener lifetime to the component tree, and avoids the module-import-side-effect smell. Backed mine out the moment I saw theirs.

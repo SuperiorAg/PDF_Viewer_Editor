@@ -73,6 +73,7 @@ import { registerIpcHandlers } from '../ipc/register.js';
 // The heavy `electron-updater` dep is loaded via runtime require INSIDE
 // `loadElectronUpdaterModule` (Diego installs it Wave 29) — so the bundle
 // builds before the dep lands. Mirrors the ocr/export bootstrap precedent.
+import { parseShellPdfPath } from './argv-parser.js';
 import {
   createAutoUpdateController,
   isPublishConfiguredFromAppUpdateYml,
@@ -118,6 +119,26 @@ function resolveRendererTarget(): { url?: string; file?: string } {
 }
 
 function bootstrap(): void {
+  // ============================================================================
+  // Shell-launched PDF handoff (David 2026-06-04, v0.7.12 -> v0.7.13 bugfix)
+  // ----------------------------------------------------------------------------
+  // Three entry points feed Channels.FileOpenFromShell to the renderer:
+  //   1. Cold-start (this process): process.argv carries the path; we parse
+  //      it here, stash in `pendingShellPdf`, and dispatch on did-finish-load.
+  //   2. Warm-start (second-instance event): Electron forwards the second
+  //      invocation's argv to the existing primary; we parse and dispatch
+  //      immediately to the already-loaded renderer.
+  //   3. macOS open-file: fires BEFORE app.whenReady() can complete on a
+  //      cold launch (Finder pre-resolves the file). We stash if no window
+  //      yet, dispatch immediately if window is loaded.
+  //
+  // pendingShellPdf is the cross-source rendezvous slot: cold-start writes it
+  // here at bootstrap, did-finish-load reads + clears it, open-file writes it
+  // pre-window-ready, second-instance writes it directly to a live window.
+  // ============================================================================
+  let pendingShellPdf: string | null = null;
+  let pendingShellSource: 'argv' | 'open-file' | 'open-url' = 'argv';
+
   // Step 1 — single-instance lock
   const gotLock = app.requestSingleInstanceLock();
   if (!gotLock) {
@@ -125,13 +146,69 @@ function bootstrap(): void {
     return;
   }
 
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, argv) => {
     const win = getMainWindow();
     if (win) {
       if (win.isMinimized()) win.restore();
       win.focus();
     }
+    // v0.7.12 BUG: the argv parameter was previously discarded. Without
+    // parsing it here, the user's "Open with PDF_Viewer_Editor" on a second
+    // double-click only focused the existing window and silently dropped the
+    // requested file.
+    const shellPath = parseShellPdfPath(argv, { isPackaged: app.isPackaged });
+    if (shellPath !== null && win && !win.isDestroyed()) {
+      try {
+        win.webContents.send(Channels.FileOpenFromShell, {
+          absolutePath: shellPath,
+          source: 'second-instance',
+        });
+      } catch (e) {
+        console.error('[main] second-instance: failed to dispatch shell open', e);
+      }
+    }
   });
+
+  // macOS-only `open-file` event. On Finder double-click / drag-onto-dock,
+  // the path arrives via this event, NOT via process.argv. e.preventDefault()
+  // is required per Electron docs — without it the default behaviour skips
+  // our handling. If the window isn't ready yet, stash for did-finish-load
+  // (cold-start path); if it is, dispatch immediately.
+  app.on('open-file', (event, path) => {
+    event.preventDefault();
+    // Reuse the parser to enforce the same sanitization rules as argv. The
+    // parser expects an argv-shaped array; synthesize the minimal shape:
+    //   [exePath, path]   so startIndex=1 picks up `path` at index 1.
+    const shellPath = parseShellPdfPath(['', path], { isPackaged: app.isPackaged });
+    if (shellPath === null) return;
+    const win = getMainWindow();
+    if (win && !win.isDestroyed() && !win.webContents.isLoading()) {
+      try {
+        win.webContents.send(Channels.FileOpenFromShell, {
+          absolutePath: shellPath,
+          source: 'open-file',
+        });
+        return;
+      } catch (e) {
+        console.error('[main] open-file: failed to dispatch shell open', e);
+      }
+    }
+    // Window not ready yet — stash for did-finish-load.
+    pendingShellPdf = shellPath;
+    pendingShellSource = 'open-file';
+  });
+
+  // Cold-start argv parse. Runs ONCE, synchronously, before whenReady() so
+  // the value is available the moment did-finish-load fires below. Stashed
+  // in pendingShellPdf so the cold-start dispatch path (window-ready) and
+  // the open-file pre-ready path (above) share a single rendezvous slot.
+  {
+    const shellPath = parseShellPdfPath(process.argv, { isPackaged: app.isPackaged });
+    if (shellPath !== null) {
+      pendingShellPdf = shellPath;
+      pendingShellSource = 'argv';
+    }
+  }
 
   // Step 2 — wait for app ready
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
@@ -403,6 +480,35 @@ function bootstrap(): void {
       ...(url !== undefined ? { rendererUrl: url } : {}),
       ...(file !== undefined ? { rendererFile: file } : {}),
     });
+
+    // Shell-launched PDF dispatch (David 2026-06-04). pendingShellPdf was
+    // populated synchronously at bootstrap from process.argv, OR by the
+    // macOS open-file handler pre-window-ready. Wait for did-finish-load
+    // (the renderer wires its onFileOpenFromShell subscriber at app mount,
+    // and we MUST NOT race that subscription).
+    if (pendingShellPdf !== null) {
+      const win = getMainWindow();
+      if (win) {
+        const absolutePath = pendingShellPdf;
+        const source = pendingShellSource;
+        const postShellOpen = (): void => {
+          try {
+            win.webContents.send(Channels.FileOpenFromShell, {
+              absolutePath,
+              source,
+            });
+          } catch (e) {
+            console.error('[main] cold-start: failed to dispatch shell open', e);
+          }
+        };
+        if (win.webContents.isLoading()) {
+          win.webContents.once('did-finish-load', postShellOpen);
+        } else {
+          postShellOpen();
+        }
+        pendingShellPdf = null;
+      }
+    }
 
     // If DB init failed, surface one toast to the renderer once it's ready.
     if (dbInitFailed !== null) {
