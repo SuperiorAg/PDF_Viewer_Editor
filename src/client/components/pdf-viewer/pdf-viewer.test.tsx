@@ -24,6 +24,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import annotationsReducer from '../../state/slices/annotations-slice';
 import documentReducer, { setDocument } from '../../state/slices/document-slice';
+import ocrReducer from '../../state/slices/ocr-slice';
 import selectionReducer from '../../state/slices/selection-slice';
 import shapesReducer from '../../state/slices/shapes-slice';
 import signaturesReducer from '../../state/slices/signatures-slice';
@@ -60,6 +61,7 @@ function makeStore(): ReturnType<typeof configureStore> {
       ui: uiReducer,
       shapes: shapesReducer,
       signatures: signaturesReducer,
+      ocr: ocrReducer,
     },
     middleware: (mw) =>
       mw({

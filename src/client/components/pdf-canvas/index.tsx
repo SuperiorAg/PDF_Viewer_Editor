@@ -8,6 +8,7 @@ import { selectCurrentDocument } from '../../state/slices/document-selectors';
 import { type FitMode } from '../../state/slices/viewport-slice';
 import { type PageModel } from '../../types/ipc-contract';
 import { AnnotationLayer } from '../annotation-layer';
+import { OcrConfidenceOverlay } from '../ocr-confidence-overlay';
 
 import styles from './pdf-canvas.module.css';
 
@@ -201,6 +202,12 @@ export function PdfCanvas(props: PdfCanvasProps): JSX.Element {
         page={props.page}
         viewport={viewport}
         annotations={annotations}
+      />
+      <OcrConfidenceOverlay
+        pageIndex={props.index}
+        pageWidthPts={props.page.width}
+        pageHeightPts={props.page.height}
+        scale={props.zoom * displayScale}
       />
     </div>
   );
