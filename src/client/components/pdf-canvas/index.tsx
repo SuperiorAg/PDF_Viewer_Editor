@@ -208,6 +208,11 @@ export function PdfCanvas(props: PdfCanvasProps): JSX.Element {
         pageWidthPts={props.page.width}
         pageHeightPts={props.page.height}
         scale={props.zoom * displayScale}
+        // Phase 5.2 (Riley, 2026-06-04 — Item C): page rotation. PdfCanvas's
+        // outer box + canvas bitmap are rotation-swapped; the overlay must
+        // re-project pdf-space rects into the rotated CSS box. See
+        // OcrConfidenceOverlay.projectRectToCss for the math.
+        rotation={props.page.rotation}
       />
     </div>
   );
