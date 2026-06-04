@@ -424,3 +424,35 @@ Locked decisions (Section 5):
 4. .pdf file-association → **Installer checkbox, default ON** (user override of Marcus's opt-in default-OFF recommendation)
 
 Riley dispatched for Wave 1 with the Section 1 brief, amended for the four locked decisions above.
+
+---
+
+## Appendix A — Phase 5.2 wave (Marcus, 2026-06-04)
+
+Follow-up wave to the v0.7.13->v0.7.17 OCR-chain closure. Three remaining gaps:
+
+| Item                                              | Owner                                                   | What                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A — per-page words restore on reopen              | Ravi (db) + David (ipc/main/preload) + Riley (renderer) | Ravi adds `listPageResultsByJobId(jobId)` returning `OcrPageResult[]` (parses words_json). David adds `ocr:listResultsByJob` IPC channel + handler + preload wiring. Riley extends `loadOcrResultsThunk` to call it and dispatch `setCurrentSummary({...summary, pageResults})` so the overlay repaints on reopen. |
+| B — standard-font factories on the OCR rasterizer | David                                                   | Mirror the export-bootstrap `resolveExportFontData` pattern in `rasterizePageProd`. Pass `standardFontDataUrl`/`cMapUrl`/`cMapPacked`/`StandardFontDataFactory`/`CMapReaderFactory` to `pdfjs.getDocument(...)`. Regression test on a Helvetica-text PDF.                                                          |
+| C — rotation handling in OcrConfidenceOverlay     | Riley                                                   | Add `rotation: 0\|90\|180\|270` prop to OcrConfidenceOverlay. Apply rotation transform in `ConfidenceBox`. Wire `props.page.rotation` at the call site. Add rotated-page test.                                                                                                                                     |
+
+### Wave order
+
+```
+Wave 5.2a (parallel, contract first) -> David contract+handler, Ravi repo, Riley thunk+overlay
+Wave 5.2b (parallel)                  -> Julian review + Diego v0.7.18 packaging
+Wave 5.2c (sequential)                -> Nathan docs refresh
+```
+
+### Per-agent commit cadence
+
+Per the 2026-05-28 concurrent-write Hard-Won Playbook, each agent commits per-task. No batched waves.
+
+### Acceptance gate
+
+Every new public export must have a production call site (Diego's v0.7.17 "build-but-don't-wire" Vault note). Marcus verifies before marking the wave complete.
+
+### Out of scope
+
+`.gitignore` / `.mcp.json` drift, anything beyond the three items, macOS/Linux verification, code-signing cert procurement.
