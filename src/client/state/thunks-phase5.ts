@@ -24,6 +24,7 @@ import {
   type PreprocessOptions,
 } from '../types/ipc-contract';
 
+import { applyEdit } from './slices/document-slice';
 import {
   applyDownloadProgressEvent,
   applyProgressEvent,
@@ -176,6 +177,14 @@ export const runOcrOnDocumentThunk = createAsyncThunk<
     // again here to cover the case where the event arrived in a different
     // tick order than the await resolution.
     dispatch(setCurrentSummary(res.value.summary));
+    // Persistence fix (v0.7.17): push the `ocr-text-behind-applied` op into
+    // the document's dirtyOps list so Save -> replay produces the searchable
+    // PDF on disk. Without this dispatch the op was returned by main and
+    // dropped here -- OCR ran, the modal showed stats, but the file was
+    // never modified. document-slice-apply.ts already handles this op kind
+    // (no PageModel mutation; just pushes to dirtyOps) and replay-engine.ts
+    // case 'ocr-text-behind-applied' regenerates the text layer at save.
+    dispatch(applyEdit(res.value.op));
     dispatch(setRunStep('done'));
     return res.value;
   } catch (e) {

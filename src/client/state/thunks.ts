@@ -79,6 +79,7 @@ import {
   setTextEditIdentifying,
 } from './slices/ui-slice';
 import { type AppDispatch, type RootState } from './store';
+import { loadOcrResultsThunk } from './thunks-phase5';
 
 function buildInitialDocument(value: DialogOpenPdfValue): PDFDocumentModel {
   const pages = Array.from({ length: value.pageCount }, (_, i) => ({
@@ -134,6 +135,12 @@ export const openDocumentThunk = createAsyncThunk<
     // pdf-coords + page-metadata + AnnotationLayer agree with the rendered
     // bitmap aspect ratio (was Letter-defaulted at thunks.ts:82-92).
     void dispatch(measurePageDimensionsThunk());
+    // Phase 5 persistence (v0.7.17): hydrate the OCR summary from SQLite if
+    // this doc was OCR'd before. Per-page words still load lazily (Phase 5.2
+    // candidate per ocr-engine.md §10.3); for now we surface the "OCR was
+    // previously run" indicator so the user knows the searchable layer exists
+    // on disk without having to re-run.
+    void dispatch(loadOcrResultsThunk());
   } finally {
     dispatch(setLoading({ loading: false }));
   }
@@ -163,6 +170,8 @@ export const openDroppedPathThunk = createAsyncThunk<
     void dispatch(refreshRecentsThunk());
     void dispatch(detectFormsThunk());
     void dispatch(measurePageDimensionsThunk());
+    // v0.7.17: same OCR-summary hydration as openDocumentThunk above.
+    void dispatch(loadOcrResultsThunk());
   } finally {
     dispatch(setLoading({ loading: false }));
   }
