@@ -136,6 +136,8 @@ import type {
   OcrCancelJobResponse,
   OcrListJobsRequest,
   OcrListJobsResponse,
+  OcrListResultsByJobRequest,
+  OcrListResultsByJobResponse,
   OcrLanguagePackDownloadRequest,
   OcrLanguagePackDownloadResponse,
   OcrLanguagePackRemoveRequest,
@@ -382,6 +384,9 @@ const pdfApi: PdfApi = {
       ipcRenderer.invoke(Channels.OcrCancelJob, req) as Promise<OcrCancelJobResponse>,
     listJobs: (req: OcrListJobsRequest) =>
       ipcRenderer.invoke(Channels.OcrListJobs, req) as Promise<OcrListJobsResponse>,
+    // Phase 5.2 (Marcus, 2026-06-04): per-job word-level result retrieval.
+    listResultsByJob: (req: OcrListResultsByJobRequest) =>
+      ipcRenderer.invoke(Channels.OcrListResultsByJob, req) as Promise<OcrListResultsByJobResponse>,
     languagePackDownload: (req: OcrLanguagePackDownloadRequest) =>
       ipcRenderer.invoke(
         Channels.OcrLanguagePackDownload,

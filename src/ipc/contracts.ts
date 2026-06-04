@@ -2173,6 +2173,51 @@ export interface OcrListJobsValue {
 
 export type OcrListJobsResponse = Result<OcrListJobsValue, OcrListJobsError>;
 
+// ---- ocr:listResultsByJob (Phase 5.2 — Marcus, 2026-06-04) -------------------
+//
+// Reads the per-page OCR results for a single job, parsing `words_json` from
+// the `ocr_results` table into `OcrPageResult[]`. Backs the "restore overlay on
+// reopen" path: after a doc is reopened, the renderer calls `ocr:listJobs`
+// (filtered by docHash + status='completed') to find the latest job, then
+// `ocr:listResultsByJob(jobId)` to hydrate the per-page word lists into the
+// `setCurrentSummary({...summary, pageResults})` payload. The OCR slice already
+// indexes `pageResults` into `pageResultsByPage` so the confidence overlay
+// repaints automatically.
+//
+// Architecture decision: the existing `ocr:listJobs` DTO deliberately omits
+// `pageResults` (data-models §10.5 — list payloads stay light). A dedicated
+// "by-job" channel that always returns the full per-page result set is the
+// Phase 5 follow-up Riley left a marker for in `thunks-phase5.ts:256-259`.
+//
+// Error modes:
+//   * 'invalid_payload'    — jobId not a positive integer.
+//   * 'job_not_found'      — no matching ocr_jobs row (caller should fall back
+//                             to "OCR was run on this document" summary state).
+//   * 'results_parse_failed' — at least one row's words_json was malformed
+//                              (corruption / older schema). Bridge swallows
+//                              individual row failures into a partial result
+//                              today; this code is reserved if the partial-
+//                              return policy is ever tightened.
+
+export interface OcrListResultsByJobRequest {
+  jobId: number;
+}
+
+export type OcrListResultsByJobError = 'invalid_payload' | 'job_not_found' | 'results_parse_failed';
+
+export interface OcrListResultsByJobValue {
+  /** Sorted by pageIndex ASC. Empty array means the job has no per-page rows
+   *  yet (the job exists but never completed any pages — e.g. cancelled before
+   *  page 0 finished). NOT a sentinel — `job_not_found` is the variant for the
+   *  "no job at all" case. */
+  pageResults: OcrPageResult[];
+}
+
+export type OcrListResultsByJobResponse = Result<
+  OcrListResultsByJobValue,
+  OcrListResultsByJobError
+>;
+
 // ---- ocr:languagePackDownload (api-contracts.md §16.7) ----------------------
 
 export interface OcrLanguagePackDownloadRequest {
@@ -3013,6 +3058,8 @@ export const Channels = {
   OcrRunOnDocument: 'ocr:runOnDocument',
   OcrCancelJob: 'ocr:cancelJob',
   OcrListJobs: 'ocr:listJobs',
+  // Phase 5.2 (Marcus, 2026-06-04) — per-job word-level result retrieval.
+  OcrListResultsByJob: 'ocr:listResultsByJob',
   OcrLanguagePackDownload: 'ocr:languagePackDownload',
   OcrLanguagePackRemove: 'ocr:languagePackRemove',
   OcrProgress: 'ocr:progress',
@@ -3164,6 +3211,8 @@ export interface PdfApi {
     runOnDocument: (req: OcrRunOnDocumentRequest) => Promise<OcrRunOnDocumentResponse>;
     cancelJob: (req: OcrCancelJobRequest) => Promise<OcrCancelJobResponse>;
     listJobs: (req: OcrListJobsRequest) => Promise<OcrListJobsResponse>;
+    /** Phase 5.2: per-page word-level results for a single completed job. */
+    listResultsByJob: (req: OcrListResultsByJobRequest) => Promise<OcrListResultsByJobResponse>;
     languagePackDownload: (
       req: OcrLanguagePackDownloadRequest,
     ) => Promise<OcrLanguagePackDownloadResponse>;

@@ -130,6 +130,8 @@ function makeBridgeUnavailableFallback(): PdfApi {
       runOnDocument: unavailable,
       cancelJob: unavailable,
       listJobs: unavailable,
+      // Phase 5.2 (Marcus, 2026-06-04)
+      listResultsByJob: unavailable,
       languagePackDownload: unavailable,
       languagePackRemove: unavailable,
       // Event subscribers — return a no-op unsubscribe so the renderer's
@@ -285,6 +287,8 @@ function makeOcrFallback(): PdfApiOcr {
     runOnDocument: unavailable,
     cancelJob: unavailable,
     listJobs: unavailable,
+    // Phase 5.2 (Marcus, 2026-06-04)
+    listResultsByJob: unavailable,
     languagePackDownload: unavailable,
     languagePackRemove: unavailable,
     onProgress: () => () => undefined,
