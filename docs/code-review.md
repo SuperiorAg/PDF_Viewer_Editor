@@ -2675,3 +2675,68 @@ Total: 24 files changed, 267 insertions, 80 deletions. Lint clean, both tsconfig
 - **Renderer tsconfig is the tighter typing surface.** My initial `process.env['NODE_ENV']` was fine in main but broke the renderer typecheck — `src/shared/**` is on both include paths, so anything in `shared/` MUST compile under the renderer tsconfig's stricter `vite/client`-only type universe. The `(globalThis as any).process?.env` indirection is the cross-process pattern. Adding to global JSONL.
 - **The "honest stub" pattern continues to be load-bearing.** `pdf:combine`, `pdf:getOutline`, and `app:set/getDefaultPdfHandler` all return `not_implemented` (loud, visible, surfaced) rather than silent no-op success. That is what made H-30.1 + M-30.1 visible to grep + audit; a silent-success stub would have been invisible.
 - **The eighth consecutive ratchet-clean wave is statistical evidence that the structural-fix-not-discipline rule works.** Wave 13.5's permissive-stub catch produced the ratchet; eight waves later, no new variant has emerged. The pattern is mature.
+
+---
+
+## Phase 5.2 wave — review (Julian, 2026-06-04)
+
+Three items closed in this wave (Marcus's brief): per-page words restore on reopen (Item A), standard-font factories on the OCR rasterizer (Item B), rotation handling in `OcrConfidenceOverlay` (Item C). Six commits between `808938f` (plan appendix) and `364b6e5` (Riley overlay rotation).
+
+### Verdict — GO
+
+Typecheck clean across all three tsconfigs (main / preload / renderer). Full vitest suite **1921 / 1921 PASS** (179 test files). +13 net new tests across the three items. No new locked-instructions violations.
+
+### Top-3 (no blockers)
+
+1. **Item A's contract-first sequencing was textbook.** David published the channel + type names in commit `944e1ce` before the bridge + handler landed in `f0715f8`. The parallel dispatch from Marcus's brief is correctly serialized at the contract module — the only file all three implementers would have touched.
+2. **Item B's static-import fix-up caught a documented failure mode in real-time.** The first draft used a runtime `require('../export/export-bootstrap.js')`, which would have reproduced the 2026-05-27 vite tree-shake / ENOENT-at-launch RCA. Marcus correctly switched to a static `import` before commit — same static-import pattern the existing `main/index.ts:65` block documents. Net: zero new latent packaging defects.
+3. **Item B's regression test is conservative-but-effective.** `ocr-bootstrap.font-rasterize.test.ts` asserts dark-pixel count > 50 on a Helvetica-glyph PDF. Without the font-factory wiring this count is essentially zero. The floor is generous enough to avoid flakiness from anti-aliasing quirks across machines.
+
+### Findings (Phase 5.2)
+
+| ID      | Severity | Location                                  | Note                                                                                                                                                                                                                                                                                                                                       | Status |
+| ------- | -------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| L-5.2.1 | LOW      | `db-bridge.ts:937-1027`                   | The new `assemblePageResultsFromRows` + `safeParseWordsJson` helpers live in the same file as the `OcrResultsRepoBridge` interface, which is the right home. Shape validation in `safeParseWordsJson` is intentionally permissive (no confidence-range or rect-bounds re-check) because the engine validated on insert. Documented inline. | OPEN   |
+| L-5.2.2 | LOW      | `ocr-bootstrap.ts:330-331`                | Two `as unknown as OcrPdfJsDataFactory` casts bridge `PdfJsDataFactory` (in `export/pdfjs-source.ts`) to the structurally-identical `OcrPdfJsDataFactory` defined locally for OCR. A future refactor could lift the type to a shared module; until then the cast is correct and the comment block explains the relationship.               | OPEN   |
+| L-5.2.3 | LOW      | `ocr-confidence-overlay/index.tsx:75-108` | `projectRectToCss` is now exported from the overlay's `index.tsx` so the rotation-math test can verify the algebra without rendering through React. Single-consumer co-location, no module split. Acceptable.                                                                                                                              | OPEN   |
+| I-5.2.1 | INFO     | `ocr-bootstrap.ts:362-380`                | The FONT-READINESS GATE (`page.getOperatorList()` before `page.render()`) is wrapped in `try/catch` that swallows pre-warm errors. Same trade-off as the export rasterizer's gate. Documented inline.                                                                                                                                      | INFO   |
+| I-5.2.2 | INFO     | `thunks-phase5.ts:262-296`                | The thunk's two-step (`listJobs` then `listResultsByJob`) is sequential not parallel because the second call needs the resolved `jobId`. A `Promise.all` optimization isn't possible without restructuring the data model. Acceptable.                                                                                                     | INFO   |
+| I-5.2.3 | INFO     | `ocr-list-results-by-job.ts:54-58`        | The "repo null" path returns `ok({ pageResults: [] })` rather than a typed error. Matches the existing `ocr-list-jobs.ts:94-96` precedent for early-boot / memory-bridge fallback. Consistent.                                                                                                                                             | INFO   |
+
+### Production-call-site checklist (per Diego's v0.7.17 Vault note)
+
+Acceptance gate from the brief: every new export must have a production call site, not just unit tests.
+
+| New export                                                   | Production call site                                                                             | Verified        |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | --------------- |
+| `OcrListResultsByJob` channel constant                       | `src/ipc/register.ts:961-966` registers the handler against `getDbBridge().ocrJobs / ocrResults` | yes             |
+| `OcrApi.listResultsByJob` preload bridge                     | `src/preload/index.ts:385-389` wires `ipcRenderer.invoke(Channels.OcrListResultsByJob, ...)`     | yes             |
+| `apiOcr.listResultsByJob` (api.ts)                           | `src/client/state/thunks-phase5.ts:265-274` (loadOcrResultsThunk chain)                          | yes             |
+| `OcrResultsRepoBridge.listPageResultsByJobId`                | `src/ipc/handlers/ocr-list-results-by-job.ts:71` calls it                                        | yes             |
+| `resolveExportFontData` (now exported from export-bootstrap) | `src/main/pdf-ops/ocr-bootstrap.ts:312` (`tryResolveOcrFontData`)                                | yes             |
+| `_resetOcrFontDataCacheForTests`                             | `src/main/pdf-ops/ocr-bootstrap.font-rasterize.test.ts:67`                                       | yes (test-only) |
+| `projectRectToCss`                                           | Used internally by `ConfidenceBox`; exported for `ocr-confidence-overlay.test.tsx`               | yes             |
+| `OverlayRotation` type                                       | Used by `OcrConfidenceOverlayProps` + `pdf-canvas/index.tsx` call site                           | yes             |
+
+All eight new public exports have at least one production call site OR a documented test-only consumer. Acceptance gate: PASS.
+
+### Locked-instruction compliance
+
+| Lock                                     | This wave                                                                        | Status  |
+| ---------------------------------------- | -------------------------------------------------------------------------------- | ------- |
+| L-001 (enableDragDropFiles)              | Not touched                                                                      | NEUTRAL |
+| L-002 (operator-level screenshot)        | Diego's packaging wave (next) must capture the screenshot for v0.7.18            | PENDING |
+| L-003 (Node 20 + no from-source rebuild) | Suite ran on the supported Node baseline; no rebuild of better-sqlite3 attempted | PASS    |
+
+### Ratchet compliance — PASS (ninth consecutive wave)
+
+- No new `(e as Error).message` direct reads (no new handler `catch` sites added).
+- No new `pageResults: []` sentinel-default assignments. `loadOcrResultsThunk` now passes either a real array (happy path) or `null` (degraded path), respecting the late-init contract.
+- No new `as any` in production code. Two `as unknown as` casts are documented and structural, not type-laundering.
+- No new permissive-stub variants.
+- No new `(e as Error)` direct access.
+- No new direct `(rec as { bytes: Buffer })` casts.
+
+### Verdict (final)
+
+**GO — Diego cleared to cut v0.7.18.** No blockers, no L-001/L-002/L-003 violations, no ratchet regressions. Three documented LOW findings + three INFO notes are all acceptable. The Phase 5.2 closure of the OCR pipeline is complete: on-reopen overlay restore, standard-font glyph rendering, and rotation-correct confidence-box placement are all in place with regression tests guarding each.
