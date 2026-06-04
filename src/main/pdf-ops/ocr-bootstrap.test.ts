@@ -16,9 +16,17 @@
 // Both bugs are now fixed by (a) hoisting `writeStream` listeners ahead of
 // `nodeHttps.get` and (b) wiring `res.on('error', reject)` first inside the
 // response callback. These tests prove the fixes via tiny EventEmitter stubs.
+//
+// 2026-06-04 (David, v0.7.13): rasterize-failure diagnostic-log tests appended
+// below. They drive the diagnostic capture seams (`__test`) exposed by
+// ocr-bootstrap and prove (a) a failure writes a JSON file under userData/logs/,
+// (b) the rethrown message contains the log path, (c) a writeFileSync throw is
+// swallowed so the original error still surfaces.
 
 import { EventEmitter } from 'node:events';
 import type * as NodeFs from 'node:fs';
+import * as nodeOs from 'node:os';
+import * as nodePath from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -27,6 +35,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   httpsGet: vi.fn(),
   createWriteStream: vi.fn(),
+  mkdirSync: vi.fn(),
+  writeFileSync: vi.fn(),
+  appGetPath: vi.fn(() => nodePath.join(nodeOs.tmpdir(), 'pdfve-test-userdata')),
 }));
 
 vi.mock('node:https', () => ({
@@ -39,11 +50,27 @@ vi.mock('node:fs', async () => {
   return {
     ...real,
     createWriteStream: mocks.createWriteStream,
+    // The diagnostic-log tests below spy on these. Real fs is used by other
+    // call sites in the module under test (none of them hit during these
+    // specs), so defaulting the spies to a real-passthrough keeps things
+    // simple.
+    mkdirSync: mocks.mkdirSync,
+    writeFileSync: mocks.writeFileSync,
   };
 });
 
+// Mock `electron` so `app.getPath('userData')` returns a temp dir — the
+// real electron binding is a path string under raw node and would throw
+// when destructured for `app.getPath`. The streamer tests above never
+// touched electron, so this mock is additive and safe.
+vi.mock('electron', () => ({
+  app: {
+    getPath: mocks.appGetPath,
+  },
+}));
+
 // Imported AFTER the mocks so the module captures the stubbed bindings.
-const { createNodeHttpsStreamer } = await import('./ocr-bootstrap.js');
+const { createNodeHttpsStreamer, __test } = await import('./ocr-bootstrap.js');
 
 interface FakeWriteStream extends EventEmitter {
   close: ReturnType<typeof vi.fn>;
@@ -181,5 +208,195 @@ describe('createNodeHttpsStreamer — main-process-crash regressions', () => {
     ).rejects.toThrow(/Abort/);
     expect(mocks.httpsGet).not.toHaveBeenCalled();
     expect(mocks.createWriteStream).not.toHaveBeenCalled();
+  });
+});
+
+// ============================================================================
+// Rasterize-failure diagnostic capture (David, 2026-06-04 — v0.7.13)
+//
+// We exercise the diagnostic capture via the `__test` seam exposed by
+// ocr-bootstrap. Driving the full rasterizePageProd path would require
+// mocking pdfjs (dynamic-imported via a runtime-concatenated specifier vi.mock
+// can't intercept) AND the native @napi-rs/canvas binding (often ABI-mismatched
+// in the test runner). The seam lets us prove the diagnostic record builder +
+// log writer behave correctly in isolation; the full happy-path render is
+// covered by `ocr-bootstrap.prod-render.test.ts`.
+// ============================================================================
+
+describe('writeDiagnosticLog — rasterize-failure capture', () => {
+  beforeEach(() => {
+    mocks.mkdirSync.mockReset();
+    mocks.writeFileSync.mockReset();
+    mocks.appGetPath.mockReset();
+    mocks.appGetPath.mockImplementation(() =>
+      nodePath.join(nodeOs.tmpdir(), 'pdfve-test-userdata'),
+    );
+    __test.resetCanvasLoadSnapshotGuard();
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('writes a JSON file under userData/logs/ when render fails AND returns the absolute log path', () => {
+    mocks.mkdirSync.mockImplementation(() => undefined);
+    mocks.writeFileSync.mockImplementation(() => undefined);
+
+    const record = __test.buildDiagnosticRecord({
+      kind: 'rasterize-failure',
+      error: new Error('Value is none of these types `String`, `Path`'),
+      pdfBytesLength: 12345,
+      pageIndex: 0,
+      dpi: 300,
+      scale: 300 / 72,
+      canvasWidth: 800,
+      canvasHeight: 1100,
+    });
+
+    const logPath = __test.writeDiagnosticLog('ocr-rasterize-9999.json', record);
+
+    expect(logPath).not.toBeNull();
+    const expectedDir = nodePath.join(nodeOs.tmpdir(), 'pdfve-test-userdata', 'logs');
+    expect(logPath).toBe(nodePath.join(expectedDir, 'ocr-rasterize-9999.json'));
+
+    // mkdirSync was called with the logs dir + recursive option BEFORE the write.
+    expect(mocks.mkdirSync).toHaveBeenCalledTimes(1);
+    expect(mocks.mkdirSync).toHaveBeenCalledWith(expectedDir, { recursive: true });
+
+    // writeFileSync got the absolute path + JSON-stringified record.
+    expect(mocks.writeFileSync).toHaveBeenCalledTimes(1);
+    const [writtenPath, writtenBody, encoding] = mocks.writeFileSync.mock.calls[0]!;
+    expect(writtenPath).toBe(logPath);
+    expect(encoding).toBe('utf8');
+    const parsed = JSON.parse(writtenBody as string) as Record<string, unknown>;
+    expect(parsed['kind']).toBe('rasterize-failure');
+    expect(parsed['pdfBytes_length']).toBe(12345);
+    expect(parsed['pageIndex']).toBe(0);
+    expect(parsed['dpi']).toBe(300);
+    expect(parsed['canvasWidth']).toBe(800);
+    expect(parsed['canvasHeight']).toBe(1100);
+    // Error fields carry the original message, name, stack.
+    const err = parsed['error'] as Record<string, unknown>;
+    expect(err['name']).toBe('Error');
+    expect(err['message']).toContain('Value is none of these types');
+    // Runtime fields are present (smoke check — no fixed values to assert).
+    expect(typeof parsed['node_version']).toBe('string');
+    expect(typeof parsed['platform']).toBe('string');
+    expect(typeof parsed['arch']).toBe('string');
+  });
+
+  it('returns null (not throws) when writeFileSync throws — logging failure must never mask the real bug', () => {
+    mocks.mkdirSync.mockImplementation(() => undefined);
+    mocks.writeFileSync.mockImplementation(() => {
+      throw new Error('ENOSPC: no space left on device');
+    });
+    // Silence the console.error the helper emits on log-write failure so the
+    // test output stays clean.
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const record = __test.buildDiagnosticRecord({
+      kind: 'rasterize-failure',
+      error: new Error('original render failure'),
+      pdfBytesLength: 1,
+      pageIndex: 0,
+      dpi: 300,
+      scale: 4,
+      canvasWidth: 10,
+      canvasHeight: 10,
+    });
+
+    const logPath = __test.writeDiagnosticLog('ocr-rasterize-1.json', record);
+    expect(logPath).toBeNull();
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it('returns null when electron.app.getPath throws (test/non-Electron context safety)', () => {
+    mocks.appGetPath.mockImplementation(() => {
+      throw new Error('app not initialized');
+    });
+    mocks.mkdirSync.mockImplementation(() => undefined);
+    mocks.writeFileSync.mockImplementation(() => undefined);
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const record = __test.buildDiagnosticRecord({
+      kind: 'rasterize-failure',
+      error: new Error('x'),
+      pdfBytesLength: 1,
+      pageIndex: 0,
+      dpi: 72,
+      scale: 1,
+      canvasWidth: 1,
+      canvasHeight: 1,
+    });
+
+    expect(__test.writeDiagnosticLog('foo.json', record)).toBeNull();
+    expect(mocks.mkdirSync).not.toHaveBeenCalled();
+    expect(mocks.writeFileSync).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it('captures Error.cause + .code + .stack into the diagnostic record', () => {
+    const inner = new Error('inner native binding rejected');
+    const outer = new Error('Value is none of these types `String`, `Path`') as Error & {
+      code?: string;
+      cause?: unknown;
+    };
+    outer.code = 'ERR_NAPI_VALUE_REJECTED';
+    outer.cause = inner;
+
+    const record = __test.buildDiagnosticRecord({
+      kind: 'rasterize-failure',
+      error: outer,
+      pdfBytesLength: 2048,
+      pageIndex: 3,
+      dpi: 300,
+      scale: 300 / 72,
+      canvasWidth: 612,
+      canvasHeight: 792,
+    });
+
+    expect(record.error).not.toBeNull();
+    expect(record.error!.name).toBe('Error');
+    expect(record.error!.message).toContain('String');
+    expect(record.error!.stack).toMatch(/Error/); // stack is non-empty
+    expect(record.error!.code).toBe('ERR_NAPI_VALUE_REJECTED');
+    expect(record.error!.cause).toBe('Error: inner native binding rejected');
+  });
+});
+
+describe('writeCanvasLoadSnapshot — one-time canvas-load fingerprint', () => {
+  beforeEach(() => {
+    mocks.mkdirSync.mockReset();
+    mocks.writeFileSync.mockReset();
+    mocks.appGetPath.mockReset();
+    mocks.appGetPath.mockImplementation(() =>
+      nodePath.join(nodeOs.tmpdir(), 'pdfve-test-userdata'),
+    );
+    mocks.mkdirSync.mockImplementation(() => undefined);
+    mocks.writeFileSync.mockImplementation(() => undefined);
+    __test.resetCanvasLoadSnapshotGuard();
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('writes canvas-load.json exactly once per process (guarded by module-scope flag)', () => {
+    expect(__test.isCanvasLoadSnapshotWritten()).toBe(false);
+    __test.writeCanvasLoadSnapshot('@napi-rs/canvas');
+    expect(__test.isCanvasLoadSnapshotWritten()).toBe(true);
+    expect(mocks.writeFileSync).toHaveBeenCalledTimes(1);
+
+    const [writtenPath, writtenBody] = mocks.writeFileSync.mock.calls[0]!;
+    expect(writtenPath).toBe(
+      nodePath.join(nodeOs.tmpdir(), 'pdfve-test-userdata', 'logs', 'canvas-load.json'),
+    );
+    const parsed = JSON.parse(writtenBody as string) as Record<string, unknown>;
+    expect(parsed['kind']).toBe('canvas-load');
+    expect(parsed['canvas_module']).toBe('@napi-rs/canvas');
+    expect(parsed['error']).toBeNull();
+
+    // Second call is a no-op — write count stays at 1.
+    __test.writeCanvasLoadSnapshot('@napi-rs/canvas');
+    expect(mocks.writeFileSync).toHaveBeenCalledTimes(1);
   });
 });

@@ -17,7 +17,13 @@
 //
 // THIS FILE IS REQUIRED AT BOOT. There is no opt-out.
 
-import { promises as fsPromises, existsSync, createWriteStream } from 'node:fs';
+import {
+  promises as fsPromises,
+  existsSync,
+  createWriteStream,
+  mkdirSync,
+  writeFileSync,
+} from 'node:fs';
 import * as nodeHttps from 'node:https';
 import { join as pathJoin } from 'node:path';
 
@@ -28,6 +34,7 @@ import { app } from 'electron';
 import type * as ElectronModule from 'electron';
 
 import type { OcrPageResult } from '../../ipc/contracts.js';
+import { safeMessage } from '../../shared/result.js';
 
 import { documentStore } from './document-store.js';
 import {
@@ -277,6 +284,9 @@ export function tryLoadCanvas(): CanvasLoadResult {
       source: '@napi-rs/canvas',
       createCanvas: canvasMod.createCanvas,
     };
+    // Fire-and-forget one-time success snapshot — gives us ground truth on
+    // what the user's machine actually has installed for the canvas globals.
+    writeCanvasLoadSnapshot('@napi-rs/canvas');
     return _canvasLoadResult;
   } catch (e) {
     const { code, message } = describeLoadError(e);
@@ -291,6 +301,7 @@ export function tryLoadCanvas(): CanvasLoadResult {
     };
     installCanvasGlobals(canvasMod);
     _canvasLoadResult = { ok: true, source: 'canvas', createCanvas: canvasMod.createCanvas };
+    writeCanvasLoadSnapshot('canvas');
     return _canvasLoadResult;
   } catch (e) {
     const { code, message } = describeLoadError(e);
@@ -304,6 +315,223 @@ export function tryLoadCanvas(): CanvasLoadResult {
   };
   return _canvasLoadResult;
 }
+
+// ============================================================================
+// Rasterize-failure diagnostic capture (David, 2026-06-04 — v0.7.12 follow-up)
+//
+// Background: v0.7.10 → v0.7.11 → v0.7.12 each shipped a fix for the
+// "rasterize page 0 failed: Value is none of these types `String`, `Path`,..."
+// toast. Synthetic PDFs reproduce nothing on our dev machines. v0.7.12's
+// `@napi-rs/canvas` globalThis polyfill is in place but a real user still
+// hits the bug on a real PDF we don't have.
+//
+// To break the loop without asking the user to run an external diagnose
+// script, we now capture the FULL native stack (canvas module + version,
+// node/electron versions, platform/arch, the pdf bytes length, the canvas
+// dimensions we tried to render at, every relevant globalThis class
+// presence, full error stack/cause) to a JSON file under userData/logs/
+// every time `page.render().promise` rejects. The thrown error then carries
+// the log-file path so the user-facing toast tells them WHERE to send us.
+//
+// Design rules:
+//   - The capture path NEVER masks the original error. If writeFileSync
+//     itself throws (read-only userData, ENOSPC, AV interference), we
+//     swallow the secondary failure and rethrow an error that still
+//     contains the original message. The user will be no worse off than
+//     before this feature; with luck they'll be in a much better place.
+//   - `require('electron')` is lazy inside the catch so the test-context
+//     module load (vitest, where `electron` exists as a stub but
+//     `app.getPath` would throw) does not break unit tests for this file.
+//     The unit tests mock `electron` explicitly and assert the catch path.
+//   - One canvas-load snapshot per process. Subsequent calls no-op via a
+//     module-scope boolean.
+// ============================================================================
+
+interface DiagnosticRecord {
+  timestamp: number;
+  kind: 'rasterize-failure' | 'canvas-load';
+  error: {
+    name: string | null;
+    message: string | null;
+    stack: string | null;
+    code: string | null;
+    cause: string | null;
+  } | null;
+  pdfBytes_length: number | null;
+  pageIndex: number | null;
+  dpi: number | null;
+  scale: number | null;
+  canvasWidth: number | null;
+  canvasHeight: number | null;
+  canvas_module: '@napi-rs/canvas' | 'canvas' | 'none';
+  module_version: string | null;
+  node_version: string;
+  electron_version: string;
+  platform: string;
+  arch: string;
+  hasGlobalImage: string;
+  hasGlobalPath2D: string;
+  hasGlobalImageData: string;
+  hasGlobalDOMMatrix: string;
+  hasGlobalDOMPoint: string;
+}
+
+function readCanvasModuleVersion(source: '@napi-rs/canvas' | 'canvas'): string | null {
+  try {
+    // Reading the package.json with `require` is the cheapest way to learn
+    // the installed version — no second `require` of the native binding.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+    const pkg = require(`${source}/package.json`) as { version?: string };
+    return typeof pkg.version === 'string' ? pkg.version : null;
+  } catch {
+    return null;
+  }
+}
+
+function describeRasterizeError(e: unknown): NonNullable<DiagnosticRecord['error']> {
+  const name = e instanceof Error ? e.name : null;
+  const message = e instanceof Error ? e.message : typeof e === 'string' ? e : null;
+  const stack = e instanceof Error && typeof e.stack === 'string' ? e.stack : null;
+  let code: string | null = null;
+  if (e && typeof e === 'object' && 'code' in e) {
+    const c = (e as { code: unknown }).code;
+    if (typeof c === 'string' || typeof c === 'number') code = String(c);
+  }
+  let cause: string | null = null;
+  if (e && typeof e === 'object' && 'cause' in e) {
+    const c = (e as { cause: unknown }).cause;
+    if (c instanceof Error) cause = `${c.name}: ${c.message}`;
+    else if (typeof c === 'string') cause = c;
+    else if (c !== undefined && c !== null) cause = JSON.stringify(c);
+  }
+  return { name, message, stack, code, cause };
+}
+
+function buildDiagnosticRecord(args: {
+  kind: 'rasterize-failure' | 'canvas-load';
+  error: unknown | null;
+  pdfBytesLength: number | null;
+  pageIndex: number | null;
+  dpi: number | null;
+  scale: number | null;
+  canvasWidth: number | null;
+  canvasHeight: number | null;
+}): DiagnosticRecord {
+  // Read the cached load result instead of re-attempting — the diagnostic
+  // path must never trigger another require of a possibly-broken binding.
+  const loaded = _canvasLoadResult;
+  const canvasModule: '@napi-rs/canvas' | 'canvas' | 'none' =
+    loaded && loaded.ok ? loaded.source : 'none';
+  const moduleVersion = loaded && loaded.ok ? readCanvasModuleVersion(loaded.source) : null;
+  const g = globalThis as unknown as Record<string, unknown>;
+  return {
+    timestamp: Date.now(),
+    kind: args.kind,
+    error: args.error === null ? null : describeRasterizeError(args.error),
+    pdfBytes_length: args.pdfBytesLength,
+    pageIndex: args.pageIndex,
+    dpi: args.dpi,
+    scale: args.scale,
+    canvasWidth: args.canvasWidth,
+    canvasHeight: args.canvasHeight,
+    canvas_module: canvasModule,
+    module_version: moduleVersion,
+    node_version: process.versions.node,
+    electron_version: process.versions.electron ?? '',
+    platform: process.platform,
+    arch: process.arch,
+    hasGlobalImage: typeof g['Image'],
+    hasGlobalPath2D: typeof g['Path2D'],
+    hasGlobalImageData: typeof g['ImageData'],
+    hasGlobalDOMMatrix: typeof g['DOMMatrix'],
+    hasGlobalDOMPoint: typeof g['DOMPoint'],
+  };
+}
+
+/**
+ * Resolves the userData/logs directory. Throws if `app.getPath('userData')`
+ * itself throws (e.g. running under a non-Electron host) — callers MUST wrap
+ * in try/catch so failure to resolve the log dir never masks the original
+ * error we're trying to log.
+ *
+ * Uses the top-level ESM `app` binding rather than a lazy CJS `require()`
+ * because vitest's `vi.mock('electron', ...)` only intercepts the ESM
+ * specifier; a CJS require here would bypass the mock and crash unit tests.
+ */
+function resolveLogsDir(): string {
+  return pathJoin(app.getPath('userData'), 'logs');
+}
+
+/**
+ * Writes the diagnostic record to userData/logs/<filename>.json. Returns the
+ * absolute path on success, or `null` if anything in the path resolution /
+ * mkdir / writeFileSync chain threw. NEVER throws — the caller depends on
+ * this being side-effect-only.
+ */
+function writeDiagnosticLog(filename: string, record: DiagnosticRecord): string | null {
+  try {
+    const dir = resolveLogsDir();
+    mkdirSync(dir, { recursive: true });
+    const logPath = pathJoin(dir, filename);
+    writeFileSync(logPath, JSON.stringify(record, null, 2), 'utf8');
+    return logPath;
+  } catch (writeErr) {
+    // Logging failure must never mask the bug. Surface the secondary error to
+    // the console for operator triage, then return null so the caller falls
+    // back to the bare original message.
+    console.error('[ocr-bootstrap] failed to write diagnostic log:', writeErr);
+    return null;
+  }
+}
+
+// Module-scope guard: write the canvas-load snapshot at most once per process.
+let _canvasLoadSnapshotWritten = false;
+
+function writeCanvasLoadSnapshot(source: '@napi-rs/canvas' | 'canvas'): void {
+  if (_canvasLoadSnapshotWritten) return;
+  _canvasLoadSnapshotWritten = true;
+  const record = buildDiagnosticRecord({
+    kind: 'canvas-load',
+    error: null,
+    pdfBytesLength: null,
+    pageIndex: null,
+    dpi: null,
+    scale: null,
+    canvasWidth: null,
+    canvasHeight: null,
+  });
+  // Force the canvas_module field to reflect the load that JUST succeeded —
+  // _canvasLoadResult is set BEFORE we call writeCanvasLoadSnapshot in
+  // tryLoadCanvas, so buildDiagnosticRecord already picks it up; but this
+  // explicit override is a belt-and-braces guard against future reordering.
+  record.canvas_module = source;
+  record.module_version = readCanvasModuleVersion(source);
+  writeDiagnosticLog('canvas-load.json', record);
+}
+
+// ============================================================================
+// Test seams (David, 2026-06-04)
+//
+// Exposed via a single export so unit tests can drive the diagnostic capture
+// without standing up a full pdf.js + canvas pipeline. NOT part of the
+// production API surface — call sites in tests only. The leading underscore +
+// the `__test` namespace make accidental production import obvious in PR
+// review.
+// ============================================================================
+
+export const __test = {
+  buildDiagnosticRecord,
+  writeDiagnosticLog,
+  /** Force-reset the canvas-load snapshot guard between tests. */
+  resetCanvasLoadSnapshotGuard(): void {
+    _canvasLoadSnapshotWritten = false;
+  },
+  /** Inspect the snapshot guard (read-only). */
+  isCanvasLoadSnapshotWritten(): boolean {
+    return _canvasLoadSnapshotWritten;
+  },
+  writeCanvasLoadSnapshot,
+};
 
 /**
  * Production rasterizer. Renders a page to a PNG-equivalent ImageData buffer
@@ -347,9 +575,40 @@ export async function rasterizePageProd(opts: RasterPageOptions): Promise<Uint8A
     );
   }
   const createCanvasFn = loaded.createCanvas;
-  const canvas = createCanvasFn(Math.ceil(viewport.width), Math.ceil(viewport.height));
+  const canvasWidth = Math.ceil(viewport.width);
+  const canvasHeight = Math.ceil(viewport.height);
+  const canvas = createCanvasFn(canvasWidth, canvasHeight);
   const ctx = canvas.getContext('2d');
-  await page.render({ canvasContext: ctx, viewport }).promise;
+  try {
+    await page.render({ canvasContext: ctx, viewport }).promise;
+  } catch (originalErr) {
+    // Hard-Won (David, 2026-06-04 — v0.7.13): synthetic PDFs reproduce
+    // nothing, so we can't fix this from our machines. Instead, capture the
+    // FULL native stack to a JSON file under userData/logs/ and surface the
+    // log path in the rethrown error message. The user's bug report then
+    // includes a path they can attach — turns every report into a
+    // self-service diagnostic.
+    const record = buildDiagnosticRecord({
+      kind: 'rasterize-failure',
+      error: originalErr,
+      pdfBytesLength: rec.bytes.length,
+      pageIndex: opts.pageIndex,
+      dpi: opts.dpi,
+      scale,
+      canvasWidth,
+      canvasHeight,
+    });
+    const logPath = writeDiagnosticLog(`ocr-rasterize-${record.timestamp}.json`, record);
+    const originalMessage = safeMessage(originalErr, 'unknown');
+    const detail =
+      logPath !== null ? `${originalMessage} — diagnostic written to ${logPath}` : originalMessage;
+    const wrapped = new Error(`rasterize page ${opts.pageIndex} failed: ${detail}`);
+    // Preserve the original error for any downstream consumer that walks
+    // `Error.cause` (Node ≥16.9). The engine's `safeMessage(e, ...)` reads
+    // `.message` only, so the wrapped message is what surfaces to the toast.
+    (wrapped as Error & { cause?: unknown }).cause = originalErr;
+    throw wrapped;
+  }
   const png = canvas.toBuffer('image/png');
   return new Uint8Array(png.buffer, png.byteOffset, png.byteLength);
 }

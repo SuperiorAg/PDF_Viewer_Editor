@@ -9494,3 +9494,36 @@ Promoted draft → Latest via `gh release edit v0.7.12 --draft=false`. Release U
 
 - **The "portable" .exe self-extracts to `$env:TEMP` and runs under a different process name than the bootstrap.** A naive `Get-Process -Name 'pdf-viewer-editor*'` filter at T+18s shows only the bootstrap wrapper, no children — looks like a launch failure. The win-unpacked exe (with proper electron-builder product naming) shows up cleanly as 4 processes with `ProcessName='PDF Viewer & Editor'`. For a structural smoke during a release wave, prefer the win-unpacked tree (rebuilt locally from the SAME tag SHA) over the portable — the process model is identical to what users will install, but the process names are stable and filterable. CI's published binary remains the authoritative artifact; the local repack is purely to make the smoke filter reliable.
 - **Two CI runs in under 8 minutes (v0.7.11 + v0.7.12) on `windows-2025-vs2026`.** v0.7.11 = 3m39s, v0.7.12 = 3m28s. The pinned image (Node preinstalled 22.22.3 but `setup-node` forces Node 20 per L-003) continues to deliver consistent ~3.5min release-pipeline wall time. No regressions since the 2026-06-01 pin from `windows-latest`.
+
+---
+
+## 2026-06-04 — David: rasterize-failure diagnostic capture (post v0.7.12)
+
+**Why:** v0.7.12 shipped the `@napi-rs/canvas` globalThis polyfill in `tryLoadCanvas()` expecting OCR to work. The user is still hitting `rasterize page 0 failed: Value is none of these types String, Path,...` on a real text-bearing PDF we don't have. Synthetic PDFs reproduce nothing on our boxes. We can't fix what we can't see — so we make the app self-diagnostic.
+
+**What landed in `src/main/pdf-ops/ocr-bootstrap.ts` (+283 net lines, single file):**
+
+- New `rasterizePageProd` try/catch around `page.render().promise`. On reject, builds a full diagnostic record (timestamp, error.{name,message,stack,code,cause}, pdfBytes_length, pageIndex, dpi, scale, canvasWidth/Height, canvas_module + version read from package.json, node/electron versions, platform/arch, presence of `globalThis.{Image,Path2D,ImageData,DOMMatrix,DOMPoint}`) and writes it to `${userData}/logs/ocr-rasterize-<epochMs>.json`. The rethrown Error's message embeds the absolute log path; `Error.cause` preserves the original.
+- `tryLoadCanvas()` SUCCESS branch fires `writeCanvasLoadSnapshot()` on first call, guarded by a module-scope boolean — one `canvas-load.json` fingerprint per process, regardless of how many OCR jobs follow. Lets us see what the user's machine had installed BEFORE any render failure.
+- Logging failure NEVER masks the original error. `writeDiagnosticLog` returns `null` and `console.error`s the secondary failure; the rethrown message falls back to the bare original.
+- Lazy CJS `require('electron')` was replaced with the top-level ESM `app` binding inside `resolveLogsDir` because `vi.mock('electron', ...)` only intercepts the ESM specifier. Cross-cutting test-correctness lesson now baked into the file's doc comment.
+- `__test` named export exposes the diagnostic seams for unit testing without standing up the full pdf.js + canvas pipeline.
+
+**Tests (`src/main/pdf-ops/ocr-bootstrap.test.ts`, +183 net lines):**
+
+- 5 new specs covering: (a) JSON file written under userData/logs/ + path returned, (b) `writeFileSync` throw is swallowed (`logPath` is `null`), (c) `app.getPath` throw is swallowed (test/non-Electron context safety), (d) Error.cause/code/stack make it into the record, (e) `writeCanvasLoadSnapshot` is one-time per process (guarded by module flag).
+- Pre-existing 4 `createNodeHttpsStreamer` regressions still pass.
+
+**Pre-flight (all green, MY-SCOPE ONLY):**
+
+- `npx eslint src/main/pdf-ops/ocr-bootstrap.ts src/main/pdf-ops/ocr-bootstrap.test.ts` — clean.
+- `npx tsc --noEmit` — clean across all 3 tsconfigs.
+- `npx vitest run src/main/pdf-ops/` — **313/313** across 33 files (up from 308/308 after the 5 new specs).
+
+**Concurrent-write hygiene:** ran IN PARALLEL with the file-association David subagent on a different tree (`src/main/index.ts`, `src/ipc/contracts.ts`, `src/preload/index.ts`, `src/client/**`). Staged only my two files explicitly by name — no `git add -A` or `git add .` — per LOCK 0036's parallel-write doctrine. Field-tested the discipline: 13 modified files were sitting in the working tree at commit time; the targeted `git add` shipped exactly two.
+
+### Field notes
+
+- **When a bug needs the user's data to reproduce, bake the diagnostic INTO the app — don't ask the user to run an external script.** App-side log capture + a known log path surfaced in the error toast turns every user bug report into a self-service diagnostic. v0.7.10 → v0.7.11 → v0.7.12 each shipped a guess based on synthetic repro; v0.7.13 ships an instrument that will give us the real native stack on the user's PDF the first time they hit the bug. The cost is ~280 lines and one extra fs.writeFileSync per failure (already a failure path — performance is irrelevant).
+- **`vi.mock('electron', ...)` intercepts ESM imports, NOT CJS `require('electron')` from inside the module under test.** Initial test run failed with `Cannot read properties of undefined (reading 'getPath')` because the diagnostic helper used a lazy CJS require. Switched to the top-level ESM `app` binding (already imported); the mock then took effect and all tests went green. Generalizable rule: when a function needs to be testable AND lives in an Electron main-process module, reach for the top-level import, not a defensive lazy `require`.
+- **The diagnostic record's `error.cause` walk handles three shapes (Error instance, string, anything-else-via-JSON.stringify).** pdf.js's render rejections sometimes carry an Error in `.cause`, sometimes a bare string token from the native binding, sometimes nothing at all. Stringifying the cause defensively keeps the JSON write robust against shapes we haven't seen yet.
