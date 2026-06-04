@@ -242,3 +242,156 @@ describe('adaptSignatureAuditRepo — Ravi adapter', () => {
     expect(got!.signatureKind).toBe('visual');
   });
 });
+
+// ============================================================
+// Phase 5.2 (Marcus, 2026-06-04) — OcrResultsRepoBridge.listPageResultsByJobId
+// ============================================================
+
+describe('OcrResultsRepoBridge.listPageResultsByJobId (Phase 5.2)', () => {
+  const sampleWordsJson = (text: string, conf = 90): string =>
+    JSON.stringify([
+      {
+        text,
+        confidence: conf,
+        imgRect: { x0: 0, y0: 0, x1: 30, y1: 12 },
+        pdfRect: { x: 10, y: 760, width: 30, height: 12 },
+      },
+    ]);
+
+  it('memory bridge parses words_json and assembles OcrPageResult[] sorted by pageIndex', () => {
+    const bridge = createMemoryDbBridge();
+    const results = bridge.ocrResults!;
+    // Insert out-of-order to test the sort.
+    results.insert({
+      job_id: 1,
+      page_index: 2,
+      total_words: 1,
+      low_confidence_words: 0,
+      mean_confidence: 90,
+      words_json: sampleWordsJson('three'),
+      img_width_px: 1700,
+      img_height_px: 2200,
+      duration_ms: 100,
+    });
+    results.insert({
+      job_id: 1,
+      page_index: 0,
+      total_words: 1,
+      low_confidence_words: 0,
+      mean_confidence: 92,
+      words_json: sampleWordsJson('one'),
+      img_width_px: 1700,
+      img_height_px: 2200,
+      duration_ms: 110,
+    });
+    results.insert({
+      job_id: 1,
+      page_index: 1,
+      total_words: 1,
+      low_confidence_words: 1,
+      mean_confidence: 45,
+      words_json: sampleWordsJson('two', 45),
+      img_width_px: 1700,
+      img_height_px: 2200,
+      duration_ms: 120,
+    });
+    // Different job — must NOT appear in the listing.
+    results.insert({
+      job_id: 2,
+      page_index: 0,
+      total_words: 1,
+      low_confidence_words: 0,
+      mean_confidence: 99,
+      words_json: sampleWordsJson('other-job'),
+      img_width_px: 100,
+      img_height_px: 100,
+      duration_ms: 1,
+    });
+
+    const pages = results.listPageResultsByJobId(1);
+    expect(pages).toHaveLength(3);
+    expect(pages.map((p) => p.pageIndex)).toEqual([0, 1, 2]);
+    expect(pages[0]!.words[0]!.text).toBe('one');
+    expect(pages[1]!.words[0]!.text).toBe('two');
+    expect(pages[2]!.words[0]!.text).toBe('three');
+    expect(pages[0]!.imgDimsPx).toEqual({ widthPx: 1700, heightPx: 2200 });
+    // PdfRect round-trips intact.
+    expect(pages[0]!.words[0]!.pdfRect).toEqual({ x: 10, y: 760, width: 30, height: 12 });
+  });
+
+  it('skips rows with malformed words_json (partial-recovery policy)', () => {
+    const bridge = createMemoryDbBridge();
+    const results = bridge.ocrResults!;
+    results.insert({
+      job_id: 1,
+      page_index: 0,
+      total_words: 1,
+      low_confidence_words: 0,
+      mean_confidence: 92,
+      words_json: sampleWordsJson('good'),
+      img_width_px: 100,
+      img_height_px: 100,
+      duration_ms: 1,
+    });
+    // Intentionally corrupted JSON.
+    results.insert({
+      job_id: 1,
+      page_index: 1,
+      total_words: 1,
+      low_confidence_words: 0,
+      mean_confidence: 50,
+      words_json: '{not-valid-json',
+      img_width_px: 100,
+      img_height_px: 100,
+      duration_ms: 1,
+    });
+    results.insert({
+      job_id: 1,
+      page_index: 2,
+      total_words: 1,
+      low_confidence_words: 0,
+      mean_confidence: 88,
+      words_json: sampleWordsJson('also-good'),
+      img_width_px: 100,
+      img_height_px: 100,
+      duration_ms: 1,
+    });
+
+    const pages = results.listPageResultsByJobId(1);
+    expect(pages).toHaveLength(2);
+    expect(pages.map((p) => p.pageIndex)).toEqual([0, 2]);
+  });
+
+  it('preserves null pdfRect (late-init contract)', () => {
+    const bridge = createMemoryDbBridge();
+    const results = bridge.ocrResults!;
+    results.insert({
+      job_id: 1,
+      page_index: 0,
+      total_words: 1,
+      low_confidence_words: 0,
+      mean_confidence: 92,
+      words_json: JSON.stringify([
+        {
+          text: 'pending',
+          confidence: 92,
+          imgRect: { x0: 0, y0: 0, x1: 30, y1: 12 },
+          pdfRect: null,
+        },
+      ]),
+      img_width_px: 100,
+      img_height_px: 100,
+      duration_ms: 1,
+    });
+
+    const pages = results.listPageResultsByJobId(1);
+    expect(pages).toHaveLength(1);
+    expect(pages[0]!.words[0]!.pdfRect).toBeNull();
+  });
+
+  it('returns empty array for an unknown jobId (no error)', () => {
+    const bridge = createMemoryDbBridge();
+    const pages = bridge.ocrResults!.listPageResultsByJobId(999);
+    expect(pages).toEqual([]);
+  });
+});

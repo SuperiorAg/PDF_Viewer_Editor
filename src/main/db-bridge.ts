@@ -15,6 +15,11 @@ import type {
   BookmarkNode,
   FileHash,
   FormFieldDefinition,
+  // Phase 5.2 (Marcus, 2026-06-04): bridge now exposes parsed per-page OCR
+  // results so the renderer can hydrate the confidence overlay on reopen.
+  OcrPageResult,
+  OcrWord,
+  PdfRect,
   RecentsListItem,
   SettingKey,
   SettingValue,
@@ -385,6 +390,24 @@ export interface OcrResultsRepoBridge {
     duration_ms: number;
   }): number;
   listByJobId(jobId: number): OcrResultRowDto[];
+  /**
+   * Phase 5.2 (Marcus, 2026-06-04): parsed-and-camelCased per-page result list.
+   *
+   * Reads each ocr_results row for the job, parses `words_json` into
+   * `OcrWord[]`, and assembles `OcrPageResult[]` (sorted page_index ASC). The
+   * bridge is the canonical JSON parse layer per the repo's "never parses" rule
+   * (see ocr-results-repo.ts:6-13 + data-models §10.6).
+   *
+   * Behavior on malformed `words_json`:
+   *   - Best-effort per-row recovery: rows that fail JSON.parse are SKIPPED
+   *     (logged via console.warn). The rest are returned. This mirrors the
+   *     `safeParsePreprocess` pattern in `ocr-list-jobs.ts:52` — never let one
+   *     corrupt blob deny the user the rest of the document's OCR overlay.
+   *   - The `'results_parse_failed'` IPC error is reserved for catastrophic
+   *     bridge failures (e.g. the table itself is unreadable); per-row JSON
+   *     decode failures degrade to a partial result.
+   */
+  listPageResultsByJobId(jobId: number): OcrPageResult[];
 }
 
 export interface LanguagePackRowDto {
@@ -911,6 +934,102 @@ class MemoryOcrResultsRepo implements OcrResultsRepoBridge {
   listByJobId(jobId: number): OcrResultRowDto[] {
     return this.rows.filter((r) => r.jobId === jobId);
   }
+
+  listPageResultsByJobId(jobId: number): OcrPageResult[] {
+    return assemblePageResultsFromRows(this.rows.filter((r) => r.jobId === jobId));
+  }
+}
+
+// ============================================================================
+// Phase 5.2 (Marcus, 2026-06-04): shared parse-and-assemble for
+// OcrResultsRepoBridge.listPageResultsByJobId — used by BOTH the memory-backed
+// repo (tests) and the SQLite-backed adapter (production).
+//
+// Per-row JSON-parse failures degrade to a SKIP of that single row (logged),
+// so one corrupt blob does not deny the user the rest of the document's
+// confidence overlay. Returns rows sorted page_index ASC.
+// ============================================================================
+
+function assemblePageResultsFromRows(rows: OcrResultRowDto[]): OcrPageResult[] {
+  const sorted = [...rows].sort((a, b) => a.pageIndex - b.pageIndex);
+  const out: OcrPageResult[] = [];
+  for (const row of sorted) {
+    const words = safeParseWordsJson(row.wordsJson, row.id);
+    if (words === null) continue;
+    out.push({
+      pageIndex: row.pageIndex,
+      imgDimsPx: { widthPx: row.imgWidthPx, heightPx: row.imgHeightPx },
+      totalWords: row.totalWords,
+      lowConfidenceWords: row.lowConfidenceWords,
+      meanConfidence: row.meanConfidence,
+      words,
+      durationMs: row.durationMs,
+    });
+  }
+  return out;
+}
+
+/**
+ * Parse and validate a `words_json` blob into `OcrWord[]`. Returns `null` on
+ * any structural failure so the caller can skip the row (per the partial-result
+ * recovery policy).
+ *
+ * Validation is shape-only — coordinates / confidence ranges are not re-checked
+ * here (the engine validated them on insert). We only guard against shapes
+ * that would crash the renderer.
+ */
+function safeParseWordsJson(json: string, rowId: number): OcrWord[] | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `ocr-results bridge: row id=${String(rowId)} words_json JSON.parse failed — skipping row.`,
+      e,
+    );
+    return null;
+  }
+  if (!Array.isArray(parsed)) return null;
+  const words: OcrWord[] = [];
+  for (const raw of parsed) {
+    if (raw === null || typeof raw !== 'object') return null;
+    const r = raw as Record<string, unknown>;
+    if (typeof r.text !== 'string') return null;
+    if (typeof r.confidence !== 'number') return null;
+    const imgRect = r.imgRect;
+    if (imgRect === null || typeof imgRect !== 'object') return null;
+    const ir = imgRect as Record<string, unknown>;
+    if (
+      typeof ir.x0 !== 'number' ||
+      typeof ir.y0 !== 'number' ||
+      typeof ir.x1 !== 'number' ||
+      typeof ir.y1 !== 'number'
+    ) {
+      return null;
+    }
+    let pdfRect: PdfRect | null = null;
+    if (r.pdfRect !== null && r.pdfRect !== undefined) {
+      if (typeof r.pdfRect !== 'object') return null;
+      const pr = r.pdfRect as Record<string, unknown>;
+      if (
+        typeof pr.x !== 'number' ||
+        typeof pr.y !== 'number' ||
+        typeof pr.width !== 'number' ||
+        typeof pr.height !== 'number'
+      ) {
+        return null;
+      }
+      pdfRect = { x: pr.x, y: pr.y, width: pr.width, height: pr.height };
+    }
+    words.push({
+      text: r.text,
+      confidence: r.confidence,
+      imgRect: { x0: ir.x0, y0: ir.y0, x1: ir.x1, y1: ir.y1 },
+      pdfRect,
+    });
+  }
+  return words;
 }
 
 class MemoryLanguagePacksRepo implements LanguagePacksRepoBridge {
@@ -1776,6 +1895,11 @@ export function adaptOcrResultsRepo(raw: RaviOcrResultsRepo): OcrResultsRepoBrid
     },
     listByJobId(jobId) {
       return raw.listByJobId(jobId).map(ocrResultRowToDto);
+    },
+    // Phase 5.2 (Marcus, 2026-06-04): same parse-and-assemble as the
+    // memory-backed repo, run against Ravi's SQLite-backed rows.
+    listPageResultsByJobId(jobId) {
+      return assemblePageResultsFromRows(raw.listByJobId(jobId).map(ocrResultRowToDto));
     },
   };
 }

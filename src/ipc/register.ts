@@ -106,6 +106,7 @@ import { handleOcrDetectLanguages } from './handlers/ocr-detect-languages.js';
 import { handleOcrLanguagePackDownload } from './handlers/ocr-download-language-pack.js';
 import { handleOcrLanguagePackRemove } from './handlers/ocr-language-pack-remove.js';
 import { handleOcrListJobs } from './handlers/ocr-list-jobs.js';
+import { handleOcrListResultsByJob } from './handlers/ocr-list-results-by-job.js';
 import { handleOcrRunOnDocument } from './handlers/ocr-run-on-document.js';
 import { handleOcrRunOnPage } from './handlers/ocr-run-on-page.js';
 import { handleFsApplyEditOps } from './handlers/pdf-apply-edit-ops.js';
@@ -955,6 +956,14 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
 
   ipcMain.handle(Channels.OcrListJobs, (_evt, payload) =>
     handleOcrListJobs(payload ?? {}, { repo: getDbBridge().ocrJobs }),
+  );
+
+  // Phase 5.2 (Marcus, 2026-06-04): per-job word-level result retrieval.
+  ipcMain.handle(Channels.OcrListResultsByJob, (_evt, payload) =>
+    handleOcrListResultsByJob(payload ?? {}, {
+      jobsRepo: getDbBridge().ocrJobs,
+      resultsRepo: getDbBridge().ocrResults,
+    }),
   );
 
   ipcMain.handle(Channels.OcrLanguagePackDownload, (_evt, payload) =>
