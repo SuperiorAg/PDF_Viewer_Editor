@@ -30,7 +30,9 @@ function renderSettings(): ReturnType<typeof render> {
 }
 
 describe('SettingsModal — ARIA tab pattern (R-2)', () => {
-  it('renders a horizontal tablist with the five settings tabs', () => {
+  it('renders a horizontal tablist with the six settings tabs', () => {
+    // v0.7.13: a sixth "Diagnostics" tab was added between Editing and About to
+    // surface David's app:diagnoseOcr IPC channel + the ocr-rasterize log path.
     renderSettings();
     const tablist = screen.getByRole('tablist', { name: 'Settings sections' });
     expect(tablist).toHaveAttribute('aria-orientation', 'horizontal');
@@ -40,6 +42,7 @@ describe('SettingsModal — ARIA tab pattern (R-2)', () => {
       'Files',
       'Export',
       'Editing',
+      'Diagnostics',
       'About',
     ]);
   });

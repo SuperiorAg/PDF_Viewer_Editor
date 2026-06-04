@@ -6,6 +6,7 @@
     "files": "Files",
     "export": "Export",
     "editing": "Editing",
+    "diagnostics": "Diagnostics",
     "about": "About"
   },
   "general": {
@@ -58,6 +59,23 @@
   "about": {
     "versionLabel": "App version",
     "blurb": "PDF_Viewer_Editor is built on Electron, React, pdf.js, and pdf-lib — all permissively licensed."
+  },
+  "diagnostics": {
+    "runHeading": "Run OCR diagnostics",
+    "runDescription": "Probes the canvas binding, pdf.js, and tesseract.js runtime to confirm the OCR pipeline is reachable from this build. Safe to run at any time.",
+    "runButton": "Run OCR diagnostics",
+    "runningLabel": "Running…",
+    "copyButton": "Copy result",
+    "resultLabel": "Diagnostic result (JSON)",
+    "copied": "Diagnostic copied to clipboard.",
+    "copyFailed": "Copy failed: {{message}}",
+    "logFolderHeading": "Log folder",
+    "logFolderDescription": "OCR rasterize failures write a full diagnostic JSON (ocr-rasterize-<timestamp>.json) to this folder. Paste the path below into File Explorer to open it.",
+    "copyPathButton": "Copy log folder path",
+    "pathCopied": "Log folder path copied to clipboard.",
+    "latestLogHeading": "Latest OCR error log",
+    "latestLogDescription": "Open the log folder above to find ocr-rasterize-*.json. The newest file describes the most recent rasterize failure.",
+    "disclaimer": "These diagnostics include @napi-rs/canvas binding version, Node + Electron versions, and OCR pipeline state. No PDF content is included."
   },
   "saveError": "Could not save: {{message}}"
 }

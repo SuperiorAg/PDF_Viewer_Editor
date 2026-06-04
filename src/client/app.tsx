@@ -28,6 +28,11 @@ import { Toolbar } from './components/toolbar';
 import { useAppShortcuts } from './hooks/use-app-shortcuts';
 import { usePhase7Bootstrap } from './i18n/use-phase7-bootstrap';
 import { useT } from './i18n/use-t';
+// v0.7.13 (parallel-coordinated with David's main-process work): subscribe to
+// the Windows file-association entry channel. The hook is a no-op until the
+// preload exposes `api.app.onFileOpenFromShell` — see the comment block on the
+// hook itself for the exact contract David is landing.
+import { subscribeFileOpenFromShell } from './state/file-open-from-shell';
 import { useAppDispatch, useAppSelector } from './state/hooks';
 import { selectCurrentDocument } from './state/slices/document-selectors';
 // Phase 3 — mail-merge wizard has its own modalOpen flag (separate from ui.activeModal)
@@ -80,6 +85,20 @@ export function App(): JSX.Element {
   useEffect(() => {
     void dispatch(listExportFormatsThunk());
     const unsub = subscribeExportProgress(dispatch);
+    return () => {
+      unsub();
+    };
+  }, [dispatch]);
+
+  // v0.7.13 — subscribe to file:openFromShell. When Windows opens the app with
+  // a .pdf path on argv (file-association double-click, Shell open verb, drag-
+  // onto-taskbar-icon), the main process emits an event and we route the path
+  // through the same opener thunk drag-drop uses. The subscription is a no-op
+  // until David's parallel main+preload run lands `api.app.onFileOpenFromShell`
+  // — `subscribeFileOpenFromShell` feature-detects and returns a no-op
+  // unsubscribe in that case (see its module comment for the gap).
+  useEffect(() => {
+    const unsub = subscribeFileOpenFromShell(dispatch);
     return () => {
       unsub();
     };

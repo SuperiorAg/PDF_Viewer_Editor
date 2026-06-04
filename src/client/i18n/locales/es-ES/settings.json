@@ -6,6 +6,7 @@
     "files": "Archivos",
     "export": "Exportación",
     "editing": "Edición",
+    "diagnostics": "Diagnóstico",
     "about": "Acerca de"
   },
   "general": {
@@ -58,6 +59,23 @@
   "about": {
     "versionLabel": "Versión de la aplicación",
     "blurb": "PDF_Viewer_Editor está construido sobre Electron, React, pdf.js y pdf-lib, todos con licencias permisivas."
+  },
+  "diagnostics": {
+    "runHeading": "Ejecutar diagnóstico de OCR",
+    "runDescription": "Comprueba el enlace de canvas, pdf.js y tesseract.js para confirmar que el flujo de OCR es alcanzable en esta versión. Puede ejecutarse en cualquier momento.",
+    "runButton": "Ejecutar diagnóstico de OCR",
+    "runningLabel": "Ejecutando…",
+    "copyButton": "Copiar resultado",
+    "resultLabel": "Resultado del diagnóstico (JSON)",
+    "copied": "Diagnóstico copiado al portapapeles.",
+    "copyFailed": "No se pudo copiar: {{message}}",
+    "logFolderHeading": "Carpeta de registros",
+    "logFolderDescription": "Cuando falla la rasterización del OCR, se escribe un JSON de diagnóstico completo (ocr-rasterize-<marca-de-tiempo>.json) en esta carpeta. Pegue la ruta siguiente en el Explorador de archivos para abrirla.",
+    "copyPathButton": "Copiar ruta de la carpeta de registros",
+    "pathCopied": "Ruta de la carpeta de registros copiada al portapapeles.",
+    "latestLogHeading": "Último registro de error de OCR",
+    "latestLogDescription": "Abra la carpeta de registros anterior para localizar ocr-rasterize-*.json. El archivo más reciente describe el último fallo de rasterización.",
+    "disclaimer": "Estos diagnósticos incluyen la versión del enlace @napi-rs/canvas, las versiones de Node y Electron, y el estado del flujo de OCR. No se incluye contenido de los PDF."
   },
   "saveError": "No se pudo guardar: {{message}}"
 }

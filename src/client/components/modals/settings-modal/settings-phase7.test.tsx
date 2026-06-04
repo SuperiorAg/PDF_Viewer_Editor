@@ -106,7 +106,7 @@ afterEach(() => {
 });
 
 describe('Settings → General Phase 7 controls', () => {
-  it('renders the five settings tabs incl. Editing', () => {
+  it('renders the six settings tabs incl. Editing + Diagnostics (v0.7.13)', () => {
     stubBridge();
     renderSettings();
     const tabs = screen.getAllByRole('tab');
@@ -115,6 +115,7 @@ describe('Settings → General Phase 7 controls', () => {
       'Files',
       'Export',
       'Editing',
+      'Diagnostics',
       'About',
     ]);
   });

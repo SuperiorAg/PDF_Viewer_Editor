@@ -17,6 +17,7 @@ import { ModalShell } from '../modal-shell';
 import { TelemetryDebugPanel } from '../telemetry-debug-panel';
 
 import { AboutTab } from './about-tab';
+import { DiagnosticsTab } from './diagnostics-tab';
 import { GeneralTab } from './general-tab';
 import styles from './settings-modal.module.css';
 
@@ -42,8 +43,18 @@ const DEFAULT_FORM: SettingsFormState = {
   appVersion: '0.0.0',
 };
 
-type SettingsTabId = 'general' | 'files' | 'export' | 'editing' | 'about';
-const SETTINGS_TABS: readonly SettingsTabId[] = ['general', 'files', 'export', 'editing', 'about'];
+// v0.7.13: 'diagnostics' tab slots between 'editing' and 'about' so the Settings
+// chrome reads General → Files → Export → Editing → Diagnostics → About. The
+// keyboard navigation order matches; useTablistKeys is index-based.
+type SettingsTabId = 'general' | 'files' | 'export' | 'editing' | 'diagnostics' | 'about';
+const SETTINGS_TABS: readonly SettingsTabId[] = [
+  'general',
+  'files',
+  'export',
+  'editing',
+  'diagnostics',
+  'about',
+];
 
 export function SettingsModal(): JSX.Element {
   const { t } = useT();
@@ -288,6 +299,8 @@ export function SettingsModal(): JSX.Element {
             />
           </label>
         )}
+
+        {activeTab === 'diagnostics' && <DiagnosticsTab />}
 
         {activeTab === 'about' && <AboutTab appVersion={form.appVersion} />}
       </div>
