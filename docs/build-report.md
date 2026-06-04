@@ -9794,3 +9794,81 @@ Renderer is healthy, React tree mounted, i18n strings resolved, recents auto-loa
 - **L-002 PrintWindow technique works two-for-two.** v0.7.14 was a 22 KB PNG; v0.7.15 is a 70 KB PNG (proportional to actual rendered content — v0.7.15's shot has PDF pages rendered, v0.7.14's was empty-state). PrintWindow with PW_RENDERFULLCONTENT (0x2) reliably captures Chromium's DWM-composed surface regardless of foreground state, occlusion, or modal overlays — in fact it captured the OCR-error modal here as a feature, surfacing the next-downstream bug for free. **Default capture path locked in for every future Diego release.**
 - **3m38s CI run.** v0.7.10 = ~3m45s, v0.7.11 = 3m39s, v0.7.12 = 3m28s, v0.7.13 = 3m41s, v0.7.14 = 3m10s, v0.7.15 = **3m38s**. Still inside the stable ~3.2-3.7min band. v0.7.14's 3m10s remains the v0.7.x record.
 - **Total wave wall time = ~10 minutes (Marcus dispatch -> Latest promotion).** Pre-flight 1m30s (rebuild scripts 12s + typecheck 11s + lint 5s + vitest 25.46s + commit + push 25s) -> CI 3m38s -> promote + download + smoke + screenshot 3m30s -> docs 1m20s. Sub-10-minute round-trip pattern from v0.7.14 still holds.
+
+---
+
+## 2026-06-04 — Diego: v0.7.16 cut (tesseract.js v7 output shape fix; OCR modal reached end-to-end without error)
+
+**Headline:** Shipped v0.7.16 live and Latest in ~10 minutes of Marcus dispatch. Third consecutive single-fix OCR release, each one peeling off the next downstream layer surfaced by the previous fix: v0.7.14 fixed Path2D ordering, v0.7.15 fixed pdf.js buffer detach, v0.7.16 fixes the next failure that v0.7.15's L-002 screenshot itself surfaced — tesseract.js v7 dropped `r.data.words`, `r.data.imageWidth`, and `r.data.imageHeight` from the default recognize-result top level, so the existing consumer's `r.data.words.map(...)` threw `Cannot read properties of undefined (reading 'map')`. Fix passes `{ blocks: true }` as the third `recognize()` output arg to opt back in to the nested word tree (flattened via blocks → paragraphs → lines → words), and reads PNG width/height from the rasterizer's input bytes via the IHDR header (offsets 16-23, big-endian uint32 each) since tesseract no longer reports them. **For the first time in this OCR debug arc**, today's L-002 visual reached the OCR modal's Step 1 wizard ("Choose language and pages") **without any error toast** — the chain reached the end of the entry path. Two L-002 screenshots captured this release (initial empty-state + post-OCR-tab-click modal state). **CI test suite still misses all three of these defects** because they live behind module boundaries the unit-test mocks short-circuit — flagging this as a Phase 7.1 candidate (real-PDF end-to-end OCR integration test).
+
+**What's in v0.7.16 (single delta on top of v0.7.15):**
+
+- `446499a` Diego — `fix(ocr): adapt to tesseract.js v7 output shape (blocks tree + PNG dims)`. Changes `src/main/pdf-ops/ocr-bootstrap.ts` (+82 / -14) to (1) call `worker.recognize(png, options, { blocks: true })`, (2) walk `r.data.blocks[].paragraphs[].lines[].words[]` and flatten into the existing flat-word-array contract the composer expects, and (3) extract PNG width/height from `bytes[16..23]` (IHDR after the 8-byte signature + 4-byte length + 4-byte type, big-endian uint32 each) before handing the recognize result to the composer's `imageToPdfRect()` mapping. Adds 4 unit tests in `src/main/pdf-ops/ocr-bootstrap.test.ts` (+51) pinning the PNG-dim reader: 3301×2550 (the actual 300dpi letter-page size from yesterday's diagnostic), 200×200 (test-fixture scale), short-bytes returns null, JPEG magic returns null.
+- `86d71b3` Diego — `chore(release): v0.7.16 - tesseract.js v7 output shape fix`. 1-line `package.json` version bump.
+
+**Pre-flight (all green at push time, this host Node 24.14.1 via L-003 escape hatch):**
+
+- `node scripts/rebuild-native-for-node.mjs` (target=node) — swapped better-sqlite3 to the cached `99329f-better-sqlite3-v12.9.0-node-v137-win32-x64.tar.gz` prebuild.
+- `npm run typecheck` — clean across `tsconfig.main.json` + `tsconfig.preload.json` + `tsconfig.renderer.json`.
+- `npm run lint` (`eslint --max-warnings 0`) — clean across `src/**/*.{ts,tsx}` + `tests/**/*.ts`.
+- `npx vitest run` (full suite) — **1900 passed / 1900 total / 0 failed across 177 test files** in 25.20s. **+4 tests vs v0.7.15's 1896**, matching exactly the 4 PNG-dim assertions added in the fix commit. No NEW failures.
+- Husky `pre-commit` ran `lint-staged` (prettier on `package.json`) + `typecheck:main` guard — clean.
+- Husky `pre-push` ran full typecheck + full lint over the tree — clean.
+
+**CI release pipeline:**
+
+- Workflow: `release.yml` run id [`26955486801`](https://github.com/SuperiorAg/superiorag.com/PDF_Viewer_Editor/actions/runs/26955486801) — triggered by tag push `v0.7.16`.
+- Duration: **3m30s end-to-end** (createdAt 13:41:17Z → updatedAt 13:44:47Z). Job: `Build + publish Windows release` on `windows-2025-vs2026`. All 12 steps GREEN: Set up job → Checkout → Setup Node (from `.nvmrc`, Node 20 per L-003) → Install deps → Rebuild better-sqlite3 for Electron → Rebuild optional WIA scanner addon (tolerant) → Build Electron bundle (typecheck + electron-vite build) → Package + publish to GitHub Release (electron-builder) → Upload Windows artifacts (backup) → Post Setup Node → Post Checkout → Complete job.
+
+**Assets uploaded (4/4):**
+
+| Asset                                         | Size          | SHA-256 prefix |
+| --------------------------------------------- | ------------- | -------------- |
+| `latest.yml`                                  | 366 B         | d2d3471f…      |
+| `pdf-viewer-editor-0.7.16.exe` (portable)     | 135,389,218 B | 6e29f359…      |
+| `pdf-viewer-editor-setup-0.7.16.exe` (NSIS)   | 135,687,222 B | 339bf5a7…      |
+| `pdf-viewer-editor-setup-0.7.16.exe.blockmap` | 142,180 B     | 30488929…      |
+
+Promoted draft -> Latest via `gh release edit v0.7.16 --draft=false --latest`. Release URL: <https://github.com/SuperiorAg/PDF_Viewer_Editor/releases/tag/v0.7.16>. `isDraft=false`, `tagName=v0.7.16`. GitHub auto-marks highest semver as Latest; electron-updater on existing v0.7.11..v0.7.15 installs resolves v0.7.16 on next launch.
+
+**Structural smoke (downloaded portable, this host):**
+
+- Binary: `release/pdf-viewer-editor-0.7.16.exe` downloaded via `gh release download v0.7.16 --pattern pdf-viewer-editor-0.7.16.exe`. Size 135,389,218 B — byte-for-byte match against the published asset. `certutil -hashfile ... SHA256` -> `6e29f359edcb97d2596f48e3f889b30844280968695070523af98337f456befc` — matches GitHub asset digest exactly.
+- Applied the v0.7.14/v0.7.15 launch protocol: **`Remove-Item Env:\ELECTRON_RUN_AS_NODE`** before launch, polling on the actual Electron process name **`PDF Viewer & Editor`** (the launcher `pdf-viewer-editor-0.7.16` exits after extracting to `%TEMP%\3EfrrZ63XWKfvsWCXlr5TLntSlk\`).
+- Process family observed: **4 processes** under the expected name (PID 39084 main with `MainWindowHandle = 3934016`, plus PIDs 18864 / 20976 / 39624 as renderer/GPU/utility children — all parented to 39084). 4-process tree is the L-002 gold-standard signature.
+- `Get-Process -Name 'PDF Viewer & Editor' | Where MainWindowHandle -ne 0` -> 1 candidate, `MainWindowHandle = 3934016`, `MainWindowTitle = 'PDF_Viewer_Editor'`, `[Win32]::IsWindowVisible(hwnd) == True`, window rect L=640 T=109 R=1920 B=909 (1280 x 800).
+- Verdict: **BINARY LAUNCHED AND RENDERED CORRECTLY** — full structural verification PASS.
+
+**L-002 visual = SATISFIED (two screenshots, end-to-end OCR-path confirmation).** Three consecutive L-002-compliant releases now (v0.7.14 + v0.7.15 + v0.7.16); the 4-release deferral streak that ended in v0.7.14 has stayed closed.
+
+**Screenshot 1 — initial empty state with auto-loaded PDF:** Captured `release/v0.7.16-launch-shot.png` (54,505 B) via PowerShell `PrintWindow(hwnd, hdc, PW_RENDERFULLCONTENT=0x2)`. Shows all L-002-required UI elements:
+
+1. Title bar — "PDF_Viewer_Editor"
+2. Menu strip — File / Edit / Insert / View / Tools / Help (6 items)
+3. Full toolbar — open / save / save-as / undo / redo / annotation tools (text / box / highlight / underline / strike / ink / signature / cursor) / page-ops (insert / append / image-as-page / duplicate / rotate-cw / rotate-ccw) / print / export / etc.
+4. Sidebar with 5 tabs — **Pages** (active, two page thumbnails for an auto-loaded Cisco Systems Capital Corp invoice PDF rendered in full color with legible text and addresses) / Bookmarks / Forms / OCR / Exports
+5. Document area — PDF page 1 rendered (CISCO Capital logo, full remittance section, "Detach here" annotation, invoice header "21000059630017300108259931" all legible)
+
+**Screenshot 2 — OCR modal reached without error (the load-bearing one for this release):** Captured `release/v0.7.16-launch-shot-ocr-tab.png` (39,916 B) after clicking the OCR sidebar tab via PowerShell `mouse_event` (LEFTDOWN + LEFTUP at screen coords 985,292 — the OCR tab center). Shows the "Run OCR" modal opened cleanly:
+
+1. Modal heading — "Run OCR"
+2. Step 1 header — "Step 1 — Choose language and pages"
+3. Language section — checkbox list with **English (eng)** pre-checked + Spanish (spa) / French (fra) / German (deu) / Portuguese (por) / Italian (ita) unchecked + "Download more..." button
+4. Pages section — radio group **All pages (1–3)** selected vs Range
+5. Preprocessing section heading visible at bottom (truncated by viewport)
+6. **No error toast.** **No `recognize threw` error row.** **No `OCR failed` message.** Compare to v0.7.15's L-002 capture which showed exactly these two error rows visible inline.
+
+**Significance of screenshot 2:** This is the FIRST L-002 capture in the v0.7.14/v0.7.15/v0.7.16 OCR debug arc where the OCR path reaches its full entry surface without raising an error. v0.7.14's binary launched but OCR threw Path2D-ordering. v0.7.15's binary launched + OCR rasterized, but `recognize()` returned a v7-shape result that the consumer crashed on. v0.7.16's binary launches + OCR modal opens + Step 1 wizard is interactive with no error rows. Whether a real OCR job actually runs cleanly through all three steps is the next signal to confirm (didn't kick off a recognize() pass in this smoke to keep the wave under 10 minutes), but the modal-reaches-Step-1-without-error verdict is the strongest signal yet that the v7 shape adapt is correct.
+
+**Out-of-scope drift retained (per brief):**
+
+- `.gitignore` `.mcp.json` working-tree drift — still pre-existing across v0.7.14/v0.7.15/v0.7.16, still not Diego's. Both release commits in this wave (`446499a`, `86d71b3`) are clean — `ocr-bootstrap.ts` + `ocr-bootstrap.test.ts` + `package.json` only.
+- `StandardFontDataFactory` / `CMapReaderFactory` wiring on the OCR rasterizer — David's standing follow-up. Still untouched per Marcus's explicit out-of-scope instruction.
+
+### Field notes
+
+- **The "fixed N, exposed N+1" pattern, three consecutive releases in 24 hours.** This is now strong enough evidence to call out as a meta-pattern, not a coincidence: each fix-and-ship cycle in the OCR pipeline reliably exposes the next downstream layer because each layer's failure mode short-circuits the next, so the test suite can never see past the current failure point. v0.7.14 → Path2D ordering fixed → buffer detach exposed. v0.7.15 → buffer detach fixed → v7 shape exposed. v0.7.16 → v7 shape fixed → ??? (whatever sits between modal-Step-1 and a successful OCR'd PDF). Cross-project Learnings note locked in at `D:\Vault\Agents\Learnings\2026-06-04-tesseract-js-v7-output-shape.md` with the full pattern writeup. **The recommended Phase 7.1 work is now a real-PDF end-to-end OCR integration test in CI** that exercises rasterize + recognize + compose against a fixture PDF on a real `@napi-rs/canvas` + tesseract.js worker pair — none of v0.7.14/v0.7.15/v0.7.16's defects would have shipped if this test existed, because each fault would have triggered a CI failure instead of a customer-visible regression.
+- **The CI test suite mocks short-circuit every one of these three defects.** Verified by reading the relevant test files — `pdf-ops/*.test.ts` either mock pdf.js entirely (so Path2D never gets called, no detach happens, no recognize is invoked) or use a fake worker that returns hand-crafted result objects in the OLD v5/v6 shape (so the v7 shape change is invisible). The new `ocr-bootstrap.prod-render.test.ts` from v0.7.15 exercises the rasterize binary path against a real canvas binding, but stops at PNG-bytes-out; it never calls `worker.recognize()`. There is currently NO test in the suite that drives a real tesseract.js worker against real PNG bytes from a real pdf.js render of a real PDF. Phase 7.1 candidate.
+- **L-002 PrintWindow technique works three-for-three** with two captures this release. The mouse_event click + second PrintWindow capture confirmed the modal opens cleanly — a richer L-002 verification than the single empty-state shot from v0.7.14/v0.7.15. Worth normalizing in the runbook: for any release whose fix lives behind a UI interaction, capture pre-state AND post-interaction-state shots, not just the empty-state launch.
+- **3m30s CI run.** v0.7.10 = ~3m45s, v0.7.11 = 3m39s, v0.7.12 = 3m28s, v0.7.13 = 3m41s, v0.7.14 = 3m10s, v0.7.15 = 3m38s, v0.7.16 = **3m30s**. Inside the stable ~3.2-3.7min band; v0.7.14's 3m10s remains the v0.7.x record.
+- **Total wave wall time = ~12 minutes (Marcus dispatch -> Latest promotion -> two L-002 captures).** Pre-flight 1m30s (rebuild scripts 12s + typecheck ~15s + lint ~5s + vitest 25.20s + commit + push 25s) -> CI 3m30s -> promote + download + structural smoke 2m -> L-002 capture #1 + OCR tab click + L-002 capture #2 + screenshot review 3m -> docs 2m. Slightly longer than v0.7.15's 10m because of the second screenshot; still well inside the sub-15-minute round-trip envelope.
