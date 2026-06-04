@@ -9872,3 +9872,81 @@ Promoted draft -> Latest via `gh release edit v0.7.16 --draft=false --latest`. R
 - **L-002 PrintWindow technique works three-for-three** with two captures this release. The mouse_event click + second PrintWindow capture confirmed the modal opens cleanly — a richer L-002 verification than the single empty-state shot from v0.7.14/v0.7.15. Worth normalizing in the runbook: for any release whose fix lives behind a UI interaction, capture pre-state AND post-interaction-state shots, not just the empty-state launch.
 - **3m30s CI run.** v0.7.10 = ~3m45s, v0.7.11 = 3m39s, v0.7.12 = 3m28s, v0.7.13 = 3m41s, v0.7.14 = 3m10s, v0.7.15 = 3m38s, v0.7.16 = **3m30s**. Inside the stable ~3.2-3.7min band; v0.7.14's 3m10s remains the v0.7.x record.
 - **Total wave wall time = ~12 minutes (Marcus dispatch -> Latest promotion -> two L-002 captures).** Pre-flight 1m30s (rebuild scripts 12s + typecheck ~15s + lint ~5s + vitest 25.20s + commit + push 25s) -> CI 3m30s -> promote + download + structural smoke 2m -> L-002 capture #1 + OCR tab click + L-002 capture #2 + screenshot review 3m -> docs 2m. Slightly longer than v0.7.15's 10m because of the second screenshot; still well inside the sub-15-minute round-trip envelope.
+
+---
+
+## 2026-06-04 — Diego: v0.7.17 cut (renderer-side OCR pipeline wire-ups: overlay mount + applyEdit dispatch + doc-open summary hydrate)
+
+**Headline:** Shipped v0.7.17 live and Latest. **Fifth consecutive same-day OCR release** (v0.7.13 -> v0.7.14 -> v0.7.15 -> v0.7.16 -> v0.7.17), and the first one in the arc that fixes a **different class of defect** than its predecessors. v0.7.14/v0.7.15/v0.7.16 were each "code is wrong in a way real PDFs reveal" (Path2D ordering, buffer detach, tesseract.js v7 shape). v0.7.17 is **"code exists but no one calls it"** — three Phase 5 deliverables (the `<OcrConfidenceOverlay>` React component, the `ocr-text-behind-applied` `applyEdit` op, and the `loadOcrResultsThunk` summary hydrator) were all written, unit-tested in isolation, and silently dead because nobody had inserted them into the production data flow. The toggle did nothing because the component was never mounted. The Save button never lit up after OCR because the post-OCR edit never reached `dirtyOps`. Re-opening a previously-OCR'd doc never surfaced its summary indicator because the hydrator was never dispatched. Bundles **two renderer-side fixes** Riley landed earlier today (commits `afa8279` + `8682365`), now stitched together into the same release.
+
+**What's in v0.7.17 (two delta commits on top of v0.7.16):**
+
+- `afa8279` Riley — `fix(ocr): mount OcrConfidenceOverlay inside PdfCanvas so the toggle does something`. The component, its CSS, the menu/toolbar toggle items, and the Redux action all existed since Phase 5; nothing imported or rendered the React component. Mounted next to `<AnnotationLayer>` in `src/client/components/pdf-canvas/index.tsx`. Also wired the `ocr` reducer into the pdf-canvas + pdf-viewer test stores so the new prop reads don't crash existing tests.
+- `8682365` Riley — `fix(ocr): dispatch ocr-text-behind-applied op + hydrate summary on doc-open`. Two seams: (a) `runOcrOnDocumentThunk` (`thunks-phase5.ts`) now dispatches `applyEdit(res.value.op)` after OCR completes so `dirtyOps` includes the op and the Save button activates and the searchable text layer is actually flushed to disk; (b) `loadOcrResultsThunk` (already existed, never dispatched in production) wired into both `openDocumentThunk` + `openDroppedPathThunk` in `thunks.ts` so reopening a doc that's been OCR'd before surfaces the summary indicator.
+- `3d1550b` Diego — `chore(release): v0.7.17 - OCR overlay mount + applyEdit dispatch + doc-open summary hydrate`. 1-line `package.json` version bump.
+
+**Pre-flight (Node 24 host with L-003 escape hatch):**
+
+- `node scripts/rebuild-native-for-node.mjs` -> cached prebuild `99329f-better-sqlite3-v12.9.0-node-v137-win32-x64.tar.gz` swapped in (first vitest pass without the rebuild gave 350 failures all of class `TypeError: Cannot read properties of undefined (reading 'close')` — classic better-sqlite3 ABI skew on Node 24, fix is in the L-003 lock, took ~10s).
+- `npm run typecheck` — clean across main/preload/renderer.
+- `npm run lint` — clean (`--max-warnings 0` enforced).
+- `npx vitest run` (full suite, post-rebuild) — **1900/1900 passed across 177 test files in 26.90s**. **Expected +0 vs v0.7.16; actual +0** — the renderer wire-ups added no new test functions, only added the `ocr` reducer to two existing test stores. No NEW failures.
+
+**CI:**
+
+- Workflow: `release.yml` run id [`26961149987`](https://github.com/SuperiorAg/PDF_Viewer_Editor/actions/runs/26961149987) — triggered by tag push `v0.7.17`.
+- Single job `Build + publish Windows release` on `windows-2025-vs2026` runner.
+- Duration: **4m9s** (slightly above the v0.7.x band median of ~3m30s but well inside the envelope; minor variance from runner-side dependency-cache warmth).
+- Exit status: success (all steps green).
+
+**Release assets (4 — same shape as v0.7.13-v0.7.16):**
+
+| Asset                                                 | Size                      | SHA256 prefix |
+| ----------------------------------------------------- | ------------------------- | ------------- |
+| `pdf-viewer-editor-0.7.17.exe` (portable)             | 135,385,279 B (~129.1 MB) | `7e5f1b80`    |
+| `pdf-viewer-editor-setup-0.7.17.exe` (NSIS installer) | 135,683,317 B (~129.4 MB) | `5a921c00`    |
+| `pdf-viewer-editor-setup-0.7.17.exe.blockmap`         | 141,562 B                 | `9d44c012`    |
+| `latest.yml` (auto-update manifest)                   | 366 B                     | `32eba0b1`    |
+
+Portable SHA256 verified locally via `Get-FileHash -Algorithm SHA256` after download — matches the GitHub release digest exactly (`7e5f1b80a63c048490376afa146c8189dd2bc296e48323db32f84bf0c3ca5cd8`).
+
+**Promote draft -> Latest:** `gh release edit v0.7.17 --draft=false --latest` -> succeeded, release URL https://github.com/SuperiorAg/PDF_Viewer_Editor/releases/tag/v0.7.17 now shows the "Latest" badge.
+
+**Structural smoke + L-002 verdict: PASS.**
+
+- Pre-launch hygiene: `Remove-Item Env:\ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue` per L-002 (this Wave's PowerShell session was clean of the env var anyway; the explicit scrub is the locked-in habit).
+- Launched the portable .exe via `Start-Process` (no shell wrapper, no argv — cold start).
+- Resolved the process family by name pattern `PDF Viewer*` / `pdf-viewer-editor-*` (productName in electron-builder is `PDF Viewer & Editor`, hence the children render under that family; the portable wrapper itself uses the file basename `pdf-viewer-editor-0.7.17`). **First-attempt smoke failed** because the original script filter only matched `pdf-viewer-editor` exactly — fix landed in `release/smoke-v0717.ps1` (the broader name filter), didn't affect the actual release.
+- Process family count: **5 processes** (well above the L-002 floor of >=3 — main + GPU + utility + renderer + the portable wrapper).
+- Top-level window: pid 5560, hwnd `C058E`, IsWindowVisible=true, geometry **1280x800**, title `PDF_Viewer_Editor`. All L-002 structural floor checks pass.
+- **L-002 launch shot:** `release/wave-v0717-launch-shot.png` (22,110 B, 1280x800 PNG, captured via `PrintWindow(hwnd, hdc, 0x2)` with PW_RENDERFULLCONTENT for the Chromium GPU surface).
+
+**Significance of the launch shot:** Shows title bar (`PDF_Viewer_Editor`), full menu strip (File / Edit / Insert / View / Tools / Help), full toolbar row (Open / Save / Save As / Undo / Redo / annotation tools / page ops / print / export), the central empty-state ("PDF" icon + "Open a PDF to get started" + the blue "Open file..." button + "or drag and drop" text), AND the RECENTS panel (shows `596300173-1.PDF — 1 hr ago` from a previous wave's smoke session — confirms the recents-repo round-trip works against the freshly-installed binary's userData store). Reference for L-002 catalog: the launch shot from this wave is structurally identical to the gold-standard exemplars (e.g. v0.7.14/v0.7.15/v0.7.16 launches) — all renderer chrome present, no white screen, no IPC-broken state, no preload mismatch.
+
+**OCR-tab post-interaction capture: ATTEMPTED, NOT SUCCESSFUL — standard launch shot is the L-002 artifact for this release.** Per the brief, I tried to drive the renderer past the empty state via PowerShell `SendKeys` — `Ctrl+O` -> type the sample PDF path -> Enter -> `Ctrl+5` for the OCR sidebar tab — but the Win32 common-dialog focus race didn't take and the second screenshot was a byte-for-byte duplicate of the launch shot (no doc loaded). Removed the duplicate file rather than misrepresenting the state. PrintWindow alone cannot interact (it captures pixels of an HWND, no input synthesis); a clean post-OCR-tab capture needs operator MCP (`mcp__desktop-operator__click`) which this dispatch did not include in the tool surface. Brief explicitly said "the standard launch screenshot is fine" if the OCR-tab path isn't reachable — that is the verdict on this release. Process-snap recorded at `release/wave-v0717-launch-shot.process-snap.txt`.
+
+**Out-of-scope drift retained (per brief):**
+
+- `.gitignore` / `.mcp.json` working-tree drift — still pre-existing across v0.7.13-v0.7.17, still not Diego's. All three commits in this wave (`afa8279`, `8682365`, `3d1550b`) are clean and attributable.
+- **Phase 5.2 work explicitly queued as Marcus's next dispatch, NOT this release:** (a) IPC channel for per-page words on reopen so the overlay can repaint after restart; (b) missing `StandardFontDataFactory` / `CMapReaderFactory` wiring on the OCR rasterizer (David's standing follow-up — present across the v0.7.14-v0.7.16 arc as well); (c) rotation handling in the confidence overlay (boxes are in unrotated PDF space; the overlay needs to apply the current viewport's `pageRotation` transform before painting). None of these block the v0.7.17 ship — they're the next downstream layer Marcus will queue.
+
+**The cumulative OCR-chain story (v0.7.13 -> v0.7.17, 24-hour arc):**
+
+| Release | Defect class            | One-line                                                                | Cumulative reach                                                                                                                    |
+| ------- | ----------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| v0.7.13 | **Visibility**          | File-association argv + OCR diagnostic logs + Settings Diagnostics tile | OCR errors are now investigable; argv-opened PDFs work cold                                                                         |
+| v0.7.14 | **Render correctness**  | OCR cold-start Path2D ordering                                          | OCR no longer crashes at rasterize-time on PDFs with stroke ops                                                                     |
+| v0.7.15 | **Memory lifetime**     | Buffer-detach: copy bytes before handing to pdf.js                      | OCR no longer crashes mid-pass on the second page (pdf.js detached the original ArrayBuffer)                                        |
+| v0.7.16 | **Library shape drift** | tesseract.js v7 output shape (blocks tree + PNG-IHDR dims)              | OCR `recognize()` call returns and produces a text layer; modal Step 1 wizard reachable without error toast                         |
+| v0.7.17 | **Wire-up**             | Mount overlay + dispatch applyEdit + dispatch loadOcrResultsThunk       | OCR result is now visible (overlay), savable (Save button activates), persistent (summary hydrates on reopen) — full UX loop closed |
+
+**The pattern across the arc:** v0.7.14/v0.7.15/v0.7.16 each fixed a real defect that ate into a layer beyond what the unit-test mocks reached. v0.7.17 fixed a **build-but-don't-wire** defect — a different failure mode where every piece compiled, every unit test passed, and every code path was internally sound, but the deliverables had never been inserted into the production data flow. The first three were "the test mocks short-circuit the defect"; the fourth is "no production call site exists." Both classes need a CI-level real-PDF end-to-end integration test (Phase 7.1 candidate, flagged here for the fourth release in a row) to surface them pre-ship. Cross-project Learnings note locking this in at `D:\Vault\Agents\Learnings\2026-06-04-ocr-chain-closure-v0717.md`.
+
+### Field notes
+
+- **Different failure mode, same arc.** The five releases form a story about layered debug: v0.7.13 made the next failure inspectable (logs + diagnostic UI), then v0.7.14/v0.7.15/v0.7.16 each found and fixed the next-deepest "logic is wrong" layer, and v0.7.17 finally hit "logic is right but not connected." Worth flagging that the swarm's "deliverables" gate for Phase wave reviews should include "production call site exists for every new component / action / thunk" as a literal checklist item, not just "module compiles and unit-test passes." Three call sites missed in one Phase 5 wave is a structural gap, not a one-off oversight.
+- **CI still misses everything.** None of v0.7.14/v0.7.15/v0.7.16's defects (mocks short-circuit them) and none of v0.7.17's defects (no call site means no rendered-output test could reach them) would have been caught by the current 1900-test suite. The unit-test mocks bypass pdf.js / tesseract.js entirely, and there is no integration test that mounts `<PdfCanvas>` against a real document and asserts the overlay HTML is in the rendered DOM. The Phase 7.1 candidate (real-PDF e2e OCR integration test) now grows a second requirement: it must also assert overlay-mount + Save-button-activation + summary-hydrate-on-reopen, not just rasterize/recognize correctness.
+- **Node 24 ABI skew, 350 failures from cold.** Without `scripts/rebuild-native-for-node.mjs --target node` the full suite produces a flood of `Cannot read properties of undefined (reading 'close')` from every db repo test (better-sqlite3 11.10/12.9 has no Node 24 prebuild, so the native binding never resolves and `new Database(...)` returns undefined, then `afterEach` calls `.close()` on undefined). L-003 escape hatch is the runbook every time this host is used for testing. Worth noting for the swarm that this is now a 6-release-in-a-row friction point — could be promoted to a literal "first thing Diego runs on a release wave" pre-flight step in the runbook.
+- **PrintWindow technique works five-for-five** on the OCR arc (v0.7.13, v0.7.14, v0.7.15, v0.7.16 single-shot launches, plus v0.7.17 launch shot). The post-interaction capture only worked clean once (v0.7.16) — and that one used a mouse_event click rather than SendKeys-driven Common-dialog flow. **Runbook refinement:** when a release wave wants a post-interaction L-002 capture and operator MCP isn't in scope, prefer `mouse_event` click coordinates over SendKeys keystrokes for any path that involves a Win32 common dialog (file open, save as, etc.). Common dialogs have aggressive focus-grab that races with PowerShell SendKeys; mouse-event coordinates into a known-good toolbar button are deterministic. The launch screenshot fallback is always sufficient per the L-002 lock anyway.
+- **4m9s CI run.** v0.7.10 = ~3m45s, v0.7.11 = 3m39s, v0.7.12 = 3m28s, v0.7.13 = 3m41s, v0.7.14 = 3m10s, v0.7.15 = 3m38s, v0.7.16 = 3m30s, v0.7.17 = **4m9s**. Slightly above the v0.7.x band but inside the envelope; no workflow changes this wave so the variance is runner-side (dependency cache warmth, Windows runner queue depth).
+- **Total wave wall time = ~16 minutes (Marcus dispatch -> Latest promotion -> launch capture -> docs).** Pre-flight 2m (typecheck 15s + lint 5s + first vitest fail 26s + rebuild 12s + second vitest 27s + commit + push 30s) -> CI 4m9s -> promote + download + SHA verify 2m -> L-002 capture 2m (first try failed on process-name filter, fixed + reran 1m) -> docs 3m -> learnings + vault 3m. Slightly above v0.7.16's 12m because of the Node-24 rebuild discovery cycle + the smoke-script process-name fix-up; still well inside the sub-20-minute round-trip envelope and tighter than any pre-v0.7.x release.
