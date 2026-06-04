@@ -64,19 +64,15 @@ function startsWithPngMagic(bytes: Uint8Array): boolean {
 const run = canRunRealCanvas() ? describe : describe.skip;
 
 run('OCR production rasterizer (real @napi-rs/canvas binding)', () => {
-  it('installs Image/Path2D/ImageData/DOMMatrix on globalThis after tryLoadCanvas', () => {
-    const r = tryLoadCanvas();
-    expect(r.ok).toBe(true);
-    const g = globalThis as unknown as Record<string, unknown>;
-    // After tryLoadCanvas() succeeds, every class pdf.js may resolve via
-    // globalThis at render time must be present. Missing any of these is the
-    // v0.7.10 regression.
-    expect(typeof g['Image']).toBe('function');
-    expect(typeof g['Path2D']).toBe('function');
-    expect(typeof g['ImageData']).toBe('function');
-    expect(typeof g['DOMMatrix']).toBe('function');
-  });
-
+  // Order matters: this test MUST run before the explicit tryLoadCanvas test
+  // below. In production OCR fires cold — no prior tryLoadCanvas call — and
+  // the v0.7.13 bug was that loadPdfJs() loaded pdf.js BEFORE canvas globals
+  // were installed, so pdf.js captured a missing Path2D and built an internal
+  // polyfill the native ctx.fill() then rejected. Running the rasterize FIRST
+  // here exercises the cold-start path: if loadPdfJs forgets to install the
+  // globals before importing pdf.js, this test surfaces the regression. The
+  // explicit-tryLoadCanvas test below would mask the bug by installing the
+  // globals first.
   it('rasterizes a real text page to PNG bytes without the String/Path error', async () => {
     const bytes = await makeTextPdf();
     const rec = documentStore.register({
@@ -98,5 +94,18 @@ run('OCR production rasterizer (real @napi-rs/canvas binding)', () => {
     } finally {
       documentStore.release(rec.handle);
     }
+  });
+
+  it('installs Image/Path2D/ImageData/DOMMatrix on globalThis after tryLoadCanvas', () => {
+    const r = tryLoadCanvas();
+    expect(r.ok).toBe(true);
+    const g = globalThis as unknown as Record<string, unknown>;
+    // After tryLoadCanvas() succeeds, every class pdf.js may resolve via
+    // globalThis at render time must be present. Missing any of these is the
+    // v0.7.10 regression.
+    expect(typeof g['Image']).toBe('function');
+    expect(typeof g['Path2D']).toBe('function');
+    expect(typeof g['ImageData']).toBe('function');
+    expect(typeof g['DOMMatrix']).toBe('function');
   });
 });

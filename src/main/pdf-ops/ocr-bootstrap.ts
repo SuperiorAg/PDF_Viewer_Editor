@@ -178,6 +178,16 @@ let _pdfjs: PdfJsModule | null = null;
 
 async function loadPdfJs(): Promise<PdfJsModule> {
   if (_pdfjs !== null) return _pdfjs;
+  // Canvas globals (Path2D/Image/DOMMatrix/ImageData/DOMPoint) MUST be on
+  // globalThis BEFORE pdf.js's legacy module is evaluated. pdf.js v4 captures
+  // whether `globalThis.Path2D` exists at load time and builds an internal
+  // `Path` polyfill if absent — and @napi-rs/canvas's `ctx.fill(path)` rejects
+  // that polyfill with "Value is none of these types `String`, `Path`,". This
+  // mirrors `src/main/export/export-bootstrap.ts:ensurePdfJs` which had the
+  // same fix for export. `tryLoadCanvas()` is idempotent and side-effects the
+  // global install; we ignore its return value here (rasterizePageProd reads
+  // it later for the createCanvas function + the actionable error message).
+  tryLoadCanvas();
   const moduleName = 'pdfjs-dist' + '/legacy/build/pdf.mjs';
   // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
   const mod = (await import(moduleName)) as PdfJsModule;
