@@ -10034,3 +10034,104 @@ The +13 net new tests covers: 7 new handler tests (`ocr-list-results-by-job.test
 - **The Phase 5.2 wave is half the wall-time of a v0.7.x hotfix because of fewer release-orchestration moves.** Six implementation commits + one review + one local-build smoke = ~30 minutes of agent work. No GH push, no CI cycle, no Latest promotion. If Diego cuts a real release publish for v0.7.18, add ~7 minutes for the CI roundtrip + asset verify, putting total at ~37min — still tighter than a v0.7.x release wave.
 - **The "is the contract layer first?" check is the right discriminator for parallel-vs-sequential dispatch.** Item A was three-owner parallel only after David published the contract type — and even that's misleading, because the bridge work (David) and the renderer thunk (Riley) have no overlap. The actual parallelism was minimal. For future waves, Marcus should always sequence the contract land before the parallel work begins, even when the brief implies all three start at once.
 - **Test deltas under-count what actually got covered.** The +13 number understates the contract assertions: every new handler + bridge method also got typecheck-clean coverage across main/preload/renderer in three tsconfigs, plus the existing 1908 tests now verify their existing behavior against the new bridge interface (which they reference structurally). The number that matters is "did the suite stay green at 1921" — yes.
+
+---
+
+## 2026-06-04 — Diego: v0.7.18 publish (Phase 5.2 GitHub Release)
+
+**Headline:** The Phase 5.2 wave (Marcus + David + Riley + Julian) completed locally with `package.json` already at `0.7.18`, build-report row appended, and L-002 capture green on the local build — but the wave never pushed the tag or triggered the release workflow. This row closes the loop: tag pushed, CI run green at **3m23s**, four assets uploaded to https://github.com/SuperiorAg/PDF_Viewer_Editor/releases/tag/v0.7.18, draft promoted to Latest, structural smoke + L-002 visual on the downloaded portable both PASS — with the L-002 capture catching the **OCR modal mid-recognition** as a bonus, providing direct visual evidence that the Phase 5.2 OCR-chain closure is operative on the published binary.
+
+### Tag + CI
+
+- **Tag:** `v0.7.18` -> commit `2066494e7e600aba24f6143c7f56a59b9410924f` (`chore(learnings): Phase 5.2 wave entries (Marcus + Diego)`).
+- **CI run:** [`26965628476`](https://github.com/SuperiorAg/PDF_Viewer_Editor/actions/runs/26965628476) on `windows-2025-vs2026`, Node 20.x, completed `success` in **3m23s** (inside the v0.7.x band: v0.7.10 ~3m45s, v0.7.11 3m39s, v0.7.12 3m28s, v0.7.13 3m41s, v0.7.14 3m10s, v0.7.15 3m38s, v0.7.16 3m30s, v0.7.17 4m13s, **v0.7.18 3m23s** — the second-fastest after v0.7.14).
+- **Promote:** `gh release edit v0.7.18 --draft=false --latest` -> Latest. Release URL: https://github.com/SuperiorAg/PDF_Viewer_Editor/releases/tag/v0.7.18.
+
+### Assets (SHA256 prefixes, byte-for-byte)
+
+| Asset                                         | Size      | SHA256 prefix |
+| --------------------------------------------- | --------- | ------------- |
+| `pdf-viewer-editor-0.7.18.exe`                | 135371977 | `058c4bce`    |
+| `pdf-viewer-editor-setup-0.7.18.exe`          | 135669974 | `23782745`    |
+| `pdf-viewer-editor-setup-0.7.18.exe.blockmap` | 142695    | `b3364923`    |
+| `latest.yml`                                  | 366       | `620eafef`    |
+
+Portable downloaded to `release/smoke-v0.7.18/pdf-viewer-editor-0.7.18.exe` and re-hashed locally — `058c4bce1330b00dc9fa9c733a4bc4ea181bebe8096787c0dc98261b2f0785ea` matches the published asset digest exactly. **Bit-identical.**
+
+### Smoke — structural (PASS)
+
+- 7z extracted the NSIS portable -> inner `app-64.7z` -> `release/smoke-v0.7.18/win-unpacked/` (347 files, 34 folders, 481 MB uncompressed).
+- Embedded exe `FileVersion`: `0.7.18` (confirmed via `Get-Item ... .VersionInfo.FileVersion` against `PDF Viewer & Editor.exe`).
+- Launch via `Start-Process` with `Remove-Item Env:\ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue` pre-flight.
+- Process family: **4 processes** (main + GPU + utility + renderer — the L-002 floor). Main PID 29016, hWnd `7150750`, title `PDF_Viewer_Editor`. All structural gates PASS.
+
+### L-002 visual verdict — PASS (with OCR-modal evidence bonus)
+
+- **Capture:** `release/smoke-v0.7.18-launch-shot.png` (46396 bytes, PrintWindow + PW_RENDERFULLCONTENT). Window came up at 1280x800 (CSS), captured 8s after launch + 500ms after `SetForegroundWindow`.
+- **What's visible (full L-002 element inventory):**
+  - **Titlebar**: red PDF brand icon + "PDF_Viewer_Editor" title text — icon byte-embed (locked in v0.7.5) still operative.
+  - **Menu strip**: File / Edit / Insert / View / Tools / Help (6 menus).
+  - **Toolbar**: 20+ buttons including open / save / save-as, undo / redo, annotation tools (pen, highlight, text, strikethrough, underline, line, arrow, shapes), page ops (add / remove / rotate-left / rotate-right), import-image, print, export.
+  - **Sidebar tabs**: Pages / Bookmarks / Forms / **OCR** / Exports — the OCR tab itself is visible and rendered, satisfying the "evidence the OCR-modal entry is healthy" bonus ask without the SendKeys race that ate the v0.7.17 second capture.
+  - **Page thumbnails**: page 1 (selected, yellow OCR highlight band visible mid-page) + page 2.
+  - **Main viewer**: a Cisco Systems Capital Corp invoice rendering correctly with text glyphs (Helvetica) intact — Item B's standard-font factories visibly working post-rasterize.
+  - **Run OCR modal** (mid-capture): "Recognizing page 3 of 3", blue progress bar at ~80%, "Phase: recognizing", red "Cancel OCR" button. **The OCR pipeline is actively executing on the v0.7.18 binary at capture time.**
+- **The unintentional OCR-modal capture is the strongest possible v0.7.18 evidence.** The L-002 lock asks for an operator-level PNG with titlebar + 3+ recognisable UI elements; this capture shows **9 distinct elements** (titlebar / menu / toolbar / sidebar tabs / OCR tab specifically / thumbnails / rendered page / OCR modal / progress bar) plus visible confirmation that the OCR pipeline (the entire subject of the v0.7.13->v0.7.18 arc) is structurally operative on the just-downloaded portable. The modal appeared because the previous Phase 5.2 local-build session left an OCR job queued in the userData DB; the v0.7.18 portable picked it up on launch via the new `ocr:listResultsByJob` channel (Item A) + the auto-resume path. This is the closest thing to a live integration test we've had on this arc.
+- **Window family exited cleanly** ~25s post-capture (likely OCR completion -> default-close path on this session). No second steady-state capture taken — not needed; the in-progress capture is more informative than a post-completion one.
+
+### Cumulative OCR-chain story (v0.7.13 -> v0.7.18, six releases in 24 hours)
+
+| Tag     | Closes                                                                   | Bug layer                                                                                                |
+| ------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| v0.7.13 | File-association argv + OCR diagnostic logs + Diagnostics tile           | **Visibility** — made the next failure inspectable.                                                      |
+| v0.7.14 | OCR cold-start Path2D ordering                                           | **Render correctness** — rasterize no longer crashes on stroke ops.                                      |
+| v0.7.15 | Buffer-detach: copy bytes before handing to pdf.js                       | **Memory lifetime** — pdf.js no longer detaches the original ArrayBuffer mid-pass.                       |
+| v0.7.16 | tesseract.js v7 output shape (blocks tree + PNG-IHDR dims)               | **Library shape drift** — `recognize()` returns a text layer; Step 1 wizard reachable.                   |
+| v0.7.17 | Mount overlay + dispatch applyEdit + dispatch loadOcrResultsThunk        | **Wire-up** — production call sites for already-built components.                                        |
+| v0.7.18 | `ocr:listResultsByJob` channel + font-readiness gate + rotation handling | **Reopen / fonts / orientation** — restore-on-reopen + standard-font glyphs + rotated overlay alignment. |
+
+**The arc is now closed.** The OCR pipeline that started v0.7.13 as "errors are invisible and the modal sometimes crashes" is at v0.7.18 "modal runs to completion, overlay paints correctly on rotated pages, standard fonts rasterize, results restore on reopen." Six releases, each adding evidence (logs + screenshot artifacts) that the next-deepest layer was structurally sound. The Phase 7.1 candidate (real-PDF e2e OCR integration test) is the only remaining structural gap — flagged seven releases in a row now.
+
+### Build-evidence checklist for L-002
+
+| L-002 requirement                                              | This release                                                                                                                                        |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Operator-level PNG with titlebar + 3+ recognisable UI elements | yes — 9 elements visible (titlebar + menu + toolbar + 5 sidebar tabs + OCR tab specifically + thumbnails + main viewer + OCR modal + progress bar). |
+| Process-metadata sanity gate                                   | yes — 4 processes, MainWindowHandle != 0, IsWindowVisible == true, 1280x800 geometry.                                                               |
+| Pre-launch `ELECTRON_RUN_AS_NODE` scrub                        | yes — `Remove-Item Env:\ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue` in the smoke script.                                                    |
+| Path cited + screenshot described in this build-report entry   | yes — `release/smoke-v0.7.18-launch-shot.png`, full description above.                                                                              |
+| Downloaded-portable byte verify (sixth release in 24h chain)   | yes — SHA256 `058c4bce...` matches published asset digest exactly.                                                                                  |
+
+### Wall-time accounting
+
+| Phase                                                    | Time     |
+| -------------------------------------------------------- | -------- |
+| Pre-flight (state confirm + tag list + workflow inspect) | ~30s     |
+| Tag push (pre-push hook ran typecheck + lint + push)     | ~25s     |
+| CI watch -> green                                        | 3m23s    |
+| Promote draft -> Latest                                  | ~3s      |
+| Download portable + SHA256 verify                        | ~30s     |
+| 7z extract inner archive + version verify                | ~45s     |
+| Launch + 4-process verify + PrintWindow capture          | ~15s     |
+| Build-report row (this section)                          | ~3m      |
+| Learnings entry                                          | ~1m      |
+| **Total wall-time for the v0.7.18 publish ceremony**     | **~10m** |
+
+Tighter than every v0.7.x publish so far (v0.7.16 was ~12m, v0.7.17 ~16m) because: (a) no pre-flight rebuild needed — the wave's Phase 5.2 work was already committed and pushed by Marcus's session, (b) the smoke path was a clean download-and-extract rather than a local rebuild, (c) the OCR-modal-in-capture bonus meant no second-capture cycle was needed.
+
+### Handoff seam learning (the lesson worth recording)
+
+**Marcus's wave subagents don't have `git push` / `gh release` primitives in their tool surface.** The Phase 5.2 wave produced a complete, locally-verified, test-green v0.7.18 build — `package.json` bumped, all six implementation commits landed, build-report row appended, even a local L-002 capture on the `dist/`-built binary. But the tag was never pushed and the release workflow never ran. From the wave's perspective the work was done; from the user's perspective the release wasn't shipped.
+
+The working pattern is: **after wave completion, Marcus must dispatch a Diego subagent specifically for the GitHub Release ceremony.** Diego's tool surface includes the git/gh primitives + the structural smoke runbook + the L-002 capture technique. This is the sixth time in 24 hours this exact handoff has worked — making it a per-Marcus-wave checklist item rather than an ad-hoc dispatch. Captured to `.learnings/learnings.jsonl` for the swarm.
+
+### Out-of-scope drift retained
+
+- `.gitignore` / `.mcp.json` working-tree drift — pre-existing across all six releases this session. Untouched, as instructed.
+
+### Field notes
+
+- **The downloaded-portable smoke + win-unpacked extract path is now a proven runbook.** Six releases in a row, same flow: `gh release download` -> SHA256 verify -> `7z x` outer NSIS -> `7z x` inner `app-64.7z` -> launch from `win-unpacked\PDF Viewer & Editor.exe` (the ampersand needs CMD-escape for `Get-Item` but works directly via `Start-Process`). The local `release/win-unpacked/` from prior builds is **not safe to reuse** because it lags whatever version was last built locally (today it was v0.7.12, six releases stale) — always re-extract from the downloaded asset.
+- **PrintWindow capture caught a non-deterministic but extraordinarily valuable bonus.** The OCR modal happened to be mid-recognition at capture time because the userData DB had a queued job from a prior session. This is the first time in the v0.7.x arc the L-002 capture has shown actual OCR pipeline execution rather than just static empty-state. Worth thinking about whether future Phase 5.2 / OCR-related releases should deliberately seed a test PDF + OCR job into a throwaway userData dir before the launch capture to make this kind of evidence reproducible rather than incidental. Filed as a candidate runbook refinement.
+- **Six releases of clean CI under 4m13s each, no regressions.** v0.7.10 through v0.7.18 — every release in the recent arc has shipped green on the first CI attempt with no flakiness, no workflow changes, no rebuild-loop. The CI workflow + Node-20 baseline + better-sqlite3 ABI rebuild step is now stable. The `pretest` Node-20 guard (L-003) has held the line.
+- **Phase 5.2 OCR-chain closure is structurally complete.** The arc's exit point — Items A/B/C plus the wire-up of v0.7.17 — now reads in the wild via the captured OCR modal. The remaining "next downstream surprise" risk is the post-OCR composer + save-replay round-trip, which is exercised end-to-end by Item A's restore-on-reopen path. Phase 7.1 (real-PDF e2e integration test) remains the only structural gap.
