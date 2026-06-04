@@ -2145,7 +2145,9 @@ If your saved file's OCR text is selectable in PDF_Viewer_Editor but Adobe Reade
 - Check **View → Toggle OCR confidence overlay** is enabled (or press **Ctrl+Shift+H**).
 - Confirm the document has OCR results — switch the sidebar to the [OCR results panel](#ocr-results-panel) and verify per-page word counts are populated. If the panel is empty, run OCR first.
 - Lower the threshold in Settings → OCR → Low-confidence threshold. If all your words are above 80 confidence, the default threshold of 60 surfaces nothing.
-- After reopening the document, the per-word data may not be rehydrated (M-21.5 carry-over to Phase 5.1). Re-run OCR to repopulate.
+- **As of 0.7.18:** reopening a previously-OCR'd document now rehydrates the per-word data automatically via the new `ocr:listResultsByJob` channel. No need to re-run OCR. If the overlay is still empty after reopen, the `ocr_results` table may have been cleared (e.g. by an explicit "Clear OCR data" action) — re-run OCR.
+- **As of 0.7.18:** boxes now position correctly on rotated pages (90 / 180 / 270 degrees). If you're on an older build (0.7.17 or earlier) and the boxes look offset on a rotated page, that's the pre-fix behavior — update to 0.7.18.
+- **As of 0.7.18:** PDFs with non-embedded standard fonts (Helvetica / Times / Symbol — the PDF 1.7 base-14 set) now OCR correctly. If you've been seeing very low confidence (e.g. 22 words at 28.5 mean confidence with 81.8% low-confidence) on a text-heavy PDF that displays fine on screen, that's the pre-fix symptom — the rasterizer was leaving the standard-font glyphs blank, so Tesseract saw an empty image. Update to 0.7.18 and re-run OCR.
 
 ### "Scanner unavailable" or "Scan from device" disabled (Phase 5.1)
 
