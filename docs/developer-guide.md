@@ -924,6 +924,37 @@ function expectErr<E extends string>(res: Result<unknown, E>, e: E): void {
 
 When you add a new handler test, prefer this shape over the silent-pass `if` pattern.
 
+### Running the OCR integration test
+
+`tests/e2e/ocr-integration.spec.ts` (Phase 7.1, shipped in v0.7.19) is the load-bearing end-to-end OCR gate. It opens a deterministically-generated scanned-image-only fixture, seeds a queued OCR job through a test-only IPC channel (`__test:seedOcrJob`, registered only when `NODE_ENV === 'test'`), drives `pdfApi.ocr.runOnDocument` to completion, asserts the OCR modal reaches `completed` with ≥20 recognized words and ≥60% mean confidence, and asserts the overlay slice (`state.ocr.pageResultsByPage`) hydrated from the run payload. A second, env-gated test exercises the close-and-reopen path: the app shuts down, relaunches against the same `userDataDir`, and asserts `loadOcrResultsThunk` rehydrates the same `summary.jobId` and the same word count out of SQLite — the exact v0.7.18 reopen-restore failure signature.
+
+#### Running locally
+
+The single-launch happy path (Phases A–C — open, OCR run-to-completion, overlay paint) runs as part of the default e2e job:
+
+```bash
+npm run e2e -- --grep "ocr-integration"
+```
+
+Playwright launches Electron via `_electron.launch()` and sets `NODE_ENV=test` on the spawned process automatically (`tests/e2e/ocr-integration.spec.ts:145`); you do not need to export it in your shell. The spec runs against the dev-mode bundle out of `dist/main/`, takes ~50–75 s on a warm Windows host, and is the gate that runs on every PR.
+
+The relaunch-restore path (Phases D + E — close, reopen, assert overlay restoration) is skipped in the default run because the dev-mode bundle out of `dist/main/` does not currently include the SQLite repo modules — the in-memory OCR bridge wins, and the reopened app cannot read back the prior session's `ocr_jobs` row. To exercise that path you need a packaged binary plus an env opt-in:
+
+```bash
+npm run dist:win
+OCR_E2E_RELAUNCH_RESTORE=1 npm run e2e -- --grep "ocr-integration"
+```
+
+Use this whenever you touch the OCR-restore code path (`loadOcrResultsThunk`, `ocr:listJobs`, `ocr:listResultsByJob`, or the SQLite-backed OCR bridge in `src/main/index.ts`). The follow-up tracked in [`docs/code-review.md`](code-review.md) (finding 7.1.5) wires dev-mode SQLite repo bundling so this gate runs unconditionally in CI; see the Phase 7.1 row in [`docs/build-report.md`](build-report.md) for the open Phase 7.2 carry-over.
+
+#### Fixture provenance
+
+All OCR fixtures and their generator live under [`tests/fixtures/pdfs/`](../tests/fixtures/pdfs/README.md). That README is the source of truth for provenance, license verification, the deterministic regeneration recipe, and the `expected-hashes.json` lockfile. Do not duplicate provenance facts in code or in this guide — link there.
+
+#### Adding a new OCR fixture
+
+Drop a public-domain source block at `tests/fixtures/pdfs/source/<slug>.txt`, then add a `generate('<slug>.pdf', ['<slug>.txt'])` call to `main()` in `tests/fixtures/pdfs/scripts/generate-fixtures.mjs` and run `node tests/fixtures/pdfs/scripts/generate-fixtures.mjs`. The generator writes the new fixture and updates `expected-hashes.json`; CI runs `verify-hashes.mjs` before the e2e job to catch any drift or substitution. Document provenance for the new fixture in `tests/fixtures/pdfs/README.md` (one row in the fixture table plus any source-specific notes), and keep the source font as **Liberation Sans Regular** from `node_modules/pdfjs-dist/standard_fonts/LiberationSans-Regular.ttf` (OFL 1.1, already bundled via `pdfjs-dist`) — do not introduce a new font without re-running the project's permissive-license check.
+
 ---
 
 ## Adding a new IPC channel — worked example
