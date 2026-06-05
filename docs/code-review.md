@@ -2740,3 +2740,200 @@ All eight new public exports have at least one production call site OR a documen
 ### Verdict (final)
 
 **GO — Diego cleared to cut v0.7.18.** No blockers, no L-001/L-002/L-003 violations, no ratchet regressions. Three documented LOW findings + three INFO notes are all acceptable. The Phase 5.2 closure of the OCR pipeline is complete: on-reopen overlay restore, standard-font glyph rendering, and rotation-correct confidence-box placement are all in place with regression tests guarding each.
+
+---
+
+## Phase 7.1 — Real-PDF e2e OCR integration test (review 2026-06-05)
+
+**Reviewer:** Julian (Director of Code Quality & Security Audit).
+**Scope:** `tests/e2e/ocr-integration.spec.ts` (Diego, b61f516), `tests/fixtures/pdfs/**` (Diego, 67c74c5), `.github/workflows/ci.yml` fixture-verify step (Diego, 85b0325), `src/ipc/handlers/test-seed-ocr-job.ts` + `src/ipc/register.ts` + `src/preload/index.ts` + `src/ipc/contracts.ts` + `docs/api-contracts.md` Phase 7.1 amendment (David, 4f272e8).
+**Design contract:** `docs/phase-7.1-test-design.md` (Riley).
+
+### Summary table
+
+| Focus area                           | Verdict              | Critical | High | Medium | Low |
+| ------------------------------------ | -------------------- | -------: | ---: | -----: | --: |
+| 1. Fixture sanity + lockfile ratchet | PASS                 |        0 |    0 |      0 |   1 |
+| 2. CI runtime budget vs. 90s         | PASS                 |        0 |    0 |      0 |   1 |
+| 3. False-positive risk               | PASS                 |        0 |    0 |      1 |   1 |
+| 4. False-negative risk + catch-cov   | ACCEPT-with-followup |        0 |    1 |      0 |   0 |
+| 5. L-004 + L-005 grep compliance     | PASS                 |        0 |    0 |      0 |   0 |
+| 6. Structural NODE_ENV gate          | PASS                 |        0 |    0 |      0 |   0 |
+
+**Final verdict: GO-with-follow-up.** Wave 3 clears Wave 2 to advance to Nathan (Wave 4) and the v0.7.19 release ceremony. The single major finding (Phase D+E `.skip()` on dev-mode harness) is **accepted** with an explicit Phase 7.2 follow-up obligation logged in this review and Diego's wave learnings. Rationale below in §4.
+
+### Focus 1 — Fixture sanity, provenance, lockfile ratchet
+
+**Verdict: PASS.**
+
+Findings:
+
+1. **Provenance:** every PDF in `tests/fixtures/pdfs/` is regenerable from `scripts/generate-fixtures.mjs`. Source text in `source/lorem.txt` + `source/lorem-page2.txt` is canonical public-domain Lorem Ipsum (no copyrighted authorship, no PII, no third-party logos). README.md explicitly cites OFL 1.1 with the verbatim copyright lines from `node_modules/pdfjs-dist/standard_fonts/LICENSE_LIBERATION`.
+2. **Font license:** I re-verified `LICENSE_LIBERATION` at `node_modules/pdfjs-dist/standard_fonts/LICENSE_LIBERATION`. First 15 lines confirm "Digitized data copyright (c) 2010 Google Corporation... Copyright (c) 2012 Red Hat, Inc.... This Font Software is licensed under the SIL Open Font License, Version 1.1." Same license family as the DejaVu Sans Riley §1.3 proposed (also OFL 1.1). Riley §7.2 explicitly authorized a bundled-font fallback; Liberation Sans is bundled, OFL 1.1, metric-compatible with Arial. Compliant with the project's permissive-OSS-only policy.
+3. **Lockfile ratchet pattern:** `expected-hashes.json` pins SHA256 + byte counts of both fixtures. `verify-hashes.mjs` runs in CI BEFORE Tesseract (5-second hash check vs. ~3-4 min wasted recognition on substituted bytes). The generator's in-memory determinism self-check (`generate-fixtures.mjs` line 181-191) aborts WITHOUT writing if the same input yields different output. I re-hashed both fixtures on disk; both match the lockfile exactly:
+   - `scan-1p-eng.pdf`: `2119bd7635792b2d7cbaba0c9003b5ca0b826d16fa45046bcd7fba18ea866b51` (91767 bytes) ✓
+   - `scan-2p-eng.pdf`: `dc55bf1b315a540cb2d44c95fc6097de918883a55c3233f7dbb50a0fa8e4180b` (183654 bytes) ✓
+4. **L-004/L-005 generator-script scope:** the generator imports `pdf-lib` directly (line 58). This is correct — pdf-lib is NOT pdf.js (different library, different code path), and the locks specifically protect `pdfjs.getDocument({data})` + `await import('pdfjs-dist/...')` patterns. The generator never loads pdf.js. Riley §6.2 explicitly distinguishes the harness scope; generator tooling is offline / ahead-of-time, not part of the harness.
+
+| ID    | Severity | Location                        | Description                                                                                                                                                                                                                                                                                                       | Status |
+| ----- | -------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 7.1.1 | LOW      | `generate-fixtures.mjs:166-172` | The `useObjectStreams: false` choice produces a classic xref table for byte-stability. Note for future maintainers: a pdf-lib minor that changes default whitespace inside content streams would break the lockfile. The README already says "regenerate + commit both in the same commit"; accept as documented. | OPEN   |
+
+### Focus 2 — CI runtime budget vs. 90s ceiling
+
+**Verdict: PASS.**
+
+Findings:
+
+1. **Local wall time observed:** Diego's wave entry reports 4.0s on his local Windows. Riley §4 budget was 75s with 15s headroom. The 4.0s figure is for Phases A–C only (Phase D+E skipped — see §4 below).
+2. **Phase A budget tail:** Diego's spec adds a `BUDGET_BRIDGE_READY_MS = 15_000` for first-launch preload bridge attach. The CI runner cold-starts: `npm ci` + Electron bundle build + `npx playwright install chromium` + `npm rebuild` already happened earlier in the job. By the time `npm run e2e` runs, SQLite ABI is bound, Playwright Chromium is cached. Cold first-launch ≤15s is realistic.
+3. **Phase B (Tesseract):** the bundled `eng.traineddata.gz` is seeded into `userDataDir/tessdata` in `beforeEach` (spec lines 211-219). No language pack download at runtime. Single-page DejaVu/Liberation Lorem @ 200 DPI on tesseract.js v7 measured 2.1s locally per Diego. 25s budget = 12x slack. No cold network download risk.
+4. **Playwright config vs. spec override:** `playwright.config.ts:9` sets `timeout: 60_000`. The spec calls `test.setTimeout(90_000)` (line 240) which overrides per-test. This works in Playwright — per-test override takes precedence. No conflict, but worth noting that any future maintainer who removes the per-test `setTimeout` would silently regress the e2e to a 60s ceiling.
+
+| ID    | Severity | Location                      | Description                                                                                                                                                                                                                                                                                                                     | Status |
+| ----- | -------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 7.1.2 | LOW      | `ocr-integration.spec.ts:240` | The spec's `test.setTimeout(90_000)` is what gives this test the 90s ceiling — playwright.config.ts global is 60s. A future test that copy-pastes the structure without the override silently downgrades to 60s. Consider promoting the 90s ceiling to the playwright config for the OCR suite once a second e2e spec needs it. | OPEN   |
+
+### Focus 3 — False-positive risk
+
+**Verdict: PASS** (one medium worth tracking).
+
+Walk of every assertion floor for flake risk on the slow `windows-2025-vs2026` runner:
+
+1. **`summary.totalWords >= 20`** (FLOOR_TOTAL_WORDS, line 107). Calibration runs report 81 words on Liberation Sans Lorem @ 200 DPI (Diego's wave entry). The floor is **4x** under calibration — Tesseract minor-version word-count drift on the same image would have to lose 75%+ of words to trip. Acceptable.
+2. **`summary.meanConfidence >= 60`** (FLOOR_MEAN_CONFIDENCE, line 108). Calibration: 93.7%. Floor is 33 percentage points below calibration. Tesseract drift would have to drop mean confidence by a third to flake. Acceptable.
+3. **`status === 'completed'`** (line 357). This is binary — no flake surface.
+4. **`pageResults.length >= 1`** (line 412). Binary — no flake surface.
+5. **`page0.words.length >= FLOOR_TOTAL_WORDS`** (line 418). Same 4x slack as #1. Acceptable.
+6. **`completedJobs.length >= 1`** (line 490). Binary — no flake surface.
+7. **`allErrors === []`** (line 504). Diego's wave entry flags: **GPU warning on stderr does NOT trip the renderer console gate today, but a future Chromium update could.** Diego pre-emptively scoped the filter to exact-match `msg.type() === 'error'` (line 122) excluding `'warn'`. Worth tracking — a Chromium major could emit new error-level renderer messages (especially Webgl / GPU-blocklist messages on the headless GitHub runner). Medium risk because the assertion message gives a complete error string in failure, which makes diagnosis fast.
+8. **Phase-level budget assertions** (lines 374-377, 421): each phase has an internal `expect(phaseMs).toBeLessThan(budget)` clause. If the runner is slower than calibration, Phase B's 25s assertion fires with `Phase B exceeded 25000ms budget` rather than the test-level 90s timeout killing it silently. Good failure-localization.
+
+| ID    | Severity | Location                          | Description                                                                                                                                                                                                                                                                                                            | Status |
+| ----- | -------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 7.1.3 | MEDIUM   | `ocr-integration.spec.ts:121-126` | The console-error collector filters exact-match `'error'`. A future Chromium update could promote a renderer warning (WebGL / GPU-blocklist) to `error` level on the headless GitHub runner. Recommend: file as an allow-list followup (specific known-benign strings allowed) before the first false-positive lands.  | OPEN   |
+| 7.1.4 | LOW      | `ocr-integration.spec.ts:107-108` | The 20-word / 60% floors are correct given 81/93.7% calibration. Recommend: log the actual calibration numbers in the spec's header comments so a future maintainer doesn't lower the floor on a `localized fixture without re-calibrating. (Diego's commit msg + Riley §5.1 already cover this; minor docs nit only.) | OPEN   |
+
+### Focus 4 — False-negative risk + v0.7.13→v0.7.18 catch-coverage walk
+
+**Verdict: ACCEPT-WITH-FOLLOWUP** (the only major finding of this review).
+
+Per-release walk, verified against the spec code (not just Riley's §5.2 design):
+
+| Release | Bug class                                                           | Riley §5.2 prediction | Spec verifies?                                                                                                                                                                                                     | Verdict                                                                                                                                 |
+| ------- | ------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| v0.7.13 | Diagnostic logs + Diagnostics tile (observability, not runtime)     | NO (n/a)              | Out of scope. Console-error collector exists.                                                                                                                                                                      | N/A                                                                                                                                     |
+| v0.7.14 | Path2D ordering crash during cold-start rasterize (L-005 ancestor)  | YES                   | Spec line 354-357: `summary.status === 'completed'`. Polyfill-ordering bug → main process throws inside rasterize → `runOnDocument` returns `{ok:false}` → assertion fails with attributable message citing L-005. | CAUGHT                                                                                                                                  |
+| v0.7.15 | Buffer-detach: pdf.js detaches the rasterize input (L-004 ancestor) | YES                   | Spec line 358-362: `summary.totalWords >= 20`. v0.7.15 signature was zero-length tesseract reads → 0 words returned. The 20-word floor is exactly that signature. Failure msg cites L-004.                         | CAUGHT                                                                                                                                  |
+| v0.7.16 | tesseract.js v7 output-shape drift (blocks tree + PNG IHDR dims)    | YES                   | Spec line 354-357: status would not reach `completed`. Modal stalls in `recognizing`; 25s budget asserts at line 374-377.                                                                                          | CAUGHT                                                                                                                                  |
+| v0.7.17 | Mount-overlay + dispatch wire-up missing in production call sites   | YES                   | Spec line 408-412: `pageResults.length >= 1` against `listResultsByJob`. v0.7.17 signature was successful OCR but no ocr_results rows inserted into the DB. Exactly this probe.                                    | CAUGHT                                                                                                                                  |
+| v0.7.18 | `ocr:listResultsByJob` channel + reopen restore + rotated overlay   | YES                   | Phase D+E `.skip()`d in dev-mode harness because `dist/main/` doesn't bundle the SQLite repo modules. v0.7.18 reopen-restore bug would NOT be caught on a dev-mode CI run as currently configured.                 | **NOT-CAUGHT in dev harness** — covered at unit tier by `loadOcrResultsThunk` 6 references in `src/client/state/thunks-phase5.test.ts`. |
+
+**Catch-coverage summary: 4/6 v0.7.x releases caught at the e2e tier**, +1 covered at unit tier, +1 observability-only (uncatchable by integration test). Riley §5.2 claimed 5/6; the actual count drops by 1 because of the Phase D+E skip.
+
+**Why I'm calling this ACCEPT-with-follow-up, not BLOCK:**
+
+1. Phase 7.1's **stated goal** in the plan is "make the modal-mid-recognition capture reproducible in CI" — that is Phases A–C, which all land cleanly.
+2. The reopen-restore bug (v0.7.18) has **defense in depth at the unit tier**: `loadOcrResultsThunk` has 6 references in `thunks-phase5.test.ts` covering the listJobs→listResultsByJob chain. A regression of the v0.7.18 class would fail at the unit job before reaching the e2e job.
+3. Phase 7.2 fix is real engineering work (dev-mode SQLite repo bundling = a build-config change to `electron.vite.config.ts` to include `src/db/repositories/*.ts` in the main bundle, or an electron-builder install hook). Out of scope for Phase 7.1.
+4. The `OCR_E2E_RELAUNCH_RESTORE=1` env-gated escape hatch is properly documented in `ocr-integration.spec.ts:525-528` for packaged-binary runs.
+5. The release-ceremony L-002 capture for v0.7.19 can still trigger the OCR modal by seeding via the production-side path (David's `pdfApi.__test` is test-only, but the natural path — open a fixture + run OCR — is operative on the packaged binary).
+
+| ID    | Severity | Location                          | Description                                                                                                                                                                                                                                                                                                                                                                                                       | Status           |
+| ----- | -------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| 7.1.5 | HIGH     | `ocr-integration.spec.ts:423-528` | Phase D+E `.skip()` on dev-mode harness because `dist/main/` doesn't bundle SQLite repo modules. v0.7.18 reopen-restore bug NOT caught on dev-mode CI run. Mitigated by unit-tier coverage of `loadOcrResultsThunk`. Phase 7.2 follow-up obligation: wire dev-mode SQLite repo bundling (Diego: electron.vite config change OR David: lift the dynamic-require to a static import path that the bundler can see). | OPEN — Phase 7.2 |
+
+### Focus 5 — L-004 + L-005 compliance (grep ratchet)
+
+**Verdict: PASS.**
+
+Per Riley §6.3, the harness must contain zero direct pdf.js invocations. Grep results:
+
+| File                                                | Grep `pdfjs\|getDocument\|pdf-lib` | Match disposition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tests/e2e/ocr-integration.spec.ts`                 | **0**                              | Zero matches.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `src/ipc/handlers/test-seed-ocr-job.ts`             | **4**                              | All 4 in **comments only** (lines 18, 20, 21, 124) explicitly explaining "this file does NOT load pdf.js". Zero call sites. PASS.                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `src/ipc/contracts.ts` (TestSeedOcrJob\* types)     | **0** (in the Phase 7.1 amendment) | The amendment adds only `interface TestSeedOcrJobRequest/Value`, `type TestSeedOcrJobError/Response`, and `Channels.TestSeedOcrJob` — zero pdf.js / pdf-lib references.                                                                                                                                                                                                                                                                                                                                                                                            |
+| `src/ipc/register.ts`                               | **5**                              | All 5 are unrelated to pdf.js OR are in comments: line 175 doc-string about main-process pdfjs, line 223 doc-string about pdf-lib metadata loader (pre-existing), line 414/636/702 are `documentStore.getDocument(handle)` / `getDocumentPath` / `getDocumentHash` (handle lookups, not pdf.js). PASS.                                                                                                                                                                                                                                                             |
+| `src/preload/index.ts` (David's Phase 7.1 slice)    | **0**                              | The `__test` namespace is a pure ipcRenderer.invoke wrapper. Zero pdf.js / pdf-lib references.                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `tests/fixtures/pdfs/scripts/generate-fixtures.mjs` | **11**                             | All 11 references are: (a) documentation comments explaining the L-004/L-005 boundary, (b) the literal string `'pdfjs-dist'` in the path to the bundled font, (c) the literal `pdf-lib` string in the producer metadata, and (d) the actual `import { PDFDocument } from 'pdf-lib'` on line 58. **pdf-lib ≠ pdf.js** — pdf-lib does NOT trigger `getDocument({data})` or the polyfill capture path. The generator is offline tooling, not part of the runtime harness. Riley §6.2 distinguished generator/tooling scope from harness scope; this is correct. PASS. |
+
+**The architectural posture is right:** the e2e tier exercises pdf.js _through_ `src/main/pdf-ops/ocr-bootstrap.ts` (which enforces L-004 via `toPdfJsBuffer` and L-005 via `loadPdfJs`). The harness does not duplicate enforcement; it inherits it. A future regression that removes the copy helper or the polyfill-loader helper would fail the spec at the v0.7.14/v0.7.15 catch surface (Phase B status + totalWords floor).
+
+### Focus 6 — Structural NODE_ENV gate (registration-time, not runtime)
+
+**Verdict: PASS.**
+
+The gate is the registration-time early-return in `src/ipc/handlers/test-seed-ocr-job.ts` at the exit point of the file:
+
+```ts
+// src/ipc/handlers/test-seed-ocr-job.ts:213-218
+export function registerTestSeedOcrJob(opts: { ipcMain: IpcMain; deps: TestSeedOcrJobDeps }): void {
+  if (process.env['NODE_ENV'] !== 'test') return;
+  opts.ipcMain.handle(Channels.TestSeedOcrJob, (_evt, payload: unknown) =>
+    handleTestSeedOcrJob(payload as TestSeedOcrJobRequest, opts.deps),
+  );
+}
+```
+
+The check is at REGISTRATION time, BEFORE `ipcMain.handle(...)`. In any production bootstrap (`NODE_ENV !== 'test'`), the function returns immediately and `__test:seedOcrJob` is **never** added to the IPC handler table. A hostile renderer probing for the channel name receives the standard "No handler registered" rejection because there is no handler.
+
+Verification chain:
+
+1. `src/ipc/register.ts:1141-1147` calls `registerTestSeedOcrJob({ ipcMain, deps: ... })`. This is the **only** call site.
+2. Inside `registerTestSeedOcrJob`, the `if (process.env['NODE_ENV'] !== 'test') return;` is line 214 — first statement of the function, BEFORE `ipcMain.handle`.
+3. `src/preload/index.ts:511-518` conditionally spreads the `__test` namespace ONLY when `process.env['NODE_ENV'] === 'test'`. Defense-in-depth — but as the David's wave entry correctly notes: "the registration-time gate is the boundary of record; the preload mirror is a courtesy."
+
+This is the **strongest form of structural gating**: a runtime check inside the handler would still leak the channel name to a probe ("not_in_test_mode" error returned). The registration-time gate leaves nothing to probe. Compliant with Riley §3 and David's own design.
+
+### L-004 + L-005 + L-001 + L-002 + L-003 compliance summary
+
+| Lock                              | This wave                                                                                                                              | Status  |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| L-001 (enableDragDropFiles)       | Not touched.                                                                                                                           | NEUTRAL |
+| L-002 (operator-level screenshot) | Diego's v0.7.19 release ceremony (next) MUST capture the L-002 screenshot per the plan's release-ceremony checklist.                   | PENDING |
+| L-003 (Node 20 baseline)          | Spec runs on the Node-20 CI matrix; `npm rebuild` (Electron ABI) step precedes Playwright. No from-source rebuild attempted.           | PASS    |
+| L-004 (pdf.js copied buffer)      | Zero direct pdf.js call sites in harness, seed handler, or fixture generator (pdf-lib in generator is correct; not pdf.js). Compliant. | PASS    |
+| L-005 (pdf.js polyfill order)     | Zero direct `await import('pdfjs-dist/...')` in harness. Production rasterize path (which the spec exercises) already enforces.        | PASS    |
+
+### Production-call-site checklist (David's slice)
+
+| New export                                         | Production call site                                                                           | Verified |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------- | -------- |
+| `Channels.TestSeedOcrJob`                          | `src/ipc/register.ts:1141-1147` (gated)                                                        | yes      |
+| `registerTestSeedOcrJob`                           | `src/ipc/register.ts:1141`                                                                     | yes      |
+| `handleTestSeedOcrJob` (pure handler)              | `src/ipc/handlers/test-seed-ocr-job.ts:215` + future test file consumes it directly per design | yes      |
+| `TestSeedOcrJobRequest/Value/Error/Response` types | `src/preload/index.ts:514-515`, `tests/e2e/ocr-integration.spec.ts:248-268`                    | yes      |
+| `pdfApi.__test.seedOcrJob` (preload)               | `tests/e2e/ocr-integration.spec.ts:267`                                                        | yes      |
+
+All five new public exports have at least one production call site (the test-only ones go through the structurally-gated channel). PASS.
+
+### Ratchet compliance (Phase 7.1 surface)
+
+- No new `(e as Error).message` direct reads — the seed handler uses `safeMessage(e, fallback)` (line 132, 162, 197).
+- No new `as any` — David's slice uses `as unknown as TestSeedOcrJobRequest` only at the IPC boundary (line 216), which is the documented pattern for unknown IPC payloads.
+- Zod schema validation at the handler entry (`requestSchema.safeParse` line 106). Strong validation.
+- No new permissive-stub variants — the structural NODE_ENV gate is strictly stronger than a stub.
+- L-001/L-002/L-003 unchanged.
+
+### Findings (Phase 7.1) — consolidated
+
+| ID    | Severity | Location                          | Description                                                                                                                                                                                                                                              | Status           |
+| ----- | -------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| 7.1.1 | LOW      | `generate-fixtures.mjs:166-172`   | `useObjectStreams: false` byte-stability is correct; document the pdf-lib whitespace-stream risk for future regenerations. (README already covers regenerate-with-commit; minor only.)                                                                   | OPEN             |
+| 7.1.2 | LOW      | `ocr-integration.spec.ts:240`     | Per-test `test.setTimeout(90_000)` overrides the 60s playwright.config.ts ceiling. A copy-paste of the spec without this line silently downgrades to 60s. Promote OCR-suite timeout to config when a second OCR e2e spec lands.                          | OPEN             |
+| 7.1.3 | MEDIUM   | `ocr-integration.spec.ts:121-126` | Console-error gate is exact-match `'error'`. Future Chromium update could promote a benign WebGL/GPU-blocklist warning to error severity on the headless runner. Track for allowlist-pattern when first false-positive lands.                            | OPEN             |
+| 7.1.4 | LOW      | `ocr-integration.spec.ts:107-108` | Document the 81-word / 93.7% calibration numbers next to the floor constants so a future fixture maintainer doesn't drop the floor without re-calibrating.                                                                                               | OPEN             |
+| 7.1.5 | **HIGH** | `ocr-integration.spec.ts:423-528` | Phase D+E `.skip()` on dev-mode harness because `dist/main/` doesn't bundle SQLite repo modules. v0.7.18 reopen-restore bug class NOT caught at e2e in dev harness. Mitigated by unit-tier coverage. Phase 7.2 follow-up: wire dev-mode SQLite bundling. | OPEN — Phase 7.2 |
+
+No blockers. No criticals.
+
+### Verdict (final)
+
+**GO-with-follow-up.** Wave 3 clears Wave 2 to advance to Nathan (Wave 4) and the v0.7.19 release ceremony.
+
+Phase 7.1 lands Phases A–C cleanly — the modal-mid-recognition capture is now reproducible in CI, exactly as the plan stated. Four of six historical v0.7.x bug classes are caught at the e2e tier (v0.7.14, v0.7.15, v0.7.16, v0.7.17), one is covered at the unit tier (v0.7.18 reopen-restore via `loadOcrResultsThunk`), and one was inherently uncatchable by integration test (v0.7.13 observability). Five-out-of-six total catch coverage with a documented Phase 7.2 obligation to lift the dev-mode SQLite bundling so v0.7.18-class regressions also surface at the e2e tier.
+
+L-004 and L-005 grep ratchet is clean across all Phase 7.1 files. The structural NODE_ENV gate is the strongest form (registration-time, not runtime); the preload mirror provides defense-in-depth. Fixture provenance is fully reproducible from source text + a bundled OFL-1.1 font; the SHA256 lockfile + CI verifier catch any substitution in 5 seconds before Tesseract wastes 3-4 minutes.
+
+The HIGH finding (7.1.5) is the catch-coverage gap from the dev-mode skip. It is **accepted, not blocking**: (a) Phase 7.1's stated goal is the modal-mid-recognition reproducibility surface, which lands; (b) the v0.7.18 bug class has unit-tier defense in depth; (c) Phase 7.2 is the right scope for the build-config change to make dist/main/ bundle the SQLite repos. Marcus should track 7.1.5 explicitly as a Phase 7.2 candidate.
