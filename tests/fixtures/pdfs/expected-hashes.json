@@ -1,0 +1,15 @@
+{
+  "note": "SHA256 of each fixture. CI runs verify-hashes.mjs to catch fixture mutation.",
+  "algorithm": "sha256",
+  "generatedBy": "tests/fixtures/pdfs/scripts/generate-fixtures.mjs",
+  "fixtures": {
+    "scan-1p-eng.pdf": {
+      "sha256": "2119bd7635792b2d7cbaba0c9003b5ca0b826d16fa45046bcd7fba18ea866b51",
+      "bytes": 91767
+    },
+    "scan-2p-eng.pdf": {
+      "sha256": "dc55bf1b315a540cb2d44c95fc6097de918883a55c3233f7dbb50a0fa8e4180b",
+      "bytes": 183654
+    }
+  }
+}
