@@ -2218,6 +2218,81 @@ export type OcrListResultsByJobResponse = Result<
   OcrListResultsByJobError
 >;
 
+// ---- __test:seedOcrJob (Phase 7.1, test-only) -------------------------------
+//
+// Registered ONLY when `process.env.NODE_ENV === 'test'` at app boot. The
+// handler inserts a row into `ocr_jobs` and (optionally) per-page rows into
+// `ocr_results` so the renderer's reopen-restore path (`loadOcrResultsThunk` in
+// thunks-phase5.ts) can hydrate the overlay without re-running real Tesseract.
+//
+// **Structural gate (see src/ipc/handlers/test-seed-ocr-job.ts):** the handler
+// is not registered at all unless NODE_ENV==='test'. In production builds the
+// channel does not exist on the IPC surface; a hostile renderer call resolves
+// to "channel not found" because there's nothing to reach. This is stronger
+// than a runtime guard inside the handler — the attack surface is zero by
+// construction. See `docs/phase-7.1-test-design.md §3` for rationale.
+//
+// Use cases (Phase 7.1 spec):
+//   - status: 'queued'    — minimal seed; the spec then drives runOnDocument
+//                           end-to-end and asserts the full pipeline.
+//   - status: 'completed' — pre-populated job + results; the spec asserts the
+//                           reopen-restore path without re-running OCR. The
+//                           canonical Phase 7.1 run uses 'queued' so the catch
+//                           surface stays wide (test-design §3).
+//
+// L-004 + L-005 compliance (phase-7.1-test-design §6.2): this handler does NOT
+// load pdf.js, does NOT rasterize, does NOT call `pdfjs.getDocument`. It
+// reads fixture bytes via `fs.readFile`, computes a SHA-256 docHash with
+// `node:crypto`, and writes DB rows. No pdf.js code path is exercised.
+
+export interface TestSeedOcrJobRequest {
+  /** Absolute path to the fixture PDF on disk. The handler reads the bytes to
+   *  compute the docHash; the bytes are NEVER passed to pdf.js. */
+  fixturePath: string;
+  /** Whether the job is seeded as a fresh 'queued' row (the spec then drives
+   *  the real runOnDocument) or as a pre-populated 'completed' row (the spec
+   *  asserts the reopen-restore path only). */
+  status: 'queued' | 'completed';
+  /** OCR languages — joined with '+' for the langs column (e.g. ['eng']). */
+  langs: string[];
+  /** Required when status === 'completed'; ignored when 'queued'. The handler
+   *  writes one ocr_results row per entry. */
+  seededResults?: {
+    pageIndex: number;
+    totalWords: number;
+    lowConfidenceWords: number;
+    meanConfidence: number;
+    words: OcrWord[];
+    imgDimsPx: { widthPx: number; heightPx: number };
+    durationMs: number;
+  }[];
+  /** Inclusive page range stored on the seeded ocr_jobs row. Defaults to
+   *  `{ start: 0, end: 0 }` if omitted. */
+  pageRange?: { start: number; end: number };
+  /** Preprocess flags stored on the seeded ocr_jobs row. Defaults to all-false. */
+  preprocess?: PreprocessOptions;
+}
+
+export type TestSeedOcrJobError =
+  /** Structural — never actually returned to a caller. Reserved for the case
+   *  where (hypothetically) the channel were registered in non-test mode and
+   *  the runtime guard fires; in practice the handler is not registered. */
+  | 'not_in_test_mode'
+  | 'fixture_not_found'
+  | 'invalid_payload'
+  | 'db_unavailable'
+  | 'db_insert_failed';
+
+export interface TestSeedOcrJobValue {
+  /** Primary key of the inserted ocr_jobs row. */
+  jobId: number;
+  /** SHA-256 hex digest of the fixture bytes; matches what loadOcrResultsThunk
+   *  filters on (ocr:listJobs { docHash }). */
+  docHash: string;
+}
+
+export type TestSeedOcrJobResponse = Result<TestSeedOcrJobValue, TestSeedOcrJobError>;
+
 // ---- ocr:languagePackDownload (api-contracts.md §16.7) ----------------------
 
 export interface OcrLanguagePackDownloadRequest {
@@ -3086,6 +3161,11 @@ export const Channels = {
   TelemetryGetStatus: 'telemetry:getStatus',
   I18nSetLocale: 'i18n:setLocale',
   I18nGetAvailableLocales: 'i18n:getAvailableLocales',
+  // Phase 7.1 (David, 2026-06-05) — test-only seed channel. Registered ONLY
+  // when process.env.NODE_ENV === 'test' at app boot; absent from production
+  // IPC surface by construction. See `src/ipc/handlers/test-seed-ocr-job.ts`
+  // and `docs/phase-7.1-test-design.md §3`.
+  TestSeedOcrJob: '__test:seedOcrJob',
 } as const;
 
 export type ChannelName = (typeof Channels)[keyof typeof Channels];
@@ -3262,5 +3342,28 @@ export interface PdfApi {
     getAvailableLocales: (
       req: I18nGetAvailableLocalesRequest,
     ) => Promise<I18nGetAvailableLocalesResponse>;
+  };
+  /**
+   * Phase 7.1 (David, 2026-06-05) — test-only IPC surface.
+   *
+   * **Present on the type for every build** so the Playwright spec compiles in
+   * any tsconfig context, but the preload bridge ONLY mounts the methods when
+   * `process.env.NODE_ENV === 'test'` AND the main-process handler is only
+   * registered in the same condition. Calling `pdfApi.__test?.seedOcrJob(...)`
+   * in production gets `undefined` from the preload (optional namespace) AND
+   * "channel not found" from the IPC layer if a renderer somehow bypasses the
+   * preload — defense in depth.
+   *
+   * The `__test` prefix is grep-detectable so a future L-006-class ratchet can
+   * fail the build on any production call site (`pdfApi\.__test` outside
+   * `tests/`).
+   *
+   * See `docs/phase-7.1-test-design.md §3` and `docs/api-contracts.md §Phase 7.1`.
+   */
+  __test?: {
+    /** Phase 7.1 — pre-seed an ocr_jobs row (and optionally ocr_results rows)
+     *  so the e2e spec can either run the full pipeline against a known
+     *  fixture or assert the reopen-restore path without re-running OCR. */
+    seedOcrJob: (req: TestSeedOcrJobRequest) => Promise<TestSeedOcrJobResponse>;
   };
 }

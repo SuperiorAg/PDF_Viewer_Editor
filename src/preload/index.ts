@@ -184,6 +184,9 @@ import type {
   I18nSetLocaleResponse,
   I18nGetAvailableLocalesRequest,
   I18nGetAvailableLocalesResponse,
+  // Phase 7.1 (David, 2026-06-05) — test-only seed channel.
+  TestSeedOcrJobRequest,
+  TestSeedOcrJobResponse,
 } from '../ipc/contracts.js';
 
 const pdfApi: PdfApi = {
@@ -497,6 +500,22 @@ const pdfApi: PdfApi = {
         req,
       ) as Promise<I18nGetAvailableLocalesResponse>,
   },
+  // Phase 7.1 (David, 2026-06-05) — test-only seed channel.
+  //
+  // Mounted ONLY when `process.env.NODE_ENV === 'test'`. In any other build
+  // `pdfApi.__test` is `undefined`, and a renderer call like
+  // `pdfApi.__test?.seedOcrJob(...)` short-circuits to `undefined` before any
+  // IPC roundtrip. Defense-in-depth alongside the registration-time gate in
+  // `src/ipc/handlers/test-seed-ocr-job.ts`. The handler is the gate of
+  // record — this is a courtesy not a security boundary.
+  ...(process.env['NODE_ENV'] === 'test'
+    ? {
+        __test: {
+          seedOcrJob: (req: TestSeedOcrJobRequest) =>
+            ipcRenderer.invoke(Channels.TestSeedOcrJob, req) as Promise<TestSeedOcrJobResponse>,
+        },
+      }
+    : {}),
 };
 
 contextBridge.exposeInMainWorld('pdfApi', pdfApi);

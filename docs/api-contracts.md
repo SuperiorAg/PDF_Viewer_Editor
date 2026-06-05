@@ -2928,3 +2928,68 @@ In addition to the standard §10 rules, Phase 7 handlers MUST:
 ### 18.11 Phase 7 contract freeze point (FINAL roadmap phase)
 
 At end of Wave 27 (this amendment), the Phase-7 contract is locked. Wave 28 implementation must conform; David/Diego extend `src/ipc/contracts.ts` to match these types. Any Wave-28 discovery that requires a contract change follows the same Riley-amend-then-implementer-update protocol as every prior phase. The Phase 1-6 surface (§1-§17) is FROZEN; Phase 7 lives in this §18 amendment only. **Since this is the final roadmap phase, this is also the v1.0.0-rc contract freeze.**
+
+---
+
+## §Phase 7.1 — `__test:seedOcrJob`
+
+> **WARNING — TEST-ONLY CHANNEL.** This channel is registered ONLY when `process.env.NODE_ENV === 'test'` at app boot. It does NOT exist in production builds. The preload `pdfApi.__test` namespace is similarly absent in non-test runtimes. Do NOT call this from production code. See `src/ipc/handlers/test-seed-ocr-job.ts` for the structural gate and `docs/phase-7.1-test-design.md §3` for the rationale.
+
+Added in Phase 7.1 (David, 2026-06-05) to support the Phase 7.1 Playwright e2e harness (`tests/e2e/ocr-integration.spec.ts`, Diego). The harness pre-populates an `ocr_jobs` row (and optionally `ocr_results` rows) so the renderer's reopen-restore path can be exercised deterministically without re-running real Tesseract on every CI run.
+
+**Structural gate (not a runtime guard):** the handler module's `registerTestSeedOcrJob(...)` early-returns when `NODE_ENV !== 'test'`. In production the `ipcMain.handle('__test:seedOcrJob', ...)` is NEVER called, so the channel does not exist on the IPC surface. A renderer call in prod resolves to "channel not found" because there is nothing to reach. This is strictly stronger than a runtime check inside the handler — the attack surface is zero by construction.
+
+**L-004 / L-005 compliance:** the handler does NOT load pdf.js, does NOT rasterize, does NOT call `pdfjs.getDocument`. It reads fixture bytes via `node:fs.readFile` and computes a SHA-256 docHash with `node:crypto`. No pdf.js code path is exercised. Julian's Wave-3 grep on `pdfjs|getDocument|pdf-lib` against `src/ipc/handlers/test-seed-ocr-job.ts` must return zero matches.
+
+```ts
+interface TestSeedOcrJobRequest {
+  /** Absolute path to the fixture PDF. Bytes are read for docHash; never passed to pdf.js. */
+  fixturePath: string;
+  /** Either a fresh queued job (spec then drives runOnDocument) or a pre-completed job
+   *  (spec asserts reopen-restore only). Phase 7.1's canonical run uses 'queued'. */
+  status: 'queued' | 'completed';
+  /** OCR languages joined with '+' for the langs column (e.g. ['eng']). */
+  langs: string[];
+  /** Required when status === 'completed'; ignored otherwise. One row per page is
+   *  written to ocr_results; aggregate confidence/totalWords are recomputed onto
+   *  the ocr_jobs row before status flips to 'completed'. */
+  seededResults?: {
+    pageIndex: number;
+    totalWords: number;
+    lowConfidenceWords: number;
+    meanConfidence: number;
+    words: OcrWord[];
+    imgDimsPx: { widthPx: number; heightPx: number };
+    durationMs: number;
+  }[];
+  /** Inclusive page range. Defaults to `{ start: 0, end: 0 }`. */
+  pageRange?: { start: number; end: number };
+  /** Defaults to all-false. */
+  preprocess?: PreprocessOptions;
+}
+
+type TestSeedOcrJobError =
+  | 'not_in_test_mode' // reserved; not returned in practice (handler is unregistered)
+  | 'fixture_not_found'
+  | 'invalid_payload'
+  | 'db_unavailable' // ocr_jobs repo not yet wired (memory-bridge bootstrap window)
+  | 'db_insert_failed';
+
+interface TestSeedOcrJobValue {
+  /** Primary key of the inserted ocr_jobs row. */
+  jobId: number;
+  /** SHA-256 hex of the fixture bytes; matches what loadOcrResultsThunk filters on. */
+  docHash: string;
+}
+
+type TestSeedOcrJobResponse = Result<TestSeedOcrJobValue, TestSeedOcrJobError>;
+```
+
+**Preload surface (test mode only):**
+
+```ts
+// pdfApi.__test is `undefined` in production builds (optional namespace).
+pdfApi.__test?.seedOcrJob(req: TestSeedOcrJobRequest): Promise<TestSeedOcrJobResponse>;
+```
+
+The `__test` prefix is intentionally grep-detectable so a future L-006-class ratchet can fail the build on any production call site (`pdfApi\.__test` outside `tests/`).

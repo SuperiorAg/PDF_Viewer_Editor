@@ -141,6 +141,10 @@ import { handleSignaturesVerify } from './handlers/signatures-verify.js';
 import { handleTelemetryGetStatus } from './handlers/telemetry-get-status.js';
 import { handleTelemetryRecordEvent } from './handlers/telemetry-record-event.js';
 import { handleTelemetrySetOptIn } from './handlers/telemetry-set-opt-in.js';
+// Phase 7.1 (David, 2026-06-05) — test-only seed channel. registerTestSeedOcrJob
+// early-returns when NODE_ENV !== 'test'; the IPC handle never lands on the prod
+// surface. See `src/ipc/handlers/test-seed-ocr-job.ts` for the structural gate.
+import { registerTestSeedOcrJob } from './handlers/test-seed-ocr-job.js';
 import { handleUpdateCheck } from './handlers/update-check.js';
 import { handleUpdateDownload } from './handlers/update-download.js';
 import { handleUpdateInstall } from './handlers/update-install.js';
@@ -1128,4 +1132,17 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
   ipcMain.handle(Channels.I18nGetAvailableLocales, (_evt, payload) =>
     handleI18nGetAvailableLocales(payload ?? {}),
   );
+
+  // Phase 7.1 (David, 2026-06-05) — test-only `__test:seedOcrJob` channel.
+  // STRUCTURAL GATE: `registerTestSeedOcrJob` early-returns when NODE_ENV is
+  // not 'test'. In production the `ipcMain.handle(...)` is never called and
+  // the channel is absent from the IPC surface. See
+  // `src/ipc/handlers/test-seed-ocr-job.ts` for the rationale.
+  registerTestSeedOcrJob({
+    ipcMain,
+    deps: {
+      ocrJobsRepo: getDbBridge().ocrJobs,
+      ocrResultsRepo: getDbBridge().ocrResults,
+    },
+  });
 }
