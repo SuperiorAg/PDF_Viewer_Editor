@@ -168,6 +168,16 @@ jobs:
       - name: Build Electron bundle
         run: npm run build
 
+      # Phase 7.1 (Diego, 2026-06-05): verify fixture PDF hashes BEFORE the
+      # e2e run, so a fixture mutation (e.g. someone substituting a
+      # copyrighted PDF) trips a 5-second hash check rather than wasting
+      # ~3-4 minutes of Tesseract recognition time before failing on a
+      # confidence floor. See tests/fixtures/pdfs/README.md for the
+      # provenance and the regen flow. The verifier is zero-dep
+      # (node:crypto + node:fs) so it runs cleanly on any Node 20 host.
+      - name: Verify OCR fixture hashes
+        run: node tests/fixtures/pdfs/scripts/verify-hashes.mjs
+
       - name: Run Playwright e2e
         run: npm run e2e
 
