@@ -208,8 +208,13 @@ export interface SignatureAuditRepoBridge {
    * invalidated a signature. Mirrors Ravi's `markInvalidatedByOcrJob` on
    * the signature-audit repo. Null-tolerant — older bridges without
    * the method behave as no-op (returns 0 rows updated).
+   *
+   * Phase 7.2 (David, 2026-06-10) — non-optional; both the memory repo and
+   * `adaptSignatureAuditRepo` implement it. Earlier Phase-5 optionality was
+   * a parallel-wave-skew defence that's no longer needed (Ravi's Wave 16
+   * repo + the bridge adapter both ship the method).
    */
-  markInvalidatedByOcrJob?(docHash: string, fieldNames: string[], ocrJobId: number): number;
+  markInvalidatedByOcrJob(docHash: string, fieldNames: string[], ocrJobId: number): number;
 }
 
 export interface DbBridge {
@@ -796,6 +801,20 @@ class MemorySignatureAuditRepo implements SignatureAuditRepoBridge {
     if (idx < 0) return false;
     this.rows.splice(idx, 1);
     return true;
+  }
+
+  markInvalidatedByOcrJob(docHash: string, fieldNames: string[], _ocrJobId: number): number {
+    // Phase 7.2 (David, 2026-06-10) — added to satisfy the now-non-optional
+    // SignatureAuditRepoBridge.markInvalidatedByOcrJob contract. The memory
+    // repo doesn't model the `invalidated_by_ocr_job_id` column (it's a
+    // single audit-table column on Ravi's SQLite path), but it counts the
+    // matching rows so tests can assert the row-resolution logic at the
+    // bridge surface without standing up SQLite.
+    if (fieldNames.length === 0) return 0;
+    const set = new Set(fieldNames);
+    return this.rows.filter(
+      (r) => r.docHash === docHash && r.fieldName !== null && set.has(r.fieldName),
+    ).length;
   }
 
   private tryParseRange(json: string): number[] | null {
@@ -1672,8 +1691,30 @@ export interface RaviSignatureAuditRow {
   created_at: number;
 }
 
+/**
+ * Mirrors Ravi's `SignatureAuditRepo` signature
+ * (src/db/repositories/signature-audit-repo.ts:110).
+ *
+ * Phase 7.2 (David, 2026-06-10) — Item A-1.1 drift fix.
+ *   * `insert` returns a discriminated `InsertSignatureAuditResult`, not a
+ *     bare `number`. The adapter unwraps to `number` (the duplicate path
+ *     surfaces as `-1` so the IPC handler can branch — this preserves the
+ *     bridge contract while making the failure mode explicit).
+ *   * `markInvalidatedByOcrJob` takes `(rowIds: number[], ocrJobId: number)`,
+ *     not `(docHash, fieldNames, ocrJobId)`. The adapter accepts the
+ *     bridge's higher-level signature and resolves `rowIds` via
+ *     `listByDocHash(docHash) + filter by fieldName`.
+ *   * `listInvalidatedByOcrJob` is a real-repo method not previously
+ *     surfaced on the bridge interface. Not currently called by any IPC
+ *     handler; declared here for completeness so the audit catches future
+ *     callers via type-error rather than runtime missing-method.
+ */
+export type RaviInsertSignatureAuditResult =
+  | { ok: true; id: number }
+  | { ok: false; error: 'duplicate' };
+
 export interface RaviSignatureAuditRepo {
-  insert(row: SignatureAuditInsertInput): number;
+  insert(row: SignatureAuditInsertInput): RaviInsertSignatureAuditResult;
   get(id: number): RaviSignatureAuditRow | null;
   listByDocHash(docHash: string, limit?: number, offset?: number): RaviSignatureAuditRow[];
   listAll(
@@ -1682,6 +1723,8 @@ export interface RaviSignatureAuditRepo {
     offset?: number,
   ): { items: RaviSignatureAuditRow[]; total: number };
   delete(id: number): boolean;
+  markInvalidatedByOcrJob(rowIds: number[], ocrJobId: number): number;
+  listInvalidatedByOcrJob(ocrJobId: number): RaviSignatureAuditRow[];
 }
 
 export function adaptSignatureAuditRepo(raw: RaviSignatureAuditRepo): SignatureAuditRepoBridge {
@@ -1717,7 +1760,13 @@ export function adaptSignatureAuditRepo(raw: RaviSignatureAuditRepo): SignatureA
   });
   return {
     insert(row) {
-      return raw.insert(row);
+      // Phase 7.2 (David, 2026-06-10) — Item A-1.1 drift fix.
+      // Ravi's repo returns a discriminated union. Bridge contract is `number`
+      // — unwrap. Duplicate path surfaces as `-1` (sentinel; no production
+      // caller currently distinguishes, but the value is non-positive so a
+      // future caller can branch without ambiguity vs valid id ≥ 1).
+      const r = raw.insert(row);
+      return r.ok ? r.id : -1;
     },
     get(id) {
       const r = raw.get(id);
@@ -1732,6 +1781,31 @@ export function adaptSignatureAuditRepo(raw: RaviSignatureAuditRepo): SignatureA
     },
     delete(id) {
       return raw.delete(id);
+    },
+    markInvalidatedByOcrJob(docHash, fieldNames, ocrJobId) {
+      // Phase 7.2 (David, 2026-06-10) — Item A-1.1 drift fix.
+      // Bridge contract: `(docHash, fieldNames, ocrJobId) -> number`.
+      // Ravi's repo: `(rowIds, ocrJobId) -> number`.
+      // The bridge resolves rowIds by reading current rows for the doc and
+      // filtering to the supplied field names. This keeps the IPC-handler
+      // call site (ocr-run-on-document.ts:376) ergonomic — the OCR engine
+      // knows the doc hash and field names but never sees row ids.
+      //
+      // Edge cases:
+      //   * Empty fieldNames → no rows to mark; return 0 immediately.
+      //   * Missing row.fieldName / null field_name on a row → that row is
+      //     filtered out (cannot match a name we never recorded).
+      //   * Over-fetch limit: defensive MAX_FETCH so a doc with hundreds of
+      //     signature rows is still covered.
+      if (fieldNames.length === 0) return 0;
+      const MAX_FETCH = 10000;
+      const rows = raw.listByDocHash(docHash, MAX_FETCH, 0);
+      const set = new Set(fieldNames);
+      const rowIds = rows
+        .filter((r) => r.field_name !== null && set.has(r.field_name))
+        .map((r) => r.id);
+      if (rowIds.length === 0) return 0;
+      return raw.markInvalidatedByOcrJob(rowIds, ocrJobId);
     },
   };
 }
@@ -1760,6 +1834,31 @@ export interface RaviOcrJobRow {
   created_at: number;
 }
 
+/**
+ * Mirrors Ravi's `OcrJobsRepo` signature (src/db/repositories/ocr-jobs-repo.ts:108).
+ *
+ * Phase 7.2 (David, 2026-06-10) — Item A-1.1 drift fix. The previous shape of
+ * this interface was authored against an older repo signature where
+ * `updateStatus` took six positional args and `listAll` returned
+ * `{items, total}`. Ravi's Phase 5.2 commit f0715f8 evolved both:
+ *   * `updateStatus(id, { status, ... })` — one object payload, COALESCE-pattern.
+ *   * `listAll(filters, limit, offset): OcrJobRow[]` — plain row array.
+ *   * `countAll(filters): number` — paired total.
+ *
+ * The dynamic-require gap in `src/main/index.ts` Wave 12..24 silently fell
+ * through to the memory bridge under `_electron.launch()`, so the drift went
+ * undetected until the Item A-1 static-import lift connected the adapter to
+ * the real SQLite repo for the first time.
+ *
+ * Adapter behaviour:
+ *   * `updateStatus` forwards the object payload verbatim (modulo undefined
+ *     filtering — Ravi's COALESCE pattern interprets `undefined` as "don't
+ *     touch this column"; the adapter passes through unchanged).
+ *   * `listAll` calls Ravi's `listAll` + `countAll` and assembles
+ *     `{items, total}` — the bridge contract stays stable for IPC handlers.
+ *   * `filters` is camelCase (`docHash`) at the bridge; Ravi's repo is
+ *     snake_case (`doc_hash`); the adapter translates one field name.
+ */
 export interface RaviOcrJobsRepo {
   insert(row: {
     doc_hash: string;
@@ -1773,23 +1872,31 @@ export interface RaviOcrJobsRepo {
   }): number;
   updateStatus(
     id: number,
-    status: OcrJobBridgeStatus,
-    completedAt?: number,
-    meanConfidence?: number,
-    totalWords?: number,
-    errorMessage?: string,
+    input: {
+      status: OcrJobBridgeStatus;
+      completed_at?: number;
+      mean_confidence?: number;
+      total_words?: number;
+      error_message?: string;
+    },
   ): boolean;
   get(id: number): RaviOcrJobRow | null;
   listAll(
     filters: {
-      docHash?: string;
+      doc_hash?: string;
       status?: OcrJobBridgeStatus;
       since?: number;
       until?: number;
     },
     limit?: number,
     offset?: number,
-  ): { items: RaviOcrJobRow[]; total: number };
+  ): RaviOcrJobRow[];
+  countAll(filters: {
+    doc_hash?: string;
+    status?: OcrJobBridgeStatus;
+    since?: number;
+    until?: number;
+  }): number;
   delete(id: number): boolean;
 }
 
@@ -1818,24 +1925,47 @@ export function adaptOcrJobsRepo(raw: RaviOcrJobsRepo): OcrJobsRepoBridge {
       return raw.insert(row);
     },
     updateStatus(id, update) {
-      // Phase 5 only valid terminal statuses come through this method;
-      // queued/running/superseded_by_undo move via insert / separate flows.
-      return raw.updateStatus(
-        id,
-        update.status,
-        update.completed_at,
-        update.mean_confidence,
-        update.total_words,
-        update.error_message,
-      );
+      // Phase 7.2 (David, 2026-06-10) — Item A-1.1 drift fix.
+      // Ravi's repo accepts a single object payload (UpdateOcrJobStatusInput)
+      // mirroring `data-models §10.9` and the COALESCE-pattern UPDATE in
+      // ocr-jobs-repo.ts:208-230. The bridge contract already accepts an
+      // object; pass through verbatim. Earlier versions of this adapter
+      // forwarded six positional args, which evaluated `assertOcrStatus`
+      // against the wrong arg and threw "status must be one of … (got
+      // undefined)" — the e2e Phase B abort signature.
+      return raw.updateStatus(id, {
+        status: update.status,
+        ...(update.completed_at !== undefined ? { completed_at: update.completed_at } : {}),
+        ...(update.mean_confidence !== undefined
+          ? { mean_confidence: update.mean_confidence }
+          : {}),
+        ...(update.total_words !== undefined ? { total_words: update.total_words } : {}),
+        ...(update.error_message !== undefined ? { error_message: update.error_message } : {}),
+      });
     },
     get(id) {
       const r = raw.get(id);
       return r ? ocrJobRowToDto(r) : null;
     },
     listAll(filters, limit, offset) {
-      const r = raw.listAll(filters, limit, offset);
-      return { items: r.items.map(ocrJobRowToDto), total: r.total };
+      // Phase 7.2 (David, 2026-06-10) — Item A-1.1 drift fix.
+      // Ravi's `listAll` returns `OcrJobRow[]`; the paired total is computed
+      // by `countAll(filters)`. The bridge contract returns `{items, total}`
+      // for the IPC handler's pagination UI; assemble it here.
+      const raviFilters: {
+        doc_hash?: string;
+        status?: OcrJobBridgeStatus;
+        since?: number;
+        until?: number;
+      } = {
+        ...(filters.docHash !== undefined ? { doc_hash: filters.docHash } : {}),
+        ...(filters.status !== undefined ? { status: filters.status } : {}),
+        ...(filters.since !== undefined ? { since: filters.since } : {}),
+        ...(filters.until !== undefined ? { until: filters.until } : {}),
+      };
+      const items = raw.listAll(raviFilters, limit, offset);
+      const total = raw.countAll(raviFilters);
+      return { items: items.map(ocrJobRowToDto), total };
     },
     delete(id) {
       return raw.delete(id);
@@ -1857,8 +1987,30 @@ export interface RaviOcrResultRow {
   created_at: number;
 }
 
+/**
+ * Mirrors Ravi's `OcrResultsRepo` signature
+ * (src/db/repositories/ocr-results-repo.ts:79).
+ *
+ * Phase 7.2 (David, 2026-06-10) — Item A-1.1 drift fix.
+ *   * `insert` returns `InsertOcrResultResult` (discriminated). The bridge
+ *     adapter calls Ravi's `upsert` instead — same idempotency story as
+ *     the OCR engine's between-page restart path (ocr-engine §7.4) and
+ *     skips the duplicate-error branch entirely. The bridge contract
+ *     remains `insert(row): number`.
+ */
 export interface RaviOcrResultsRepo {
   insert(row: {
+    job_id: number;
+    page_index: number;
+    total_words: number;
+    low_confidence_words: number;
+    mean_confidence: number;
+    words_json: string;
+    img_width_px: number;
+    img_height_px: number;
+    duration_ms: number;
+  }): { ok: true; id: number } | { ok: false; error: 'duplicate' };
+  upsert(row: {
     job_id: number;
     page_index: number;
     total_words: number;
@@ -1891,7 +2043,17 @@ function ocrResultRowToDto(r: RaviOcrResultRow): OcrResultRowDto {
 export function adaptOcrResultsRepo(raw: RaviOcrResultsRepo): OcrResultsRepoBridge {
   return {
     insert(row) {
-      return raw.insert(row);
+      // Phase 7.2 (David, 2026-06-10) — Item A-1.1 drift fix.
+      // Ravi's `insert` returns a discriminated `InsertOcrResultResult`
+      // (the `duplicate` variant surfaces UNIQUE(job_id, page_index) collisions).
+      // The bridge contract says `number`, and the IPC handler discards the
+      // return — so we use Ravi's `upsert` here, which is idempotent under
+      // retry (between-page restart in ocr-engine §7.4) and returns `number`
+      // unconditionally. This is a strict improvement: under the previous
+      // dynamic-require gap the handler was talking to the memory repo's
+      // plain-number `insert`; calling `upsert` against Ravi's SQLite now
+      // restores that semantic.
+      return raw.upsert(row);
     },
     listByJobId(jobId) {
       return raw.listByJobId(jobId).map(ocrResultRowToDto);
@@ -1914,12 +2076,43 @@ export interface RaviLanguagePackRow {
   last_used_at: number | null;
 }
 
+/**
+ * Mirrors Ravi's `LanguagePacksRepo` signature
+ * (src/db/repositories/language-packs-repo.ts:67).
+ *
+ * Phase 7.2 (David, 2026-06-10) — Item A-1.1 drift fix.
+ *   * `remove` returns a discriminated `RemoveLanguagePackResult`
+ *     (`{ok: true} | {ok: false, error: 'bundled_protected' | 'not_found'}`).
+ *     The bridge contract is `boolean`; the adapter unwraps to `r.ok`. This
+ *     collapses the `bundled_protected` variant into a generic "false" — the
+ *     IPC handler `ocr-language-pack-remove` discards the boolean today
+ *     (best-effort) so the loss is contained. A future widening of the
+ *     bridge contract should pass the discriminated union through, but
+ *     that's outside this remediation's scope.
+ *   * `touchLastUsed` returns `boolean` (true iff the row exists). Bridge
+ *     contract is `void`; the adapter swallows the return.
+ *   * `upsert` accepts an optional `last_used_at` per Ravi's
+ *     `UpsertLanguagePackInput`. The bridge always passes one (the OCR
+ *     handler tracks it), so the optionality is benign here.
+ */
+export type RaviRemoveLanguagePackResult =
+  | { ok: true }
+  | { ok: false; error: 'bundled_protected' | 'not_found' };
+
 export interface RaviLanguagePacksRepo {
-  upsert(row: RaviLanguagePackRow): void;
+  upsert(row: {
+    lang: string;
+    source: 'bundled' | 'downloaded';
+    file_path: string;
+    size_bytes: number;
+    sha256: string;
+    installed_at: number;
+    last_used_at?: number | null;
+  }): void;
   list(): RaviLanguagePackRow[];
   get(lang: string): RaviLanguagePackRow | null;
-  remove(lang: string): boolean;
-  touchLastUsed(lang: string, when: number): void;
+  remove(lang: string): RaviRemoveLanguagePackResult;
+  touchLastUsed(lang: string, when: number): boolean;
 }
 
 function languagePackRowToDto(r: RaviLanguagePackRow): LanguagePackRowDto {
@@ -1947,9 +2140,15 @@ export function adaptLanguagePacksRepo(raw: RaviLanguagePacksRepo): LanguagePack
       return r ? languagePackRowToDto(r) : null;
     },
     remove(lang) {
-      return raw.remove(lang);
+      // Phase 7.2 (David, 2026-06-10) — Item A-1.1 drift fix.
+      // Ravi's repo returns a discriminated `RemoveLanguagePackResult`.
+      // Bridge contract is `boolean`; unwrap to `r.ok`.
+      return raw.remove(lang).ok;
     },
     touchLastUsed(lang, when) {
+      // Phase 7.2 (David, 2026-06-10) — Item A-1.1 drift fix.
+      // Ravi's `touchLastUsed` returns boolean (true iff the row exists);
+      // bridge contract is `void`. Swallow the return.
       raw.touchLastUsed(lang, when);
     },
   };
@@ -1997,6 +2196,33 @@ export interface RaviExportJobRow {
   created_at: number;
 }
 
+/**
+ * Mirrors Ravi's `ExportJobsRepo` signature (src/db/repositories/export-jobs-repo.ts:165).
+ *
+ * Phase 7.2 (David, 2026-06-10) — Item A-1.1 drift fix. The previous shape of
+ * this interface declared a `listAll(filters, limit, offset): {items, total}`
+ * method that DOES NOT EXIST on Ravi's real repo. The real surface exposes
+ * single-axis list methods (`listByDocHash`, `listByStatus`, `listRecent`,
+ * `listInProgress`). The dynamic-require gap hid the drift because the
+ * memory bridge provided a `listAll` that matched the bridge's contract.
+ *
+ * The `updateProgress` parameter is also a snake_case object on Ravi's repo
+ * (`UpdateExportJobProgressInput { pages_processed, ... }`), not three
+ * positional args — earlier drift class.
+ *
+ * `output_size_bytes` is a top-level field on `UpdateExportJobStatusInput`
+ * (Ravi accepts it on the status payload, NOT only on progress).
+ *
+ * Adapter behaviour:
+ *   * `listAll` emulates the bridge contract by reading via the most-
+ *     specific available filter method (`listByDocHash` or `listByStatus`
+ *     when those are the only constraints; `listRecent` when neither;
+ *     `listInProgress` when status filter is queued|running), then
+ *     in-memory filtering by the remaining filters and computing `total`
+ *     from the post-filter set length. Export jobs are a low-volume
+ *     surface (single-digit per session); the in-memory step is cheap.
+ *   * `updateProgress` translates positional → object input.
+ */
 export interface RaviExportJobsRepo {
   insert(row: {
     doc_hash: string;
@@ -2015,34 +2241,28 @@ export interface RaviExportJobsRepo {
   updateStatus(
     id: number,
     update: {
-      status: 'running' | 'completed' | 'cancelled' | 'failed';
+      status: 'queued' | 'running' | 'completed' | 'cancelled' | 'failed';
       completed_at?: number;
       duration_ms?: number;
+      output_size_bytes?: number;
       error_message?: string;
     },
   ): boolean;
   updateProgress(
     id: number,
-    pagesProcessed: number,
-    extras?: {
-      paragraphsExtracted?: number;
-      tablesDetected?: number;
-      imagesEmbedded?: number;
-      outputSizeBytes?: number;
+    input: {
+      pages_processed: number;
+      paragraphs_extracted?: number;
+      tables_detected?: number;
+      images_embedded?: number;
+      output_size_bytes?: number;
     },
   ): boolean;
   get(id: number): RaviExportJobRow | null;
-  listAll(
-    filters: {
-      docHash?: string;
-      format?: ExportFormatBridge;
-      status?: ExportJobBridgeStatus;
-      since?: number;
-      until?: number;
-    },
-    limit: number,
-    offset: number,
-  ): { items: RaviExportJobRow[]; total: number };
+  listByDocHash(docHash: string, limit?: number, offset?: number): RaviExportJobRow[];
+  listByStatus(status: ExportJobBridgeStatus, limit?: number, offset?: number): RaviExportJobRow[];
+  listRecent(limit?: number): RaviExportJobRow[];
+  listInProgress(): RaviExportJobRow[];
   delete(id: number): boolean;
 }
 
@@ -2055,13 +2275,67 @@ export function adaptExportJobsRepo(raw: RaviExportJobsRepo): ExportJobsRepoBrid
       return raw.updateStatus(id, update);
     },
     updateProgress(id, pagesProcessed, extras) {
-      return raw.updateProgress(id, pagesProcessed, extras);
+      // Phase 7.2 (David, 2026-06-10) — Item A-1.1 drift fix.
+      // Ravi's repo accepts a single object input
+      // (UpdateExportJobProgressInput); earlier shape took positional args.
+      return raw.updateProgress(id, {
+        pages_processed: pagesProcessed,
+        ...(extras?.paragraphsExtracted !== undefined
+          ? { paragraphs_extracted: extras.paragraphsExtracted }
+          : {}),
+        ...(extras?.tablesDetected !== undefined ? { tables_detected: extras.tablesDetected } : {}),
+        ...(extras?.imagesEmbedded !== undefined ? { images_embedded: extras.imagesEmbedded } : {}),
+        ...(extras?.outputSizeBytes !== undefined
+          ? { output_size_bytes: extras.outputSizeBytes }
+          : {}),
+      });
     },
     get(id) {
       return raw.get(id);
     },
     listAll(filters, limit, offset) {
-      return raw.listAll(filters, limit, offset);
+      // Phase 7.2 (David, 2026-06-10) — Item A-1.1 drift fix.
+      // Ravi's repo has NO `listAll(filters)` method. It exposes single-axis
+      // list methods. The bridge contract for IPC requires a paginated
+      // {items, total} shape with multi-axis filtering, so the adapter
+      // assembles it:
+      //   1. Pick the most specific upstream method given the filter set.
+      //   2. Apply remaining filters in-memory.
+      //   3. Total is the post-filter set length; slice for limit/offset.
+      // Export jobs are a low-volume surface (single-digit per session,
+      // bounded by user actions); in-memory filtering is cheap.
+      //
+      // We over-fetch (`MAX_LIMIT`) from the chosen method to ensure the
+      // multi-filter intersection is complete before slicing.
+      const MAX_FETCH = 10000;
+      let candidates: RaviExportJobRow[];
+      if (filters.docHash !== undefined) {
+        candidates = raw.listByDocHash(filters.docHash, MAX_FETCH, 0);
+      } else if (
+        filters.status !== undefined &&
+        (filters.status === 'queued' || filters.status === 'running')
+      ) {
+        // Optimisation: listInProgress is the queued+running union.
+        candidates = raw.listInProgress();
+      } else if (filters.status !== undefined) {
+        candidates = raw.listByStatus(filters.status, MAX_FETCH, 0);
+      } else {
+        candidates = raw.listRecent(MAX_FETCH);
+      }
+      const filtered = candidates.filter((r) => {
+        if (filters.docHash !== undefined && r.doc_hash !== filters.docHash) return false;
+        if (filters.format !== undefined && r.format !== filters.format) return false;
+        if (filters.status !== undefined && r.status !== filters.status) return false;
+        if (filters.since !== undefined && r.started_at < filters.since) return false;
+        if (filters.until !== undefined && r.started_at > filters.until) return false;
+        return true;
+      });
+      // Ravi's single-axis methods already return started_at DESC, id ASC —
+      // but `listInProgress` mixes queued + running; sort here defensively
+      // so the slice is deterministic regardless of source method.
+      filtered.sort((a, b) => b.started_at - a.started_at || a.id - b.id);
+      const items = filtered.slice(offset, offset + limit);
+      return { items, total: filtered.length };
     },
     delete(id) {
       return raw.delete(id);
