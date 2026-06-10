@@ -11,7 +11,7 @@ import { join as joinPath } from 'node:path';
 import { app, dialog, shell, type BrowserWindow, type IpcMain } from 'electron';
 
 import type { AutoUpdateController } from '../main/auto-update.js';
-import { getDbBridge } from '../main/db-bridge.js';
+import { getDbBridge, getDbBridgeKinds } from '../main/db-bridge.js';
 import { type ExportEngine } from '../main/export/export-engine.js';
 import { createExportQueue } from '../main/export/export-queue.js';
 import { releaseAll as releaseAllCerts } from '../main/pdf-ops/cert-store.js';
@@ -145,6 +145,13 @@ import { handleTelemetrySetOptIn } from './handlers/telemetry-set-opt-in.js';
 // early-returns when NODE_ENV !== 'test'; the IPC handle never lands on the prod
 // surface. See `src/ipc/handlers/test-seed-ocr-job.ts` for the structural gate.
 import { registerTestSeedOcrJob } from './handlers/test-seed-ocr-job.js';
+// Phase 7.2 (David, 2026-06-10) — test-only bridge-introspection channel.
+// Same structural gate as `__test:seedOcrJob` (early-returns when NODE_ENV is
+// not 'test'); the e2e spec uses this to assert Item A-1's static-import lift
+// actually loaded the SQLite repos under `_electron.launch()`. See
+// `src/ipc/handlers/test-which-bridge.ts` and
+// `docs/phase-7.2-test-design.md §2.6`.
+import { registerTestWhichBridge } from './handlers/test-which-bridge.js';
 import { handleUpdateCheck } from './handlers/update-check.js';
 import { handleUpdateDownload } from './handlers/update-download.js';
 import { handleUpdateInstall } from './handlers/update-install.js';
@@ -1143,6 +1150,19 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
     deps: {
       ocrJobsRepo: getDbBridge().ocrJobs,
       ocrResultsRepo: getDbBridge().ocrResults,
+    },
+  });
+
+  // Phase 7.2 (David, 2026-06-10) — test-only `__test:whichBridge` channel.
+  // STRUCTURAL GATE: `registerTestWhichBridge` early-returns when NODE_ENV is
+  // not 'test'. Same shape as `__test:seedOcrJob` above — the channel is
+  // absent from the production IPC surface by construction. The handler
+  // reads the bridge-tag map written at `setDbBridge` time in
+  // `src/main/index.ts`. See `src/ipc/handlers/test-which-bridge.ts`.
+  registerTestWhichBridge({
+    ipcMain,
+    deps: {
+      getKinds: () => getDbBridgeKinds(),
     },
   });
 }

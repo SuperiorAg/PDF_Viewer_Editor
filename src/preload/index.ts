@@ -187,6 +187,8 @@ import type {
   // Phase 7.1 (David, 2026-06-05) — test-only seed channel.
   TestSeedOcrJobRequest,
   TestSeedOcrJobResponse,
+  TestWhichBridgeRequest,
+  TestWhichBridgeResponse,
 } from '../ipc/contracts.js';
 
 const pdfApi: PdfApi = {
@@ -513,6 +515,15 @@ const pdfApi: PdfApi = {
         __test: {
           seedOcrJob: (req: TestSeedOcrJobRequest) =>
             ipcRenderer.invoke(Channels.TestSeedOcrJob, req) as Promise<TestSeedOcrJobResponse>,
+          // Phase 7.2 (David, 2026-06-10) — bridge-introspection probe.
+          // Same NODE_ENV==='test' gate as `seedOcrJob`; `pdfApi.__test` is
+          // `undefined` in any other build. See
+          // `src/ipc/handlers/test-which-bridge.ts` for the structural gate.
+          whichBridge: (req?: TestWhichBridgeRequest) =>
+            ipcRenderer.invoke(
+              Channels.TestWhichBridge,
+              req ?? {},
+            ) as Promise<TestWhichBridgeResponse>,
         },
       }
     : {}),

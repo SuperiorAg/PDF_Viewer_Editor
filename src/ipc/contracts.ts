@@ -2293,6 +2293,62 @@ export interface TestSeedOcrJobValue {
 
 export type TestSeedOcrJobResponse = Result<TestSeedOcrJobValue, TestSeedOcrJobError>;
 
+// ---- __test:whichBridge (Phase 7.2, test-only) ------------------------------
+//
+// Registered ONLY when `process.env.NODE_ENV === 'test'` at app boot. The
+// handler reports — per repo slot — whether the `setDbBridge({...})` call site
+// constructed the SQLite-backed factory or fell back to the in-memory bridge.
+// Six fields, one per Phase-3..6 repo. Used by the Phase D+E body of
+// `tests/e2e/ocr-integration.spec.ts` to assert "all six are 'sqlite' under
+// `_electron.launch()`" — i.e. the static-import lift (Item A-1) actually put
+// the repos into the bundle.
+//
+// **Structural gate (see src/ipc/handlers/test-which-bridge.ts):** the handler
+// is not registered at all unless NODE_ENV==='test'. In production builds the
+// channel does not exist on the IPC surface. Same shape as
+// `__test:seedOcrJob` — registration-time gate, not runtime.
+//
+// L-004 + L-005 compliance (phase-7.2-test-design §5): this handler does NOT
+// load pdf.js, does NOT rasterize, does NOT call `pdfjs.getDocument`. It
+// reads the bridge-tag map written at `setDbBridge` time and returns six
+// string literals. No pdf.js code path is exercised.
+
+/** Per-slot tag — which factory landed in the active DbBridge. Written at
+ *  `setDbBridge` time by `src/main/index.ts`; read by this handler. */
+export type DbBridgeKindContract = 'sqlite' | 'memory';
+
+export interface TestWhichBridgeRequest {
+  /** Reserved for future filtering (e.g. single-slot probe). Currently unused;
+   *  the handler always returns all six fields. */
+  _reserved?: never;
+}
+
+export type TestWhichBridgeError =
+  /** Structural — reserved for the (hypothetical) case the handler runs in
+   *  non-test mode. The structural gate prevents this in practice. */
+  | 'not_in_test_mode'
+  /** The bridge-tag map was never populated. Indicates `setDbBridge` was not
+   *  called before the renderer made the probe — should never happen given
+   *  the boot sequence. */
+  | 'bridge_not_initialized';
+
+export interface TestWhichBridgeValue {
+  /** Phase 3 (form_templates). */
+  formTemplates: DbBridgeKindContract;
+  /** Phase 4 (signature_audit_log). */
+  signatureAudit: DbBridgeKindContract;
+  /** Phase 5 (ocr_jobs). */
+  ocrJobs: DbBridgeKindContract;
+  /** Phase 5 (ocr_results). */
+  ocrResults: DbBridgeKindContract;
+  /** Phase 5 (language_packs). */
+  languagePacks: DbBridgeKindContract;
+  /** Phase 6 (export_jobs). */
+  exportJobs: DbBridgeKindContract;
+}
+
+export type TestWhichBridgeResponse = Result<TestWhichBridgeValue, TestWhichBridgeError>;
+
 // ---- ocr:languagePackDownload (api-contracts.md §16.7) ----------------------
 
 export interface OcrLanguagePackDownloadRequest {
@@ -3166,6 +3222,13 @@ export const Channels = {
   // IPC surface by construction. See `src/ipc/handlers/test-seed-ocr-job.ts`
   // and `docs/phase-7.1-test-design.md §3`.
   TestSeedOcrJob: '__test:seedOcrJob',
+  // Phase 7.2 (David, 2026-06-10) — test-only bridge-introspection channel.
+  // Registered ONLY when process.env.NODE_ENV === 'test' at app boot. The
+  // handler reports which factory (`'sqlite' | 'memory'`) was used to
+  // construct each of the six Phase-3..6 repo slots at `setDbBridge` time.
+  // See `src/ipc/handlers/test-which-bridge.ts` and
+  // `docs/phase-7.2-test-design.md §2.6`.
+  TestWhichBridge: '__test:whichBridge',
 } as const;
 
 export type ChannelName = (typeof Channels)[keyof typeof Channels];
@@ -3365,5 +3428,10 @@ export interface PdfApi {
      *  so the e2e spec can either run the full pipeline against a known
      *  fixture or assert the reopen-restore path without re-running OCR. */
     seedOcrJob: (req: TestSeedOcrJobRequest) => Promise<TestSeedOcrJobResponse>;
+    /** Phase 7.2 — bridge-introspection probe. Reports the `'sqlite' | 'memory'`
+     *  tag for each of the six Phase-3..6 repo slots so the e2e spec can
+     *  assert the static-import lift (Item A-1) populated SQLite-backed repos
+     *  under `_electron.launch()`. */
+    whichBridge: (req?: TestWhichBridgeRequest) => Promise<TestWhichBridgeResponse>;
   };
 }

@@ -2076,10 +2076,52 @@ export function adaptExportJobsRepo(raw: RaviExportJobsRepo): ExportJobsRepoBrid
 
 let activeBridge: DbBridge = createMemoryDbBridge();
 
-export function setDbBridge(bridge: DbBridge): void {
+/**
+ * Phase 7.2 (David, 2026-06-10) — bridge-introspection tag map.
+ *
+ * For each of the six Phase-3..6 repo slots, records whether the slot was
+ * populated with the SQLite-backed factory or fell back to the memory bridge
+ * (e.g. the factory threw at construction time). The `__test:whichBridge`
+ * IPC handler (test-only, NODE_ENV==='test') reads this map and reports it
+ * to the e2e spec so the test can assert "all six are 'sqlite' under
+ * `_electron.launch()`" — i.e. the static-import lift in `src/main/index.ts`
+ * actually put the repos into the bundle.
+ *
+ * `null` reflects the pre-`setDbBridge` boot state (or a test fixture that
+ * called `setDbBridge` without supplying kinds — the memory bridge is still
+ * active, but no introspection happened). The handler treats a null map as
+ * `bridge_not_initialized`.
+ *
+ * Riley's design (`docs/phase-7.2-test-design.md §2.6`) specifies:
+ *   "David adds a tiny tag at construction (`{kind, repo}`) read by the probe."
+ * The tag is the `'sqlite' | 'memory'` enum below; the `repo` is the live
+ * instance already wired into `DbBridge` — no need to duplicate it here.
+ */
+export type DbBridgeKind = 'sqlite' | 'memory';
+
+export interface DbBridgeKinds {
+  formTemplates: DbBridgeKind;
+  signatureAudit: DbBridgeKind;
+  ocrJobs: DbBridgeKind;
+  ocrResults: DbBridgeKind;
+  languagePacks: DbBridgeKind;
+  exportJobs: DbBridgeKind;
+}
+
+let activeBridgeKinds: DbBridgeKinds | null = null;
+
+export function setDbBridge(bridge: DbBridge, kinds?: DbBridgeKinds): void {
   activeBridge = bridge;
+  if (kinds !== undefined) activeBridgeKinds = kinds;
 }
 
 export function getDbBridge(): DbBridge {
   return activeBridge;
+}
+
+/** Returns the per-slot SQLite/memory tag map, or null if `setDbBridge` was
+ *  never called with a `kinds` argument. Used exclusively by the test-only
+ *  `__test:whichBridge` IPC handler. */
+export function getDbBridgeKinds(): DbBridgeKinds | null {
+  return activeBridgeKinds;
 }

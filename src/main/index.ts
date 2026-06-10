@@ -53,8 +53,28 @@ import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 
 import { initDatabase } from '../db/connection.js';
 import { createBookmarksRepo } from '../db/repositories/bookmarks-repo.js';
+// Phase 7.2 (David, 2026-06-10) — STATIC import lift (Item A-1) of the six
+// Phase-3..6 repo factories. Replaces six dynamic `require('../db/repositories/
+// *-repo.js')` blocks in `bootstrap()` below (formerly lines 254–336 of this
+// file). The dynamic-require pattern was the v0.7.18 reopen-restore catch
+// surface gap (Julian finding 7.1.5) — Vite/Rollup silently tree-shook the
+// modules out of `dist/main/` under `_electron.launch()`, so the six repo
+// slots fell back to the memory bridge and the seeded OCR job did not survive
+// close+relaunch. The lift unconditionally wires the SQLite factories into the
+// main-process import graph; memory fallback is preserved for the legitimate
+// constructor-throw case (e.g. SQLite open fails because the prepared statement
+// won't compile against a schema-version skew) via an inline try/catch around
+// the FACTORY CALL — the imports themselves cannot fail at runtime, only the
+// invocations can. See `docs/phase-7.2-test-design.md §2.2-§2.4` and the
+// 2026-05-27 Nathan global learning ("THIRD instance ratchet — A-1 preempts").
+import { createExportJobsRepo } from '../db/repositories/export-jobs-repo.js';
+import { createFormTemplatesRepo } from '../db/repositories/form-templates-repo.js';
+import { createLanguagePacksRepo } from '../db/repositories/language-packs-repo.js';
+import { createOcrJobsRepo } from '../db/repositories/ocr-jobs-repo.js';
+import { createOcrResultsRepo } from '../db/repositories/ocr-results-repo.js';
 import { createRecentFilesRepo } from '../db/repositories/recent-files-repo.js';
 import { createSettingsRepo } from '../db/repositories/settings-repo.js';
+import { createSignatureAuditRepo } from '../db/repositories/signature-audit-repo.js';
 import { Channels } from '../ipc/contracts.js';
 import { registerIpcHandlers } from '../ipc/register.js';
 
@@ -92,12 +112,7 @@ import {
   createMemoryDbBridge,
   getDbBridge,
   setDbBridge,
-  type RaviExportJobsRepo,
-  type RaviFormTemplatesRepo,
-  type RaviLanguagePacksRepo,
-  type RaviOcrJobsRepo,
-  type RaviOcrResultsRepo,
-  type RaviSignatureAuditRepo,
+  type DbBridgeKinds,
 } from './db-bridge.js';
 import { bootstrapExportEngine, createProdSourceLoader } from './export/export-bootstrap.js';
 import { bootstrapOcr } from './pdf-ops/ocr-bootstrap.js';
@@ -241,118 +256,115 @@ function bootstrap(): void {
         // builder `extraResources` / build files (see electron-builder.yml).
         migrationsDir: join(app.getAppPath(), 'migrations'),
       });
-      // Phase 3 (Wave 12, David): wire Ravi's form_templates SQLite repo
-      // through adaptFormTemplatesRepo when present. The createFormTemplatesRepo
-      // factory may not exist yet (Wave 12 parallel-wave skew with Ravi); in
-      // that case we keep the memory-backed default already populated by
-      // createMemoryDbBridge(). The conditional import here is a runtime
-      // probe — if the module resolves, we wrap; if not, we fall back.
+      // Phase 7.2 (David, 2026-06-10) — Item A-1 static-import lift.
+      // Six repo factories (form-templates, signature-audit, ocr-jobs,
+      // ocr-results, language-packs, export-jobs) are now STATIC imports at
+      // the top of this file. The previous Wave-12..24 dynamic-require shape
+      // was the v0.7.18 reopen-restore catch-surface gap (Julian 7.1.5) —
+      // Vite/Rollup silently tree-shook the modules out of `dist/main/` under
+      // `_electron.launch()`, leaving the six slots on the memory fallback.
+      // Replaced per `docs/phase-7.2-test-design.md §2.4`.
+      //
+      // Memory-fallback semantics preserved for the legitimate
+      // constructor-throw case (e.g. SQLite open fails because the prepared
+      // statement won't compile against a schema-version skew, or a test
+      // injects a broken repo via `vi.mock` to drive the failure path). The
+      // `tryConstruct` helper guards the FACTORY CALL only — the imports
+      // themselves are unconditional and resolved at build time.
+      //
+      // Tagging: each slot records its origin (`'sqlite'` when the factory
+      // returned, `'memory'` when it threw) into `kinds`. The map is handed
+      // to `setDbBridge(bridge, kinds)` and exposed via the test-only
+      // `__test:whichBridge` IPC channel so the e2e spec can assert all six
+      // landed on SQLite under `_electron.launch()`.
       const memoryBridge = createMemoryDbBridge();
-      let formTemplatesRepo = memoryBridge.formTemplates;
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-        const ftMod: unknown = require('../db/repositories/form-templates-repo.js');
-        const factory = (ftMod as { createFormTemplatesRepo?: unknown }).createFormTemplatesRepo;
-        if (typeof factory === 'function') {
-          formTemplatesRepo = adaptFormTemplatesRepo(
-            (factory as (db: unknown) => RaviFormTemplatesRepo)(db),
-          );
+
+      // Per-slot factory-call guard. The factory is unconditionally imported
+      // (static import at top of file), so the only legitimate failure case is
+      // a constructor throw (SQLite open fails, schema-version skew, vi.mock
+      // returning an unusable shape, etc.). The cast through `unknown` is
+      // load-bearing — Ravi's repo return types (e.g. `OcrJobsRepo`) and
+      // David's adapter input types (`RaviOcrJobsRepo`) are structurally
+      // compatible at runtime but TypeScript treats discriminated-union return
+      // shapes as non-overlapping. The legacy dynamic-require code carried the
+      // same `unknown`-indirected cast — the lift preserves the type discipline
+      // exactly (no NEW unsafe surface, just removes the runtime-require).
+      const tryConstruct = <F, R, S>(
+        factory: F,
+        adapt: (raw: R) => S,
+        fallback: S,
+      ): { kind: 'sqlite' | 'memory'; repo: S } => {
+        try {
+          const raw = (factory as unknown as (db: unknown) => R)(db);
+          return { kind: 'sqlite', repo: adapt(raw) };
+        } catch (e) {
+          console.error('[main] repo factory threw; using memory fallback:', (e as Error).message);
+          return { kind: 'memory', repo: fallback };
         }
-      } catch {
-        // Memory fallback is fine until Ravi's repo lands.
-      }
-      // Phase 4 (Wave 16): wrap Ravi's signature_audit_log repo when
-      // available. Memory-backed fallback otherwise — IPC handlers tolerate
-      // both via the SignatureAuditRepoBridge interface.
-      let signatureAuditRepo = memoryBridge.signatureAudit;
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-        const saMod: unknown = require('../db/repositories/signature-audit-repo.js');
-        const factory = (saMod as { createSignatureAuditRepo?: unknown }).createSignatureAuditRepo;
-        if (typeof factory === 'function') {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          signatureAuditRepo = adaptSignatureAuditRepo(
-            (factory as (db: unknown) => RaviSignatureAuditRepo)(db),
-          );
-        }
-      } catch {
-        // Memory fallback is fine until Ravi's Wave 16 repo lands.
-      }
-      // Phase 5 (Wave 20): wrap Ravi's three new OCR repos when available.
-      // Memory-backed fallback otherwise — IPC handlers tolerate either
-      // via the OcrJobsRepoBridge / OcrResultsRepoBridge / LanguagePacksRepoBridge
-      // interfaces.
-      let ocrJobsRepo = memoryBridge.ocrJobs;
-      let ocrResultsRepo = memoryBridge.ocrResults;
-      let languagePacksRepo = memoryBridge.languagePacks;
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-        const ojMod: unknown = require('../db/repositories/ocr-jobs-repo.js');
-        const factory = (ojMod as { createOcrJobsRepo?: unknown }).createOcrJobsRepo;
-        if (typeof factory === 'function') {
-          ocrJobsRepo = adaptOcrJobsRepo((factory as (db: unknown) => RaviOcrJobsRepo)(db));
-        }
-      } catch {
-        // Memory fallback is fine until Ravi's Wave 20 repo lands.
-      }
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-        const orMod: unknown = require('../db/repositories/ocr-results-repo.js');
-        const factory = (orMod as { createOcrResultsRepo?: unknown }).createOcrResultsRepo;
-        if (typeof factory === 'function') {
-          ocrResultsRepo = adaptOcrResultsRepo(
-            (factory as (db: unknown) => RaviOcrResultsRepo)(db),
-          );
-        }
-      } catch {
-        // Memory fallback.
-      }
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-        const lpMod: unknown = require('../db/repositories/language-packs-repo.js');
-        const factory = (lpMod as { createLanguagePacksRepo?: unknown }).createLanguagePacksRepo;
-        if (typeof factory === 'function') {
-          languagePacksRepo = adaptLanguagePacksRepo(
-            (factory as (db: unknown) => RaviLanguagePacksRepo)(db),
-          );
-        }
-      } catch {
-        // Memory fallback.
-      }
-      // Phase 6 (Wave 24): wrap Ravi's export_jobs repo when available.
-      // Memory-backed fallback otherwise (same Phase 5 parallel-wave pattern).
-      let exportJobsRepo = memoryBridge.exportJobs;
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-        const ejMod: unknown = require('../db/repositories/export-jobs-repo.js');
-        const factory = (ejMod as { createExportJobsRepo?: unknown }).createExportJobsRepo;
-        if (typeof factory === 'function') {
-          exportJobsRepo = adaptExportJobsRepo(
-            (factory as (db: unknown) => RaviExportJobsRepo)(db),
-          );
-        }
-      } catch {
-        // Memory fallback is fine until Ravi's Wave 24 repo lands.
-      }
-      setDbBridge({
-        recents: adaptRecentsRepo(createRecentFilesRepo(db)),
-        bookmarks: adaptBookmarksRepo(createBookmarksRepo(db)),
-        // Phase 2 (Wave 7): wrap Ravi's settings repo through
-        // adaptSettingsRepo so Phase-2 keys (export.deterministic,
-        // editing.commitTextOnBlur, etc.) gracefully degrade to defaults
-        // until Ravi widens the SettingKey union.
-        settings: adaptSettingsRepo(createSettingsRepo(db)),
-        // Phase 3 (Wave 12)
-        formTemplates: formTemplatesRepo,
-        // Phase 4 (Wave 16)
-        signatureAudit: signatureAuditRepo,
-        // Phase 5 (Wave 20)
-        ocrJobs: ocrJobsRepo,
-        ocrResults: ocrResultsRepo,
-        languagePacks: languagePacksRepo,
-        // Phase 6 (Wave 24)
-        exportJobs: exportJobsRepo,
-      });
+      };
+
+      // Phase 3 (Wave 12) — form_templates
+      const formTemplates = tryConstruct(
+        createFormTemplatesRepo,
+        adaptFormTemplatesRepo,
+        memoryBridge.formTemplates,
+      );
+      // Phase 4 (Wave 16) — signature_audit_log
+      const signatureAudit = tryConstruct(
+        createSignatureAuditRepo,
+        adaptSignatureAuditRepo,
+        memoryBridge.signatureAudit,
+      );
+      // Phase 5 (Wave 20) — three OCR repos
+      const ocrJobs = tryConstruct(createOcrJobsRepo, adaptOcrJobsRepo, memoryBridge.ocrJobs);
+      const ocrResults = tryConstruct(
+        createOcrResultsRepo,
+        adaptOcrResultsRepo,
+        memoryBridge.ocrResults,
+      );
+      const languagePacks = tryConstruct(
+        createLanguagePacksRepo,
+        adaptLanguagePacksRepo,
+        memoryBridge.languagePacks,
+      );
+      // Phase 6 (Wave 24) — export_jobs
+      const exportJobs = tryConstruct(
+        createExportJobsRepo,
+        adaptExportJobsRepo,
+        memoryBridge.exportJobs,
+      );
+
+      const kinds: DbBridgeKinds = {
+        formTemplates: formTemplates.kind,
+        signatureAudit: signatureAudit.kind,
+        ocrJobs: ocrJobs.kind,
+        ocrResults: ocrResults.kind,
+        languagePacks: languagePacks.kind,
+        exportJobs: exportJobs.kind,
+      };
+
+      setDbBridge(
+        {
+          recents: adaptRecentsRepo(createRecentFilesRepo(db)),
+          bookmarks: adaptBookmarksRepo(createBookmarksRepo(db)),
+          // Phase 2 (Wave 7): wrap Ravi's settings repo through
+          // adaptSettingsRepo so Phase-2 keys (export.deterministic,
+          // editing.commitTextOnBlur, etc.) gracefully degrade to defaults
+          // until Ravi widens the SettingKey union.
+          settings: adaptSettingsRepo(createSettingsRepo(db)),
+          // Phase 3 (Wave 12)
+          formTemplates: formTemplates.repo,
+          // Phase 4 (Wave 16)
+          signatureAudit: signatureAudit.repo,
+          // Phase 5 (Wave 20)
+          ocrJobs: ocrJobs.repo,
+          ocrResults: ocrResults.repo,
+          languagePacks: languagePacks.repo,
+          // Phase 6 (Wave 24)
+          exportJobs: exportJobs.repo,
+        },
+        kinds,
+      );
     } catch (e) {
       const msg = (e as Error).message;
       console.error('[main] DB init failed; using in-memory fallback:', msg);
