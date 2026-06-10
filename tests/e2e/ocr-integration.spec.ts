@@ -17,7 +17,12 @@
 //      'completed', per-page word lists are present via the production
 //      `pdfApi.ocr.listResultsByJob` channel (no __reduxStore dependency).
 //   D. Close the app; relaunch with the SAME userData dir; wait for the
-//      bridge; re-open the same fixture.
+//      bridge; re-open the same fixture. Phase 7.2 (Diego, 2026-06-10):
+//      LIVE under the dev-mode harness — David's Item-A static-import lift
+//      in src/main/index.ts now bundles the SQLite repos so the bridge
+//      slots are 'sqlite' (not 'memory') under _electron.launch(). The
+//      OCR_E2E_RELAUNCH_RESTORE=1 env gate is REMOVED — Phase D+E runs by
+//      default in CI on every PR.
 //   E. After reopen, verify the OCR row is restored: listJobs (filtered
 //      by docHash + status='completed') returns the original jobId, and
 //      listResultsByJob returns the same word count for page 0. This is
@@ -95,13 +100,13 @@ const BUNDLED_ENG_GZ = resolve(
 const BUDGET_BRIDGE_READY_MS = 15_000;
 const BUDGET_OCR_RUN_MS = 25_000;
 const BUDGET_HYDRATE_MS = 5_000;
-// Phase D + E budgets — only consumed by the relaunch-restore .skip()
-// follow-up. Referenced here so the budget surface is one place when the
-// follow-up enables.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _BUDGET_RELAUNCH_MS = 15_000;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _BUDGET_RESTORE_MS = 10_000;
+// Phase D + E budgets — now live under Phase 7.2 Item A. Phase D covers
+// app1.close() + relaunch + bridge re-attach + readPdf; Phase E covers
+// listJobs + listResultsByJob restoration. Total spec under the 90 s
+// ceiling: A 15 + B 25 + C 5 + D 15 + E 10 + F+G 5 = 75 s, 15 s headroom
+// (Riley §3.4).
+const BUDGET_RELAUNCH_MS = 15_000;
+const BUDGET_RESTORE_MS = 10_000;
 
 // Riley §2.3 calibration floors — set against historical bug signatures.
 const FLOOR_TOTAL_WORDS = 20;
@@ -421,48 +426,20 @@ test.describe('Phase 7.1 — real-PDF OCR e2e integration', () => {
     expect(phaseCMs).toBeLessThan(BUDGET_HYDRATE_MS);
 
     // ============================== PHASE D / E ==========================
-    // Riley's design §2.5 / §2.6 specifies "close + relaunch with the SAME
-    // userDataDir; reopen the same fixture; listJobs filtered by docHash +
-    // status='completed' must surface the original job; listResultsByJob
-    // returns the same word count for page 0." That property requires the
-    // OCR-jobs/results DB rows to PERSIST across an Electron relaunch.
+    // Phase 7.2 Item A (Diego, 2026-06-10): LIVE under the dev-mode
+    // _electron.launch() harness. David's static-import lift in
+    // src/main/index.ts now resolves the six SQLite repo factories at
+    // build time, so under _electron.launch() the bridge slots are
+    // 'sqlite' rather than 'memory' and the OCR rows persist across an
+    // Electron close + reopen. This is the v0.7.18 reopen-restore catch
+    // surface (overlay-disappears-on-reopen) at the e2e tier — previously
+    // only covered at the unit tier in src/client/state/thunks-phase5.test.ts
+    // (loadOcrResultsThunk × 6 references). The OCR_E2E_RELAUNCH_RESTORE
+    // env gate is removed (Riley §3.1); Phase D+E runs by default in CI.
     //
-    // In a packaged build, the SQLite bridge is wired through Ravi's
-    // ocr-jobs-repo / ocr-results-repo factories and the rows do survive
-    // relaunch. In the dev-mode `_electron.launch()` harness used here,
-    // src/main/index.ts dynamic-require's the repo modules at
-    // `../db/repositories/ocr-jobs-repo.js` (line 290). Those modules are
-    // not bundled into `dist/main/` by electron-vite (verified
-    // 2026-06-05 — `find dist -name 'ocr-jobs-repo*'` returns empty), so
-    // the `require` throws, the catch silently falls through, and the
-    // OCR bridge stays at the in-memory default initialized two lines
-    // above. The DB file IS created (167936 bytes — the empty migration
-    // schema), but no OCR rows ever flow through it. After close +
-    // relaunch the in-memory state is gone and listJobs returns zero.
-    //
-    // The right scope for fixing the dev-mode bundling is a follow-up to
-    // David's main-bootstrap wire-up (parallel-wave skew with Ravi per
-    // the in-code comments) — NOT this wave. Per the Phase 7.1 plan, my
-    // slice is "the spec + fixtures + CI wiring" and the catch-coverage
-    // walk for the v0.7.18 reopen-restore signature is Riley's design
-    // contract; the unit tier already covers it via
-    // src/client/state/thunks-phase5.test.ts (loadOcrResultsThunk: 12
-    // assertions over listJobs + listResultsByJob hydration). What this
-    // spec CAN load-bearingly catch is the v0.7.15 buffer-detach (Phase
-    // B totalWords floor) + v0.7.16 tesseract.js shape drift (Phase B
-    // 'completed' status) + v0.7.17 mount-overlay (Phase C
-    // pageResultsCount floor). Five of six historical bugs caught is
-    // still well above the Phase 7.1 ROI threshold (Riley §5.2).
-    //
-    // We DO assert that the seeded queued-job row from Phase A is still
-    // visible via listJobs in the same launch (proves the bridge round-
-    // trips through one persistence layer), and we close the app cleanly
-    // — Phase G — to assert no crash on shutdown after a real OCR run.
-    //
-    // OCR_E2E_RELAUNCH_RESTORE=1 enables the relaunch+restore phase for
-    // local runs against a packaged build (see scripts/dist:win + manual
-    // smoke). The skip is the right CI posture until dev-mode SQLite
-    // persistence is wired.
+    // Sanity gate: same-launch listJobs surfaces the just-completed job.
+    // (Catches v0.7.17 mount-overlay class: "OCR finished but no row was
+    // inserted" — would fire here BEFORE the close-reopen even starts.)
 
     const seedJobsVisible = await window1.evaluate(async () => {
       const api = (
@@ -495,36 +472,207 @@ test.describe('Phase 7.1 — real-PDF OCR e2e integration', () => {
         `(saw ids: ${completedJobs.map((j) => j.id).join(',')}). ID drift?`,
     ).toBeDefined();
 
+    // Capture the pre-close page-0 word count from the same-launch
+    // listResultsByJob payload (already fetched in Phase C as pageResults).
+    // Riley §4 R3: this reads from the SQLite row Phase B wrote, NOT a
+    // fresh Tesseract run on relaunch — so the strict equality assertion
+    // in Phase E is correct (do NOT loosen to >=).
+    const originalPage0WordCount = page0?.words.length ?? 0;
+    expect(
+      originalPage0WordCount,
+      `Pre-close page-0 word count ${String(originalPage0WordCount)} < ${String(FLOOR_TOTAL_WORDS)} — ` +
+        `Phase E equality assertion would be vacuous. Phase C hydration broken? (Riley §4 R6.)`,
+    ).toBeGreaterThanOrEqual(FLOOR_TOTAL_WORDS);
+
+    // ============================== PHASE D ==============================
+    // Close app1, settle for the SQLite WAL/SHM file-lock release on
+    // Windows (Riley §4 R1, default 250 ms; cap 500 ms), relaunch with
+    // the SAME userDataDir, wait for the preload bridge.
+    const phaseDStart = Date.now();
+    await app1.close();
+    await new Promise((r) => setTimeout(r, 250));
+
+    const { app: app2, window: window2, consoleCollector: errors2 } = await launchApp(userDataDir);
+    await waitForBridgeAndTestNs(window2, 'phase-D relaunch');
+
+    // Bridge-introspection probe (Item A P-2, Riley §2.6). Asserts all
+    // six bridge slots are 'sqlite' under _electron.launch() — if any are
+    // 'memory', David's static-import lift didn't take and Phase E would
+    // fail with a worse / less attributable message downstream. Failing
+    // fast here surfaces the regression at the bridge layer.
+    const bridge2 = await window2.evaluate(async () => {
+      const api = (
+        window as unknown as {
+          pdfApi: {
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            __test: {
+              whichBridge: () => Promise<{
+                ok: boolean;
+                value?: {
+                  formTemplates: 'sqlite' | 'memory';
+                  signatureAudit: 'sqlite' | 'memory';
+                  ocrJobs: 'sqlite' | 'memory';
+                  ocrResults: 'sqlite' | 'memory';
+                  languagePacks: 'sqlite' | 'memory';
+                  exportJobs: 'sqlite' | 'memory';
+                };
+                error?: string;
+              }>;
+            };
+          };
+        }
+      ).pdfApi;
+      return api.__test.whichBridge();
+    });
+    expect(
+      bridge2.ok,
+      `[launch2] __test:whichBridge failed: ${String(bridge2.error)} — ` +
+        `is the test-only channel registered (NODE_ENV=test)?`,
+    ).toBe(true);
+    const bridgeKinds = bridge2.value!;
+    const memorySlots = Object.entries(bridgeKinds)
+      .filter(([, kind]) => kind === 'memory')
+      .map(([slot]) => slot);
+    expect(
+      memorySlots,
+      `[launch2] Bridge probe: expected all 6 repos to be 'sqlite' under _electron.launch(); ` +
+        `got memory slots: [${memorySlots.join(', ')}]. ` +
+        `Item A regression — David's static-import lift in src/main/index.ts is incomplete ` +
+        `or vite tree-shook a module.`,
+    ).toEqual([]);
+
+    // Re-open the same fixture on launch2.
+    const reopenResult = await window2.evaluate(async (fixturePath: string) => {
+      const api = (
+        window as unknown as {
+          pdfApi: {
+            fs: {
+              readPdf: (req: { droppedPath: string }) => Promise<{
+                ok: boolean;
+                value?: { handle: number; fileHash: string; pageCount: number };
+                error?: string;
+              }>;
+            };
+          };
+        }
+      ).pdfApi;
+      return api.fs.readPdf({ droppedPath: fixturePath });
+    }, FIXTURE_1P);
+    expect(
+      reopenResult.ok,
+      `[launch2] fs.readPdf on relaunch failed: ${String(reopenResult.error)}`,
+    ).toBe(true);
+
+    const phaseDMs = Date.now() - phaseDStart;
+    console.log(`[phase D] ${String(phaseDMs)}ms (budget ${String(BUDGET_RELAUNCH_MS)}ms)`);
+    expect(
+      phaseDMs,
+      `Phase D exceeded budget: ${String(phaseDMs)}ms > ${String(BUDGET_RELAUNCH_MS)}ms. ` +
+        `Bridge re-attach slow? SQLite file-lock contention?`,
+    ).toBeLessThan(BUDGET_RELAUNCH_MS);
+
+    // ============================== PHASE E ==============================
+    // loadOcrResultsThunk semantics on the renderer: when a doc opens,
+    // listJobs is filtered by docHash + status='completed' to find the
+    // job whose results to hydrate, then listResultsByJob fetches the
+    // per-page rows. Mirror that here at the IPC tier.
+    const phaseEStart = Date.now();
+
+    const restoredJobs = await window2.evaluate(async () => {
+      const api = (
+        window as unknown as {
+          pdfApi: {
+            ocr: {
+              listJobs: (req: Record<string, unknown>) => Promise<{
+                ok: boolean;
+                value?: { jobs: { id: number; status: string }[] };
+                error?: string;
+              }>;
+            };
+          };
+        }
+      ).pdfApi;
+      return api.ocr.listJobs({ limit: 100 });
+    });
+    expect(
+      restoredJobs.ok,
+      `[launch2] listJobs failed after relaunch — SQLite repo not loaded? error=${String(restoredJobs.error)}`,
+    ).toBe(true);
+
+    const restoredCompletedJob = restoredJobs.value?.jobs.find(
+      (j) => j.id === originalJobId && j.status === 'completed',
+    );
+    expect(
+      restoredCompletedJob,
+      `Phase E: original jobId=${String(originalJobId)} not found after relaunch. ` +
+        `Got jobs: ${(restoredJobs.value?.jobs ?? []).map((j) => `${j.id}:${j.status}`).join(',')}. ` +
+        `This is the v0.7.18 reopen-restore signature — the SQLite row either did not persist ` +
+        `or listJobs lost it across the Electron close + reopen.`,
+    ).toBeDefined();
+
+    const restoredResults = await window2.evaluate(async (jobId: number) => {
+      const api = (
+        window as unknown as {
+          pdfApi: {
+            ocr: {
+              listResultsByJob: (req: { jobId: number }) => Promise<{
+                ok: boolean;
+                value?: {
+                  pageResults: { pageIndex: number; words: unknown[]; totalWords: number }[];
+                };
+                error?: string;
+              }>;
+            };
+          };
+        }
+      ).pdfApi;
+      return api.ocr.listResultsByJob({ jobId });
+    }, originalJobId);
+
+    expect(
+      restoredResults.ok,
+      `[launch2] listResultsByJob failed: ${String(restoredResults.error)}`,
+    ).toBe(true);
+    const restoredPage0 = restoredResults.value?.pageResults.find((p) => p.pageIndex === 0);
+    expect(
+      restoredPage0,
+      `Phase E: no page-0 results restored for jobId=${String(originalJobId)} — ` +
+        `the ocr_results rows did not survive serialize/deserialize.`,
+    ).toBeDefined();
+    expect(
+      restoredPage0!.words.length,
+      `Phase E: restored page-0 word count ${String(restoredPage0!.words.length)} != pre-close ` +
+        `${String(originalPage0WordCount)}. Drift through SQLite serialize/deserialize — ` +
+        `v0.7.18 catch surface (Riley §4 R3: equality is correct, do NOT loosen to >=).`,
+    ).toBe(originalPage0WordCount);
+
+    const phaseEMs = Date.now() - phaseEStart;
+    console.log(`[phase E] ${String(phaseEMs)}ms (budget ${String(BUDGET_RESTORE_MS)}ms)`);
+    expect(
+      phaseEMs,
+      `Phase E exceeded budget: ${String(phaseEMs)}ms > ${String(BUDGET_RESTORE_MS)}ms.`,
+    ).toBeLessThan(BUDGET_RESTORE_MS);
+
     // ============================== PHASE F ==============================
-    // No console errors during the single-launch run. (Riley §2.7.)
-    const allErrors = [...errors1.errors];
+    // No console errors across BOTH launches. Same exact-match 'error'
+    // filter as Phase A (Riley §2.7 / 7.2 §3.3). React DevTools-detection
+    // emits a benign 'log' at boot — that does NOT trip this gate.
+    const allErrors = [...errors1.errors, ...errors2.errors];
     expect(
       allErrors,
-      `Console errors during run (${String(allErrors.length)}): ${allErrors.join(' | ')}`,
+      `Console errors across launch1+launch2 (${String(allErrors.length)}): ${allErrors.join(' | ')}`,
     ).toEqual([]);
 
     // ============================== PHASE G ==============================
-    // Clean shutdown.
-    await app1.close();
+    // Clean shutdown of launch2.
+    await app2.close();
 
-    const totalMs = phaseAMs + phaseBMs + phaseCMs;
+    const totalMs = phaseAMs + phaseBMs + phaseCMs + phaseDMs + phaseEMs;
     console.log(
       `[phase totals] A=${String(phaseAMs)}ms B=${String(phaseBMs)}ms C=${String(phaseCMs)}ms ` +
+        `D=${String(phaseDMs)}ms E=${String(phaseEMs)}ms ` +
         `total=${String(totalMs)}ms (75s target, 90s ceiling)`,
     );
-  });
-
-  // Phase D + E (close + relaunch + overlay restoration). Requires the
-  // SQLite-backed OCR bridge to be active, which only happens in packaged
-  // builds today — dev-mode `_electron.launch()` falls back to the in-
-  // memory bridge per the wave-skew workaround in src/main/index.ts:290.
-  // Enable locally with OCR_E2E_RELAUNCH_RESTORE=1 after running
-  // `npm run dist:win` and launching against the packaged binary path.
-  // Follow-up tracking: this becomes a CI-gated test once Wave-X wires
-  // dev-mode SQLite repo bundling.
-  test.skip('OCR overlay restores on close + relaunch (local-only, OCR_E2E_RELAUNCH_RESTORE=1 to enable)', () => {
-    // TODO Wave 7.x: requires packaged-binary launch + SQLite bridge.
-    // Spec body matches Riley §2.5 / §2.6 verbatim.
   });
 
   // Multi-page fixture: skipped in CI to keep the canonical run under the
