@@ -40,15 +40,26 @@ describe('handleDialogPickPdfFiles', () => {
   });
 
   it('happy path: returns a single sanitized path for default (single-select)', async () => {
+    // Cross-platform: derive the expected shape from the same production
+    // sanitizer the handler uses, so this assertion stays load-bearing on
+    // BOTH Windows (`C:\Users\test\a.pdf`) and Ubuntu CI
+    // (`<cwd>/C:/Users/test/a.pdf`). The point of the test is the
+    // production-sanitizer round-trip, not the specific Windows separator
+    // shape — hardcoding `C:\Users\test\a.pdf` made the assertion fail on
+    // ubuntu-latest because Linux `path.resolve` prepends the cwd to a
+    // string that isn't an absolute POSIX path. Phase 7.2 Item B (Diego).
+    const input = 'C:/Users/test/a.pdf';
+    const expected = sanitizePath(input); // ← same fn the handler calls
+    expect(expected, 'sanitizePath rejected the test input — fixture must be valid').not.toBeNull();
     const deps = makeDeps({
       showOpenDialog: vi.fn().mockResolvedValue({
         canceled: false,
-        filePaths: ['C:/Users/test/a.pdf'],
+        filePaths: [input],
       }),
     });
     const res = await handleDialogPickPdfFiles({}, deps);
     const val = expectOk(res);
-    expect(val.paths).toEqual(['C:\\Users\\test\\a.pdf']);
+    expect(val.paths).toEqual([expected!]);
   });
 
   it('honors multi: true and passes multiSelections to the dialog', async () => {
