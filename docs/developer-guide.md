@@ -938,14 +938,17 @@ npm run e2e -- --grep "ocr-integration"
 
 Playwright launches Electron via `_electron.launch()` and sets `NODE_ENV=test` on the spawned process automatically (`tests/e2e/ocr-integration.spec.ts:145`); you do not need to export it in your shell. The spec runs against the dev-mode bundle out of `dist/main/`, takes ~50–75 s on a warm Windows host, and is the gate that runs on every PR.
 
-The relaunch-restore path (Phases D + E — close, reopen, assert overlay restoration) is skipped in the default run because the dev-mode bundle out of `dist/main/` does not currently include the SQLite repo modules — the in-memory OCR bridge wins, and the reopened app cannot read back the prior session's `ocr_jobs` row. To exercise that path you need a packaged binary plus an env opt-in:
+The relaunch-restore path (Phases D + E — close, reopen, assert overlay restoration) **now runs by default** as of Phase 7.2 (2026-06-10). The `OCR_E2E_RELAUNCH_RESTORE=1` env gate and the packaged-binary prerequisite have been removed. David's static-import lift of the six SQLite repos in `src/main/index.ts` (Phase 7.2 Item A-1) makes the SQLite OCR bridge bundler-visible to the dev-mode harness, so the close + relaunch + restore body runs against `dist/main/` on every PR — same command as the happy path:
 
 ```bash
-npm run dist:win
-OCR_E2E_RELAUNCH_RESTORE=1 npm run e2e -- --grep "ocr-integration"
+npm run e2e -- --grep "ocr-integration"
 ```
 
-Use this whenever you touch the OCR-restore code path (`loadOcrResultsThunk`, `ocr:listJobs`, `ocr:listResultsByJob`, or the SQLite-backed OCR bridge in `src/main/index.ts`). The follow-up tracked in [`docs/code-review.md`](code-review.md) (finding 7.1.5) wires dev-mode SQLite repo bundling so this gate runs unconditionally in CI; see the Phase 7.1 row in [`docs/build-report.md`](build-report.md) for the open Phase 7.2 carry-over.
+The live Phase D + E body lives at `tests/e2e/ocr-integration.spec.ts` (see the file header for the Phase A–G walkthrough). This closes [`docs/code-review.md`](code-review.md) finding 7.1.5 at the e2e tier; the unit-tier coverage in `src/client/state/thunks-phase5.test.ts` (`loadOcrResultsThunk` × 6 references) remains in place as defense in depth.
+
+A second-tier ratchet landed alongside Item A-1: `src/main/db-bridge.integration.test.ts` (24 tests against real `better-sqlite3` via `makeTestDatabase()`) audits all six db-bridge adapters (`adaptDocumentsRepo`, `adaptOcrJobsRepo`, `adaptOcrResultsRepo`, `adaptSignatureAuditRepo`, `adaptBookmarksRepo`, `adaptRecentsRepo`) for method-coverage drift against their repo modules. It catches the adapter/repo signature drift class that masquerades as e2e flake — the class that surfaced as Julian finding 7.2.1 (CRITICAL) when `adaptOcrJobsRepo` had silently dropped methods the bridge contract required. Run as part of the default `npm test` Vitest suite; no Electron harness needed. Touch this when you add or rename a method on any `src/db/repositories/*.ts` file.
+
+Phase 7.2 closed at Julian's **GO-with-follow-up** verdict (see [`docs/code-review.md`](code-review.md) §"Phase 7.2 — re-review"). One forward-looking follow-up is open: finding **7.2.4** (no signed-PDF e2e coverage for PAdES + OCR invalidation backref wiring — the bug class behind the `markInvalidatedByOcrJob` silent-no-op uncovered by the new integration test). Scoped into Phase 7.3 e2e; not a v0.7.20 blocker.
 
 #### Fixture provenance
 
