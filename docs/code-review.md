@@ -3068,3 +3068,73 @@ I chose **C-2** (recommend Marcus push the draft PR after the 7.2.1 blocker is f
 **Recommended unblock:** dispatch David for a targeted Item A-1.1 fix on `adaptOcrJobsRepo` (and audit the sibling adapters per 7.2.2). Fix should be: change the bridge's `RaviOcrJobsRepo` interface and adapter to pass an object input matching Ravi's actual SQLite signature. Estimated cost: ~30 LOC across `db-bridge.ts`. Add a regression test that exercises the round-trip through the real SQLite repo (not the memory mock) so this class of drift cannot regress silently again. Then re-run Phase 7.2 Wave 3.
 
 When 7.2.1 is closed and the e2e spec runs green locally + CI, finding 7.1.5 will be closed.
+
+## Phase 7.2 — Wave 3 re-review (Julian, 2026-06-10)
+
+### 1. Updated verdict
+
+**GO-with-follow-up.** David's Item A-1.1 (commit `491341f`) closes the 7.2.1 blocker cleanly — every spot-check verifies, the new round-trip integration test (24 tests, all six adapters, real `better-sqlite3` via `makeTestDatabase()`) is the right ratchet for the drift class, the canonical e2e spec runs green in CI for the first time in months, and the bridge-introspection probe asserts all six slots are SQLite-backed on relaunch. The single carry-forward is 7.2.3 (prod-build dead-code-elimination of `__test:*` channels) — MEDIUM, deferred to Diego.
+
+### 2. 7.2.1 closure — adapter fix confirmed
+
+`src/main/db-bridge.ts:1862-1882` now declares `RaviOcrJobsRepo.updateStatus(id, input: {status, completed_at?, mean_confidence?, total_words?, error_message?})` — an object payload matching Ravi's actual SQLite signature at `src/db/repositories/ocr-jobs-repo.ts:351` exactly. The adapter at `db-bridge.ts:1922-1945` forwards the object verbatim with conditional spreads that respect Ravi's COALESCE-pattern UPDATE semantics — missing-field undefined is preserved as "do not overwrite" rather than collapsed to a positional placeholder. The Phase B e2e abort signature (`status must be one of … (got undefined)`) is structurally impossible against this code path.
+
+### 3. Sibling adapter audit verification
+
+I read each adapter and its paired `Ravi*Repo` interface against the corresponding `src/db/repositories/*-repo.ts`. Every "Phase 7.2 (David, 2026-06-10) — Item A-1.1 drift fix." marker maps to a real shape difference David resolved:
+
+- **ocrJobs** — CONFIRMED. `updateStatus` positional→object; `listAll` re-assembled from Ravi's `listAll(filters, limit?, offset?)` + `countAll(filters)` into `{items, total}`. Both fixes are load-bearing for the e2e.
+- **ocrResults** — CONFIRMED. `insert` now routes via `upsert` (which is Ravi's actual surface — there is no `insert` method on `createOcrResultsRepo`); idempotent on `UNIQUE(job_id, page_index)` per the integration test. Rationale fully matches Ravi's repo at `src/db/repositories/ocr-results-repo.ts`.
+- **signatureAudit** — CONFIRMED. `insert` unwraps the discriminated union (Ravi returns `{kind:'inserted',id}|{kind:'duplicate',id}`); `markInvalidatedByOcrJob` rewritten to resolve `(docHash, fieldNames[]) → rowIds[]` via the existing `listAll` filter, then forward Ravi's `(rowIds[], ocrJobId)` signature. This is the right ownership boundary — the bridge converts UI-shaped lookup keys to SQL primary keys; Ravi's repo stays SQL-native.
+- **languagePacks** — CONFIRMED. `remove` unwraps the `{kind:'downloaded',true}|{kind:'bundled_protected',false}` discriminated union to a plain boolean; `touchLastUsed` swallows the boolean return (handler doesn't need it). Both match Ravi's repo at `src/db/repositories/language-packs-repo.ts`.
+- **exportJobs** — CONFIRMED. The most ambitious adapter — Ravi's repo exposes four single-axis list methods (`listAll`, `listInProgress`, `listByDocHash`, `listByStatus`) but the bridge contract wants a generic `listAll(filters, limit, offset) → {items, total}`. David's adapter dispatches to the narrowest matching Ravi method (e.g. `status='queued'|'running'` → `listInProgress`, fallback `listByStatus`) and filters the remainder in-memory. Acceptable per L1 ("don't grow Ravi's surface for bridge ergonomics") and the dataset is low-volume. `updateProgress` positional→object, same shape fix as ocrJobs.
+- **formTemplates** — CONFIRMED CLEAN. David's audit found NO drift here. I re-checked: `adaptFormTemplatesRepo` at `db-bridge.ts:1495` matches `createFormTemplatesRepo` at `src/db/repositories/form-templates-repo.ts` field-for-field. Reported "no fix needed" stands.
+
+### 4. Round-trip integration test verification
+
+`src/main/db-bridge.integration.test.ts` (654 LOC) is the right ratchet:
+
+- **Real SQLite, not memory mock**: imports `BetterSqlite3` + `makeTestDatabase()` from `src/db/test-support.ts`, which spins a fresh `:memory:` DB with the canonical migration list applied. Each test gets a fresh DB via `beforeEach`/`afterEach`.
+- **24 tests across 7 describe blocks**: ocrJobs (5), ocrResults (3), signatureAudit (3), languagePacks (4), formTemplates (2), exportJobs (4), and a "no-drift smoke" block (3) covering recents/bookmarks/settings. Counts verified by `grep -c "  it("` and `grep -c "  describe("`.
+- **Coverage breadth**: every adapter method exercised through real SQLite. The exact Phase-B abort code path (`updateStatus({status:'completed', completed_at, mean_confidence, total_words})`) is the second test in `ocrJobs` and is labeled "this is the v0.7.20 catch." `markInvalidatedByOcrJob` has its own test that confirms the `docHash + fieldNames → rowIds → mark` chain — closing the silent-no-op risk David noted in his learnings L4.
+- **Local note**: vitest run failed locally for me with `NODE_MODULE_VERSION 123 vs 137` — that's the L-003 better-sqlite3 ABI rebuild gap (my Node 24 vs the Electron-targeted rebuild). The escape hatch at `scripts/rebuild-native-for-node.mjs` would resolve, but CI ran the canonical Node 20 baseline and the suite is GREEN there (see §5).
+
+### 5. CI confirmation — local re-run substituted
+
+CI is the authoritative wall clock since L-003 holds my Node-24 local at the ABI gate. From `gh run view 27277743488 --log`:
+
+- **Vitest** (both Windows + Ubuntu): `src/main/db-bridge.integration.test.ts (24 tests)` GREEN. Full suite **1949 passed / 2 skipped** across **180 files**.
+- **Playwright e2e** (Windows): Phase A=8294ms, Phase B=3476ms, Phase C=29ms, Phase D=1442ms, Phase E=38ms, total=**13279ms** (75s target, 90s ceiling). All 6 bridge slots probed `'sqlite'` post-relaunch (else Phase D's `expect.fail` would have fired). David's local Windows numbers (A=961, B=2727, C=25, D=1417, E=19, total=5149ms) were the warm-cache lower bound; CI's cold-start matches expectations within budget. **No flake** — the 3 Playwright tests passed cleanly in 17.4s.
+
+### 6. CI status — first-greens
+
+Workflow run: https://github.com/SuperiorAg/PDF_Viewer_Editor/actions/runs/27277743488. PR: https://github.com/SuperiorAg/PDF_Viewer_Editor/pull/1.
+
+- `Lint / Typecheck / Test (windows-2025-vs2026)` — GREEN.
+- `Lint / Typecheck / Test (ubuntu-latest)` — GREEN. **First Ubuntu `check`-green in months** (Diego's Item B was the unlock; the dialog-pick-pdf-files sanitizePath round-trip is now platform-portable per §1 of the prior STOP review).
+- `Playwright e2e (windows-2025-vs2026)` — GREEN. **First CI run of the Phase 7.1 canonical spec, ever** (it was env-gated `OCR_E2E_RELAUNCH_RESTORE=1` until Diego's Item A-test live-body lift in `9d69f83`).
+- `Build Windows artifacts` — correctly SKIPPED (PR-only; runs on main push during the v0.7.20 release ceremony).
+
+All three plan §"Wave 3 (sequential)" gates (line 138) satisfied.
+
+### 7. Findings closure
+
+- **7.1.5** — CLOSED. Structural cause was Item A-1's static-import lift; operational consequence is now demonstrated by a green CI run of the spec body that catches the v0.7.18 reopen-restore class at three distinct assertion points (bridge probe + listJobs match + listResultsByJob word-count equality).
+- **7.2.1** — CLOSED. Adapter signature aligned with Ravi's SQLite repo; deterministic Phase B abort no longer reproducible. Locked open against regression by `db-bridge.integration.test.ts` test 2 of `ocrJobs adapter`.
+- **7.2.2** — CLOSED. Full sibling-adapter audit completed by David (5 of 5 had drift; formTemplates clean), all fixes landed in `491341f`, each covered by integration tests. The drift class as a whole is now ratcheted by the integration test file — any future Ravi-side signature evolution that breaks an adapter will fail the suite at PR time, not at e2e-Phase-B time months later.
+
+### 8. 7.2.3 disposition
+
+**DEFERRED to a future Diego dispatch.** Test-only channel registrations (`__test:whichBridge`, `__test:seedOcrJob`) are still gated at runtime via `process.env['NODE_ENV'] !== 'test'` early-return; channel name strings and handler bodies remain in `dist/main/index.js`. Risk model unchanged from the original STOP review — runtime gate holds for normal launches; an attacker with control of the parent environment could bind the channel by setting `NODE_ENV=test` before exec. Fix is a Vite `define: {'process.env.NODE_ENV': '"production"'}` constant in `electron.vite.config.ts` for the prod build, which would dead-code-eliminate both the registration AND the handler module bodies via constant-folded `if` branches. **Not a v0.7.20 blocker** — same risk has existed since v0.7.19's `__test:seedOcrJob`; the operational mitigation (packaged binary's parent env is the user's shell, not the network) holds. Marcus, route to Diego post-v0.7.20.
+
+### 9. New finding — 7.2.4 (LOW/MED, forward-looking)
+
+| ID    | Severity | Location                                                                                                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Status                 |
+| ----- | -------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| 7.2.4 | LOW/MED  | `src/main/db-bridge.ts:1785-1808` (adapter) + `src/ipc/handlers/ocr-run-on-document.ts:376` (call site) | `signatureAudit.markInvalidatedByOcrJob(docHash, signedFields, jobId)` is now non-optional on the bridge contract and the adapter resolves docHash/fieldNames → rowIds → mark loudly (per David's L4 lesson). BUT no e2e spec exercises the PAdES+OCR invalidation backref end-to-end on a signed PDF. The integration test (`db-bridge.integration.test.ts` signatureAudit block, test 3) covers the SQL-layer round-trip in isolation, but the production path (signed PDF → OCR runs → audit rows resolved + marked) is unobserved. If the call site evolves (e.g. signedFields computed from a different upstream source) the failure would be silent until a user-reported "my signed PDF still shows valid after OCR." | OPEN — forward-looking |
+
+Recommended remediation: Phase 7.3 e2e add a signed-PDF fixture, run OCR over it, assert at the audit-row level that `invalidated_at IS NOT NULL` and `invalidating_ocr_job_id` matches the run. Not a v0.7.20 blocker — the integration test closes the regression-against-known-shape risk; this addresses the production-wiring risk.
+
+### 10. Closing
+
+Wave 3 is complete. Recommend Marcus advance to Wave 4 (Nathan) for the v0.7.20 release-notes/user-guide refresh, then merge PR #1, then cut v0.7.20 via Diego's release ceremony.
