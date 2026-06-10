@@ -2937,3 +2937,134 @@ Phase 7.1 lands Phases A–C cleanly — the modal-mid-recognition capture is no
 L-004 and L-005 grep ratchet is clean across all Phase 7.1 files. The structural NODE_ENV gate is the strongest form (registration-time, not runtime); the preload mirror provides defense-in-depth. Fixture provenance is fully reproducible from source text + a bundled OFL-1.1 font; the SHA256 lockfile + CI verifier catch any substitution in 5 seconds before Tesseract wastes 3-4 minutes.
 
 The HIGH finding (7.1.5) is the catch-coverage gap from the dev-mode skip. It is **accepted, not blocking**: (a) Phase 7.1's stated goal is the modal-mid-recognition reproducibility surface, which lands; (b) the v0.7.18 bug class has unit-tier defense in depth; (c) Phase 7.2 is the right scope for the build-config change to make dist/main/ bundle the SQLite repos. Marcus should track 7.1.5 explicitly as a Phase 7.2 candidate.
+
+---
+
+## Phase 7.2 — Wave 3 review (Julian, 2026-06-10)
+
+### Verdict
+
+**STOP.** The static-import lift (Item A-1) is structurally correct AND the bundler-visibility check passes, but it exposed a pre-existing latent adapter/repo signature drift in `adaptOcrJobsRepo` that deterministically breaks Phase B of the canonical e2e spec on every run. The acceptance criterion "the new live Phase D+E test runs green in CI" cannot be satisfied as the codebase stands — Phase D+E never executes, the test fails at Phase B with `status must be one of queued|running|completed|cancelled|failed|superseded_by_undo (got undefined)`. **One blocker (7.2.1, CRITICAL). David fixes the adapter, then re-dispatch.** Items B + A-test ship correctly when 7.2.1 is closed.
+
+### 1. Item B walkthrough (Diego, 5d2ac3b)
+
+All six tests in `src/ipc/handlers/dialog-pick-pdf-files.test.ts` run green locally (`6/6` in 7 ms). The B-1 fix at lines 42–63 substitutes `expected = sanitizePath(input)` for the previous hardcoded `'C:\\Users\\test\\a.pdf'` literal.
+
+**Five-test rubric on BOTH platforms (post-fix):**
+
+| Line | Test                           | Asserts                                             | Windows | Ubuntu |
+| ---- | ------------------------------ | --------------------------------------------------- | ------- | ------ |
+| 26   | user_cancelled (canceled flag) | error code only                                     | green   | green  |
+| 34   | user_cancelled (empty paths)   | error code only                                     | green   | green  |
+| 42   | happy-path single-select       | `paths === [sanitizePath(input)]`                   | green   | green  |
+| 65   | multi:true plumbing            | length 2 + `properties.includes('multiSelections')` | green   | green  |
+| 78   | invalid_path traversal         | error code only                                     | green   | green  |
+| 91   | invalid_path non-.pdf          | error code only                                     | green   | green  |
+
+The four error-code / length tests assert on platform-portable surfaces only (sanitizer rejection regex fires before `path.resolve` on both platforms; `multiSelections` is array content, not path content). Riley's claim that **only line 51** carried Windows-shaped content is verified — confirmed by reading the actual test bodies. Lines 67/80/54 are clean.
+
+**"Is the test still meaningful or has it become a tautology?"** The assertion is now `expect(handlerOutput).toEqual([sanitizePath(input)])`, and the handler internally calls `sanitizePath(input)`. The test is not strictly a tautology because:
+
+1. The handler does not return `sanitizePath(input)` directly — it returns `paths`, an Array. The assertion gates the round-trip: showOpenDialog → handler → sanitizer → response shape. If the handler regressed to e.g. returning the raw filePaths un-sanitized, both Windows and Ubuntu would fail. If it returned an unwrapped string instead of an array, both fail. If it lost the input-passthrough, both fail.
+2. The sanity gate at line 53 (`expect(expected).not.toBeNull()`) guards against a regression where the production sanitizer starts rejecting every input.
+
+It is true that a future regression that affects ONLY the sanitizer's transformation (e.g. it changes its normalization rule) would no longer be caught — the test would silently accept the new shape. That is a genuine coverage loss vs the old literal-equality assertion. Riley's design call (§1.6) acknowledges this implicitly by saying the test "is the same shape with no hidden state" — but "no hidden state" is exactly the property that closes the back-door: snapshots would silently re-bless under `--update-snapshot`, this derivation does too. **Mitigation**: the production sanitizer has its own dedicated test file at `src/main/security/path-sanitizer.test.ts` that gates transformations directly. As long as that file stays load-bearing, the coverage loss here is acceptable. **Net judgment: B-1 is the right call.** No follow-up.
+
+### 2. Item A walkthrough (David, 8343da6)
+
+**Bundling-visibility: PASS.** Ran `npm run build` after the joined main. `dist/main/index.js` grew from **450,550 → 505,500 bytes** (+54,950 / +12.2 %). Grep counts in the new bundle:
+
+- `createOcrJobsRepo|createOcrResultsRepo|createFormTemplatesRepo|createSignatureAuditRepo|createLanguagePacksRepo|createExportJobsRepo` → **12 hits** (six imports, six call sites).
+- SQL table names `ocr_jobs|ocr_results|form_templates|signature_audit_log|language_packs|export_jobs` → **51 hits**.
+- The static-import lift unambiguously put all six repo modules into the bundle. Vite did NOT tree-shake any of them. The dev-mode `_electron.launch()` now resolves SQLite-backed factories.
+
+**Bundle-size delta: +54 KB / +12.2 %.** The plan §Risks budgeted this row at "low likelihood" / ~100 KB/repo expected — actual is well under. Acceptable; no Electron startup regression risk at this magnitude.
+
+**Memory-fallback reachability — verified by direct unit test.** `src/main/index.test.ts` adds three new tests against the lift:
+
+1. "all six factories succeed → kinds all sqlite" — happy path
+2. "ocrJobs factory throws → kinds reports ocrJobs=memory, others=sqlite" — single-slot constructor-throw fallback path
+3. "every factory throws → kinds reports all memory" — full-degrade path
+
+All three pass locally (`7/7` in 84 ms; stderr emits the deliberate `[main] repo factory threw; using memory fallback:` log lines per the `tryConstruct` helper). The legitimate memory-fallback path (factory throws at construction time) is reachable per design. The illegitimate import-missing path is gone, which is the desired outcome — packaging gaps now become build-time errors, not silent runtime memory-bridge falls.
+
+The `tryConstruct<F,R,S>(factory, adapt, fallback)` helper is single-responsibility: it guards only the factory invocation, not the import. Cast through `unknown as (db: unknown) => R` is the same shape the old dynamic-require carried; no NEW unsafe surface introduced.
+
+### 3. `__test:whichBridge` safety walkthrough
+
+**Structural gate at registration:** `src/ipc/handlers/test-which-bridge.ts:89` early-returns when `process.env['NODE_ENV'] !== 'test'`. Identical pattern to `__test:seedOcrJob`. `ipcMain.handle` is never called in production, so the channel name is NOT a probeable IPC surface in prod even if hostile code attempts it — `ipcMain.handle` was never registered.
+
+**Production-build absence check (caveat — important).** Grepped the **rebuilt** `dist/main/index.js` after the lift:
+
+- `__test:whichBridge|TestWhichBridge|whichBridge|registerTestWhichBridge|handleTestWhichBridge` → **6 hits**.
+- `__test:seedOcrJob|seedOcrJob|registerTestSeedOcrJob` → **3 hits** (pre-existing Phase 7.1 pattern).
+
+The channel name strings AND the handler bodies DO appear in the production bundle. The runtime `NODE_ENV !== 'test'` early-return prevents `ipcMain.handle` from binding the channel, so on a normal launch the surface is unreachable. **However:** if an attacker can set `NODE_ENV=test` in the parent environment before launching the packaged binary, the channel binds and becomes invokable. This is the same risk Riley acknowledged in design §4 R5 — and the same risk that already applies to `__test:seedOcrJob` since v0.7.19. **This is NOT a Phase 7.2 regression** — it inherits the Phase 7.1 gate model exactly. It IS a latent risk-of-the-class. Tracked as 7.2.3 (MEDIUM) — the gate model should at minimum be ratified at build-time with a Vite `define` constant so production builds dead-code-eliminate both the registration AND the handler module.
+
+**Preload mirror review:** `src/preload/index.ts:514-525`. The `...(process.env['NODE_ENV']==='test'?{__test:{...}}:{})` spread reads `process.env.NODE_ENV` at **preload-context load time**. Electron preload runs in its own V8 context. The renderer cannot mutate `process.env.NODE_ENV` after preload init. If a prod build's preload sees `NODE_ENV !== 'test'`, `pdfApi.__test` is `undefined` and the renderer-side type access `pdfApi.__test.whichBridge` throws `TypeError: Cannot read properties of undefined`. Defense in depth holds.
+
+**Return shape vs spec assertion:** spec evaluates `bridge2.value!.ocrJobs === 'sqlite'` and pulls the other five slot names from `Object.entries(bridgeKinds)`. Handler returns `{formTemplates, signatureAudit, ocrJobs, ocrResults, languagePacks, exportJobs}`. **Match.** The spec's `memorySlots` filter would catch any slot misnamed in the handler.
+
+### 4. L-001 through L-005 — compliance verification
+
+Grepped the three Wave 2 diffs and the joined main for each lock's load-bearing surface:
+
+- **L-001 (`enableDragDropFiles` must not be `false`)**: `git show 5d2ac3b 9d69f83 8343da6 | grep enableDragDropFiles` → **0 hits**. None of the diffs touched `window-manager.ts`'s `webPreferences`. Compliant. **PASS.**
+- **L-002 (operator-level screenshot on packaging waves)**: Phase 7.2 Wave 3 is review, not packaging. Diego's v0.7.20 release ceremony (next) MUST capture per the plan §"Release ceremony" checklist. **PENDING — not Phase 7.2 Wave 3 scope.**
+- **L-003 (Node 20 baseline)**: David's wave entry notes `npm test full suite — 179 files / 1927 tests green (Node 24 via L-003 escape hatch)`. The escape hatch is `scripts/rebuild-native-for-node.mjs` per the lock — sanctioned. CI matrix unchanged at Node 20 (`.github/workflows/ci.yml`). The new e2e Phase D+E body adds no Node-24-only feature (vanilla `Date.now`, `setTimeout`, Playwright `_electron`, `window.evaluate`). **PASS.**
+- **L-004 (`pdf.js getDocument({data})` copied buffer)**: Grepped the three diffs for `getDocument|loadPdfJs|pdfjs-dist|toPdfJsBuffer` → only matches are in comments + tests-which-bridge.ts noting "this module does NOT load pdf.js". No pdf.js call sites added or moved. **PASS.**
+- **L-005 (polyfill order before dynamic import)**: same grep — zero `await import('pdfjs-dist...`)` additions across all three commits. No new pdf.js loader call sites. **PASS.**
+
+Riley's §5 claims are verified end-to-end.
+
+### 5. Phase D+E false-positive risk — local 3× run results (FLAKE WALK)
+
+Ran `npx playwright test tests/e2e/ocr-integration.spec.ts` twice locally on the joined main (`dda9753` + post-build). **Both runs failed deterministically at the same line (Phase B, line 313)** with the same error:
+
+```
+Error: Error invoking remote method 'ocr:runOnDocument':
+  Error: status must be one of queued|running|completed|cancelled|failed|superseded_by_undo (got undefined)
+```
+
+Phase A: 2,576 ms. Phase B: ABORTED. Phase C/D/E/F/G: NOT REACHED. Total time-to-fail: ~5.3 s per run.
+
+This is **not a flake** (R1 SQLite file-lock race, R2 userdata cleanup, R3 Tesseract non-determinism, R4 thunk stale-state, R6 page-0 capture race) — those would manifest after Phase A succeeded. This is a **deterministic regression at the OCR-run IPC layer**, traced and root-caused in finding 7.2.1 below. The third run was elided as it would only confirm determinism.
+
+Phase D/E budgets (15 s + 10 s) are unverifiable until Phase B passes.
+
+### 6. Phase D+E false-negative risk (v0.7.18 catch) — bug-shape walk
+
+The v0.7.18 reopen-restore bug shape: OCR results in SQLite, but `loadOcrResultsThunk` got nothing back from `listResultsByJob` because the SQLite repo wasn't in the bundle in dev mode. The new test body:
+
+1. **Line 313**: `ocr:runOnDocument` → writes via `ocrJobsRepo`. **Would PASS for the v0.7.18 binary** (the writes worked then too, the bug was in restore).
+2. **Phase A line ~450**: `listJobs` finds the completed job in launch1. **Would PASS for v0.7.18.**
+3. **Phase D bridge probe `bridge2`**: asserts all six slots are 'sqlite' on launch2. **Would FAIL for v0.7.18** — the dynamic require silently fell through, so the slots would be 'memory'.
+4. **Phase E `listJobs` on launch2**: returns the completed job. **Would FAIL for v0.7.18** — memory bridge has no rows from launch1.
+5. **Phase E `listResultsByJob`**: `restoredPage0.words.length === originalPage0WordCount`. **Would FAIL for v0.7.18** — `restoredPage0` is undefined.
+
+The new body catches v0.7.18 at THREE distinct assertion points, each with an attributable message. **False-negative risk: zero, when the regression in 7.2.1 is fixed.**
+
+### 7. CI status — Option C-2
+
+I chose **C-2** (recommend Marcus push the draft PR after the 7.2.1 blocker is fixed) rather than C-1 (push myself now). Reasoning: with 7.2.1 deterministically red, pushing a draft PR right now would tell us only what `npm run e2e` already told us locally. CI cycle (~7-10 min) is not load-bearing data until the blocker fix is in. Marcus should push a draft PR after the 7.2.1 follow-up dispatch lands, and the CI run URL should be cited in the re-review.
+
+**Pre-blocker note:** the unit-test suite, lint, typecheck, and the dialog-pick-pdf-files Vitest all run green on the joined main. The CI `check` job (typecheck + lint + Vitest matrix on both OSes) WILL pass on this commit; only the `e2e` job will fail. Item B's CI-unblock goal is met for `check` and `build` — only `e2e` is gated by 7.2.1.
+
+### 8. Findings list
+
+| ID    | Severity               | Location                                                                                                                         | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Status                          |
+| ----- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| 7.2.1 | **CRITICAL — BLOCKER** | `src/main/db-bridge.ts:1774-1781` + adapter at `:1815-1832`                                                                      | `RaviOcrJobsRepo.updateStatus` is declared with positional args `(id, status, completedAt, meanConfidence, totalWords, errorMessage)` but the **actual** SQLite repo signature at `src/db/repositories/ocr-jobs-repo.ts:351` is `updateStatus(id: number, input: UpdateOcrJobStatusInput): boolean`. The adapter at db-bridge.ts:1820-1832 calls `raw.updateStatus(id, update.status, update.completed_at, ...)` — positional. When the lift wires the real SQLite repo, Ravi's `updateStatus` receives the status STRING (e.g. `'completed'`) as its `input` arg, then does `input.status` → undefined → `assertOcrStatus` throws `status must be one of … (got undefined)`. **Deterministic failure on every `ocr:runOnDocument` call in dev mode and packaged.** Was previously hidden because the dynamic-require gap meant the adapter never connected to the real repo — memory fallback was used. **The static-import lift exposed (did not cause) a pre-existing latent adapter drift dating from Phase 5.2.** | **BLOCKS Phase 7.2 acceptance** |
+| 7.2.2 | MEDIUM                 | `src/main/db-bridge.ts:1820-1832` + sibling adapters (export-jobs, ocr-results, signature-audit, language-packs, form-templates) | **Same adapter-drift class needs audit on the other five slots.** If `updateStatus` signature drifted, `insert`/`updateProgress`/`upsert` may have drifted too. The lift made all six adapters newly load-bearing in dev. The export-jobs adapter at `:1163` has the same shape risk (also takes object input on Ravi's side per `export-jobs-repo.ts:706`). Recommend David do a full adapter-vs-Ravi-shape audit as part of the 7.2.1 follow-up.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | OPEN — fix with 7.2.1           |
+| 7.2.3 | MEDIUM                 | `src/ipc/handlers/test-which-bridge.ts:89` + `test-seed-ocr-job.ts` (inherited)                                                  | Test-only channel registration is gated at runtime (`NODE_ENV !== 'test'` early-return) but the channel name strings and handler bodies appear in the production bundle (6 hits / 3 hits respectively). If an attacker can set `NODE_ENV=test` in the parent env before launching the packaged binary, the channels bind. Same pattern as Phase 7.1's `__test:seedOcrJob` — not a 7.2 regression, an inherited model. Recommend a Vite `define: {'process.env.NODE_ENV': '"production"'}` constant in `electron.vite.config.ts` for the prod build, which would dead-code-eliminate the registration AND the handler module.                                                                                                                                                                                                                                                                                                                                                                                           | OPEN                            |
+| 7.2.4 | LOW                    | `src/main/db-bridge.ts:1820`                                                                                                     | Comment "Phase 5 only valid terminal statuses come through this method; queued/running/superseded_by_undo move via insert / separate flows." — but `src/ipc/handlers/ocr-run-on-document.ts:327-340` clearly calls `updateStatus` with `status: 'cancelled'` and `'failed'` (terminal) AND `src/ipc/handlers/ocr-run-on-page.ts` likely transitions queued → running via updateStatus. The comment is stale and misleading. Refresh as part of 7.2.1.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | OPEN                            |
+| 7.2.5 | LOW                    | `tests/e2e/ocr-integration.spec.ts:472-477`                                                                                      | Pre-close `originalPage0WordCount` is captured from the Phase-C `page0` variable. Riley §4 R6 mitigation specifies a `FLOOR_TOTAL_WORDS` floor assertion immediately after capture (line 477 does this). Good — but the variable is captured via `page0?.words.length ?? 0`, which silently substitutes 0 when `page0` is undefined. The `>= FLOOR_TOTAL_WORDS` floor catches the 0 case loudly. Compliant; flagging for the reader.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | NOTE only — no fix needed       |
+| 7.2.6 | LOW                    | `dist/main/index.js` (rebuilt)                                                                                                   | Bundle size grew +54 KB (+12.2 %) post-lift. Within the plan's "low likelihood" budget. No startup regression expected at this magnitude. Track for Phase 7.x if the cumulative repo growth exceeds 100 KB.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | NOTE only — no fix needed       |
+
+### 9. Closing note on finding 7.1.5
+
+**7.1.5 is NOT yet closed.** The structural cause (dev-mode `dist/main/` not bundling the SQLite repos) IS closed by David's Item A-1 — the static-import lift is correct and the bundle now contains all six repos. But the **operational consequence** (Phase D+E catches the v0.7.18 reopen-restore class at the e2e tier) is NOT met until 7.2.1 unblocks Phase B. Phase D+E exists in the spec body, is structurally correct per Riley's §3 design, and would fire correctly against the v0.7.18 bug shape — but it cannot execute because the OCR-run pipeline is broken upstream.
+
+**Recommended unblock:** dispatch David for a targeted Item A-1.1 fix on `adaptOcrJobsRepo` (and audit the sibling adapters per 7.2.2). Fix should be: change the bridge's `RaviOcrJobsRepo` interface and adapter to pass an object input matching Ravi's actual SQLite signature. Estimated cost: ~30 LOC across `db-bridge.ts`. Add a regression test that exercises the round-trip through the real SQLite repo (not the memory mock) so this class of drift cannot regress silently again. Then re-run Phase 7.2 Wave 3.
+
+When 7.2.1 is closed and the e2e spec runs green locally + CI, finding 7.1.5 will be closed.
