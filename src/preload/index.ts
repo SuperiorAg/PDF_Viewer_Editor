@@ -510,7 +510,15 @@ const pdfApi: PdfApi = {
   // IPC roundtrip. Defense-in-depth alongside the registration-time gate in
   // `src/ipc/handlers/test-seed-ocr-job.ts`. The handler is the gate of
   // record — this is a courtesy not a security boundary.
-  ...(process.env['NODE_ENV'] === 'test'
+  // Dot syntax (not bracket) is load-bearing: Vite's `define` config in
+  // `electron.vite.config.ts` folds `process.env.NODE_ENV` -> `"production"`
+  // ONLY for the dot form. With the dot form, prod preload builds collapse
+  // this conditional to a static `false` branch and Rollup DCEs the entire
+  // `__test` namespace (including channel-name string references and
+  // ipcRenderer.invoke closures). The bracket form would leave the strings
+  // in `dist/preload/index.js`. See Julian's re-review §8 and the
+  // prodNodeEnvDefine comment at the top of `electron.vite.config.ts`.
+  ...(process.env.NODE_ENV === 'test'
     ? {
         __test: {
           seedOcrJob: (req: TestSeedOcrJobRequest) =>

@@ -211,7 +211,11 @@ export async function handleTestSeedOcrJob(
  * registration-time gate weakens the L-006-class invariant Riley specified.
  */
 export function registerTestSeedOcrJob(opts: { ipcMain: IpcMain; deps: TestSeedOcrJobDeps }): void {
-  if (process.env['NODE_ENV'] !== 'test') return;
+  // Dot syntax (not bracket) is load-bearing for the prod-build define-fold
+  // in `electron.vite.config.ts`. See the matching comment in
+  // `src/ipc/handlers/test-which-bridge.ts:registerTestWhichBridge` and
+  // Julian's Phase 7.2 re-review §8 for the full rationale.
+  if (process.env.NODE_ENV !== 'test') return;
   opts.ipcMain.handle(Channels.TestSeedOcrJob, (_evt, payload: unknown) =>
     handleTestSeedOcrJob(payload as TestSeedOcrJobRequest, opts.deps),
   );

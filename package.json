@@ -13,6 +13,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
+    "build:test": "npm run typecheck && electron-vite build --mode test",
     "start:built": "electron .",
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\" --max-warnings 0",
     "lint:fix": "eslint \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\" --fix",
@@ -100,7 +101,11 @@
     "vitest": "^2.1.9"
   },
   "lint-staged": {
-    "*.{ts,tsx}": [
+    "src/**/*.{ts,tsx}": [
+      "eslint --fix --max-warnings 0",
+      "prettier --write"
+    ],
+    "tests/**/*.ts": [
       "eslint --fix --max-warnings 0",
       "prettier --write"
     ],

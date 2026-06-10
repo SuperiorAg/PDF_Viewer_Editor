@@ -42,9 +42,44 @@ const r = (...p: string[]): string => resolve(__dirname, ...p);
 // loading; runtime require is a packaging anti-pattern" is the standing rule.
 // ---------------------------------------------------------------------------
 
-export default defineConfig({
+// Phase 7.2 (Diego, 2026-06-10) — Item 7.2.3 prod NODE_ENV define-fold.
+//
+// In production builds, replace `process.env.NODE_ENV` at the AST level with
+// the literal string `"production"`. Rollup's constant-folder then collapses
+// `if (process.env.NODE_ENV !== 'test') return;` to `if (true) return;` and
+// dead-code-eliminates the trailing `ipcMain.handle(...)` registration AND
+// the channel-name string (`__test:whichBridge`, `__test:seedOcrJob`) from
+// `dist/main/index.js`. Same fold applied to `dist/preload/index.js`.
+//
+// WHY MODE-CONDITIONAL: `electron-vite build` (no mode flag) defaults to
+// `mode === 'production'` — that's the packaged-binary path. The e2e harness
+// at `tests/e2e/ocr-integration.spec.ts:150` launches Electron with
+// `env.NODE_ENV='test'`, but it runs against whatever `dist/main/index.js`
+// was just built. If we fold unconditionally, the e2e bundle loses the test
+// channels and Phase B/E aborts immediately. The e2e CI step therefore
+// invokes the project via the `build:test` script (electron-vite build
+// --mode test) so this define-block is bypassed and the runtime gate keeps
+// gating. See `.github/workflows/ci.yml` "Build Electron bundle" step.
+//
+// BRACKET-vs-DOT NORMALIZATION: Vite/Rollup `define` matches the dot form
+// (`process.env.NODE_ENV`) at the AST identifier-access level. It does NOT
+// match the bracket form (`process.env['NODE_ENV']`) because that's a
+// different AST shape (string-keyed property access on a computed member
+// expression). The three live gate sites that need to fold under prod
+// (`src/ipc/handlers/test-which-bridge.ts`, `src/ipc/handlers/test-seed-
+// ocr-job.ts`, `src/preload/index.ts`) were therefore normalized from
+// bracket -> dot at the same time as this define landed. `tsconfig.json`
+// sets `noUncheckedIndexedAccess: true` so the dot form returns
+// `string | undefined` (same as bracket) — no type-safety regression.
+//
+// Reference: Julian's Phase 7.2 re-review §8 in `docs/code-review.md`.
+const prodNodeEnvDefine = (mode: string): Record<string, string> =>
+  mode === 'production' ? { 'process.env.NODE_ENV': '"production"' } : {};
+
+export default defineConfig(({ mode }) => ({
   // ---- main process ------------------------------------------------------
   main: {
+    define: prodNodeEnvDefine(mode),
     plugins: [
       externalizeDepsPlugin(),
       // Phase 5 (Diego, 2026-05-27, Wave 21) — David's
@@ -122,6 +157,8 @@ export default defineConfig({
   // semantics. Rollup still bundles in CJS format below (`formats: ['cjs']` +
   // `output.format` fallback), so the file contents are unchanged.
   preload: {
+    // Phase 7.2 (Diego) — see prodNodeEnvDefine comment above the main config.
+    define: prodNodeEnvDefine(mode),
     plugins: [externalizeDepsPlugin()],
     build: {
       outDir: 'dist/preload',
@@ -219,4 +256,4 @@ export default defineConfig({
       exclude: ['pdfjs-dist/build/pdf.worker.min.mjs'],
     },
   },
-});
+}));

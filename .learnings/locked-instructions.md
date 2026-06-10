@@ -148,3 +148,54 @@ Any direct `await import('pdfjs-dist/…')` outside `loadPdfJs`'s file is a viol
 - `src/main/pdf-ops/pdfjs-loader.test.ts` (Diego — to be created; polyfill-ordering regression test)
 
 **To unlock:** A pdf.js release whose module-top-level no longer captures globals at load time (i.e. it lazily reads `globalThis.Path2D` only when a render is invoked), demonstrated by a green run of the polyfill-ordering regression test with the helper's polyfill-install step removed. The unlock entry must cite the pdf.js release notes and the green test run.
+
+---
+
+## L-006 (2026-06-10, Diego) — Test-only IPC channel gates MUST use `process.env.NODE_ENV` dot syntax, and `electron.vite.config.ts` MUST define-fold it to `"production"` in prod mode
+
+**Constraint:** Every test-only IPC channel registration gate (i.e. any `register*` function or preload spread whose only purpose is to mount a channel when `NODE_ENV==='test'`) MUST use **dot syntax** `process.env.NODE_ENV` — never the bracket form `process.env['NODE_ENV']`. The Vite config in `electron.vite.config.ts` MUST keep the `prodNodeEnvDefine(mode)` helper applied to both the `main` and `preload` config blocks so prod builds (mode === 'production') constant-fold the access to the literal `"production"`. Together these two rules guarantee Rollup's dead-code-elimination drops the channel-name string + `ipcMain.handle(...)` registration + handler body from `dist/main/index.js` AND `dist/preload/index.js`.
+
+**The rule (one line):**
+
+> The dot form folds. The bracket form doesn't. The prod bundle must contain ZERO `ipcMain.handle('__test:...')` calls and ZERO live `__test:` channel-name references — only inert string constants in the `Channels` enum (which is harmless) or in preserved source comments are permitted.
+
+**Why locked:** Phase 7.2 §8 (Julian, 2026-06-10). Before the fix, `__test:whichBridge` and `__test:seedOcrJob` channel-name strings AND their handler module bodies sat in `dist/main/index.js` even in production builds. The runtime gate `process.env['NODE_ENV'] !== 'test'` held for normal launches, but an attacker with parent-environment control (set `NODE_ENV=test` before `Start-Process`) could bind both channels in a packaged installation. The fix is structural: Vite's `define` config constant-folds the dot-form access to `"production"` in prod-mode builds, Rollup collapses the gate to `if (true) return;`, and DCE drops everything below. The bracket form `process.env['NODE_ENV']` does NOT match Vite's `define` key (different AST shape: string-keyed property access on a computed member expression, vs identifier-access chain), so a future regression to bracket syntax silently re-leaks the channel into the prod bundle WITH NO CI ERROR. The lock prevents that.
+
+**Reference implementation:**
+
+```ts
+// electron.vite.config.ts (function-form defineConfig)
+const prodNodeEnvDefine = (mode: string): Record<string, string> =>
+  mode === 'production' ? { 'process.env.NODE_ENV': '"production"' } : {};
+
+export default defineConfig(({ mode }) => ({
+  main:    { define: prodNodeEnvDefine(mode), /* ... */ },
+  preload: { define: prodNodeEnvDefine(mode), /* ... */ },
+}));
+
+// src/ipc/handlers/test-*.ts (gate site — dot syntax, NOT bracket)
+export function registerTestWhichBridge(opts: {...}): void {
+  if (process.env.NODE_ENV !== 'test') return;  // ← dot. NOT process.env['NODE_ENV'].
+  opts.ipcMain.handle(Channels.TestWhichBridge, ...);
+}
+```
+
+**The e2e harness exception:** The Playwright e2e at `tests/e2e/ocr-integration.spec.ts:150` sets `env.NODE_ENV='test'` and launches `_electron.launch({args:['.']})` against `dist/main/index.js`. If that bundle were built in `production` mode the define-fold would DCE the test channels and Phase B/E would abort. The e2e therefore builds via `npm run build:test` (`electron-vite build --mode test`), which bypasses the define and leaves the runtime gate live. `.github/workflows/ci.yml` "Build Electron bundle" step calls `build:test`. The packaging job (`npm run dist:win`) calls the default `build` (prod mode) and gets the DCE'd bundle.
+
+**Enforcement:**
+
+1. After every `npm run build` (prod mode), `grep "ipcMain.*\.handle.*Channels.Test" dist/main/index.js` MUST return zero matches.
+2. After every `npm run build` (prod mode), `grep -c "function registerTestSeedOcrJob" dist/main/index.js` MUST be either 0 OR a single function body matching `function registerTestSeedOcrJob(opts) { return; }` (the empty shell Rollup leaves when only the early-return survives). Same for `registerTestWhichBridge` (expected: fully tree-shaken).
+3. The bracket-form regex `process\.env\[['\"]NODE_ENV['\"]\]` MUST not appear in any `src/ipc/handlers/test-*.ts` or `src/preload/index.ts` for a test-channel gate site. Test files (`*.test.ts`, `*.spec.ts`) and `result.test.ts` (which mutates `process.env['NODE_ENV']` for test setup) are exempt.
+
+**Affected files:**
+
+- `electron.vite.config.ts` — `prodNodeEnvDefine` helper + function-form `defineConfig` (Diego)
+- `package.json` — `build:test` script entry (Diego)
+- `.github/workflows/ci.yml` — e2e job "Build Electron bundle" step uses `npm run build:test` (Diego)
+- `src/ipc/handlers/test-which-bridge.ts:registerTestWhichBridge` — dot-form gate (David / Diego)
+- `src/ipc/handlers/test-seed-ocr-job.ts:registerTestSeedOcrJob` — dot-form gate (David / Diego)
+- `src/preload/index.ts` — dot-form spread guard for the `__test` namespace (David / Diego)
+- Any future `src/ipc/handlers/test-*.ts` test-only channel — same dot-form gate pattern, same comment block (David / Diego)
+
+**To unlock:** A change to the build that proves the prod bundle is structurally clean by an even stronger mechanism (e.g. a build-time plugin that physically deletes every `src/ipc/handlers/test-*.ts` from the rollup graph before transform, removing even the comment + Channels-enum-string residue). The unlock entry must cite a green prod build that produces a `dist/main/index.js` with literally zero references to `__test:`, `whichBridge`, `seedOcrJob`, or `registerTest*`, AND a green CI e2e run against a separately-built test bundle.

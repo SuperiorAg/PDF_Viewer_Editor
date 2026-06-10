@@ -86,7 +86,19 @@ export function registerTestWhichBridge(opts: {
   ipcMain: IpcMain;
   deps: TestWhichBridgeDeps;
 }): void {
-  if (process.env['NODE_ENV'] !== 'test') return;
+  // Dot syntax (not bracket) is load-bearing: Vite's `define` config in
+  // `electron.vite.config.ts` constant-folds `process.env.NODE_ENV` -> the
+  // literal `"production"` ONLY for the dot form (AST identifier-access
+  // match). With this dot form, prod builds collapse the line to
+  // `if ("production" !== "test") return;` -> Rollup DCE drops everything
+  // below, including the channel-name string `__test:whichBridge`. The
+  // bracket form `process.env['NODE_ENV']` would not match the define key
+  // and the registration would leak into the prod bundle. See Julian's
+  // re-review §8 in `docs/code-review.md` and the prodNodeEnvDefine comment
+  // at the top of `electron.vite.config.ts`. `tsconfig.json` has
+  // `noUncheckedIndexedAccess: true` so dot vs bracket return identical
+  // `string | undefined` here — no type-safety change.
+  if (process.env.NODE_ENV !== 'test') return;
   opts.ipcMain.handle(Channels.TestWhichBridge, (_evt, payload: unknown) =>
     handleTestWhichBridge(payload, opts.deps),
   );

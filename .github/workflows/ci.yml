@@ -165,8 +165,19 @@ jobs:
       # Build the Electron bundle so the e2e harness can launch the packaged
       # main entry. The e2e test launches via _electron.launch({ args: ['.'] })
       # which loads dist/main/index.js per package.json main field.
-      - name: Build Electron bundle
-        run: npm run build
+      #
+      # Phase 7.2 (Diego, 2026-06-10) — Item 7.2.3: use `build:test` (not
+      # `build`) so the Vite `define` constant that folds
+      # `process.env.NODE_ENV` -> `"production"` is BYPASSED for the e2e
+      # bundle. Without this, prod build folds the test-channel registration
+      # gates to a static-false branch and Rollup DCEs the
+      # `__test:whichBridge` / `__test:seedOcrJob` handlers — Phase B's
+      # `__test.seedOcrJob()` call would 404 and the spec would abort. The
+      # `build:test` script invokes `electron-vite build --mode test`, which
+      # leaves the runtime gate live. The packaging job (`npm run dist:win`
+      # below) uses the default `build` and gets the folded prod bundle.
+      - name: Build Electron bundle (test mode — preserves __test channels)
+        run: npm run build:test
 
       # Phase 7.1 (Diego, 2026-06-05): verify fixture PDF hashes BEFORE the
       # e2e run, so a fixture mutation (e.g. someone substituting a
