@@ -49,10 +49,11 @@ dependency, zero font download, zero CI complexity.
 
 ## Fixtures
 
-| File              | Pages | Content                             | Bytes (approx) | Notes                                                                                              |
-| ----------------- | ----- | ----------------------------------- | -------------- | -------------------------------------------------------------------------------------------------- |
-| `scan-1p-eng.pdf` | 1     | Lorem block 1 rasterized at 200 DPI | ~90 KB         | Required. Smallest fixture that exercises full rasterize → tesseract → overlay → DB → reopen path. |
-| `scan-2p-eng.pdf` | 2     | Lorem block 1 + block 2 at 200 DPI  | ~180 KB        | Required. Forces "Recognizing page 1 of 2 → page 2 of 2" path.                                     |
+| File                | Pages | Content                                                | Bytes (approx) | Notes                                                                                                                                                                                                                     |
+| ------------------- | ----- | ------------------------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scan-1p-eng.pdf`   | 1     | Lorem block 1 rasterized at 200 DPI                    | ~90 KB         | Required. Smallest fixture that exercises full rasterize → tesseract → overlay → DB → reopen path.                                                                                                                        |
+| `scan-2p-eng.pdf`   | 2     | Lorem block 1 + block 2 at 200 DPI                     | ~180 KB        | Required. Forces "Recognizing page 1 of 2 → page 2 of 2" path.                                                                                                                                                            |
+| `signed-1p-eng.pdf` | 1     | Lorem block 1 at 200 DPI + a real PAdES /Sig signature | ~125 KB        | Phase 7.2 7.2.4 closure (Diego). Used by `tests/e2e/signed-pdf-ocr-invalidation.spec.ts` to exercise the production OCR → `markInvalidatedByOcrJob` audit-row backref path on a doc that carries a prior PAdES signature. |
 
 Both fixtures are **scanned-image-only**: each page is a single embedded
 PNG of rasterized Lorem text. There is no embedded PDF text layer; pdf.js
@@ -67,8 +68,21 @@ same `@napi-rs/canvas` + `pdf-lib` versions.
 ## Regenerating fixtures
 
 ```bash
+# Plain scanned-image fixtures (scan-1p-eng.pdf + scan-2p-eng.pdf)
 node tests/fixtures/pdfs/scripts/generate-fixtures.mjs
+
+# Signed-PDF fixture (signed-1p-eng.pdf) + test-only PFX
+node tests/fixtures/pdfs/scripts/generate-signed-fixture.mjs
 ```
+
+The signed-fixture generator reuses the committed PFX at
+`keys/test-signing.pfx` (test-only RSA-2048 self-signed cert, password
+`PDF_VIEWER_EDITOR_TEST_FIXTURE_ONLY` — never use in prod). If the PFX is
+absent it regenerates it deterministically from a seeded PRNG. The signing
+path neutralizes `new Date()` (via a fixed-epoch Date shim) and
+`forge.random.getBytes()` (via a seeded PRNG override on the RSA blinding
+randomness) so the output bytes are deterministic across runs and hosts.
+See the script header for the full determinism contract.
 
 The script:
 

@@ -189,6 +189,12 @@ import type {
   TestSeedOcrJobResponse,
   TestWhichBridgeRequest,
   TestWhichBridgeResponse,
+  // Phase 7.2 7.2.4 (Diego, 2026-06-10) — test-only signature_audit_log
+  // seed + readback channels for the signed-PDF + OCR invalidation e2e.
+  TestSeedSignatureAuditRequest,
+  TestSeedSignatureAuditResponse,
+  TestListSignatureAuditRequest,
+  TestListSignatureAuditResponse,
 } from '../ipc/contracts.js';
 
 const pdfApi: PdfApi = {
@@ -532,6 +538,22 @@ const pdfApi: PdfApi = {
               Channels.TestWhichBridge,
               req ?? {},
             ) as Promise<TestWhichBridgeResponse>,
+          // Phase 7.2 7.2.4 (Diego, 2026-06-10) — seed + readback for the
+          // signed-PDF + OCR invalidation e2e. Same NODE_ENV==='test' gate;
+          // pdfApi.__test stays `undefined` in any non-test build. See
+          // `src/ipc/handlers/test-seed-signature-audit.ts` and
+          // `src/ipc/handlers/test-list-signature-audit.ts` for the
+          // structural gates on the main side.
+          seedSignatureAudit: (req: TestSeedSignatureAuditRequest) =>
+            ipcRenderer.invoke(
+              Channels.TestSeedSignatureAudit,
+              req,
+            ) as Promise<TestSeedSignatureAuditResponse>,
+          listSignatureAudit: (req: TestListSignatureAuditRequest) =>
+            ipcRenderer.invoke(
+              Channels.TestListSignatureAudit,
+              req,
+            ) as Promise<TestListSignatureAuditResponse>,
         },
       }
     : {}),

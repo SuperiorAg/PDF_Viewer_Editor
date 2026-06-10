@@ -164,6 +164,12 @@ export interface SignatureAuditRowDto {
   location: string | null;
   fieldName: string | null;
   createdAt: number;
+  // Phase 5 (data-models §10.10) cross-link to ocr_jobs. Null until an OCR
+  // run on the corresponding doc invalidated this signature. Diego added
+  // this projection 2026-06-10 (Phase 7.2 7.2.4) so the `__test:listSignatureAudit`
+  // channel can carry the column through for e2e assertions; the column has
+  // been on Ravi's SELECTs since Wave 16 / Phase 5.
+  invalidatedByOcrJobId: number | null;
 }
 
 export interface SignatureAuditInsertInput {
@@ -757,6 +763,7 @@ class MemorySignatureAuditRepo implements SignatureAuditRepoBridge {
       location: row.location,
       fieldName: row.field_name,
       createdAt: now,
+      invalidatedByOcrJobId: null,
     });
     return id;
   }
@@ -803,18 +810,29 @@ class MemorySignatureAuditRepo implements SignatureAuditRepoBridge {
     return true;
   }
 
-  markInvalidatedByOcrJob(docHash: string, fieldNames: string[], _ocrJobId: number): number {
+  markInvalidatedByOcrJob(docHash: string, fieldNames: string[], ocrJobId: number): number {
     // Phase 7.2 (David, 2026-06-10) — added to satisfy the now-non-optional
-    // SignatureAuditRepoBridge.markInvalidatedByOcrJob contract. The memory
-    // repo doesn't model the `invalidated_by_ocr_job_id` column (it's a
-    // single audit-table column on Ravi's SQLite path), but it counts the
-    // matching rows so tests can assert the row-resolution logic at the
-    // bridge surface without standing up SQLite.
+    // SignatureAuditRepoBridge.markInvalidatedByOcrJob contract.
+    //
+    // Phase 7.2 7.2.4 (Diego, 2026-06-10) — now actually MUTATES the
+    // invalidatedByOcrJobId column on matched rows (was previously a
+    // count-only no-op). This keeps the in-memory bridge in lock-step with
+    // Ravi's SQLite UPDATE behaviour so a future test against the memory
+    // bridge sees the same observable state as one running against SQLite.
+    // The e2e at signed-pdf-ocr-invalidation.spec.ts runs against SQLite
+    // (Item A static-import lift, per L-006 e2e exception); the memory-
+    // repo behaviour is still load-bearing for any unit test that exercises
+    // the back-ref through the in-memory bridge.
     if (fieldNames.length === 0) return 0;
     const set = new Set(fieldNames);
-    return this.rows.filter(
-      (r) => r.docHash === docHash && r.fieldName !== null && set.has(r.fieldName),
-    ).length;
+    let changed = 0;
+    for (const r of this.rows) {
+      if (r.docHash === docHash && r.fieldName !== null && set.has(r.fieldName)) {
+        r.invalidatedByOcrJobId = ocrJobId;
+        changed += 1;
+      }
+    }
+    return changed;
   }
 
   private tryParseRange(json: string): number[] | null {
@@ -1689,6 +1707,13 @@ export interface RaviSignatureAuditRow {
   location: string | null;
   field_name: string | null;
   created_at: number;
+  // Phase 5 (data-models §10.10) — set by `markInvalidatedByOcrJob` when an
+  // OCR run mutates page bytes on a previously-PAdES-signed doc. Null until
+  // an OCR run invalidates this row. Added here Phase 7.2 7.2.4 (Diego,
+  // 2026-06-10) so the read path can carry the column through to the DTO —
+  // Ravi's SELECT statements already project it; the gap was only on the
+  // bridge-interface side.
+  invalidated_by_ocr_job_id: number | null;
 }
 
 /**
@@ -1757,6 +1782,10 @@ export function adaptSignatureAuditRepo(raw: RaviSignatureAuditRepo): SignatureA
     location: r.location,
     fieldName: r.field_name,
     createdAt: r.created_at,
+    // Phase 7.2 7.2.4 (Diego, 2026-06-10) — surface the Phase-5 OCR back-ref
+    // column on the DTO. `?? null` keeps the projection safe across older
+    // adapter mocks that may not carry the column yet (Wave-skew defence).
+    invalidatedByOcrJobId: r.invalidated_by_ocr_job_id ?? null,
   });
   return {
     insert(row) {

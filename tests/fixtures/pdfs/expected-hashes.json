@@ -10,6 +10,10 @@
     "scan-2p-eng.pdf": {
       "sha256": "dc55bf1b315a540cb2d44c95fc6097de918883a55c3233f7dbb50a0fa8e4180b",
       "bytes": 183654
+    },
+    "signed-1p-eng.pdf": {
+      "sha256": "bac979218bfe0aaccb72a0591d6b6e9977091813f39ba931c02be0beefa87d44",
+      "bytes": 125842
     }
   }
 }

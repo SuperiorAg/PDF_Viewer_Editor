@@ -2349,6 +2349,102 @@ export interface TestWhichBridgeValue {
 
 export type TestWhichBridgeResponse = Result<TestWhichBridgeValue, TestWhichBridgeError>;
 
+// ---- __test:seedSignatureAudit (Phase 7.2 7.2.4, test-only) -----------------
+//
+// Registered ONLY when `process.env.NODE_ENV === 'test'` at app boot. The
+// handler inserts a row into `signature_audit_log` so the e2e at
+// `tests/e2e/signed-pdf-ocr-invalidation.spec.ts` can pre-populate the audit
+// row that the OCR run's `markInvalidatedByOcrJob` call site will later mark.
+// This dodges the cert-store + PAdES sign path (which requires UI-only
+// dialogs in production) while still exercising the EXACT production code
+// path: detect prior PAdES → flag confirm → run OCR → resolve docHash +
+// fieldNames → mark rows.
+//
+// **Structural gate (see src/ipc/handlers/test-seed-signature-audit.ts):** the
+// handler is not registered at all unless NODE_ENV==='test'. In production
+// builds the channel does not exist on the IPC surface. Same shape as
+// `__test:seedOcrJob` / `__test:whichBridge` — registration-time gate, not
+// runtime. Dot syntax (NOT bracket) on `process.env.NODE_ENV` is required
+// per L-006 so Vite's prod-mode define-fold can DCE the whole module.
+//
+// L-004 + L-005 compliance: handler does NOT load pdf.js, does NOT rasterize.
+// It writes a single DB row keyed by (docHash, fieldName).
+
+export interface TestSeedSignatureAuditRequest {
+  /** docHash that the audit row pertains to — same SHA-256 hex that the
+   *  OCR handler computes via `deps.getDocHash(handle)` at run time. The
+   *  test computes this by hashing the fixture bytes on disk. */
+  docHash: string;
+  /** Signature field name (matches what `detectPriorPadesSignatures` will
+   *  return for the fixture). The bridge adapter's
+   *  `markInvalidatedByOcrJob(docHash, fieldNames, jobId)` resolves the
+   *  row by (doc_hash, field_name) → id and marks it. */
+  fieldName: string;
+  /** Optional override for the signature kind. Defaults to 'pades' — visual
+   *  rows are not eligible for OCR invalidation per data-models §10.10. */
+  signatureKind?: 'pades' | 'pades-tsa';
+}
+
+export type TestSeedSignatureAuditError =
+  | 'not_in_test_mode'
+  | 'invalid_payload'
+  | 'db_unavailable'
+  | 'db_insert_failed';
+
+export interface TestSeedSignatureAuditValue {
+  /** Primary key of the inserted signature_audit_log row. */
+  rowId: number;
+}
+
+export type TestSeedSignatureAuditResponse = Result<
+  TestSeedSignatureAuditValue,
+  TestSeedSignatureAuditError
+>;
+
+// ---- __test:listSignatureAudit (Phase 7.2 7.2.4, test-only) -----------------
+//
+// Registered ONLY when `process.env.NODE_ENV === 'test'` at app boot. Returns
+// the raw signature_audit_log rows for a given docHash, exposing the fields
+// the e2e needs to assert post-OCR: `invalidated_by_ocr_job_id` (the back-
+// reference set by the bridge adapter when OCR runs against a signed PDF) +
+// `field_name` + the row id.
+//
+// Why a dedicated channel instead of the production `signatures:listAudit`:
+// the production channel filters + paginates + projects to a camelCase DTO
+// (`signedBySubjectCN`, `byteRange`, etc.) — useful for the audit panel, but
+// the e2e needs the raw `invalidated_by_ocr_job_id` column which the
+// production path projects as `invalidatedByOcrJobId` in `SignatureAuditRowDto`.
+// We expose a flat slice with the fields the test asserts on, keeping the
+// public IPC surface unchanged.
+//
+// **Structural gate** — same NODE_ENV==='test' dot-syntax registration-time
+// gate as the other `__test:*` channels. L-006 compliance.
+
+export interface TestListSignatureAuditRequest {
+  /** docHash to filter on. */
+  docHash: string;
+}
+
+export type TestListSignatureAuditError = 'not_in_test_mode' | 'invalid_payload' | 'db_unavailable';
+
+export interface TestSignatureAuditRowSlice {
+  id: number;
+  docHash: string;
+  fieldName: string | null;
+  /** Null until an OCR run invalidated this signature; set to the
+   *  invalidating job's id once `markInvalidatedByOcrJob` runs. */
+  invalidatedByOcrJobId: number | null;
+}
+
+export interface TestListSignatureAuditValue {
+  rows: TestSignatureAuditRowSlice[];
+}
+
+export type TestListSignatureAuditResponse = Result<
+  TestListSignatureAuditValue,
+  TestListSignatureAuditError
+>;
+
 // ---- ocr:languagePackDownload (api-contracts.md §16.7) ----------------------
 
 export interface OcrLanguagePackDownloadRequest {
@@ -3229,6 +3325,14 @@ export const Channels = {
   // See `src/ipc/handlers/test-which-bridge.ts` and
   // `docs/phase-7.2-test-design.md §2.6`.
   TestWhichBridge: '__test:whichBridge',
+  // Phase 7.2 7.2.4 (Diego, 2026-06-10) — test-only signature_audit_log seed
+  // + readback channels for the signed-PDF + OCR invalidation e2e at
+  // `tests/e2e/signed-pdf-ocr-invalidation.spec.ts`. Same registration-time
+  // structural gate as the channels above. See
+  // `src/ipc/handlers/test-seed-signature-audit.ts` and
+  // `src/ipc/handlers/test-list-signature-audit.ts`.
+  TestSeedSignatureAudit: '__test:seedSignatureAudit',
+  TestListSignatureAudit: '__test:listSignatureAudit',
 } as const;
 
 export type ChannelName = (typeof Channels)[keyof typeof Channels];
@@ -3433,5 +3537,18 @@ export interface PdfApi {
      *  assert the static-import lift (Item A-1) populated SQLite-backed repos
      *  under `_electron.launch()`. */
     whichBridge: (req?: TestWhichBridgeRequest) => Promise<TestWhichBridgeResponse>;
+    /** Phase 7.2 7.2.4 — pre-seed a signature_audit_log row keyed by
+     *  (docHash, fieldName) so the OCR run can later resolve + mark it via
+     *  `markInvalidatedByOcrJob`. Used by the signed-PDF + OCR invalidation
+     *  e2e to assert the production back-ref path end-to-end. */
+    seedSignatureAudit: (
+      req: TestSeedSignatureAuditRequest,
+    ) => Promise<TestSeedSignatureAuditResponse>;
+    /** Phase 7.2 7.2.4 — readback the audit rows for a given docHash so the
+     *  e2e can assert pre-OCR / post-OCR values of `invalidatedByOcrJobId`.
+     *  Returns a flat slice exposing only the fields the test asserts on. */
+    listSignatureAudit: (
+      req: TestListSignatureAuditRequest,
+    ) => Promise<TestListSignatureAuditResponse>;
   };
 }

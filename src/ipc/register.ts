@@ -144,6 +144,7 @@ import { handleTelemetrySetOptIn } from './handlers/telemetry-set-opt-in.js';
 // Phase 7.1 (David, 2026-06-05) — test-only seed channel. registerTestSeedOcrJob
 // early-returns when NODE_ENV !== 'test'; the IPC handle never lands on the prod
 // surface. See `src/ipc/handlers/test-seed-ocr-job.ts` for the structural gate.
+import { registerTestListSignatureAudit } from './handlers/test-list-signature-audit.js';
 import { registerTestSeedOcrJob } from './handlers/test-seed-ocr-job.js';
 // Phase 7.2 (David, 2026-06-10) — test-only bridge-introspection channel.
 // Same structural gate as `__test:seedOcrJob` (early-returns when NODE_ENV is
@@ -151,7 +152,13 @@ import { registerTestSeedOcrJob } from './handlers/test-seed-ocr-job.js';
 // actually loaded the SQLite repos under `_electron.launch()`. See
 // `src/ipc/handlers/test-which-bridge.ts` and
 // `docs/phase-7.2-test-design.md §2.6`.
+import { registerTestSeedSignatureAudit } from './handlers/test-seed-signature-audit.js';
 import { registerTestWhichBridge } from './handlers/test-which-bridge.js';
+// Phase 7.2 7.2.4 (Diego, 2026-06-10) — test-only signature_audit_log seed +
+// readback channels for the signed-PDF + OCR invalidation e2e. Same structural
+// gate (early-return when NODE_ENV !== 'test'). See
+// `src/ipc/handlers/test-seed-signature-audit.ts` and
+// `src/ipc/handlers/test-list-signature-audit.ts`.
 import { handleUpdateCheck } from './handlers/update-check.js';
 import { handleUpdateDownload } from './handlers/update-download.js';
 import { handleUpdateInstall } from './handlers/update-install.js';
@@ -1163,6 +1170,28 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
     ipcMain,
     deps: {
       getKinds: () => getDbBridgeKinds(),
+    },
+  });
+
+  // Phase 7.2 7.2.4 (Diego, 2026-06-10) — test-only `__test:seedSignatureAudit`
+  // and `__test:listSignatureAudit` channels. STRUCTURAL GATE: each
+  // `register*` function early-returns when NODE_ENV is not 'test'; the
+  // channels are absent from the production IPC surface by construction.
+  // Used by `tests/e2e/signed-pdf-ocr-invalidation.spec.ts` to seed the
+  // pre-existing audit row that the production OCR run's
+  // `markInvalidatedByOcrJob` call site will later mark, then read it back
+  // for the post-OCR assertion. See `src/ipc/handlers/test-seed-signature-audit.ts`
+  // and `src/ipc/handlers/test-list-signature-audit.ts` for the rationale.
+  registerTestSeedSignatureAudit({
+    ipcMain,
+    deps: {
+      signatureAuditRepo: getDbBridge().signatureAudit,
+    },
+  });
+  registerTestListSignatureAudit({
+    ipcMain,
+    deps: {
+      signatureAuditRepo: getDbBridge().signatureAudit,
     },
   });
 }
