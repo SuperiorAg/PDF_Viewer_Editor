@@ -422,46 +422,29 @@ function signPdf(unsignedBytes) {
 }
 
 // ============================================================================
-// Post-process: inline the /V signature dict.
-//
-// Why: node-signpdf's plainAddPlaceholder writes /V as an INDIRECT REFERENCE
-// (PDFRef pointing at a separate object stream entry). The production
-// detector at `src/main/pdf-ops/pades-detect.ts:43-69` reads /V via
-// `dict.get(PDFName.of('V'))` which returns the raw stored value — a PDFRef
-// in this case — and then tries `vAny.get(...)` / `vAny.dict?.get?.(...)` to
-// reach /Contents. PDFRef has neither method, so the detector falls through
-// and concludes "no signature present". The e2e would then never enter the
-// `signed_pdf_requires_confirm` → `invalidatesSignatures=true` →
-// `markInvalidatedByOcrJob` path and the assertion below would be vacuous.
-//
-// Inlining is byte-safe for the detection path (the resolved PDFDict has the
-// same `/Contents` hex string), but it INVALIDATES the cryptographic byte-
-// range (offsets shift when pdf-lib re-serializes). That's acceptable here:
-// the e2e only asserts the audit-row invalidation backref; nothing verifies
-// the CMS signature against the byte-range. A future fix to pades-detect to
-// resolve PDFRef via `doc.context.lookup(v, PDFDict)` would let us drop this
-// post-process and keep the byte-range intact, but that's a Julian /
-// pades-detect.ts owner change and out of scope for this Phase 7.2 7.2.4
-// closure.
-// ============================================================================
-async function inlineSignatureDict(signedBytes) {
-  const doc = await PDFDocument.load(signedBytes, { updateMetadata: false });
-  const form = doc.getForm();
-  for (const field of form.getFields()) {
-    const acro = field.acroField;
-    const dict = acro.dict;
-    const v = dict.get(PDFName.of('V'));
-    // Only inline when /V is an indirect ref. Direct PDFDict is already fine.
-    if (v && v.constructor && v.constructor.name === 'PDFRef') {
-      const resolved = doc.context.lookup(v, PDFDict);
-      acro.dict.set(PDFName.of('V'), resolved);
-    }
-  }
-  return Buffer.from(await doc.save({ useObjectStreams: false }));
-}
-
-// ============================================================================
 // Top-level orchestrator.
+//
+// HISTORICAL NOTE (Phase 7.2 7.2.5, David, 2026-06-10): an earlier version
+// of this script included an `inlineSignatureDict(signedBytes)` post-pass
+// that re-loaded the signed PDF, resolved /V (an indirect PDFRef as emitted
+// by node-signpdf's `plainAddPlaceholder`) into its inline-dict form, and
+// re-saved. The post-pass existed to work around a bug in
+// `src/main/pdf-ops/pades-detect.ts` which only handled inline /V and
+// silently returned [] for indirect-ref /V — meaning the production
+// signature-audit invalidation backref never fired against real-world
+// PAdES-signed PDFs (Acrobat / DocuSign / Adobe Sign all emit indirect /V).
+// Side effect: pdf-lib's re-serialize shifted the /ByteRange offsets, so
+// the resulting CMS envelope was cryptographically invalid (byte-range no
+// longer covered the right bytes). The e2e didn't care because nothing
+// verifies the signature, but it left an inconsistent fixture on disk.
+//
+// David's Phase 7.2 7.2.5 fix routes pades-detect's reads through
+// `dict.lookupMaybe(name, Type)` which transparently resolves PDFRefs.
+// The detector now handles both inline and indirect /V correctly, so the
+// post-pass is no longer needed AND the resulting fixture's /ByteRange
+// stays intact (cryptographically valid CMS — useful for any future
+// signature-verify smoke test). See pades-detect.test.ts for the
+// indirect-ref coverage.
 // ============================================================================
 function sha256(buf) {
   return createHash('sha256').update(buf).digest('hex');
@@ -469,8 +452,7 @@ function sha256(buf) {
 
 async function buildSignedFixture(pageText) {
   const unsigned = await buildUnsignedPdfWithSigField(pageText);
-  const signed = signPdf(unsigned);
-  return inlineSignatureDict(signed);
+  return signPdf(unsigned);
 }
 
 async function main() {

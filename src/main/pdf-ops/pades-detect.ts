@@ -9,9 +9,27 @@
 // FAST, READ-ONLY: walks the AcroForm field tree; does NOT mutate the doc.
 //
 // Cross-ref: docs/ocr-engine.md §8.1 + docs/architecture-phase-5.md §6.1.
+//
+// INDIRECT-REFERENCE HANDLING (Phase 7.2 7.2.5, David, 2026-06-10):
+//   Real-world PAdES-signed PDFs (Adobe Acrobat, DocuSign, Adobe Sign, AND
+//   node-signpdf v3 `plainAddPlaceholder`) write the /V signature value as
+//   an INDIRECT REFERENCE (PDFRef → separate object), not as an inline
+//   PDFDict. /FT and /Contents can also be indirect under aggressive
+//   object-stream packing. Reading via the raw `dict.get(name)` returns the
+//   un-resolved PDFRef, on which `.get(...)` does not exist; the prior
+//   detector implementation silently fell through and returned `[]` for
+//   every real-world signed PDF. We now route every dict-typed read through
+//   pdf-lib's `dict.lookupMaybe(name, Type)`, which transparently resolves
+//   PDFRefs via the document's PDFContext and returns `undefined` when the
+//   value isn't of the expected type. The detector therefore handles BOTH
+//   inline-dict and indirect-ref shapes correctly. The fixture-generator
+//   workaround (`inlineSignatureDict` in
+//   tests/fixtures/pdfs/scripts/generate-signed-fixture.mjs) is now
+//   redundant — but kept in place because its byte-range-invalidating side
+//   effect is independent of detection.
 
-import { PDFName } from 'pdf-lib';
-import type { PDFDocument, PDFDict } from 'pdf-lib';
+import { PDFDict, PDFHexString, PDFName, PDFString } from 'pdf-lib';
+import type { PDFDocument } from 'pdf-lib';
 
 /**
  * Detect prior PAdES signatures. Returns the field-name list (e.g.
@@ -23,6 +41,12 @@ import type { PDFDocument, PDFDict } from 'pdf-lib';
  * NEVER throws. Defensive against malformed PDFs (returns empty array on
  * any internal traversal failure — the caller's pre-flight is the load-
  * bearing check, not this helper).
+ *
+ * Handles BOTH inline-dict /V (Phase 3 hand-authored placeholders, our own
+ * test fixtures) AND indirect-ref /V (node-signpdf, Acrobat, DocuSign —
+ * every real-world PAdES tool) via `lookupMaybe`. /FT and /Contents are
+ * resolved the same way for safety against deeply object-stream-packed
+ * signed PDFs.
  */
 export function detectPriorPadesSignatures(doc: PDFDocument): string[] {
   const out: string[] = [];
@@ -33,52 +57,47 @@ export function detectPriorPadesSignatures(doc: PDFDocument): string[] {
       // After save+reload, pdf-lib auto-instantiates the typed subclass
       // (PDFAcroSignature for /FT=/Sig); `getType()` may not exist on
       // every subclass. The robust approach is to read /FT directly from
-      // the acroField's PDFDict.
+      // the acroField's PDFDict via lookupMaybe so indirect refs resolve.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const acro: any = (field as unknown as { acroField?: unknown }).acroField;
       if (!acro) continue;
       const dict = acro.dict as PDFDict | undefined;
-      if (!dict || typeof dict.get !== 'function') continue;
+      if (!dict || typeof dict.lookupMaybe !== 'function') continue;
 
-      const ft = dict.get(PDFName.of('FT'));
-      // /FT serializes as `/Sig` (PDFName).toString returns the leading slash.
-      // Robust check: stringify and look for 'Sig' (handles both inherited
-      // and direct PDFName instances).
-      if (!ft || !String(ft).includes('Sig')) continue;
+      // /FT is a PDFName; lookupMaybe(name, PDFName) resolves PDFRefs AND
+      // type-guards. A non-/Sig (or absent) result skips the field.
+      const ft = dict.lookupMaybe(PDFName.of('FT'), PDFName);
+      if (!ft) continue;
+      // PDFName.toString() emits the leading slash (`/Sig`); the exact-match
+      // check is cleaner than the prior includes('Sig') heuristic AND avoids
+      // false-positive matches on names like /SigFlags, /Signature.
+      if (ft !== PDFName.of('Sig')) continue;
 
-      // /V is the signature value dict; it MUST be present for a signed
-      // widget. Unsigned placeholder fields (Phase 3 form-design) have NO
-      // /V entry.
-      const v = dict.get(PDFName.of('V'));
-      if (!v) continue;
+      // /V is the signature value dict. node-signpdf v3 stores it as an
+      // indirect ref; Adobe Acrobat / DocuSign / Adobe Sign do too. Inline
+      // PDFDict (our own hand-authored test fixtures) is also valid. Both
+      // shapes resolve through lookupMaybe.
+      const vDict = dict.lookupMaybe(PDFName.of('V'), PDFDict);
+      if (!vDict) continue;
 
-      // /V is itself a PDFDict with a /Contents key holding the CMS bytes
-      // (PDFHexString or PDFString). pdf-lib's PDFDict has both `.dict`
-      // (which is itself a reference to this dict) AND a top-level `.get()`.
-      // Try both code paths defensively.
-      let contents: unknown;
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const vAny: any = v;
-        contents = vAny.get
-          ? vAny.get(PDFName.of('Contents'))
-          : vAny.dict?.get?.(PDFName.of('Contents'));
-      } catch {
-        continue;
-      }
+      // /Contents holds the CMS bytes. Typically PDFHexString; PDFString is
+      // also valid per ISO 32000 §12.8.1. Both can be indirect refs under
+      // object-stream packing — lookupMaybe handles both transparently.
+      const contents = vDict.lookupMaybe(PDFName.of('Contents'), PDFString, PDFHexString);
       if (!contents) continue;
-      // PDFHexString / PDFString surface their bytes via `.asString()` or
-      // `.toString()`. Either way, length > 2 (i.e. NOT just an empty
-      // `<>` placeholder reservation) signals a real signature.
+
+      // PDFHexString / PDFString surface their bytes via `.asString()` /
+      // `.toString()`. The empty `<>` placeholder reservation is 2 chars;
+      // real signatures are thousands. Use the conservative >2 floor.
       let asStr: string;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const c: any = contents;
-        asStr = typeof c.asString === 'function' ? c.asString() : String(c);
+        asStr =
+          typeof (contents as { asString?: () => string }).asString === 'function'
+            ? (contents as { asString: () => string }).asString()
+            : String(contents);
       } catch {
         continue;
       }
-      // Empty `<>` is the unsigned placeholder; >2 chars means real bytes.
       if (asStr.length > 2) {
         out.push(field.getName());
       }

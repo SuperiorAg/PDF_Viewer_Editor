@@ -8,6 +8,15 @@
 // alarm.
 //
 // Zero external deps — node:crypto + node:fs only. Safe to run pre-`npm ci`.
+//
+// NOT THE SAME AS the production docHash. This script computes a raw
+// SHA-256 of the FULL fixture bytes (a strict content-integrity check
+// suitable for catching any substitution). The production docHash in
+// `src/main/pdf-ops/file-hash.ts` is SHA-256(first 64 KiB || asciiSize) —
+// a different algorithm chosen for fast-on-large-files lookup. The two
+// hashes are intentionally distinct and a fixture's sha256 here MUST NOT
+// be confused with the docHash the OCR handler / signature-audit repos
+// see. See `src/main/pdf-ops/file-hash.ts` header for the reciprocal note.
 
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
