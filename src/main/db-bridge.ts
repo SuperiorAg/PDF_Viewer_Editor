@@ -170,6 +170,11 @@ export interface SignatureAuditRowDto {
   // channel can carry the column through for e2e assertions; the column has
   // been on Ravi's SELECTs since Wave 16 / Phase 5.
   invalidatedByOcrJobId: number | null;
+  // Phase 7.4 B1 (Riley design §5.3, David 2026-06-15) — ms-epoch when a
+  // redaction operation invalidated this signature. Null until a redaction
+  // Apply marks the row. Migration 0008_phase7.4_redaction_audit.sql adds
+  // the column. Defaults to null per the anti-sentinel discipline.
+  invalidatedByRedactionAt: number | null;
 }
 
 export interface SignatureAuditInsertInput {
@@ -221,6 +226,26 @@ export interface SignatureAuditRepoBridge {
    * repo + the bridge adapter both ship the method).
    */
   markInvalidatedByOcrJob(docHash: string, fieldNames: string[], ocrJobId: number): number;
+
+  /**
+   * Phase 7.4 B1 (Riley design §5.3, David 2026-06-15) — back-reference the
+   * redaction Apply that invalidated a signature. Mirrors the OCR-back-ref
+   * method above; the timestamp is stamped INSIDE Ravi's SQL via
+   * `unixepoch() * 1000` (no separate `redaction_jobs` table — redaction is
+   * synchronous within one round-trip, per Riley §5.3 rationale). Returns
+   * rows updated.
+   *
+   * SIGNATURE matches Ravi's repo method exactly — `(docHash, fieldNames):
+   * number` (src/db/repositories/signature-audit-repo.ts:228). Differs from
+   * the OCR back-ref by NOT exposing the timestamp at the bridge layer
+   * (Ravi's design — handler doesn't synthesize one; the SQL `unixepoch() *
+   * 1000` is the single source of truth).
+   *
+   * Memory-bridge equivalent at `MemorySignatureAuditRepo.markInvalidatedByRedaction`
+   * — stamps `invalidatedByRedactionAt = Date.now()` on matched rows so unit
+   * tests can exercise the back-ref against the in-memory bridge.
+   */
+  markInvalidatedByRedaction(docHash: string, fieldNames: string[]): number;
 }
 
 export interface DbBridge {
@@ -764,6 +789,7 @@ class MemorySignatureAuditRepo implements SignatureAuditRepoBridge {
       fieldName: row.field_name,
       createdAt: now,
       invalidatedByOcrJobId: null,
+      invalidatedByRedactionAt: null,
     });
     return id;
   }
@@ -829,6 +855,27 @@ class MemorySignatureAuditRepo implements SignatureAuditRepoBridge {
     for (const r of this.rows) {
       if (r.docHash === docHash && r.fieldName !== null && set.has(r.fieldName)) {
         r.invalidatedByOcrJobId = ocrJobId;
+        changed += 1;
+      }
+    }
+    return changed;
+  }
+
+  markInvalidatedByRedaction(docHash: string, fieldNames: string[]): number {
+    // Phase 7.4 B1 (David, 2026-06-15) — mirrors `markInvalidatedByOcrJob`
+    // above. Mutates `invalidatedByRedactionAt = Date.now()` on every matched
+    // row. Empty fieldNames → 0 rows. Same anti-sentinel discipline as the
+    // OCR sibling. Mirrors Ravi's SQL `unixepoch() * 1000` timestamping —
+    // the memory bridge uses Date.now() since it lacks a SQL clock; the
+    // observable behaviour (non-null timestamp on matched rows, null on
+    // unmatched) is identical.
+    if (fieldNames.length === 0) return 0;
+    const now = Date.now();
+    const set = new Set(fieldNames);
+    let changed = 0;
+    for (const r of this.rows) {
+      if (r.docHash === docHash && r.fieldName !== null && set.has(r.fieldName)) {
+        r.invalidatedByRedactionAt = now;
         changed += 1;
       }
     }
@@ -1714,6 +1761,12 @@ export interface RaviSignatureAuditRow {
   // Ravi's SELECT statements already project it; the gap was only on the
   // bridge-interface side.
   invalidated_by_ocr_job_id: number | null;
+  // Phase 7.4 B1 (Riley design §5.3, David 2026-06-15) — set by
+  // `markInvalidatedByRedaction` (Ravi's SQL stamps via `unixepoch() * 1000`)
+  // when a redaction Apply mutates page bytes on a previously-PAdES-signed
+  // doc. Optional on the Ravi-row shape — tolerates older repo builds that
+  // haven't yet projected the column.
+  invalidated_by_redaction_at?: number | null;
 }
 
 /**
@@ -1750,6 +1803,12 @@ export interface RaviSignatureAuditRepo {
   delete(id: number): boolean;
   markInvalidatedByOcrJob(rowIds: number[], ocrJobId: number): number;
   listInvalidatedByOcrJob(ocrJobId: number): RaviSignatureAuditRow[];
+  // Phase 7.4 B1 (Riley design §5.3) — Ravi's signature matches the bridge's
+  // higher-level shape verbatim: `(docHash, fieldNames): number`. SQL stamps
+  // `unixepoch() * 1000` on matched rows internally. Optional on this
+  // interface to tolerate older Ravi-repo builds during the parallel-wave
+  // land (the adapter `typeof` checks for the method before forwarding).
+  markInvalidatedByRedaction?(docHash: string, fieldNames: string[]): number;
 }
 
 export function adaptSignatureAuditRepo(raw: RaviSignatureAuditRepo): SignatureAuditRepoBridge {
@@ -1786,6 +1845,11 @@ export function adaptSignatureAuditRepo(raw: RaviSignatureAuditRepo): SignatureA
     // column on the DTO. `?? null` keeps the projection safe across older
     // adapter mocks that may not carry the column yet (Wave-skew defence).
     invalidatedByOcrJobId: r.invalidated_by_ocr_job_id ?? null,
+    // Phase 7.4 B1 (David, 2026-06-15) — surface the new redaction back-ref
+    // column. `?? null` tolerates older Ravi-repo rows that haven't yet
+    // projected the column (parallel-wave skew during the Phase 7.4 B1 Wave 2
+    // land).
+    invalidatedByRedactionAt: r.invalidated_by_redaction_at ?? null,
   });
   return {
     insert(row) {
@@ -1835,6 +1899,24 @@ export function adaptSignatureAuditRepo(raw: RaviSignatureAuditRepo): SignatureA
         .map((r) => r.id);
       if (rowIds.length === 0) return 0;
       return raw.markInvalidatedByOcrJob(rowIds, ocrJobId);
+    },
+    markInvalidatedByRedaction(docHash, fieldNames) {
+      // Phase 7.4 B1 (David, 2026-06-15) — direct pass-through. Ravi's repo
+      // signature `(docHash, fieldNames): number` matches the bridge's
+      // higher-level shape verbatim (the SQL stamps the timestamp via
+      // `unixepoch() * 1000` internally). The OCR sibling above needs the
+      // (docHash, fieldNames) → rowIds adapter step because Ravi's OCR
+      // method takes `(rowIds, ocrJobId)`; the redaction repo method
+      // collapsed that lookup into SQL so no adapter work is needed here.
+      //
+      // Defensive: if the production Ravi repo lacks the method (parallel-
+      // wave land race), we fall back to a best-effort no-op + return 0.
+      // The handler-layer call site is also try/catch-wrapped so the
+      // redaction Apply itself never fails on an audit-log absence.
+      if (fieldNames.length === 0) return 0;
+      const fn = raw.markInvalidatedByRedaction;
+      if (typeof fn !== 'function') return 0;
+      return fn.call(raw, docHash, fieldNames);
     },
   };
 }

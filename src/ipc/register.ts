@@ -111,6 +111,7 @@ import { handleOcrRunOnDocument } from './handlers/ocr-run-on-document.js';
 import { handleOcrRunOnPage } from './handlers/ocr-run-on-page.js';
 import { handleFsApplyEditOps } from './handlers/pdf-apply-edit-ops.js';
 import type { FsApplyEditOpsDeps } from './handlers/pdf-apply-edit-ops.js';
+import { handlePdfApplyRedactions } from './handlers/pdf-apply-redactions.js';
 import { handlePdfCombine } from './handlers/pdf-combine.js';
 import { handlePdfEmbedImage } from './handlers/pdf-embed-image.js';
 import { defaultPickEngine, handlePdfExport } from './handlers/pdf-export-pdf.js';
@@ -619,6 +620,59 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
       // src/main/print-window.test.ts.
       chromiumExport: exportViaChromium,
       pickEngine: (bytes, ops, annotations) => defaultPickEngine(bytes, ops, annotations),
+    }),
+  );
+
+  // ============================================================================
+  // Phase 7.4 B1 (David, 2026-06-15) — pdf:applyRedactions (Riley design §3.1).
+  //
+  // R1 rasterize-redact + sanitize. Reuses the L-004/L-005-compliant OCR
+  // rasterizer for page rasterization, and `@napi-rs/canvas` for the black-
+  // rect compositing. Signature-audit invalidation backref forwards to the
+  // signatureAudit bridge's new `markInvalidatedByRedaction` method
+  // (Ravi's repo + David's bridge adapter, db-bridge.ts).
+  // ============================================================================
+  ipcMain.handle(Channels.PdfApplyRedactions, (_evt, payload) =>
+    handlePdfApplyRedactions(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+      getDocHash: (h) => documentStore.get(h)?.fileHash ?? null,
+      // Handle-keyed rasterizer — production reuses the OCR rasterize
+      // pipeline (same L-004/L-005 contract). Bytes already in documentStore;
+      // the rasterizer reads them from there. We synthesize a non-aborting
+      // `AbortSignal` because the OCR `RasterPageOptions` requires one (it's
+      // load-bearing for OCR's per-page cancel); redaction has no per-page
+      // cancellation today (Riley §3.1 `cancelled` reserved for v2). The
+      // signal stays unfired for the lifetime of the IPC round-trip.
+      rasterizePageByHandle: async (handle, opts) =>
+        ocr.rasterizePage({
+          handle,
+          pageIndex: opts.pageIndex,
+          dpi: opts.dpi,
+          signal: new AbortController().signal,
+        }),
+      // Production canvas adapter — paints opaque black rects on the PNG.
+      // Dynamic-imported inside the closure so a packaging without
+      // `@napi-rs/canvas` (test env) doesn't error at boot — error surfaces
+      // at first Apply call instead, mapped to engine_failed.
+      drawBlackRectsOnPng: async (png, rectsPx) => {
+        const { drawBlackRectsOnPngProd } = await import('../main/pdf-ops/redact-canvas.js');
+        return drawBlackRectsOnPngProd(png, rectsPx);
+      },
+      signatureAuditRedaction: getDbBridge().signatureAudit
+        ? {
+            markInvalidatedByRedaction: (docHash, fieldNames) => {
+              const repo = getDbBridge().signatureAudit;
+              if (!repo) return 0;
+              if (typeof repo.markInvalidatedByRedaction === 'function') {
+                return repo.markInvalidatedByRedaction(docHash, fieldNames);
+              }
+              // Older memory bridge without the back-ref — best-effort no-op.
+              return 0;
+            },
+          }
+        : null,
+      defaultRasterDpi: 200, // Riley §1.2 design default; UI can override per-request.
     }),
   );
 

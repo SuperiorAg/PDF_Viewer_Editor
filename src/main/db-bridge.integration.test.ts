@@ -413,6 +413,40 @@ describe('db-bridge round-trip against real SQLite repos (Item A-1.1 regression)
       const none = bridge.signatureAudit.markInvalidatedByOcrJob(DOC_HASH, [], ocrJobId);
       expect(none).toBe(0);
     });
+
+    it('markInvalidatedByRedaction stamps invalidated_by_redaction_at on matched rows', () => {
+      // Phase 7.4 B1 (David, 2026-06-15) — mirrors the OCR sibling above.
+      // Ravi's repo stamps `unixepoch() * 1000` internally; the bridge surface
+      // is `(docHash, fieldNames): number`.
+      const idA = bridge.signatureAudit.insert(makeInsertInput({ field_name: 'sigA' }));
+      const inputB = makeInsertInput({ field_name: 'sigB' });
+      inputB.sig_bytes_offset = 200;
+      const idB = bridge.signatureAudit.insert(inputB);
+      bridge.signatureAudit.insert(makeInsertInput({ doc_hash: DOC_HASH_2, field_name: 'sigC' }));
+
+      const beforeMs = Date.now();
+      const marked = bridge.signatureAudit.markInvalidatedByRedaction(DOC_HASH, ['sigA', 'sigB']);
+      const afterMs = Date.now();
+      expect(marked).toBe(2);
+
+      // Read back via the bridge — invalidatedByRedactionAt should be a recent
+      // ms-epoch on both matched rows; null on the unmatched DOC_HASH_2 row.
+      const rowA = bridge.signatureAudit.get(idA);
+      const rowB = bridge.signatureAudit.get(idB);
+      expect(rowA?.invalidatedByRedactionAt).not.toBeNull();
+      expect(rowB?.invalidatedByRedactionAt).not.toBeNull();
+      // Within a sane range of the wall clock (the SQL stamp may drift a
+      // few ms relative to JS Date.now; allow 2s slack).
+      expect(rowA!.invalidatedByRedactionAt!).toBeGreaterThanOrEqual(beforeMs - 2000);
+      expect(rowA!.invalidatedByRedactionAt!).toBeLessThanOrEqual(afterMs + 2000);
+
+      // Empty field names → 0 rows.
+      const none = bridge.signatureAudit.markInvalidatedByRedaction(DOC_HASH, []);
+      expect(none).toBe(0);
+
+      // OCR back-ref MUST NOT be touched by the redaction marker.
+      expect(rowA?.invalidatedByOcrJobId).toBeNull();
+    });
   });
 
   // ==========================================================================

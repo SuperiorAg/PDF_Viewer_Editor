@@ -75,6 +75,8 @@ function makeBridgeUnavailableFallback(): PdfApi {
       replaceText: unavailable,
       identifyTextSpan: unavailable,
       print: unavailable,
+      // Phase 7.4 B1 — Riley design §3.1.
+      applyRedactions: unavailable,
     },
     // Phase 3 (api-contracts §13)
     forms: {

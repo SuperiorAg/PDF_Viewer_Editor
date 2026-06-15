@@ -63,6 +63,8 @@ import type {
   PdfIdentifyTextSpanResponse,
   PdfPrintRequest,
   PdfPrintResponse,
+  PdfApplyRedactionsRequest,
+  PdfApplyRedactionsResponse,
   PdfReplaceTextRequest,
   PdfReplaceTextResponse,
   RecentsAddRequest,
@@ -269,6 +271,9 @@ const pdfApi: PdfApi = {
       ipcRenderer.invoke(Channels.PdfIdentifyTextSpan, req) as Promise<PdfIdentifyTextSpanResponse>,
     print: (req: PdfPrintRequest) =>
       ipcRenderer.invoke(Channels.PdfPrint, req) as Promise<PdfPrintResponse>,
+    // Phase 7.4 B1 (Riley design §3.1) — R1 rasterize-redact + sanitize.
+    applyRedactions: (req: PdfApplyRedactionsRequest) =>
+      ipcRenderer.invoke(Channels.PdfApplyRedactions, req) as Promise<PdfApplyRedactionsResponse>,
   },
   app: {
     getVersion: () =>

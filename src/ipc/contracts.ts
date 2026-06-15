@@ -1284,6 +1284,69 @@ export interface PdfPrintValue {
 }
 export type PdfPrintResponse = Result<PdfPrintValue, PdfPrintError>;
 
+// ---- pdf:applyRedactions ----------------------------------------------------
+// Phase 7.4 B1 (Riley design — docs/phase-7.4-b1-redaction-design.md §3.1).
+// R1 rasterize-redact + full sanitize matrix. One channel; no preview channel
+// (mark preview is renderer-side SVG, see design §3.3). Two-step UX when the
+// doc carries prior PAdES signatures (design §5.2 — `invalidatesSignaturesConfirmed`
+// mirrors the OCR runOnDocument discipline).
+
+/** A redaction rectangle in PDF user-space coords (same shape as `PdfRect`). */
+export interface RedactionRectIpc {
+  pageIndex: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface PdfApplyRedactionsRequest {
+  handle: DocumentHandle;
+  /** Flat list — pageIndex is on each item for serialization simplicity. */
+  redactions: RedactionRectIpc[];
+  /**
+   * Set to true after the user confirmed the signature-invalidation step in
+   * the Apply modal. Mirror of OcrRunOnDocument's `invalidatesSignaturesConfirmed`
+   * (see ocr-run-on-document.ts:179). If absent / false and signatures are
+   * present, handler returns `signed_pdf_requires_confirm` with the field-name
+   * list so the renderer can re-prompt.
+   */
+  invalidatesSignaturesConfirmed?: boolean;
+  /** DPI at which redacted pages are rasterized. Default 200 (design §1.2 trade-off). */
+  rasterDpi?: number;
+}
+
+export type PdfApplyRedactionsError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'no_redactions'
+  | 'page_out_of_range'
+  | 'rect_invalid'
+  | 'signed_pdf_requires_confirm' // PAdES present + not confirmed
+  | 'pdf_load_failed'
+  | 'rasterize_failed'
+  | 'engine_failed'
+  | 'output_too_large'
+  | 'cancelled';
+
+export interface PdfApplyRedactionsValue {
+  /** The sanitized + redacted output bytes. The renderer writes via fs:writePdf
+   *  or refreshes document-store via setBytes, then prompts Save As. */
+  bytes: Uint8Array;
+  /** Counts for the post-Apply toast. */
+  pagesRedacted: number;
+  rectsApplied: number;
+  /** True iff a prior PAdES signature was invalidated (audit-log already updated). */
+  invalidatedSignatures: boolean;
+  /** Field-name list of invalidated signatures (empty if none). */
+  invalidatedSignatureFields: string[];
+  /** Honest disclosure warnings. Always populated with "non-redacted text is no
+   *  longer searchable — re-run OCR" when at least one page was rasterized. */
+  warnings: string[];
+}
+
+export type PdfApplyRedactionsResponse = Result<PdfApplyRedactionsValue, PdfApplyRedactionsError>;
+
 // ---- pdf:applyEditOps -------------------------------------------------------
 // Phase 2 (architecture-phase-2.md §2.5): convenience channel that wraps
 // fs:writePdf kind:'ops' so the renderer thunk has a clean async surface
@@ -3234,6 +3297,8 @@ export const Channels = {
   PdfReplaceText: 'pdf:replaceText',
   PdfIdentifyTextSpan: 'pdf:identifyTextSpan',
   PdfPrint: 'pdf:print',
+  // Phase 7.4 B1 (Riley design §3.1) — R1 rasterize-redact + sanitize.
+  PdfApplyRedactions: 'pdf:applyRedactions',
   // Phase 2 fs (replay-engine entry point)
   FsApplyEditOps: 'fs:applyEditOps',
   // Phase 4.1 (api-contracts.md §15, David)
@@ -3393,6 +3458,8 @@ export interface PdfApi {
     replaceText: (req: PdfReplaceTextRequest) => Promise<PdfReplaceTextResponse>;
     identifyTextSpan: (req: PdfIdentifyTextSpanRequest) => Promise<PdfIdentifyTextSpanResponse>;
     print: (req: PdfPrintRequest) => Promise<PdfPrintResponse>;
+    // Phase 7.4 B1 (Riley design §3.1) — R1 rasterize-redact + sanitize.
+    applyRedactions: (req: PdfApplyRedactionsRequest) => Promise<PdfApplyRedactionsResponse>;
   };
   app: {
     getVersion: () => Promise<AppGetVersionResponse>;
