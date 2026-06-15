@@ -11,6 +11,10 @@ export const selectImageImportPreload = (s: RootState) => s.ui.imageImport;
 export const selectTextEditMode = (s: RootState): boolean => s.ui.textEdit.active;
 export const selectTextEditState = (s: RootState) => s.ui.textEdit;
 export const selectBookmarksEditMode = (s: RootState): boolean => s.ui.bookmarksEditMode;
+// Phase 7.4 A5 — Shapes sub-toolbar visibility. Drives the Shapes button's
+// `active` state in the main Toolbar and the conditional render of the
+// ShapeToolbar sub-toolbar in app.tsx.
+export const selectShapesPanelOpen = (s: RootState): boolean => s.ui.shapesPanelOpen;
 export const selectToasts = (s: RootState) => s.ui.toasts;
 export const selectIsLoading = (s: RootState) => s.ui.isLoading;
 export const selectLoadingMessage = (s: RootState) => s.ui.loadingMessage;

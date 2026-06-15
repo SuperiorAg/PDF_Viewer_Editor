@@ -20,11 +20,13 @@ describe('i18n resolveKey — baseline + fallback', () => {
   });
 
   it('falls back to en-US when an es-ES key is MISSING (never a raw key)', () => {
-    // 'toolbar:shapes' is deliberately untranslated in es-ES (proof-locale gap).
-    const resolved = resolveKey('es-ES', 'toolbar:shapes');
-    // Falls back to the English value, NOT the raw 'shapes' key.
-    expect(resolved).toBe('Shapes');
-    expect(resolved).not.toBe('shapes');
+    // 'toolbar:insertFromFile' is deliberately untranslated in es-ES (proof-
+    // locale gap; the feature is itself deferred). Phase 7.4 A5 replaced the
+    // previous `toolbar:shapes` sample after Shapes shipped to es-ES.
+    const resolved = resolveKey('es-ES', 'toolbar:insertFromFile');
+    // Falls back to the English value, NOT the raw 'insertFromFile' key.
+    expect(resolved).toBe('Insert from file');
+    expect(resolved).not.toBe('insertFromFile');
     expect(resolved).not.toContain(':');
   });
 

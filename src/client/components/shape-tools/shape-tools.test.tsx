@@ -18,7 +18,7 @@ import shapesReducer, {
   setActiveShapeTool,
   setShapeDefaults,
 } from '../../state/slices/shapes-slice';
-import uiReducer from '../../state/slices/ui-slice';
+import uiReducer, { setShapesPanelOpen } from '../../state/slices/ui-slice';
 import { type PDFDocumentModel } from '../../types/ipc-contract';
 
 import { buildShapeForTool } from './build-shape-annotation';
@@ -71,8 +71,22 @@ function makeStore() {
 describe('ShapeToolbar', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('renders all 8 tool buttons (7 tools + arrow as a synonym)', () => {
+  it('renders nothing when the shapes panel is closed (default)', () => {
+    // Phase 7.4 A5 — the sub-toolbar is gated on ui.shapesPanelOpen so the
+    // production main toolbar can mount it conditionally. Default state =
+    // closed → component returns null and contributes no DOM.
     const store = makeStore();
+    const { container } = render(
+      <Provider store={store}>
+        <ShapeToolbar />
+      </Provider>,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('renders all 8 tool buttons (7 tools + arrow as a synonym) when open', () => {
+    const store = makeStore();
+    store.dispatch(setShapesPanelOpen(true));
     render(
       <Provider store={store}>
         <ShapeToolbar />
@@ -91,6 +105,7 @@ describe('ShapeToolbar', () => {
 
   it('toggles aria-pressed when a tool is activated', () => {
     const store = makeStore();
+    store.dispatch(setShapesPanelOpen(true));
     render(
       <Provider store={store}>
         <ShapeToolbar />
@@ -100,6 +115,21 @@ describe('ShapeToolbar', () => {
     expect(rect).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(rect);
     expect(rect).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('Esc closes the panel (sets ui.shapesPanelOpen back to false)', () => {
+    // Phase 7.4 A5 — keyboard accessibility: focus + Esc to close, matching
+    // the project's existing modal/menu Esc convention.
+    const store = makeStore();
+    store.dispatch(setShapesPanelOpen(true));
+    render(
+      <Provider store={store}>
+        <ShapeToolbar />
+      </Provider>,
+    );
+    const toolbar = screen.getByRole('toolbar', { name: /Shape annotation tools/ });
+    fireEvent.keyDown(toolbar, { key: 'Escape' });
+    expect(store.getState().ui.shapesPanelOpen).toBe(false);
   });
 });
 

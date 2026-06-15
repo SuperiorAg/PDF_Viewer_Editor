@@ -34,7 +34,7 @@
   "textEdit": "Text edit",
   "textEditTooltip": "Text edit mode (E)",
   "shapes": "Shapes",
-  "shapesTooltip": "Shapes — planned for an upcoming release.",
+  "shapesTooltip": "Click to show shape tools",
   "insertBlank": "Insert blank page",
   "insertBlankTooltip": "Insert blank page",
   "insertFromFile": "Insert from file",

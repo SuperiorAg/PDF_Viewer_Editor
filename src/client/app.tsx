@@ -20,6 +20,9 @@ import { SaveTemplateModal } from './components/modals/save-template-modal';
 import { ScanModal } from './components/modals/scan-modal';
 import { SettingsModal } from './components/modals/settings-modal';
 import { PdfViewer } from './components/pdf-viewer';
+// Phase 7.4 A5 — ShapeToolbar mounts as a sibling under the main Toolbar,
+// gated on ui.shapesPanelOpen (mirrors the FormDesignerToolbar pattern).
+import { ShapeToolbar } from './components/shape-tools/shape-toolbar';
 import { Sidebar } from './components/sidebar';
 import { StatusBar } from './components/status-bar';
 import { TextEditOverlay } from './components/text-edit-overlay';
@@ -209,6 +212,10 @@ export function App(): JSX.Element {
         <Toolbar />
         {/* Phase 3 — designer field-type pills toolbar (visible only in designer mode). */}
         <FormDesignerToolbar />
+        {/* Phase 7.4 A5 — shape tools sub-toolbar (visible only when the main
+            toolbar's Shapes toggle is on). Component returns null while the
+            ui.shapesPanelOpen flag is false. */}
+        <ShapeToolbar />
         <main className={styles.main}>
           {doc ? (
             <>

@@ -33,6 +33,8 @@
   "freehandTooltip": "Mano alzada (Mayús+F)",
   "textEdit": "Editar texto",
   "textEditTooltip": "Modo de edición de texto (E)",
+  "shapes": "Formas",
+  "shapesTooltip": "Haga clic para mostrar las herramientas de forma",
   "insertBlank": "Insertar página en blanco",
   "insertBlankTooltip": "Insertar página en blanco",
   "insertImage": "Insertar imagen",

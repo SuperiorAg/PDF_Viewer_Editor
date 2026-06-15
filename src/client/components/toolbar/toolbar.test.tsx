@@ -25,12 +25,25 @@ describe('Toolbar', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });
 
-  it('should mark Phase 2 annotation tools (underline, freehand, shapes) as disabled', () => {
+  it('should mark Phase 2 annotation tools (underline, strikethrough, freehand) as disabled with no doc', () => {
+    // Phase 7.4 A5 — Shapes is no longer in this list: it is now an enabled
+    // toggle (its own assertion is below). The other doc-gated annotation
+    // tools remain disabled when no document is open.
     renderToolbar();
     expect(screen.getByRole('button', { name: 'Underline' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Strikethrough' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Freehand' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Shapes' })).toBeDisabled();
+  });
+
+  it('Shapes button is doc-gated and exposes aria-pressed (Phase 7.4 A5 toggle)', () => {
+    // Shapes is now a toggle for the ShapeToolbar sub-toolbar. With no doc,
+    // it is disabled (same gate as the other annotation tools). The
+    // aria-pressed attribute is present because `active` is supplied (toggle
+    // semantics) — driven by ui.shapesPanelOpen, default false.
+    renderToolbar();
+    const shapes = screen.getByRole('button', { name: 'Shapes' });
+    expect(shapes).toBeDisabled();
+    expect(shapes).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('should always enable the Combine button regardless of doc state', () => {

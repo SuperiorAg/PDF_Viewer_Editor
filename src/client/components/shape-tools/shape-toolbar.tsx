@@ -11,10 +11,21 @@
 // Spanish speaker. Native-speaker review is the next step (deferrable). The
 // visible button labels are short by design (toolbar buttons); the ARIA +
 // tooltip carry the full descriptive name in both locales.
+//
+// Phase 7.4 A5 (Riley) — mount under the main Toolbar via app.tsx, gated on
+// the `ui.shapesPanelOpen` flag. Mirrors the FormDesignerToolbar pattern (a
+// sibling sub-toolbar that returns null when its slice flag is false). Esc
+// while focus is inside the sub-toolbar closes it; this matches the
+// FormDesigner "Exit (Esc)" convention and the broader app keyboard idiom
+// (modals + menus close on Esc — see useAppShortcuts).
+
+import { useCallback, useEffect, useRef } from 'react';
 
 import { useT } from '../../i18n/use-t';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { type ShapeTool, setActiveShapeTool } from '../../state/slices/shapes-slice';
+import { selectShapesPanelOpen } from '../../state/slices/ui-selectors';
+import { setShapesPanelOpen } from '../../state/slices/ui-slice';
 
 import styles from './shape-tools.module.css';
 
@@ -85,17 +96,51 @@ const TOOLS: readonly ShapeToolEntry[] = [
   },
 ];
 
-export function ShapeToolbar(): JSX.Element {
+export function ShapeToolbar(): JSX.Element | null {
   const { t } = useT();
   const dispatch = useAppDispatch();
   const active = useAppSelector((s) => s.shapes.activeTool);
+  const open = useAppSelector(selectShapesPanelOpen);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const firstButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  // When the panel opens, focus the first shape-tool button so keyboard users
+  // land inside it and Esc lands on a focused descendant. Mirrors the
+  // focus-into-modal pattern used by the app's modal stack (a11y-audit R-5).
+  useEffect(() => {
+    if (open && firstButtonRef.current) {
+      firstButtonRef.current.focus();
+    }
+  }, [open]);
+
+  // Esc closes the panel. The handler is attached to the sub-toolbar itself
+  // (not the document) so it only fires when focus is inside — the global Esc
+  // listener for modals continues to work unchanged elsewhere.
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        dispatch(setShapesPanelOpen(false));
+      }
+    },
+    [dispatch],
+  );
+
+  if (!open) return null;
 
   return (
-    <div role="toolbar" aria-label={t('toolbar:shapeTools.label')} className={styles.toolbar}>
-      {TOOLS.map((tool) => (
+    <div
+      ref={containerRef}
+      role="toolbar"
+      aria-label={t('toolbar:shapeTools.label')}
+      className={styles.toolbar}
+      onKeyDown={onKeyDown}
+    >
+      {TOOLS.map((tool, idx) => (
         <button
           key={tool.id}
           type="button"
+          ref={idx === 0 ? firstButtonRef : undefined}
           className={`${styles.toolButton} ${active === tool.id ? styles.toolButtonActive : ''}`}
           aria-label={t(tool.ariaKey)}
           aria-pressed={active === tool.id ? 'true' : 'false'}

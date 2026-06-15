@@ -85,6 +85,13 @@ interface UiState {
   imageImport: ImageImportPreload;
   textEdit: TextEditOverlayState;
   bookmarksEditMode: boolean;
+  // Phase 7.4 A5 — Shapes sub-toolbar visibility. Mirrors the
+  // FormDesignerToolbar pattern: a boolean here drives a sibling sub-toolbar
+  // mounted right under the main Toolbar in app.tsx. Toggled by the main
+  // toolbar's Shapes button; closed by Esc while focus is inside the
+  // sub-toolbar. The active shape tool itself lives in the shapes slice
+  // (shapes.activeTool) — this flag only controls visibility of the picker.
+  shapesPanelOpen: boolean;
 }
 
 const initialState: UiState = {
@@ -112,6 +119,7 @@ const initialState: UiState = {
     draftText: '',
   },
   bookmarksEditMode: false,
+  shapesPanelOpen: false,
 };
 
 export const uiSlice = createSlice({
@@ -209,6 +217,15 @@ export const uiSlice = createSlice({
     toggleBookmarksEditMode(state) {
       state.bookmarksEditMode = !state.bookmarksEditMode;
     },
+    // Phase 7.4 A5 — Shapes sub-toolbar visibility actions. Mirror the
+    // bookmarksEditMode pair above (toggle + explicit set) so the main toolbar
+    // can flip the panel and the panel itself can close on Esc.
+    toggleShapesPanel(state) {
+      state.shapesPanelOpen = !state.shapesPanelOpen;
+    },
+    setShapesPanelOpen(state, action: PayloadAction<boolean>) {
+      state.shapesPanelOpen = action.payload;
+    },
   },
 });
 
@@ -232,6 +249,8 @@ export const {
   clearTextEditActiveSpan,
   setBookmarksEditMode,
   toggleBookmarksEditMode,
+  toggleShapesPanel,
+  setShapesPanelOpen,
 } = uiSlice.actions;
 
 // Phase 2 — image-import modal convenience action creators.

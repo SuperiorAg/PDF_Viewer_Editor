@@ -30,13 +30,18 @@ import {
   openRunModal as openOcrRunModal,
   toggleOverlay as toggleOcrOverlay,
 } from '../../state/slices/ocr-slice';
-import { selectBookmarksEditMode, selectTextEditMode } from '../../state/slices/ui-selectors';
+import {
+  selectBookmarksEditMode,
+  selectShapesPanelOpen,
+  selectTextEditMode,
+} from '../../state/slices/ui-selectors';
 import {
   openImageImportModal,
   openModal,
   pushToast,
   setTextEditMode,
   toggleBookmarksEditMode,
+  toggleShapesPanel,
 } from '../../state/slices/ui-slice';
 // Phase 6 — Export-to-Office modal entry.
 import { selectCurrentPage } from '../../state/slices/viewport-selectors';
@@ -64,6 +69,7 @@ export function Toolbar(): JSX.Element {
   const bookmarksEditActive = useAppSelector(selectBookmarksEditMode);
   const designerActive = useAppSelector(selectDesignerMode);
   const ocrOverlayVisible = useAppSelector(selectOcrOverlayVisible);
+  const shapesPanelOpen = useAppSelector(selectShapesPanelOpen);
 
   // Roving-tabindex controller (a11y-audit.md R-3). `rb()` allocates the next
   // sequential roving index in render order and returns the roving props to
@@ -250,20 +256,19 @@ export function Toolbar(): JSX.Element {
           active={textEditActive}
           onClick={() => dispatch(setTextEditMode(!textEditActive))}
         />
-        {/* Shapes button: the underlying ShapeToolbar component exists but is
-            not mounted in the production UI yet. Per Phase 7.4 A1 honesty
-            refresh the tooltip no longer promises a specific phase, and the
-            dead "coming later" toast (the button is disabled, so it never
-            fired) is removed. Tracked for the future Shapes wave. */}
+        {/* Phase 7.4 A5 — Shapes button is now a toggle that reveals the
+            ShapeToolbar sub-toolbar (rendered as a sibling under the main
+            toolbar by app.tsx, gated on ui.shapesPanelOpen). The aria-pressed
+            state on this button is driven by the same flag so screen readers
+            announce the panel's open/closed state on activation. */}
         <ToolbarButton
           {...rb()}
           icon="shapes"
           label={t('toolbar:shapes')}
           tooltip={t('toolbar:shapesTooltip')}
-          disabled
-          onClick={() => {
-            // Disabled — nothing happens; the tooltip explains.
-          }}
+          disabled={!doc}
+          active={shapesPanelOpen}
+          onClick={() => dispatch(toggleShapesPanel())}
         />
       </div>
 
