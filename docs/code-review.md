@@ -3189,7 +3189,7 @@ Pushed `phase-7.4-b1-julian-review` (no source edits; only `docs/code-review.md`
 - `lint --max-warnings 0`: **GREEN** (no warnings).
 - `vitest` full suite: **2067 passed / 0 failed / 185 files** in 28.08s.
 
-CI run URL will be: `https://github.com/SuperiorAg/PDF_Viewer_Editor/actions` filtered to branch `phase-7.4-b1-julian-review` once Diego's draft PR is opened. `build (windows-2025-vs2026)` packaging job runs on `main` push only — not on this PR per design.
+CI run URL: https://github.com/SuperiorAg/PDF_Viewer_Editor/actions/runs/27554846448 (PR #2 https://github.com/SuperiorAg/PDF_Viewer_Editor/pull/2). At time of writing, `check (windows-2025-vs2026)` + `check (ubuntu-latest)` are QUEUED — pending CI confirmation. The Phase 7.1 e2e job runs on this PR per the dispatch. `build (windows-2025-vs2026)` packaging job runs on `main` push only — not on this PR per design.
 
 ### 7. Findings
 
