@@ -606,6 +606,99 @@ Click any row to jump to the annotation's page and select the annotation (so the
 
 ---
 
+## Redaction
+
+> **Read this section before you redact anything.** Redaction is **destructive and irreversible** — there is no undo. Run **File → Save As…** to keep a copy of the original first, then redact the copy. The Apply confirm modal will warn you again at the moment of action, but the muscle-memory mistake of "I'll just hit Apply and Save over the original" is the failure mode this section exists to prevent.
+
+**NEW in Phase 7.4 B1 (v0.8.0).** Redaction permanently removes content from one or more pages of a PDF. This is not the same as drawing a black highlight over the text — a black highlight leaves the underlying text in the file, where it can be recovered by anyone who copies the page, opens it in another reader, or runs a text-extract. PDF_Viewer_Editor's redaction tool rebuilds the redacted pages from scratch as raster images with the marked regions burned out, so the original bytes are not present in the saved file at all.
+
+### How to redact a region
+
+1. Open the document and click **Toolbar → Redact** (the dashed-square icon), or use the menu **Tools → Redaction → Mark Rectangle…**, or press **Shift+R**. A new Redaction sub-toolbar appears beneath the main toolbar.
+2. In the sub-toolbar, the **Mark Rectangle** tool is armed by default. Click and drag on any page to draw a redaction mark. The mark appears as a red outline by default; the underlying text stays visible so you can verify you marked the right region.
+3. Repeat on as many pages as you need. The status bar shows "N redaction marks pending on M pages — Apply…" while marks are present. Right-click a mark and choose **Remove this mark** to delete it. **Clear Marks** in the sub-toolbar removes everything that's pending.
+4. Toggle **Show Markups** off (in the sub-toolbar) to preview what Apply will look like — each mark paints as a fully-opaque black rectangle so you can see the final result before committing. Toggle it back on to keep editing.
+5. When you are sure, click **Apply Redactions** (or press **Ctrl+Shift+Y**). The Apply confirm modal opens. **Cancel** if you have any doubt; **Apply** to commit.
+6. The result opens in the viewer as the modified document. **Save** (Ctrl+S) writes it to disk; if you want to keep the original, **Save As…** (Ctrl+Shift+S) to a new path.
+
+### What "destructive" means
+
+Acrobat shipped a notorious bug for decades where users drew a black rectangle over text, saved, and shipped the document — only to have the redacted text trivially recovered by anyone who copy-pasted the page. The 2008 TSA airport-security leak, the 2010 DOJ-Manning leak, and the 2023 NY Times court-filing leak are the same failure mode every time. **Our redaction is not that.** When you Apply, the engine:
+
+1. Loads the PDF.
+2. For every page that has at least one redaction mark, rasterizes the page into a high-DPI image, draws the black redaction rectangles **into** that image, and replaces the page's entire content stream with the resulting image.
+3. Reauthors the output document from scratch, copying only the pages — every catalog-level entry that could carry residual data is dropped by construction (see [What sanitize removes](#what-sanitize-removes) below).
+4. Writes the new bytes back through the editor's standard Save path.
+
+The marked content is not in the saved PDF in any form — not as hidden text under an image, not as a deleted-but-recoverable object, not in the document outline, not in form fields, not in JavaScript actions, not in embedded files. It is **gone**.
+
+The trade-off: **redacted pages lose searchability.** A rasterized page is a single image — there is no text layer left on it. You can re-run OCR on the redacted output (**Tools → Run OCR…**) to author a new searchable text layer behind the raster; until you do, the non-redacted text on redacted pages can't be searched, copy-pasted, or read by a screen reader. This is honest: the Apply confirm modal says so and the post-Apply warning list reminds you again.
+
+### What sanitize removes
+
+When you Apply, the engine strips 17 categories of hidden information from the output. The categories Acrobat covers with its "Remove Hidden Information" feature are all here, by construction (the output document is rebuilt from scratch — the source document's catalog never comes along):
+
+- **Document metadata** — Title, Author, Subject, Keywords, Creator, Producer, CreationDate, ModDate (`/Info` dictionary). Replaced with a minimal `{ Producer: 'PDF_Viewer_Editor', ModDate: <now> }` so the file is still spec-compliant.
+- **XMP metadata** — the document-level `/Metadata` XMP stream is dropped.
+- **Document-level JavaScript** — `/Names → /JavaScript` actions, `/OpenAction` if it's a JS action, and the catalog `/AA` (Additional Actions). Belt-and-braces: the engine also runs `stripDocLevelJavaScript` on the output as a second defense.
+- **Embedded files** — `/Names → /EmbeddedFiles` (attached files inside the PDF) and per-page `/FileAttachment` annotations on redacted pages.
+- **Document outline (bookmarks)** — the `/Outlines` tree is dropped. A bookmark target could name a redacted region, so this is the safest cut. The post-Apply warning list says "Bookmarks removed during redaction."
+- **AcroForm tree** — `/AcroForm` from the catalog is dropped. A half-removed form would be worse than no form. If you need to preserve filled values, flatten the form first (Forms designer → flatten) before applying redaction. The warning list says "Form fields removed during redaction. Flatten the form first if you need to keep filled values."
+- **Per-page annotations on redacted pages** — every highlight / sticky / text box / shape / signature widget on a page that has at least one redaction mark is dropped. The page is being rebuilt as a raster image; the original annotations would no longer line up.
+- **Layers** — `/OCProperties` (optional content / layers). Hidden layers could leak. The warning list says "Layers removed during redaction."
+- **Accessibility structure tree** — `/StructTreeRoot`, `/MarkInfo`, `/Lang`. Tagged-PDF accessibility refs point to specific content streams that no longer exist after rasterize. The warning list says "Accessibility structure removed during redaction."
+- **Thread / Article references**, **catalog-level Additional Actions**, **PieceInfo / SpiderInfo**, **hidden or off-page content**, **comment annotations**, **web-capture tags** — all dropped by the rebuild-from-scratch construction. Most are silent; the warnings above cover the user-visible categories.
+
+In short: **document metadata, embedded files, document-level JavaScript, the document outline, AcroForm objects, layers, the accessibility structure tree, and per-page annotations on redacted pages.** The output document is sanitized in the same pass that performs the redaction — you don't need a separate "Remove Hidden Information" step.
+
+### Redacting a digitally-signed document
+
+If the document carries one or more PAdES (Phase 4) digital signatures, the Apply confirm modal grows a second paragraph that lists the affected signature fields:
+
+> This document carries N digital signature(s):
+>
+> - Signature field "field-name-1"
+> - Signature field "field-name-2"
+>   Applying redaction will invalidate every signature listed. The signature audit panel will be updated to reflect this.
+
+You must explicitly confirm before the engine runs. If you cancel, the document is untouched and the signatures remain valid. If you Apply:
+
+- The redaction commits as normal.
+- The signature audit log records the invalidation: each affected row now shows an **"Invalidated by redaction on YYYY-MM-DD"** badge in the [Signature audit panel](#signature-audit-panel).
+- The signature widget remains visible in the document (so the audit trail of "this was signed" is preserved), but any third-party reader that verifies the signature against the PDF bytes will report it as invalid — the bytes have changed.
+
+This mirrors the OCR pattern from [Running OCR](#running-ocr) and the [Honesty reminder — running OCR on a signed PDF](#honesty-reminder--running-ocr-on-a-signed-pdf).
+
+### What's deferred to v2
+
+Two things are out of scope for v1; the Tools → Redaction submenu shows them honestly:
+
+- **Mark Text** (selection-based redaction) — "coming in v2." Today only Mark Rectangle is available, even when you have text selected. The button is visible but disabled so the workflow is discoverable.
+- **R2 content-stream redaction** — the variant of redaction that preserves searchability of non-redacted text on redacted pages by surgically removing only the marked text operators from the content stream (rather than replacing the whole page with a raster). R2 is a separate engine with a different correctness budget — it requires a careful walker for every text-show operator, careful handling of CID fonts and ligatures and rotated runs, and a much larger fixture corpus to prove correct on real-world PDFs. R2 is on the roadmap as a future phase; the v1 R1 engine + the "Run OCR on the redacted output" workflow is the documented path until R2 ships.
+
+The deliberate goal is **Acrobat tools-menu parity for the most-cited enterprise/legal demand** — the Acrobat-style Redact tool with Mark Rectangle, sanitize-on-Apply, and signature-invalidation handling. R2's searchability win is a future delta on top of that floor.
+
+### Keyboard shortcuts
+
+| Action                                                      | Shortcut                       |
+| ----------------------------------------------------------- | ------------------------------ |
+| **Mark Rectangle** (opens the sub-toolbar if it isn't open) | **Shift+R**                    |
+| **Apply Redactions**                                        | **Ctrl+Shift+Y**               |
+| Close the sub-toolbar (marks persist)                       | **Esc** inside the sub-toolbar |
+
+Both Shift+R and Ctrl+Shift+Y mirror Acrobat. Apply is intentionally a chord shortcut — no single-key "press Enter to Apply" — because the operation is destructive.
+
+### Honesty reminder — redaction is destructive
+
+The Phase 7.4 B1 honesty obligations, surfaced here at the source and again at the point of action in the Apply confirm modal:
+
+1. **Redacted pages become rasterized images and lose text-search.** Non-redacted text on redacted pages is no longer searchable until you re-run OCR. Document metadata, embedded files, document-level JavaScript, the document outline, AcroForm objects, layers, the accessibility structure tree, and per-page annotations on redacted pages are stripped at the same time.
+2. **Applying redaction invalidates any existing digital signatures.** The signature audit panel records the invalidation; the visible widget remains in the document for the audit trail; third-party verifiers will report the signature as invalid against the new bytes.
+
+Both obligations are surfaced (a) here in the user guide, (b) in the Apply confirm modal at the moment of action, (c) in the post-Apply warning list shown when Apply succeeds, and (d) in [README → Roadmap status → Phase 7.4 B1](../README.md#phase-74-b1--redaction-new-in-v080). This is the four-location ratchet the project uses for any destructive or security-sensitive feature.
+
+---
+
 ## Importing images
 
 PDF_Viewer_Editor 0.2.0 imports PNG, JPEG, and TIFF (first page only) images. Two import modes — **new page** or **overlay on an existing page**. Trigger via **Ctrl+I**, **Toolbar → Insert image**, or right-click a page → **Insert image overlay**.
@@ -1966,6 +2059,8 @@ Verified against `src/client/hooks/use-app-shortcuts.ts` and `src/client/shortcu
 | **Tools**        | **Manage language packs…**        | (no shortcut; menu only)                | **yes (Phase 5 NEW)**                                            |
 | **Tools / File** | **Export…**                       | **Ctrl+Shift+E**                        | **yes (Phase 6 NEW)**                                            |
 | **Tools**        | **Scan from device…**             | (no shortcut; menu only)                | **LIVE on Windows (Phase 5.1, 0.7.3+); disabled on macOS/Linux** |
+| **Tools**        | **Mark Rectangle for redaction**  | **Shift+R**                             | **yes (Phase 7.4 B1 NEW)**                                       |
+| **Tools**        | **Apply Redactions**              | **Ctrl+Shift+Y**                        | **yes (Phase 7.4 B1 NEW; gated on at least one pending mark)**   |
 | **View**         | **Toggle OCR confidence overlay** | **Ctrl+Shift+H**                        | **yes (Phase 5 NEW)**                                            |
 | Forms            | Toggle Form Designer mode         | **Ctrl+Shift+F**                        | yes (Phase 3)                                                    |
 | Forms            | Open Mail Merge wizard            | **Ctrl+M**                              | yes (Phase 3)                                                    |
@@ -1983,6 +2078,8 @@ Phase 4 shortcuts are hard-coded. User-configurable shortcuts ship in a later ph
 **Note on Ctrl+Shift+R (Phase 5 rebind, L-21.3):** Phase 1–4 used **Ctrl+Shift+R** for "rotate counter-clockwise". Phase 5 reclaims that chord for **Run OCR…** (the most common new action in this phase). The counter-clockwise rotate is now **Ctrl+Shift+Alt+R**; the toolbar / Pages menu still exposes a one-click button. Phase 5 also introduces **Ctrl+Shift+H** for the OCR confidence overlay toggle.
 
 **Note on Ctrl+Shift+E (Phase 6):** Phase 6 adds **Ctrl+Shift+E** for the Export modal. The chord opens the modal with your last-chosen format pre-selected (`export-slice.lastChosenFormat`). The File menu Export to {Word / Excel / PowerPoint / image…} entries open the modal pre-selected to that specific format instead. No conflict with prior phases' bindings.
+
+**Note on Shift+R / Ctrl+Shift+Y (Phase 7.4 B1):** Phase 7.4 B1 adds **Shift+R** (Mark Rectangle for redaction — opens the Redaction sub-toolbar if it isn't open and arms the rectangle tool) and **Ctrl+Shift+Y** (Apply Redactions — opens the confirm modal when at least one mark is pending). Both shortcuts mirror Acrobat. Apply is a chord — there is no single-key Apply path — because the operation is destructive. The shortcuts are scoped to phase 7, so they don't conflict with the Phase 1–4 "R" (rotate, prefixed Ctrl+R) or "Y" (redo, prefixed Ctrl+Y) bindings.
 
 ---
 
