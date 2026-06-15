@@ -69,7 +69,7 @@ import { resolve } from 'node:path';
 
 import { expect, test, type Page } from '@playwright/test';
 
-import { launchPackagedApp } from './launch-app';
+import { discoverDefaultExePath, launchPackagedApp } from './launch-app';
 
 const BUDGET_BRIDGE_READY_MS = 15_000;
 
@@ -101,8 +101,27 @@ async function waitForProdBridge(window: Page, label: string): Promise<void> {
     });
 }
 
+// CI gating: this spec runs ONLY when a packaged binary exists on disk.
+// Default CI `e2e` job runs BEFORE `build`, so no `release/.../win-unpacked/`
+// exists and the spec is skipped — preserving Diego's "release-ceremony bonus"
+// intent without turning the e2e job red. Locally and during the smoke
+// ceremony the v0.7.X smoke dir is present and the spec runs.
+function probePackagedBinaryExists(): boolean {
+  try {
+    return discoverDefaultExePath() !== null;
+  } catch {
+    return false;
+  }
+}
+
 test.describe('Phase 7.3 candidate — packaged-binary smoke', () => {
   let userDataDir: string;
+
+  test.skip(
+    !probePackagedBinaryExists(),
+    'No packaged binary found under release/smoke-v*/win-unpacked/ — ' +
+      'run `npm run dist:win` (or the release smoke ceremony) to enable this spec.',
+  );
 
   test.beforeEach(() => {
     userDataDir = mkdtempSync(resolve(tmpdir(), 'pdfve-packaged-smoke-'));

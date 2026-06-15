@@ -205,7 +205,7 @@ const EXE_BASENAME = 'PDF Viewer & Editor.exe';
  *
  * Returns null if no candidate exists.
  */
-function discoverDefaultExePath(): string | null {
+export function discoverDefaultExePath(): string | null {
   if (!existsSync(RELEASE_DIR)) return null;
 
   // Candidate 1: smoke-v*\/win-unpacked
