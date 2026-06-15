@@ -15,6 +15,8 @@ import formsReducer from '../../state/slices/forms-slice';
 import historyReducer from '../../state/slices/history-slice';
 import mailMergeReducer from '../../state/slices/mail-merge-slice';
 import ocrReducer from '../../state/slices/ocr-slice';
+// Phase 7.4 B1 — MenuBar reads redactions slice for Tools menu enable rules.
+import redactionsReducer from '../../state/slices/redactions-slice';
 import signaturesReducer from '../../state/slices/signatures-slice';
 import uiReducer from '../../state/slices/ui-slice';
 import viewportReducer from '../../state/slices/viewport-slice';
@@ -59,6 +61,8 @@ function makeStore() {
       viewport: viewportReducer,
       // Phase 7.4 A1 (Riley) — Fill & Sign menu entry dispatches openCaptureModal.
       signatures: signaturesReducer,
+      // Phase 7.4 B1 (Riley) — Redact menu mirrors read totalMarks + showMarks.
+      redactions: redactionsReducer,
     },
   });
 }

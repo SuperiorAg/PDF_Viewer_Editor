@@ -30,6 +30,15 @@ import {
   openRunModal as openOcrRunModal,
   toggleOverlay as toggleOcrOverlay,
 } from '../../state/slices/ocr-slice';
+// Phase 7.4 B1 — Redact menu entries dispatch into the redactions slice +
+// ui-slice flags. Same action shapes the toolbar's RedactionToolbar fires.
+import {
+  clearMarks,
+  selectRedactionShowMarks,
+  selectRedactionTotalMarks,
+  setActiveRedactionTool,
+  setShowMarks,
+} from '../../state/slices/redactions-slice';
 // Phase 7.4 A1 — Fill & Sign menu entry dispatches the existing signature-capture flow.
 import { openCaptureModal } from '../../state/slices/signatures-slice';
 import {
@@ -38,6 +47,8 @@ import {
   // Phase 7.4 A4 — Delete Page menu mirror reuses the toolbar's "cannot delete
   // the only page" warning toast.
   pushToast,
+  setRedactionApplyModalOpen,
+  setRedactionPanelOpen,
   setSidebarTab,
   setTextEditMode,
   toggleBookmarksEditMode,
@@ -82,6 +93,8 @@ export function MenuBar(): JSX.Element {
   const formFields = useAppSelector(selectFormFields);
   const ocrOverlayVisible = useAppSelector(selectOcrOverlayVisible);
   const currentPage = useAppSelector(selectCurrentPage);
+  const redactionShowMarks = useAppSelector(selectRedactionShowMarks);
+  const redactionTotalMarks = useAppSelector(selectRedactionTotalMarks);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   // Phase 7.4 A1 (Riley) — Honest dispatcher for the previously toast-only
@@ -503,6 +516,51 @@ export function MenuBar(): JSX.Element {
           disabled: !doc,
           onClick: () => dispatch(openCaptureModal()),
         },
+        { label: '', divider: true },
+        // Phase 7.4 B1 — Redact menu mirrors. Same actions the
+        // RedactionToolbar sub-toolbar dispatches:
+        //   - Mark Rectangle: opens the panel + arms the rect tool.
+        //   - Show Markups:   toggles the overlay flag.
+        //   - Clear Marks:    clears pending marks (disabled when none).
+        //   - Apply Redactions...: opens the confirmation modal.
+        //
+        // The Apply entry is enabled only when there is at least one pending
+        // mark — same disable rule the toolbar uses. Tooltip surfaces the
+        // honesty obligation ("irreversible; consider Save As first").
+        {
+          label: t('menu:items.redactMarkRect'),
+          disabled: !doc,
+          onClick: () => {
+            dispatch(setRedactionPanelOpen(true));
+            dispatch(setActiveRedactionTool('rect'));
+          },
+        },
+        {
+          label: redactionShowMarks
+            ? t('menu:items.redactShowMarks')
+            : t('menu:items.redactShowMarks'),
+          disabled: !doc,
+          onClick: () => dispatch(setShowMarks(!redactionShowMarks)),
+        },
+        {
+          label: t('menu:items.redactClearMarks'),
+          disabled: !doc || redactionTotalMarks === 0,
+          onClick: () => dispatch(clearMarks()),
+        },
+        ((): MenuItem => {
+          const enabled = !!doc && redactionTotalMarks > 0;
+          const base: MenuItem = {
+            label: t('menu:items.redactApply'),
+            shortcut: 'Ctrl+Shift+Y',
+            disabled: !enabled,
+            onClick: () => dispatch(setRedactionApplyModalOpen(true)),
+          };
+          if (!doc) return base;
+          const tip = enabled
+            ? t('menu:tooltips.redactIrreversible')
+            : t('menu:tooltips.redactNeedsMarks');
+          return { ...base, tooltip: tip };
+        })(),
         { label: '', divider: true },
         // Phase 7.4 A1 — Scan tooltip refresh. TWAIN/WIA bindings are deferred
         // indefinitely (no MIT-compatible Node binding survives the project's

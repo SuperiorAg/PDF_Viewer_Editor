@@ -61,12 +61,20 @@
     "toolTextBox": "Text Box Tool",
     "toolUnderline": "Underline Tool",
     "toolStrikethrough": "Strikethrough Tool",
-    "toolFreehand": "Freehand Tool"
+    "toolFreehand": "Freehand Tool",
+    "redactionGroup": "Redact",
+    "redactMarkRect": "Mark Rectangle for Redaction",
+    "redactShowMarks": "Show Redaction Markups",
+    "redactClearMarks": "Clear Redaction Marks",
+    "redactApply": "Apply Redactions...",
+    "invalidatedByRedaction": "invalidated by redaction"
   },
   "tooltips": {
     "findComing": "Find is planned for an upcoming release.",
     "pageFromFileComing": "Insert pages from another PDF is planned for an upcoming release.",
     "scanDeferred": "Use your OS scan utility, then drag the saved PDF here to run OCR.",
-    "mailMergeNeedsField": "Detect or author at least one form field first."
+    "mailMergeNeedsField": "Detect or author at least one form field first.",
+    "redactNeedsMarks": "Mark at least one area first.",
+    "redactIrreversible": "Apply redactions — irreversible. Consider Save As first."
   }
 }

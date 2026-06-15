@@ -67,6 +67,8 @@
   "confidenceOverlayTooltip": "Toggle OCR confidence overlay",
   "scanDevice": "Scan from device",
   "scanDeviceTooltip": "Use your OS scan utility, then drag the saved PDF here to run OCR.",
+  "redact": "Redact",
+  "redactTooltip": "Mark areas for redaction (toggle Redaction tools)",
   "combine": "Combine",
   "combineTooltip": "Combine PDFs...",
   "settings": "Settings",
@@ -99,5 +101,27 @@
     "polylineMeasure": "Poly-Measure",
     "polylineMeasureAria": "Polyline measure (Shift+M)",
     "polylineMeasureTooltip": "Polyline measure (Shift+M)"
+  },
+  "redactionTools": {
+    "label": "Redaction tools",
+    "markRect": "Mark rectangle",
+    "markRectAria": "Mark rectangle for redaction (R)",
+    "markRectTooltip": "Mark rectangle for redaction (R)",
+    "markText": "Mark text",
+    "markTextAria": "Mark text for redaction (deferred to v2)",
+    "markTextTooltip": "Mark text for redaction — coming in v2; use Mark Rectangle.",
+    "showMarks": "Show markups",
+    "showMarksAria": "Show redaction markup preview",
+    "showMarksTooltip": "Preview marks as overlay (no PDF mutation yet)",
+    "clearMarks": "Clear marks",
+    "clearMarksAria": "Clear all pending redaction marks",
+    "clearMarksTooltip": "Remove all pending redaction marks",
+    "apply": "Apply redactions",
+    "applyAria": "Apply redactions — irreversible",
+    "applyTooltip": "Apply and sanitize — IRREVERSIBLE (Ctrl+Shift+Y)",
+    "overlayPageLabel_one": "{{count}} redaction mark on page {{page}}",
+    "overlayPageLabel_other": "{{count}} redaction marks on page {{page}}",
+    "statusBarPending_one": "{{rects}} redaction mark pending on {{pages}} page",
+    "statusBarPending_other": "{{rects}} redaction marks pending on {{pages}} page(s)"
   }
 }

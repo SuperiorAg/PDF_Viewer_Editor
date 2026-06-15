@@ -8,6 +8,7 @@
 
 import { useEffect } from 'react';
 
+import { useT } from '../../i18n/use-t';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { selectCurrentDocument } from '../../state/slices/document-selectors';
 import {
@@ -21,10 +22,13 @@ import {
   verifySignatureThunk,
 } from '../../state/thunks-phase4';
 import { ModalShell } from '../modals/modal-shell';
+// Phase 7.4 B1 — borrow the redaction tools CSS module for the invalidated badge.
+import redactionStyles from '../redaction-tools/redaction-tools.module.css';
 
 import styles from './signature-audit-panel.module.css';
 
 export function SignatureAuditPanel(): JSX.Element | null {
+  const { t } = useT();
   const dispatch = useAppDispatch();
   const open = useAppSelector((s) => s.signatureAudit.panelOpen);
   const items = useAppSelector((s) => s.signatureAudit.items);
@@ -130,7 +134,30 @@ export function SignatureAuditPanel(): JSX.Element | null {
                       <td>{new Date(row.signedAt).toISOString().slice(0, 19).replace('T', ' ')}</td>
                       <td>{row.signatureKind}</td>
                       <td>{row.signedBySubjectCN ?? '—'}</td>
-                      <td>{row.fieldName ?? 'freeform'}</td>
+                      <td>
+                        {row.fieldName ?? 'freeform'}
+                        {/* Phase 7.4 B1 — invalidated-by-redaction badge. The
+                            audit-row DTO carries `invalidatedByRedactionAt`
+                            (ms epoch, null when not redaction-invalidated;
+                            Ravi added the column + David surfaces it through
+                            the bridge). We feature-detect the optional field
+                            so we render gracefully against older bridges. */}
+                        {(() => {
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          const at = (row as any).invalidatedByRedactionAt as
+                            | number
+                            | null
+                            | undefined;
+                          if (at !== undefined && at !== null) {
+                            return (
+                              <span className={redactionStyles.invalidatedBadge}>
+                                {t('menu:items.invalidatedByRedaction')}
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </td>
                       <td className={statusCls}>{status}</td>
                     </tr>
                   );

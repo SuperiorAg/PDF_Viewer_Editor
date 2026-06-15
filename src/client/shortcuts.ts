@@ -45,7 +45,10 @@ export type ShortcutId =
   | 'toggle-form-designer'
   | 'open-mail-merge'
   // Phase 6 (ui-spec §15.9)
-  | 'open-export-office';
+  | 'open-export-office'
+  // Phase 7.4 B1 — Redaction
+  | 'redaction-apply'
+  | 'redaction-mark-rect';
 
 export interface ShortcutSpec {
   id: ShortcutId;
@@ -215,6 +218,29 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
     shift: true,
     enabledInPhase1: false,
     enabledInPhases: [6, 7],
+  },
+  // Phase 7.4 B1 — Apply redactions. Acrobat uses Ctrl+Shift+Y. Active only
+  // when the redaction sub-toolbar is open AND there is at least one mark
+  // pending — the handler in use-app-shortcuts.ts gates on those flags.
+  {
+    id: 'redaction-apply',
+    label: 'Apply redactions',
+    key: 'Y',
+    ctrl: true,
+    shift: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  // Phase 7.4 B1 — Arm the Mark Rectangle redaction tool. 'R' inside the
+  // sub-toolbar mirrors the H/S/T tool-letter convention; the handler also
+  // opens the panel if not already open.
+  {
+    id: 'redaction-mark-rect',
+    label: 'Mark rectangle for redaction',
+    key: 'R',
+    shift: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
   },
 ] as const;
 

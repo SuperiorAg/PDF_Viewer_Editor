@@ -35,6 +35,7 @@ import {
 import { openCaptureModal } from '../../state/slices/signatures-slice';
 import {
   selectBookmarksEditMode,
+  selectRedactionPanelOpen,
   selectShapesPanelOpen,
   selectTextEditMode,
 } from '../../state/slices/ui-selectors';
@@ -44,6 +45,7 @@ import {
   pushToast,
   setTextEditMode,
   toggleBookmarksEditMode,
+  toggleRedactionPanel,
   toggleShapesPanel,
 } from '../../state/slices/ui-slice';
 // Phase 6 — Export-to-Office modal entry.
@@ -58,7 +60,8 @@ import styles from './toolbar.module.css';
 // count MUST match the number of `{...rb()}` spreads in the JSX — a mismatch
 // would leave a button out of the roving order. Guarded by a dev assertion.
 // Phase 7.4 A6: bumped 30 → 31 for the Fill & Sign button.
-const TOOLBAR_BUTTON_COUNT = 31;
+// Phase 7.4 B1: bumped 31 → 32 for the Redact button.
+const TOOLBAR_BUTTON_COUNT = 32;
 
 export function Toolbar(): JSX.Element {
   const { t } = useT();
@@ -74,6 +77,7 @@ export function Toolbar(): JSX.Element {
   const designerActive = useAppSelector(selectDesignerMode);
   const ocrOverlayVisible = useAppSelector(selectOcrOverlayVisible);
   const shapesPanelOpen = useAppSelector(selectShapesPanelOpen);
+  const redactionPanelOpen = useAppSelector(selectRedactionPanelOpen);
 
   // Roving-tabindex controller (a11y-audit.md R-3). `rb()` allocates the next
   // sequential roving index in render order and returns the roving props to
@@ -408,6 +412,21 @@ export function Toolbar(): JSX.Element {
           tooltip={t('toolbar:fillAndSignTooltip')}
           disabled={!doc}
           onClick={() => dispatch(openCaptureModal())}
+        />
+        {/* Phase 7.4 B1 — Redact toggle. Reveals the RedactionToolbar
+            sub-toolbar (rendered as a sibling under the main toolbar by
+            app.tsx, gated on ui.redactionPanelOpen). aria-pressed reflects
+            that flag. Acrobat convention puts Redact under Protect — we land
+            it next to Fill & Sign here for visual proximity to the signature
+            workflow (the two interact via the PAdES invalidation pre-flight). */}
+        <ToolbarButton
+          {...rb()}
+          icon="redact"
+          label={t('toolbar:redact')}
+          tooltip={t('toolbar:redactTooltip')}
+          disabled={!doc}
+          active={redactionPanelOpen}
+          onClick={() => dispatch(toggleRedactionPanel())}
         />
       </div>
 

@@ -61,12 +61,20 @@
     "toolTextBox": "Herramienta de cuadro de texto",
     "toolUnderline": "Herramienta de subrayado",
     "toolStrikethrough": "Herramienta de tachado",
-    "toolFreehand": "Herramienta de mano alzada"
+    "toolFreehand": "Herramienta de mano alzada",
+    "redactionGroup": "Redactar",
+    "redactMarkRect": "Marcar rectángulo para redacción",
+    "redactShowMarks": "Mostrar marcas de redacción",
+    "redactClearMarks": "Borrar marcas de redacción",
+    "redactApply": "Aplicar redacciones...",
+    "invalidatedByRedaction": "invalidada por redacción"
   },
   "tooltips": {
     "findComing": "La función Buscar está planificada para una versión futura.",
     "pageFromFileComing": "Insertar páginas desde otro PDF está planificado para una versión futura.",
     "scanDeferred": "Use la utilidad de escaneo de su sistema operativo, luego arrastre el PDF guardado aquí para ejecutar OCR.",
-    "mailMergeNeedsField": "Detecte o cree al menos un campo de formulario primero."
+    "mailMergeNeedsField": "Detecte o cree al menos un campo de formulario primero.",
+    "redactNeedsMarks": "Marque al menos un área primero.",
+    "redactIrreversible": "Aplicar redacciones — irreversible. Considere Guardar como primero."
   }
 }

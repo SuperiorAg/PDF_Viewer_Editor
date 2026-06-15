@@ -17,6 +17,8 @@ import formsReducer from '../../state/slices/forms-slice';
 import historyReducer from '../../state/slices/history-slice';
 import mailMergeReducer from '../../state/slices/mail-merge-slice';
 import ocrReducer from '../../state/slices/ocr-slice';
+// Phase 7.4 B1 — Redact menu wiring
+import redactionsReducer, { addMark } from '../../state/slices/redactions-slice';
 import signaturesReducer from '../../state/slices/signatures-slice';
 import uiReducer from '../../state/slices/ui-slice';
 import viewportReducer from '../../state/slices/viewport-slice';
@@ -70,6 +72,7 @@ function makeStore() {
       ocr: ocrReducer,
       viewport: viewportReducer,
       signatures: signaturesReducer,
+      redactions: redactionsReducer,
     },
   });
 }
@@ -219,6 +222,112 @@ describe('MenuBar — Phase 7.4 A4 (toolbar-only mirror entries)', () => {
       const tip = (findBtn as HTMLButtonElement).title;
       expect(tip).toMatch(/upcoming release/i);
       expect(tip).not.toMatch(/Phase 3/i);
+    });
+  });
+
+  describe('Phase 7.4 B1 Redaction menu mirrors', () => {
+    const RECT = { x: 10, y: 20, width: 100, height: 40 };
+
+    it('Tools > Mark Rectangle for Redaction opens the panel + arms the rect tool', () => {
+      const store = makeStore();
+      store.dispatch(setDocument(DOC));
+      render(
+        <Provider store={store}>
+          <MenuBar />
+        </Provider>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Tools' }));
+      fireEvent.click(screen.getByText('Mark Rectangle for Redaction'));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ui = (store.getState() as any).ui as {
+        redactionPanelOpen: boolean;
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const r = (store.getState() as any).redactions as { activeTool: string | null };
+      expect(ui.redactionPanelOpen).toBe(true);
+      expect(r.activeTool).toBe('rect');
+    });
+
+    it('Tools > Show Redaction Markups toggles the overlay flag', () => {
+      const store = makeStore();
+      store.dispatch(setDocument(DOC));
+      render(
+        <Provider store={store}>
+          <MenuBar />
+        </Provider>,
+      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const initial = (store.getState() as any).redactions.showMarks as boolean;
+      fireEvent.click(screen.getByRole('button', { name: 'Tools' }));
+      fireEvent.click(screen.getByText('Show Redaction Markups'));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((store.getState() as any).redactions.showMarks).toBe(!initial);
+    });
+
+    it('Tools > Clear Redaction Marks is disabled when no marks are pending', () => {
+      const store = makeStore();
+      store.dispatch(setDocument(DOC));
+      render(
+        <Provider store={store}>
+          <MenuBar />
+        </Provider>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Tools' }));
+      const clearBtn = screen.getByText('Clear Redaction Marks').closest('button');
+      expect((clearBtn as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('Tools > Clear Redaction Marks clears marks when enabled', () => {
+      const store = makeStore();
+      store.dispatch(setDocument(DOC));
+      store.dispatch(addMark({ pageIndex: 0, rect: RECT }));
+      render(
+        <Provider store={store}>
+          <MenuBar />
+        </Provider>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Tools' }));
+      fireEvent.click(screen.getByText('Clear Redaction Marks'));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((store.getState() as any).redactions.totalMarks).toBe(0);
+    });
+
+    it('Tools > Apply Redactions... is disabled with no marks and enabled with marks', () => {
+      const store = makeStore();
+      store.dispatch(setDocument(DOC));
+      render(
+        <Provider store={store}>
+          <MenuBar />
+        </Provider>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Tools' }));
+      const applyBtnA = screen.getByText('Apply Redactions...').closest('button');
+      expect((applyBtnA as HTMLButtonElement).disabled).toBe(true);
+
+      // Add a mark, close + reopen the menu, re-check.
+      store.dispatch(addMark({ pageIndex: 0, rect: RECT }));
+      // Closing happens via clicking somewhere else; for the test we re-click Tools.
+      fireEvent.click(screen.getByRole('button', { name: 'Tools' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Tools' }));
+      const applyBtnB = screen.getByText('Apply Redactions...').closest('button');
+      expect((applyBtnB as HTMLButtonElement).disabled).toBe(false);
+      fireEvent.click(applyBtnB!);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((store.getState() as any).ui.redactionApplyModalOpen).toBe(true);
+    });
+
+    it('Tools > Apply Redactions... has an honest "irreversible" tooltip when enabled', () => {
+      const store = makeStore();
+      store.dispatch(setDocument(DOC));
+      store.dispatch(addMark({ pageIndex: 0, rect: RECT }));
+      render(
+        <Provider store={store}>
+          <MenuBar />
+        </Provider>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Tools' }));
+      const applyBtn = screen.getByText('Apply Redactions...').closest('button');
+      expect((applyBtn as HTMLButtonElement).title).toMatch(/irreversible|Save As/i);
     });
   });
 });

@@ -15,6 +15,10 @@ export const selectBookmarksEditMode = (s: RootState): boolean => s.ui.bookmarks
 // `active` state in the main Toolbar and the conditional render of the
 // ShapeToolbar sub-toolbar in app.tsx.
 export const selectShapesPanelOpen = (s: RootState): boolean => s.ui.shapesPanelOpen;
+// Phase 7.4 B1 — Redaction sub-toolbar visibility. Same shape as shapes.
+export const selectRedactionPanelOpen = (s: RootState): boolean => s.ui.redactionPanelOpen;
+export const selectRedactionApplyModalOpen = (s: RootState): boolean =>
+  s.ui.redactionApplyModalOpen;
 export const selectToasts = (s: RootState) => s.ui.toasts;
 export const selectIsLoading = (s: RootState) => s.ui.isLoading;
 export const selectLoadingMessage = (s: RootState) => s.ui.loadingMessage;

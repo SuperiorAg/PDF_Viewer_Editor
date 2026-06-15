@@ -42,7 +42,11 @@ export type ToolbarIconName =
   | 'scanner'
   // Phase 7.4 A6 — Fill & Sign top-level toolbar entry. Acrobat convention:
   // a pen-on-paper glyph next to the forms tools.
-  | 'pen-signature';
+  | 'pen-signature'
+  // Phase 7.4 B1 — Redact button. A dashed-square (marker box) with a small
+  // black-rect-burn glyph in the corner, distinguishing it from the regular
+  // shapes (solid stroke) and freehand (wavy stroke) icons.
+  | 'redact';
 
 interface IconProps {
   name: ToolbarIconName;
@@ -334,6 +338,26 @@ export function ToolbarIcon({ name, size = 18 }: IconProps): JSX.Element {
           {/* Pen nib + barrel pointing down-right onto the scribble */}
           <path d="M16 11 l4 4 -3 3 -4-4 z" />
           <path d="M14 13 l-3 3" />
+        </svg>
+      );
+    // Phase 7.4 B1 — Redact: a marker-box rectangle (dashed outline) with a
+    // filled black square inside, representing "mark this area and burn it".
+    // The black fill is the key affordance distinguishing it from generic
+    // shape tools.
+    case 'redact':
+      return (
+        <svg {...common}>
+          {/* Dashed marker bounds */}
+          <path d="M3 5 h6" strokeDasharray="3 2" />
+          <path d="M15 5 h6" strokeDasharray="3 2" />
+          <path d="M3 19 h6" strokeDasharray="3 2" />
+          <path d="M15 19 h6" strokeDasharray="3 2" />
+          <path d="M3 5 v3" strokeDasharray="3 2" />
+          <path d="M3 16 v3" strokeDasharray="3 2" />
+          <path d="M21 5 v3" strokeDasharray="3 2" />
+          <path d="M21 16 v3" strokeDasharray="3 2" />
+          {/* Filled black rectangle (the redaction itself) */}
+          <rect x="7" y="9" width="10" height="6" fill="currentColor" stroke="none" />
         </svg>
       );
   }

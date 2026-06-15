@@ -65,6 +65,8 @@
   "confidenceOverlayTooltip": "Alternar la capa de confianza de OCR",
   "scanDevice": "Escanear desde dispositivo",
   "scanDeviceTooltip": "Use la utilidad de escaneo de su sistema operativo, luego arrastre el PDF guardado aquí para ejecutar OCR.",
+  "redact": "Redactar",
+  "redactTooltip": "Marcar áreas para redacción (alternar herramientas de redacción)",
   "combine": "Combinar",
   "combineTooltip": "Combinar PDF...",
   "settings": "Configuración",
@@ -97,5 +99,27 @@
     "polylineMeasure": "Polimedir",
     "polylineMeasureAria": "Medición de polilínea (Mayús+M)",
     "polylineMeasureTooltip": "Medición de polilínea (Mayús+M)"
+  },
+  "redactionTools": {
+    "label": "Herramientas de redacción",
+    "markRect": "Marcar rectángulo",
+    "markRectAria": "Marcar rectángulo para redacción (R)",
+    "markRectTooltip": "Marcar rectángulo para redacción (R)",
+    "markText": "Marcar texto",
+    "markTextAria": "Marcar texto para redacción (diferido a v2)",
+    "markTextTooltip": "Marcar texto para redacción — disponible en v2; use Marcar rectángulo.",
+    "showMarks": "Mostrar marcas",
+    "showMarksAria": "Mostrar vista previa de marcas de redacción",
+    "showMarksTooltip": "Previsualizar marcas como superposición (aún no modifica el PDF)",
+    "clearMarks": "Borrar marcas",
+    "clearMarksAria": "Borrar todas las marcas de redacción pendientes",
+    "clearMarksTooltip": "Eliminar todas las marcas de redacción pendientes",
+    "apply": "Aplicar redacciones",
+    "applyAria": "Aplicar redacciones — irreversible",
+    "applyTooltip": "Aplicar y sanear — IRREVERSIBLE (Ctrl+Mayús+Y)",
+    "overlayPageLabel_one": "{{count}} marca de redacción en la página {{page}}",
+    "overlayPageLabel_other": "{{count}} marcas de redacción en la página {{page}}",
+    "statusBarPending_one": "{{rects}} marca de redacción pendiente en {{pages}} página",
+    "statusBarPending_other": "{{rects}} marcas de redacción pendientes en {{pages}} página(s)"
   }
 }

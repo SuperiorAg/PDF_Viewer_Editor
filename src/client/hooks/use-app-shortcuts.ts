@@ -14,13 +14,21 @@ import { applyEdit } from '../state/slices/document-slice';
 import { openExportModal } from '../state/slices/export-slice';
 import { toggleDesignerMode } from '../state/slices/forms-slice';
 import { openWizard as openMailMergeWizard } from '../state/slices/mail-merge-slice';
+// Phase 7.4 B1 — Redaction shortcuts dispatch into the redactions + ui slices.
+import { setActiveRedactionTool } from '../state/slices/redactions-slice';
 import { selectAll, clearSelection } from '../state/slices/selection-slice';
-import { selectTextEditMode } from '../state/slices/ui-selectors';
+import {
+  selectRedactionApplyModalOpen,
+  selectRedactionPanelOpen,
+  selectTextEditMode,
+} from '../state/slices/ui-selectors';
 import {
   cycleSidebarTab,
   openHelpModal,
   openImageImportModal,
   openModal,
+  setRedactionApplyModalOpen,
+  setRedactionPanelOpen,
   setTextEditMode,
   toggleInspector,
   toggleSidebar,
@@ -43,6 +51,9 @@ export function useAppShortcuts(): void {
   const doc = useAppSelector(selectCurrentDocument);
   const currentPage = useAppSelector(selectCurrentPage);
   const textEditActive = useAppSelector(selectTextEditMode);
+  const redactionPanelOpen = useAppSelector(selectRedactionPanelOpen);
+  const redactionApplyModalOpen = useAppSelector(selectRedactionApplyModalOpen);
+  const redactionTotalMarks = useAppSelector((s) => s.redactions.totalMarks);
 
   const handler = useCallback(
     (id: ShortcutId, e: KeyboardEvent) => {
@@ -260,6 +271,25 @@ export function useAppShortcuts(): void {
         case 'quit':
           // Electron handles Ctrl+Q at the menu level; nothing for renderer to do.
           break;
+        case 'redaction-apply':
+          // Phase 7.4 B1 — Ctrl+Shift+Y opens the Apply Redactions confirmation
+          // modal. Gated by panel open + at least one pending mark, mirroring
+          // the toolbar button's enable rule. Suppress when the Apply modal is
+          // already open (avoid double-open).
+          e.preventDefault();
+          if (!doc) break;
+          if (!redactionPanelOpen || redactionTotalMarks === 0) break;
+          if (redactionApplyModalOpen) break;
+          dispatch(setRedactionApplyModalOpen(true));
+          break;
+        case 'redaction-mark-rect':
+          // Phase 7.4 B1 — Shift+R arms the Mark Rectangle tool (and opens
+          // the panel if closed, matching Acrobat's auto-open-on-tool idiom).
+          e.preventDefault();
+          if (!doc) break;
+          if (!redactionPanelOpen) dispatch(setRedactionPanelOpen(true));
+          dispatch(setActiveRedactionTool('rect'));
+          break;
         case 'fit-width':
         case 'fit-page':
           // Phase 1 no-op — viewport fit modes not wired yet.
@@ -267,7 +297,15 @@ export function useAppShortcuts(): void {
           break;
       }
     },
-    [dispatch, doc, currentPage, textEditActive],
+    [
+      dispatch,
+      doc,
+      currentPage,
+      textEditActive,
+      redactionPanelOpen,
+      redactionApplyModalOpen,
+      redactionTotalMarks,
+    ],
   );
 
   useKeyboardShortcut(handler);

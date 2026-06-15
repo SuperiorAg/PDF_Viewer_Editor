@@ -20,6 +20,10 @@ import { SaveTemplateModal } from './components/modals/save-template-modal';
 import { ScanModal } from './components/modals/scan-modal';
 import { SettingsModal } from './components/modals/settings-modal';
 import { PdfViewer } from './components/pdf-viewer';
+// Phase 7.4 B1 — Redaction sub-toolbar + Apply confirm modal (same mount
+// pattern as ShapeToolbar above, gated on ui.redactionPanelOpen / Modal flag).
+import { ApplyRedactionsModal } from './components/redaction-tools/apply-redactions-modal';
+import { RedactionToolbar } from './components/redaction-tools/redaction-toolbar';
 // Phase 7.4 A5 — ShapeToolbar mounts as a sibling under the main Toolbar,
 // gated on ui.shapesPanelOpen (mirrors the FormDesignerToolbar pattern).
 import { ShapeToolbar } from './components/shape-tools/shape-toolbar';
@@ -45,7 +49,7 @@ import { selectMailMergeOpen } from './state/slices/mail-merge-selectors';
 import { selectOcrOpenModal } from './state/slices/ocr-selectors';
 // Phase 6 — Export-to-Office modal owns its own openness flag on the export slice.
 import { selectScanModalOpen } from './state/slices/scan-selectors';
-import { selectActiveModal } from './state/slices/ui-selectors';
+import { selectActiveModal, selectRedactionApplyModalOpen } from './state/slices/ui-selectors';
 import { openImageImportModal, pushToast, setImageImportPreload } from './state/slices/ui-slice';
 import { openDroppedPathThunk, refreshRecentsThunk } from './state/thunks';
 import { subscribeOcrPackDownloadProgress, subscribeOcrProgress } from './state/thunks-phase5';
@@ -61,6 +65,7 @@ export function App(): JSX.Element {
   const ocrOpenModal = useAppSelector(selectOcrOpenModal);
   const scanOpen = useAppSelector(selectScanModalOpen);
   const exportModalOpen = useAppSelector(selectExportModalOpen);
+  const redactionApplyModalOpen = useAppSelector(selectRedactionApplyModalOpen);
 
   useAppShortcuts();
 
@@ -216,6 +221,10 @@ export function App(): JSX.Element {
             toolbar's Shapes toggle is on). Component returns null while the
             ui.shapesPanelOpen flag is false. */}
         <ShapeToolbar />
+        {/* Phase 7.4 B1 — redaction tools sub-toolbar. Same sibling-under-Toolbar
+            mount as ShapeToolbar; returns null while ui.redactionPanelOpen
+            is false. The Apply modal mounts below with the other modals. */}
+        <RedactionToolbar />
         <main className={styles.main}>
           {doc ? (
             <>
@@ -251,6 +260,10 @@ export function App(): JSX.Element {
             possible by intent, but the structural separation mirrors Phase 5
             ocr-slice). */}
         {exportModalOpen && <ExportModal />}
+        {/* Phase 7.4 B1 — Redaction Apply confirmation modal. Owns its own
+            open flag (ui.redactionApplyModalOpen) independent of activeModal
+            since the redaction sub-toolbar mounts in parallel to other modals. */}
+        {redactionApplyModalOpen && <ApplyRedactionsModal />}
         <TextEditOverlay />
       </div>
     </ErrorBoundary>

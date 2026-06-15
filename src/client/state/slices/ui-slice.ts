@@ -92,6 +92,15 @@ interface UiState {
   // sub-toolbar. The active shape tool itself lives in the shapes slice
   // (shapes.activeTool) — this flag only controls visibility of the picker.
   shapesPanelOpen: boolean;
+  // Phase 7.4 B1 — Redaction sub-toolbar visibility. Same shape + mount
+  // discipline as `shapesPanelOpen`; the active redaction tool itself lives
+  // in the redactions slice (redactions.activeTool). The Apply confirmation
+  // dialog has its own flag below (redactionApplyModalOpen) so it can compose
+  // with other modals — the Apply modal is `role="alertdialog"` and the body
+  // copy is too important to truncate through `window.confirm`.
+  redactionPanelOpen: boolean;
+  /** Phase 7.4 B1 — Apply-confirmation modal open flag. Independent of activeModal. */
+  redactionApplyModalOpen: boolean;
 }
 
 const initialState: UiState = {
@@ -120,6 +129,8 @@ const initialState: UiState = {
   },
   bookmarksEditMode: false,
   shapesPanelOpen: false,
+  redactionPanelOpen: false,
+  redactionApplyModalOpen: false,
 };
 
 export const uiSlice = createSlice({
@@ -226,6 +237,20 @@ export const uiSlice = createSlice({
     setShapesPanelOpen(state, action: PayloadAction<boolean>) {
       state.shapesPanelOpen = action.payload;
     },
+    // Phase 7.4 B1 — Redaction sub-toolbar visibility actions. Mirror the
+    // shapesPanelOpen pair above. Opening also disarms the active tool when
+    // the panel reopens — handled in the redactions slice via the redact-tool
+    // dispatcher on the toolbar button click, NOT here. Keep this slice
+    // strictly UI-visibility.
+    toggleRedactionPanel(state) {
+      state.redactionPanelOpen = !state.redactionPanelOpen;
+    },
+    setRedactionPanelOpen(state, action: PayloadAction<boolean>) {
+      state.redactionPanelOpen = action.payload;
+    },
+    setRedactionApplyModalOpen(state, action: PayloadAction<boolean>) {
+      state.redactionApplyModalOpen = action.payload;
+    },
   },
 });
 
@@ -251,6 +276,10 @@ export const {
   toggleBookmarksEditMode,
   toggleShapesPanel,
   setShapesPanelOpen,
+  // Phase 7.4 B1
+  toggleRedactionPanel,
+  setRedactionPanelOpen,
+  setRedactionApplyModalOpen,
 } = uiSlice.actions;
 
 // Phase 2 — image-import modal convenience action creators.

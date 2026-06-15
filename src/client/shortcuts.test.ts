@@ -36,4 +36,23 @@ describe('findShortcutForEvent', () => {
   it('should identify Escape as tool-cursor', () => {
     expect(findShortcutForEvent(makeEvent({ key: 'Escape' }))).toBe('tool-cursor');
   });
+
+  // Phase 7.4 B1 — redaction shortcuts (Ctrl+Shift+Y, Shift+R).
+  it('should identify Ctrl+Shift+Y as redaction-apply', () => {
+    expect(findShortcutForEvent(makeEvent({ key: 'Y', ctrlKey: true, shiftKey: true }))).toBe(
+      'redaction-apply',
+    );
+  });
+
+  it('should identify Shift+R as redaction-mark-rect (no ctrl)', () => {
+    expect(findShortcutForEvent(makeEvent({ key: 'R', shiftKey: true }))).toBe(
+      'redaction-mark-rect',
+    );
+  });
+
+  it('should NOT confuse Ctrl+Shift+R (rotate-ccw) with Shift+R (redaction-mark-rect)', () => {
+    expect(findShortcutForEvent(makeEvent({ key: 'R', ctrlKey: true, shiftKey: true }))).toBe(
+      'rotate-ccw',
+    );
+  });
 });

@@ -14,6 +14,8 @@ import mailMergeReducer from './slices/mail-merge-slice';
 // Phase 5
 import ocrReducer from './slices/ocr-slice';
 import recentsReducer from './slices/recents-slice';
+// Phase 7.4 B1
+import redactionsReducer from './slices/redactions-slice';
 import scanReducer from './slices/scan-slice';
 import selectionReducer from './slices/selection-slice';
 // Phase 7
@@ -48,6 +50,8 @@ export const store = configureStore({
     // Phase 5
     ocr: ocrReducer,
     scan: scanReducer,
+    // Phase 7.4 B1
+    redactions: redactionsReducer,
     // Phase 7
     update: updateReducer,
     telemetry: telemetryReducer,
