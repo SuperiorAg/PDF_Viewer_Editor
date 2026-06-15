@@ -52,7 +52,16 @@
     "exportAsPowerpoint": "Exportar como PowerPoint...",
     "exportAsImage": "Exportar como imagen...",
     "help": "Ayuda",
-    "about": "Acerca de PDF_Viewer_Editor"
+    "about": "Acerca de PDF_Viewer_Editor",
+    "rotateCw": "Girar página a la derecha",
+    "rotateCcw": "Girar página a la izquierda",
+    "deletePage": "Eliminar la página actual",
+    "toolHighlight": "Herramienta de resaltado",
+    "toolSticky": "Herramienta de nota adhesiva",
+    "toolTextBox": "Herramienta de cuadro de texto",
+    "toolUnderline": "Herramienta de subrayado",
+    "toolStrikethrough": "Herramienta de tachado",
+    "toolFreehand": "Herramienta de mano alzada"
   },
   "tooltips": {
     "findComing": "La función Buscar está planificada para una versión futura.",

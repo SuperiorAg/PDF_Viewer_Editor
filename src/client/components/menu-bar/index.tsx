@@ -14,6 +14,9 @@ import { useState } from 'react';
 import { useT } from '../../i18n/use-t';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { redoAction, undoAction } from '../../state/middleware/history-middleware';
+// Phase 7.4 A4 — annotation tool menu mirrors dispatch the same setActiveTool
+// action the toolbar uses. Single dispatcher; no duplicated state machine.
+import { type AnnotationTool, setActiveTool } from '../../state/slices/annotations-slice';
 import { selectCurrentDocument, selectIsDirty } from '../../state/slices/document-selectors';
 import { applyEdit } from '../../state/slices/document-slice';
 import { openExportModal } from '../../state/slices/export-slice';
@@ -32,6 +35,9 @@ import { openCaptureModal } from '../../state/slices/signatures-slice';
 import {
   openImageImportModal,
   openModal,
+  // Phase 7.4 A4 — Delete Page menu mirror reuses the toolbar's "cannot delete
+  // the only page" warning toast.
+  pushToast,
   setSidebarTab,
   setTextEditMode,
   toggleBookmarksEditMode,
@@ -94,6 +100,64 @@ export function MenuBar(): JSX.Element {
       }),
     );
   };
+
+  // Phase 7.4 A4 (Riley) — page-op + annotation-tool menu mirrors. Each one
+  // dispatches the SAME action the corresponding toolbar button uses — never a
+  // duplicated state machine. The audit's §3.5 finding was that nine toolbar-
+  // only tools (annotation H/S/T/U/K/Shift+F + rotate CW/CCW + delete page)
+  // had no menu entry, leaving keyboard-first + screen-reader users with no
+  // discoverability path. These helpers and the new menu items below close
+  // that gap.
+  //
+  // Shortcut choices for the new menu entries mirror Acrobat Pro DC where
+  // possible:
+  //   - Ctrl+R / Ctrl+Shift+R for rotate (already registered in shortcuts.ts,
+  //     matches Acrobat's "Rotate View" Shift+Ctrl+Plus/Minus only by spirit;
+  //     the shortcut registry's existing assignment wins).
+  //   - Del for Delete Page (matches Acrobat's Ctrl+Shift+D — we already
+  //     surface Del through the thumbnail context menu; standardizing on Del
+  //     keeps the muscle memory).
+  //   - Single-letter shortcuts H/S/T/U/K/Shift+F for annotation tools — these
+  //     are our existing Phase 1/2 registrations, already documented in the
+  //     in-app Help modal.
+  const rotatePageMenu = (cw: boolean): void => {
+    if (!doc) return;
+    const page = doc.pages[currentPage];
+    if (!page) return;
+    const next: 0 | 90 | 180 | 270 = ((page.rotation + (cw ? 90 : 270)) % 360) as
+      | 0
+      | 90
+      | 180
+      | 270;
+    dispatch(
+      applyEdit({
+        kind: 'rotate',
+        meta: { ts: Date.now(), undoable: true, operationId: `r-${Date.now()}` },
+        pageIndex: currentPage,
+        fromRotation: page.rotation,
+        toRotation: next,
+      }),
+    );
+  };
+
+  const deletePageMenu = (): void => {
+    if (!doc || doc.pageCount <= 1) {
+      dispatch(pushToast({ kind: 'warning', message: t('errors:cannotDeleteOnlyPage') }));
+      return;
+    }
+    const page = doc.pages[currentPage];
+    if (!page) return;
+    dispatch(
+      applyEdit({
+        kind: 'delete',
+        meta: { ts: Date.now(), undoable: true, operationId: `d-${Date.now()}` },
+        pageIndex: currentPage,
+        preservedSource: page.sourcePageRef,
+      }),
+    );
+  };
+
+  const setTool = (tool: AnnotationTool) => () => dispatch(setActiveTool(tool));
 
   const menus: MenuDef[] = [
     {
@@ -187,6 +251,31 @@ export function MenuBar(): JSX.Element {
           shortcut: 'Ctrl+Y',
           disabled: !doc || !canRedo,
           onClick: () => dispatch(redoAction()),
+        },
+        // Phase 7.4 A4 — page-op menu mirrors. Same dispatchers the toolbar
+        // uses (Rotate CW, Rotate CCW, Delete Current Page). Closes the
+        // toolbar-only discoverability gap documented in acrobat-parity-audit
+        // §3.5. Shortcuts already registered in src/client/shortcuts.ts and
+        // wired in use-app-shortcuts.ts — listing them here is purely cosmetic
+        // (the global shortcut handler fires regardless of menu visibility).
+        { label: '', divider: true },
+        {
+          label: t('menu:items.rotateCw'),
+          shortcut: 'Ctrl+R',
+          disabled: !doc,
+          onClick: () => rotatePageMenu(true),
+        },
+        {
+          label: t('menu:items.rotateCcw'),
+          shortcut: 'Ctrl+Shift+R',
+          disabled: !doc,
+          onClick: () => rotatePageMenu(false),
+        },
+        {
+          label: t('menu:items.deletePage'),
+          shortcut: 'Del',
+          disabled: !doc,
+          onClick: deletePageMenu,
         },
         { label: '', divider: true },
         {
@@ -326,6 +415,50 @@ export function MenuBar(): JSX.Element {
           shortcut: 'E',
           disabled: !doc,
           onClick: () => dispatch(setTextEditMode(true)),
+        },
+        // Phase 7.4 A4 — annotation tool menu mirrors. Highlight / Sticky Note
+        // / Text Box / Underline / Strikethrough / Freehand were toolbar-only
+        // until now; keyboard-first users and Acrobat-trained users expecting
+        // menu access could not find them. Acrobat puts these under a top-level
+        // "Comment" menu — to avoid restructuring the menu surface in this
+        // dispatch (Bucket A scope), they land under Tools alongside the other
+        // mode-toggle tools. Shortcuts mirror src/client/shortcuts.ts.
+        { label: '', divider: true },
+        {
+          label: t('menu:items.toolHighlight'),
+          shortcut: 'H',
+          disabled: !doc,
+          onClick: setTool('highlight'),
+        },
+        {
+          label: t('menu:items.toolSticky'),
+          shortcut: 'S',
+          disabled: !doc,
+          onClick: setTool('sticky'),
+        },
+        {
+          label: t('menu:items.toolTextBox'),
+          shortcut: 'T',
+          disabled: !doc,
+          onClick: setTool('text'),
+        },
+        {
+          label: t('menu:items.toolUnderline'),
+          shortcut: 'U',
+          disabled: !doc,
+          onClick: setTool('underline'),
+        },
+        {
+          label: t('menu:items.toolStrikethrough'),
+          shortcut: 'K',
+          disabled: !doc,
+          onClick: setTool('strikeout'),
+        },
+        {
+          label: t('menu:items.toolFreehand'),
+          shortcut: 'Shift+F',
+          disabled: !doc,
+          onClick: setTool('ink'),
         },
         { label: '', divider: true },
         {

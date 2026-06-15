@@ -52,7 +52,16 @@
     "exportAsPowerpoint": "Export as PowerPoint...",
     "exportAsImage": "Export as Image...",
     "help": "Help",
-    "about": "About PDF_Viewer_Editor"
+    "about": "About PDF_Viewer_Editor",
+    "rotateCw": "Rotate Page Clockwise",
+    "rotateCcw": "Rotate Page Counter-Clockwise",
+    "deletePage": "Delete Current Page",
+    "toolHighlight": "Highlight Tool",
+    "toolSticky": "Sticky Note Tool",
+    "toolTextBox": "Text Box Tool",
+    "toolUnderline": "Underline Tool",
+    "toolStrikethrough": "Strikethrough Tool",
+    "toolFreehand": "Freehand Tool"
   },
   "tooltips": {
     "findComing": "Find is planned for an upcoming release.",
