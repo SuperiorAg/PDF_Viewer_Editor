@@ -39,7 +39,10 @@ export type ToolbarIconName =
   // Phase 5 additions:
   | 'scan-text'
   | 'eye-low'
-  | 'scanner';
+  | 'scanner'
+  // Phase 7.4 A6 — Fill & Sign top-level toolbar entry. Acrobat convention:
+  // a pen-on-paper glyph next to the forms tools.
+  | 'pen-signature';
 
 interface IconProps {
   name: ToolbarIconName;
@@ -313,6 +316,24 @@ export function ToolbarIcon({ name, size = 18 }: IconProps): JSX.Element {
           <rect x="3" y="10" width="18" height="7" rx="1" />
           <path d="M5 10 V7 a1 1 0 0 1 1-1 h12 a1 1 0 0 1 1 1 v3" />
           <path d="M7 14 h10" />
+        </svg>
+      );
+    // Phase 7.4 A6 — Fill & Sign: pen-on-paper glyph (a fountain-pen nib
+    // tracing a signature stroke over a document corner). The Acrobat-style
+    // visual hint distinguishes this from the freehand-ink tool (which is a
+    // simple wavy stroke) and from the form-edit tool (which shows form
+    // boxes). Drawn at the same 24-unit canvas as the rest of the set.
+    case 'pen-signature':
+      return (
+        <svg {...common}>
+          {/* Page corner */}
+          <path d="M4 4 h10 l4 4 v6" />
+          <path d="M14 4 v4 h4" />
+          {/* Signature scribble underline */}
+          <path d="M4 19 c2-1 4 1 6 0 c2-1 4 1 6 0 c2-1 4 1 6 0" />
+          {/* Pen nib + barrel pointing down-right onto the scribble */}
+          <path d="M16 11 l4 4 -3 3 -4-4 z" />
+          <path d="M14 13 l-3 3" />
         </svg>
       );
   }

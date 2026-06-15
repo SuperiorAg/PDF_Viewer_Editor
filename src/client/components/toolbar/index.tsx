@@ -30,6 +30,9 @@ import {
   openRunModal as openOcrRunModal,
   toggleOverlay as toggleOcrOverlay,
 } from '../../state/slices/ocr-slice';
+// Phase 7.4 A6 — Fill & Sign top-level toolbar entry. The same action the
+// Tools menu mirror dispatches (per Phase 7.4 A1).
+import { openCaptureModal } from '../../state/slices/signatures-slice';
 import {
   selectBookmarksEditMode,
   selectShapesPanelOpen,
@@ -54,7 +57,8 @@ import styles from './toolbar.module.css';
 // the toolbar is a single Tab stop with arrow-key roving between buttons. This
 // count MUST match the number of `{...rb()}` spreads in the JSX — a mismatch
 // would leave a button out of the roving order. Guarded by a dev assertion.
-const TOOLBAR_BUTTON_COUNT = 30;
+// Phase 7.4 A6: bumped 30 → 31 for the Fill & Sign button.
+const TOOLBAR_BUTTON_COUNT = 31;
 
 export function Toolbar(): JSX.Element {
   const { t } = useT();
@@ -390,6 +394,20 @@ export function Toolbar(): JSX.Element {
           tooltip={t('toolbar:mailMergeTooltip')}
           disabled={!doc}
           onClick={() => dispatch(openMailMergeWizard())}
+        />
+        {/* Phase 7.4 A6 — Fill & Sign top-level toolbar entry. Mirrors the
+            Tools → Fill & Sign... menu item (Phase 7.4 A1, c.f. menu-bar
+            index.tsx) by dispatching the same openCaptureModal() that opens
+            the shipped Phase 4 signature-capture workflow (typed / drawn /
+            imaged signatures, applied via PAdES). Acrobat-trained users
+            reach for the toolbar first; the menu mirror remains. */}
+        <ToolbarButton
+          {...rb()}
+          icon="pen-signature"
+          label={t('toolbar:fillAndSign')}
+          tooltip={t('toolbar:fillAndSignTooltip')}
+          disabled={!doc}
+          onClick={() => dispatch(openCaptureModal())}
         />
       </div>
 

@@ -59,6 +59,8 @@
   "formDesignerTooltip": "Toggle Form Designer mode (Ctrl+Shift+F)",
   "mailMerge": "Mail Merge",
   "mailMergeTooltip": "Open Mail Merge wizard (Ctrl+M)",
+  "fillAndSign": "Fill & Sign",
+  "fillAndSignTooltip": "Fill & sign — capture a typed, drawn, or imaged signature and apply it to the document.",
   "runOcr": "Run OCR",
   "runOcrTooltip": "Run OCR on this document",
   "confidenceOverlay": "Confidence overlay",

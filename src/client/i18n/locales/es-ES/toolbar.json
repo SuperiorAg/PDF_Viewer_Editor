@@ -57,6 +57,8 @@
   "formDesignerTooltip": "Alternar modo Diseñador de formularios (Ctrl+Mayús+F)",
   "mailMerge": "Combinar correspondencia",
   "mailMergeTooltip": "Abrir el asistente de combinación de correspondencia (Ctrl+M)",
+  "fillAndSign": "Rellenar y firmar",
+  "fillAndSignTooltip": "Rellenar y firmar — capture una firma escrita, dibujada o en imagen y aplíquela al documento.",
   "runOcr": "Ejecutar OCR",
   "runOcrTooltip": "Ejecutar OCR en este documento",
   "confidenceOverlay": "Capa de confianza",

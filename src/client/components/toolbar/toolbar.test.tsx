@@ -46,6 +46,18 @@ describe('Toolbar', () => {
     expect(shapes).toHaveAttribute('aria-pressed', 'false');
   });
 
+  it('Fill & Sign button is present and doc-gated (Phase 7.4 A6)', () => {
+    // Mirrors the Tools → Fill & Sign... menu item; dispatches openCaptureModal
+    // (the shipped Phase 4 signature-capture workflow). Doc-gated like every
+    // other tool that operates on the open document.
+    renderToolbar();
+    const fillSign = screen.getByRole('button', { name: 'Fill & Sign' });
+    expect(fillSign).toBeInTheDocument();
+    expect(fillSign).toBeDisabled();
+    // Momentary action, not a toggle — no aria-pressed.
+    expect(fillSign).not.toHaveAttribute('aria-pressed');
+  });
+
   it('should always enable the Combine button regardless of doc state', () => {
     renderToolbar();
     expect(screen.getByRole('button', { name: 'Combine' })).not.toBeDisabled();
