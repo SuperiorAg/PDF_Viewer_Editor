@@ -129,11 +129,16 @@ describe('signature-audit-repo', () => {
           // Phase 5 additive (data-models §10.10): FK column linking to
           // the OCR job that invalidated this signature row, if any.
           'invalidated_by_ocr_job_id',
+          // Phase 7.4 B1 additive (phase-7.4-b1-redaction-design.md §5.3):
+          // ms epoch column flagging a row as invalidated by a redaction
+          // Apply operation. Nullable. Can coexist with non-null
+          // invalidated_by_ocr_job_id on the same row.
+          'invalidated_by_redaction_at',
         ].sort(),
       );
     });
 
-    it('creates the documented indexes (data-models §9.4 + §10.10)', () => {
+    it('creates the documented indexes (data-models §9.4 + §10.10 + phase-7.4-b1 §5.3)', () => {
       const idx = db
         .prepare<[], { name: string }>(
           `SELECT name FROM sqlite_master
@@ -149,6 +154,9 @@ describe('signature-audit-repo', () => {
           'idx_signature_audit_log_fingerprint',
           // Phase 5 additive index — supports listInvalidatedByOcrJob.
           'idx_signature_audit_log_invalidated_by_ocr_job_id',
+          // Phase 7.4 B1 additive partial index — supports the audit-panel
+          // "invalidated by redaction" badge query and reverse-lookup.
+          'idx_signature_audit_log_invalidated_by_redaction_at',
         ]),
       );
     });
@@ -846,6 +854,263 @@ describe('signature-audit-repo', () => {
         ocrJobId,
       );
       expect(repo.listAll({}).items[0]).toHaveProperty('invalidated_by_ocr_job_id', ocrJobId);
+    });
+  });
+
+  // ============================================================
+  // Phase 7.4 B1 — Redaction invalidation cross-link
+  //   (docs/phase-7.4-b1-redaction-design.md §5.3)
+  //
+  // The redaction Apply handler calls markInvalidatedByRedaction(docHash,
+  // fieldNames) after sanitizing the bytes; the WHERE clause matches by
+  // doc_hash + field_name IN (...). Co-existence with the Phase 5
+  // invalidated_by_ocr_job_id column is required and exercised below.
+  // ============================================================
+
+  describe('Phase 7.4 B1 — Redaction invalidation cross-link', () => {
+    it('insert defaults invalidated_by_redaction_at to NULL', () => {
+      const res = repo.insert(makePadesTsaInput({ field_name: 'Signature1' }));
+      if (!res.ok) throw new Error('expected ok');
+      expect(repo.get(res.id)?.invalidated_by_redaction_at).toBeNull();
+    });
+
+    it('marks one row when fieldNames has one entry', () => {
+      const docHash = 'redact-doc-1';
+      const a = repo.insert(
+        makePadesTsaInput({
+          doc_hash: docHash,
+          field_name: 'SignerA',
+          sig_bytes_offset: 1,
+        }),
+      );
+      if (!a.ok) throw new Error('expected ok');
+
+      const changed = repo.markInvalidatedByRedaction(docHash, ['SignerA']);
+      expect(changed).toBe(1);
+
+      const row = repo.get(a.id);
+      expect(row?.invalidated_by_redaction_at).toBeGreaterThan(0);
+    });
+
+    it('marks multiple rows when fieldNames has multiple entries', () => {
+      const docHash = 'redact-doc-2';
+      const a = repo.insert(
+        makePadesTsaInput({ doc_hash: docHash, field_name: 'SignerA', sig_bytes_offset: 1 }),
+      );
+      const b = repo.insert(
+        makePadesTsaInput({ doc_hash: docHash, field_name: 'SignerB', sig_bytes_offset: 2 }),
+      );
+      const c = repo.insert(
+        makePadesTsaInput({ doc_hash: docHash, field_name: 'SignerC', sig_bytes_offset: 3 }),
+      );
+      if (!a.ok || !b.ok || !c.ok) throw new Error('expected ok');
+
+      const changed = repo.markInvalidatedByRedaction(docHash, ['SignerA', 'SignerB']);
+      expect(changed).toBe(2);
+
+      expect(repo.get(a.id)?.invalidated_by_redaction_at).toBeGreaterThan(0);
+      expect(repo.get(b.id)?.invalidated_by_redaction_at).toBeGreaterThan(0);
+      // C was not in the field-name list — untouched.
+      expect(repo.get(c.id)?.invalidated_by_redaction_at).toBeNull();
+    });
+
+    it('always sets invalidated_by_redaction_at on matched rows', () => {
+      // The column is unconditional: re-marking a row stamps it with the
+      // latest Apply time (no COALESCE on the column). The user-facing
+      // "Invalidated by redaction on YYYY-MM-DD" reflects the MOST RECENT
+      // event.
+      const docHash = 'redact-doc-3';
+      const a = repo.insert(
+        makePadesTsaInput({ doc_hash: docHash, field_name: 'SignerA', sig_bytes_offset: 1 }),
+      );
+      if (!a.ok) throw new Error('expected ok');
+
+      const before = Math.floor(Date.now() / 1000) * 1000;
+      const changed1 = repo.markInvalidatedByRedaction(docHash, ['SignerA']);
+      expect(changed1).toBe(1);
+      const firstStamp = repo.get(a.id)?.invalidated_by_redaction_at;
+      expect(firstStamp).not.toBeNull();
+      expect(firstStamp).toBeGreaterThanOrEqual(before);
+
+      // Re-mark — stamp updates to the latest time (or stays equal if SQL's
+      // unixepoch() returns the same second). Either way it is non-null and
+      // not older than the first stamp.
+      const changed2 = repo.markInvalidatedByRedaction(docHash, ['SignerA']);
+      expect(changed2).toBe(1);
+      const secondStamp = repo.get(a.id)?.invalidated_by_redaction_at;
+      expect(secondStamp).not.toBeNull();
+      expect(secondStamp).toBeGreaterThanOrEqual(firstStamp ?? 0);
+    });
+
+    it('returns rows-affected count', () => {
+      const docHash = 'redact-doc-4';
+      repo.insert(makePadesTsaInput({ doc_hash: docHash, field_name: 'F1', sig_bytes_offset: 10 }));
+      repo.insert(makePadesTsaInput({ doc_hash: docHash, field_name: 'F2', sig_bytes_offset: 20 }));
+      repo.insert(makePadesTsaInput({ doc_hash: docHash, field_name: 'F3', sig_bytes_offset: 30 }));
+
+      // All three matched.
+      expect(repo.markInvalidatedByRedaction(docHash, ['F1', 'F2', 'F3'])).toBe(3);
+      // Two matched out of one missing.
+      expect(repo.markInvalidatedByRedaction(docHash, ['F1', 'F-NOT-PRESENT'])).toBe(1);
+    });
+
+    it('no-ops on docHash with no matching rows (returns 0)', () => {
+      repo.insert(
+        makePadesTsaInput({ doc_hash: 'doc-A', field_name: 'SignerA', sig_bytes_offset: 1 }),
+      );
+      expect(repo.markInvalidatedByRedaction('doc-Z-missing', ['SignerA'])).toBe(0);
+      // The unrelated doc-A row is untouched.
+      const row = repo.listByDocHash('doc-A').find((r) => r.field_name === 'SignerA');
+      expect(row?.invalidated_by_redaction_at).toBeNull();
+    });
+
+    it('no-ops on empty fieldNames (returns 0 without touching DB)', () => {
+      const docHash = 'redact-doc-5';
+      const a = repo.insert(
+        makePadesTsaInput({ doc_hash: docHash, field_name: 'SignerA', sig_bytes_offset: 1 }),
+      );
+      if (!a.ok) throw new Error('expected ok');
+
+      expect(repo.markInvalidatedByRedaction(docHash, [])).toBe(0);
+      expect(repo.get(a.id)?.invalidated_by_redaction_at).toBeNull();
+    });
+
+    it('does not match visual-signature rows (field_name = NULL)', () => {
+      // Visual rows have no cryptographic field-name binding; the IN-list
+      // never matches NULL in SQL. The user-facing semantic is correct —
+      // visual signatures are not "invalidated" by byte changes the way
+      // PAdES signatures are.
+      const docHash = 'redact-doc-visual';
+      const v = repo.insert(makeVisualInput({ doc_hash: docHash }));
+      if (!v.ok) throw new Error('expected ok');
+
+      // Passing the visual row's field_name (which IS null) shouldn't even
+      // typecheck through the public API; but even if a caller passed a
+      // string like "" (rejected upstream) or an unrelated name, no rows
+      // would match.
+      expect(repo.markInvalidatedByRedaction(docHash, ['SomeName'])).toBe(0);
+      expect(repo.get(v.id)?.invalidated_by_redaction_at).toBeNull();
+    });
+
+    it('coexists with an existing invalidated_by_ocr_job_id (both columns can be set)', () => {
+      // Critical co-existence invariant from the design (§5.3): a row can
+      // be invalidated by BOTH OCR and redaction at different points in the
+      // doc's history. Each subsystem stamps its own column; neither
+      // overwrites the other.
+      const docHash = 'coexist-doc';
+      const a = repo.insert(
+        makePadesTsaInput({ doc_hash: docHash, field_name: 'SignerA', sig_bytes_offset: 1 }),
+      );
+      if (!a.ok) throw new Error('expected ok');
+
+      // First: mark by OCR.
+      const ocrJobId = db
+        .prepare(
+          `INSERT INTO ocr_jobs (doc_hash, page_range_start, page_range_end,
+            langs, preprocess_json, status, started_at,
+            invalidated_signatures, created_at)
+            VALUES ('${docHash}', 0, 5, 'eng', '{}', 'completed', 100, 1, 100)`,
+        )
+        .run().lastInsertRowid;
+      const ocrJobNum = typeof ocrJobId === 'bigint' ? Number(ocrJobId) : ocrJobId;
+      repo.markInvalidatedByOcrJob([a.id], ocrJobNum);
+      expect(repo.get(a.id)?.invalidated_by_ocr_job_id).toBe(ocrJobNum);
+      expect(repo.get(a.id)?.invalidated_by_redaction_at).toBeNull();
+
+      // Then: mark by redaction.
+      expect(repo.markInvalidatedByRedaction(docHash, ['SignerA'])).toBe(1);
+
+      // Both columns now populated; neither overwrote the other.
+      const after = repo.get(a.id);
+      expect(after?.invalidated_by_ocr_job_id).toBe(ocrJobNum);
+      expect(after?.invalidated_by_redaction_at).toBeGreaterThan(0);
+
+      // Reverse order also works — redaction first, then OCR.
+      const b = repo.insert(
+        makePadesTsaInput({ doc_hash: docHash, field_name: 'SignerB', sig_bytes_offset: 2 }),
+      );
+      if (!b.ok) throw new Error('expected ok');
+      repo.markInvalidatedByRedaction(docHash, ['SignerB']);
+      expect(repo.get(b.id)?.invalidated_by_redaction_at).toBeGreaterThan(0);
+      repo.markInvalidatedByOcrJob([b.id], ocrJobNum);
+      const bAfter = repo.get(b.id);
+      expect(bAfter?.invalidated_by_ocr_job_id).toBe(ocrJobNum);
+      expect(bAfter?.invalidated_by_redaction_at).toBeGreaterThan(0);
+    });
+
+    it('does NOT touch invalidated_by_ocr_job_id', () => {
+      // Defensive guard: a redaction mark never clears the OCR column,
+      // regardless of whether it's already set.
+      const docHash = 'no-clobber-doc';
+      const a = repo.insert(
+        makePadesTsaInput({ doc_hash: docHash, field_name: 'SignerA', sig_bytes_offset: 1 }),
+      );
+      const b = repo.insert(
+        makePadesTsaInput({ doc_hash: docHash, field_name: 'SignerB', sig_bytes_offset: 2 }),
+      );
+      if (!a.ok || !b.ok) throw new Error('expected ok');
+
+      // A starts NULL; B gets pre-stamped via raw SQL to an arbitrary value
+      // (no ocr_jobs row needed for this assertion — the column itself is
+      // an INTEGER, the REFERENCES constraint allows NULL and any FK-
+      // enabled integer that satisfies the join target; we insert a job
+      // row to keep FK happy when foreign_keys=ON).
+      const ocrJobId = db
+        .prepare(
+          `INSERT INTO ocr_jobs (doc_hash, page_range_start, page_range_end,
+            langs, preprocess_json, status, started_at,
+            invalidated_signatures, created_at)
+            VALUES ('${docHash}', 0, 5, 'eng', '{}', 'completed', 100, 1, 100)`,
+        )
+        .run().lastInsertRowid;
+      const ocrJobNum = typeof ocrJobId === 'bigint' ? Number(ocrJobId) : ocrJobId;
+      repo.markInvalidatedByOcrJob([b.id], ocrJobNum);
+
+      // Now redact both: A's OCR column stays NULL, B's stays at ocrJobNum.
+      expect(repo.markInvalidatedByRedaction(docHash, ['SignerA', 'SignerB'])).toBe(2);
+      expect(repo.get(a.id)?.invalidated_by_ocr_job_id).toBeNull();
+      expect(repo.get(b.id)?.invalidated_by_ocr_job_id).toBe(ocrJobNum);
+      expect(repo.get(a.id)?.invalidated_by_redaction_at).toBeGreaterThan(0);
+      expect(repo.get(b.id)?.invalidated_by_redaction_at).toBeGreaterThan(0);
+    });
+
+    it('rejects empty docHash + non-string entries in fieldNames', () => {
+      expect(() => repo.markInvalidatedByRedaction('', ['F1'])).toThrowError(/docHash/);
+      expect(() => repo.markInvalidatedByRedaction('doc', [''])).toThrowError(/fieldNames/);
+      expect(() =>
+        // @ts-expect-error — runtime guard test
+        repo.markInvalidatedByRedaction('doc', 'not-an-array'),
+      ).toThrowError(/fieldNames must be an array/);
+    });
+
+    it('SELECT statements include invalidated_by_redaction_at in row shape', () => {
+      // Regression guard for the Phase 7.4 column projection extension:
+      // every read method must surface invalidated_by_redaction_at, NOT
+      // undefined. Mirrors the Phase 5 OCR test above.
+      const docHash = 'a'.repeat(64);
+      const a = repo.insert(
+        makePadesTsaInput({ doc_hash: docHash, field_name: 'SignerA', sig_bytes_offset: 1 }),
+      );
+      if (!a.ok) throw new Error('expected ok');
+      repo.markInvalidatedByRedaction(docHash, ['SignerA']);
+
+      // get()
+      const got = repo.get(a.id);
+      expect(got).toHaveProperty('invalidated_by_redaction_at');
+      expect(got?.invalidated_by_redaction_at).toBeGreaterThan(0);
+
+      // listByDocHash()
+      expect(repo.listByDocHash(docHash)[0]).toHaveProperty('invalidated_by_redaction_at');
+      // listByPreSignDocHash()
+      expect(repo.listByPreSignDocHash('b'.repeat(64))[0]).toHaveProperty(
+        'invalidated_by_redaction_at',
+      );
+      // listByFingerprint()
+      expect(repo.listByFingerprint('c'.repeat(64))[0]).toHaveProperty(
+        'invalidated_by_redaction_at',
+      );
+      // listAll()
+      expect(repo.listAll({}).items[0]).toHaveProperty('invalidated_by_redaction_at');
     });
   });
 });

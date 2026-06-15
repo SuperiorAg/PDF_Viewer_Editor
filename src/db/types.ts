@@ -195,6 +195,15 @@ export interface SignatureAuditRow {
   // #N)" when this is non-null. The 0005 migration adds the column via ALTER
   // TABLE; pre-existing rows default to NULL on read.
   invalidated_by_ocr_job_id: number | null;
+  // Phase 7.4 B1 additive (docs/phase-7.4-b1-redaction-design.md §5.3):
+  // ms epoch at which a redaction Apply invalidated this signature row.
+  // Nullable — NULL for rows not invalidated by redaction. Can coexist with
+  // a non-null `invalidated_by_ocr_job_id` on the same row (a signature can
+  // be invalidated by both OCR and redaction at different points in the
+  // doc's history). The signature audit panel surfaces "Invalidated by
+  // redaction on YYYY-MM-DD" when this is non-null. The 0008 migration adds
+  // the column via ALTER TABLE; pre-existing rows default to NULL on read.
+  invalidated_by_redaction_at: number | null;
 }
 
 // ============================================================

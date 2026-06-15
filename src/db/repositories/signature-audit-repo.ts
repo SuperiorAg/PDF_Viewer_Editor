@@ -183,6 +183,49 @@ export interface SignatureAuditRepo {
    * and the signature audit panel's reverse-lookup.
    */
   listInvalidatedByOcrJob(ocrJobId: number): SignatureAuditRow[];
+
+  // ============================================================
+  // Phase 7.4 B1 — Redaction invalidation cross-link
+  //   (docs/phase-7.4-b1-redaction-design.md §5.3)
+  //
+  // When a redaction Apply destructively mutates page bytes on a previously-
+  // PAdES-signed doc, the engine first asks the user to confirm at modal time
+  // (design §2.4 + §5.2) then, after Apply succeeds, calls
+  // `markInvalidatedByRedaction(docHash, fieldNames)` to back-link the
+  // affected audit rows.
+  //
+  // SIGNATURE differs from `markInvalidatedByOcrJob`: redaction's call site
+  // (David's `pdf:applyRedactions` handler) knows only the doc hash + the
+  // signed-field-name list returned by `detectPriorPadesSignatures`. There's
+  // no intermediate "job id" to coordinate with, so the bridge contract
+  // collapses to (docHash, fieldNames) and the WHERE clause does the row
+  // lookup in SQL: `WHERE doc_hash = ? AND field_name IN (...)`. This keeps
+  // the handler ergonomic and avoids a redundant `listByDocHash + filter`
+  // round-trip that David's bridge currently performs for the OCR path.
+  //
+  // CO-EXISTENCE: a row may carry BOTH a non-null `invalidated_by_ocr_job_id`
+  // and a non-null `invalidated_by_redaction_at` — this method NEVER touches
+  // the OCR column. Marking a row that's already OCR-invalidated remains
+  // valid and is the documented co-marking pattern (design §5.3).
+  // ============================================================
+
+  /**
+   * Mark every signature-audit row whose `doc_hash` matches `docHash` AND
+   * whose `field_name` is in `fieldNames` as invalidated by a redaction
+   * operation. Sets `invalidated_by_redaction_at` to the current ms epoch
+   * (always — re-marking a row stamps it with the latest Apply time, which
+   * matches user-facing "Invalidated by redaction on YYYY-MM-DD" semantics
+   * for the most recent invalidation event).
+   *
+   * Returns the number of rows updated. Empty `fieldNames` is a no-op
+   * (returns 0 without touching the database). A `docHash` with no matching
+   * rows is a no-op (returns 0). Visual-signature rows (`field_name = NULL`)
+   * are never matched — they have no cryptographic byte-range to invalidate.
+   *
+   * NEVER touches `invalidated_by_ocr_job_id`. The two columns coexist on
+   * the same row when a signature is invalidated by both subsystems.
+   */
+  markInvalidatedByRedaction(docHash: string, fieldNames: string[]): number;
 }
 
 // ============================================================
@@ -239,7 +282,8 @@ export function createSignatureAuditRepo(db: BetterSqlite3.Database): SignatureA
             tsa_url, tsa_response_status,
             sig_bytes_offset, sig_bytes_length, byte_range_json,
             reason, location, field_name, created_at,
-            invalidated_by_ocr_job_id
+            invalidated_by_ocr_job_id,
+            invalidated_by_redaction_at
        FROM signature_audit_log
       WHERE id = @id
       LIMIT 1`,
@@ -259,7 +303,8 @@ export function createSignatureAuditRepo(db: BetterSqlite3.Database): SignatureA
             tsa_url, tsa_response_status,
             sig_bytes_offset, sig_bytes_length, byte_range_json,
             reason, location, field_name, created_at,
-            invalidated_by_ocr_job_id
+            invalidated_by_ocr_job_id,
+            invalidated_by_redaction_at
        FROM signature_audit_log
       WHERE doc_hash = @doc_hash
       ORDER BY signed_at DESC, id ASC
@@ -276,7 +321,8 @@ export function createSignatureAuditRepo(db: BetterSqlite3.Database): SignatureA
             tsa_url, tsa_response_status,
             sig_bytes_offset, sig_bytes_length, byte_range_json,
             reason, location, field_name, created_at,
-            invalidated_by_ocr_job_id
+            invalidated_by_ocr_job_id,
+            invalidated_by_redaction_at
        FROM signature_audit_log
       WHERE pre_sign_doc_hash = @pre_sign_doc_hash
       ORDER BY signed_at DESC, id ASC
@@ -303,7 +349,8 @@ export function createSignatureAuditRepo(db: BetterSqlite3.Database): SignatureA
             tsa_url, tsa_response_status,
             sig_bytes_offset, sig_bytes_length, byte_range_json,
             reason, location, field_name, created_at,
-            invalidated_by_ocr_job_id
+            invalidated_by_ocr_job_id,
+            invalidated_by_redaction_at
        FROM signature_audit_log
       WHERE signed_by_fingerprint = @fingerprint
         AND signed_at >= @since
@@ -341,7 +388,8 @@ export function createSignatureAuditRepo(db: BetterSqlite3.Database): SignatureA
             tsa_url, tsa_response_status,
             sig_bytes_offset, sig_bytes_length, byte_range_json,
             reason, location, field_name, created_at,
-            invalidated_by_ocr_job_id
+            invalidated_by_ocr_job_id,
+            invalidated_by_redaction_at
        FROM signature_audit_log
       WHERE (@file_hash_supplied = 0 OR doc_hash = @file_hash)
         AND (@fingerprint_supplied = 0 OR signed_by_fingerprint = @fingerprint)
@@ -405,11 +453,50 @@ export function createSignatureAuditRepo(db: BetterSqlite3.Database): SignatureA
             tsa_url, tsa_response_status,
             sig_bytes_offset, sig_bytes_length, byte_range_json,
             reason, location, field_name, created_at,
-            invalidated_by_ocr_job_id
+            invalidated_by_ocr_job_id,
+            invalidated_by_redaction_at
        FROM signature_audit_log
       WHERE invalidated_by_ocr_job_id = @ocr_job_id
       ORDER BY signed_at DESC, id ASC`,
   );
+
+  // Phase 7.4 B1 — Redaction cross-link UPDATE.
+  //
+  // The WHERE clause is `doc_hash = ? AND field_name IN (?, ?, ...)` — the
+  // IN-list placeholder count varies per call, so we cannot prepare ONCE
+  // upfront the way the other statements do. Instead we lazily cache prepared
+  // statements keyed by the IN-list arity. SQLite's prepared-statement cache
+  // benefits from this (an Apply with 3 signatures and a subsequent Apply
+  // with 3 signatures reuses the same prepared statement) without unbounded
+  // growth (real-world field counts cap at ~10).
+  //
+  // The `at` value is computed in the SQL via `(unixepoch() * 1000)` so the
+  // mark stamps wall-clock ms epoch consistent with the rest of the audit
+  // log's `signed_at` / `created_at` columns. Re-marking a row stamps it
+  // with the latest Apply time (no COALESCE on the column) — that matches
+  // user-facing "Invalidated by redaction on YYYY-MM-DD" semantics for the
+  // most recent invalidation event.
+  //
+  // NEVER touches `invalidated_by_ocr_job_id` — co-existence is allowed
+  // and documented in the bridge contract (docs/phase-7.4-b1-redaction-
+  // design.md §5.3).
+  type MarkRedactionParams = Record<string, string | number>;
+  const markRedactionStmtCache = new Map<number, BetterSqlite3.Statement<MarkRedactionParams>>();
+  const getMarkRedactionStmt = (
+    fieldCount: number,
+  ): BetterSqlite3.Statement<MarkRedactionParams> => {
+    const cached = markRedactionStmtCache.get(fieldCount);
+    if (cached) return cached;
+    const placeholders = Array.from({ length: fieldCount }, (_, i) => `@field_${i}`).join(', ');
+    const stmt = db.prepare<MarkRedactionParams>(
+      `UPDATE signature_audit_log
+          SET invalidated_by_redaction_at = (unixepoch() * 1000)
+        WHERE doc_hash = @doc_hash
+          AND field_name IN (${placeholders})`,
+    );
+    markRedactionStmtCache.set(fieldCount, stmt);
+    return stmt;
+  };
 
   return {
     insert(input: InsertSignatureAuditInput): InsertSignatureAuditResult {
@@ -598,6 +685,28 @@ export function createSignatureAuditRepo(db: BetterSqlite3.Database): SignatureA
     listInvalidatedByOcrJob(ocrJobId: number): SignatureAuditRow[] {
       assertValidId(ocrJobId, 'ocrJobId');
       return listInvalidatedByOcrJobStmt.all({ ocr_job_id: ocrJobId });
+    },
+
+    markInvalidatedByRedaction(docHash: string, fieldNames: string[]): number {
+      assertNonEmptyString(docHash, 'docHash');
+      if (!Array.isArray(fieldNames)) {
+        throw new Error('fieldNames must be an array of non-empty strings');
+      }
+      if (fieldNames.length === 0) return 0;
+      for (const name of fieldNames) {
+        assertNonEmptyString(name, 'fieldNames[]');
+      }
+
+      // Build the @field_0 / @field_1 / ... parameter object for the cached
+      // IN-list statement. Same arity → same prepared statement.
+      const params: Record<string, string | number> = { doc_hash: docHash };
+      for (let i = 0; i < fieldNames.length; i++) {
+        params[`field_${i}`] = fieldNames[i] as string;
+      }
+
+      const stmt = getMarkRedactionStmt(fieldNames.length);
+      const result = stmt.run(params);
+      return result.changes;
     },
   };
 }
