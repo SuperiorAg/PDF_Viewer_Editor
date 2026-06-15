@@ -15,6 +15,7 @@ import { useT } from '../../i18n/use-t';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { redoAction, undoAction } from '../../state/middleware/history-middleware';
 import { selectCurrentDocument, selectIsDirty } from '../../state/slices/document-selectors';
+import { applyEdit } from '../../state/slices/document-slice';
 import { openExportModal } from '../../state/slices/export-slice';
 import { selectFormFields } from '../../state/slices/forms-selectors';
 import { setDesignerMode, toggleDesignerMode } from '../../state/slices/forms-slice';
@@ -26,16 +27,18 @@ import {
   openRunModal as openOcrRunModal,
   toggleOverlay as toggleOcrOverlay,
 } from '../../state/slices/ocr-slice';
+// Phase 7.4 A1 — Fill & Sign menu entry dispatches the existing signature-capture flow.
+import { openCaptureModal } from '../../state/slices/signatures-slice';
 import {
   openImageImportModal,
   openModal,
-  pushToast,
   setSidebarTab,
   setTextEditMode,
   toggleBookmarksEditMode,
   toggleInspector,
   toggleSidebar,
 } from '../../state/slices/ui-slice';
+import { selectCurrentPage } from '../../state/slices/viewport-selectors';
 import {
   closeDocumentThunk,
   flattenFormsThunk,
@@ -72,10 +75,24 @@ export function MenuBar(): JSX.Element {
   const canRedo = useAppSelector(selectCanRedo);
   const formFields = useAppSelector(selectFormFields);
   const ocrOverlayVisible = useAppSelector(selectOcrOverlayVisible);
+  const currentPage = useAppSelector(selectCurrentPage);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
-  const phase3 = (feature: string) => () => {
-    dispatch(pushToast({ kind: 'info', message: t('common:comingInLaterPhase', { feature }) }));
+  // Phase 7.4 A1 (Riley) — Honest dispatcher for the previously toast-only
+  // Blank Page menu item. The toolbar's insertBlank button already wires this
+  // operation; the menu mirror must dispatch the SAME applyEdit action — never
+  // a "coming later" toast for a shipped feature. Per acrobat-parity-audit.md
+  // §3.5 + Bucket A1.
+  const insertBlankMenu = (): void => {
+    if (!doc) return;
+    dispatch(
+      applyEdit({
+        kind: 'insert',
+        meta: { ts: Date.now(), undoable: true, operationId: `i-${Date.now()}` },
+        atIndex: currentPage + 1,
+        source: { kind: 'blank', width: 612, height: 792 },
+      }),
+    );
   };
 
   const menus: MenuDef[] = [
@@ -178,9 +195,13 @@ export function MenuBar(): JSX.Element {
           disabled: !doc,
           onClick: () => dispatch(setTextEditMode(true)),
         },
+        // Phase 7.4 A1 — Find is genuinely deferred. The previous tooltip read
+        // "Coming in Phase 3" three phases AFTER Phase 3 shipped, and Ctrl+F
+        // fired a matching toast. The honest UX: visible-but-disabled with a
+        // refreshed tooltip (no version promise), no shortcut. Ctrl+F's
+        // toast-dispatch was removed from use-app-shortcuts.ts in the same commit.
         {
           label: t('menu:items.find'),
-          shortcut: 'Ctrl+F',
           disabled: true,
           tooltip: t('menu:tooltips.findComing'),
         },
@@ -201,15 +222,22 @@ export function MenuBar(): JSX.Element {
           disabled: !doc,
           onClick: () => dispatch(openImageImportModal()),
         },
+        // Phase 7.4 A1 — Page from File is genuinely deferred (no shipped
+        // insert-pages-from-PDF dispatcher). Honest UX: visible-but-disabled
+        // with a refreshed tooltip — NOT a "coming later" toast that looked
+        // enabled then surprised the user.
         {
           label: t('menu:items.pageFromFile'),
-          disabled: !doc,
-          onClick: phase3(t('menu:items.pageFromFile')),
+          disabled: true,
+          tooltip: t('menu:tooltips.pageFromFileComing'),
         },
+        // Phase 7.4 A1 — Blank Page IS shipped via the toolbar's insertBlank
+        // button. The menu mirror now dispatches the same applyEdit call instead
+        // of toasting "coming later".
         {
           label: t('menu:items.blankPage'),
           disabled: !doc,
-          onClick: phase3(t('menu:items.blankPage')),
+          onClick: insertBlankMenu,
         },
         { label: '', divider: true },
         // Phase 3 — "Form Field…" entries each enter designer mode pre-set
@@ -332,19 +360,26 @@ export function MenuBar(): JSX.Element {
             void dispatch(flattenFormsThunk());
           },
         },
+        // Phase 7.4 A1 — Fill & Sign IS the shipped signature-capture flow
+        // (Phase 4 visual signatures + Phase 4 PAdES). Previously the menu
+        // entry read "Coming in Phase 4" three phases AFTER Phase 4 shipped.
+        // The menu item now opens the shipped signature-capture modal — making
+        // this the first top-level entry point for the workflow.
         {
           label: t('menu:items.fillAndSign'),
-          disabled: true,
-          tooltip: t('menu:tooltips.fillSignComing'),
+          disabled: !doc,
+          onClick: () => dispatch(openCaptureModal()),
         },
         { label: '', divider: true },
-        // Phase 5 — Scan is intentionally disabled with tooltip per
-        // architecture-phase-5.md §7 (Q-E deferral verdict). The Phase 5.1
-        // implementation re-enables this item.
+        // Phase 7.4 A1 — Scan tooltip refresh. TWAIN/WIA bindings are deferred
+        // indefinitely (no MIT-compatible Node binding survives the project's
+        // OSS maturity bar — see groomed roadmap 0a09f4c). The tooltip now
+        // matches the scan-modal body copy: scan with your OS utility, then
+        // drag the PDF into this app. No false "Phase 5.1" version promise.
         {
           label: t('menu:items.scanDevice'),
           disabled: true,
-          tooltip: t('menu:tooltips.scanComing'),
+          tooltip: t('menu:tooltips.scanDeferred'),
         },
         {
           label: t('menu:items.runOcr'),

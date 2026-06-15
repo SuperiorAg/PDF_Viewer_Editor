@@ -43,7 +43,7 @@
     "formDesigner": "Form Designer",
     "mailMerge": "Mail Merge...",
     "flattenForms": "Flatten Forms",
-    "fillAndSign": "Fill & Sign",
+    "fillAndSign": "Fill & Sign...",
     "scanDevice": "Scan from device...",
     "runOcr": "Run OCR...",
     "manageLanguagePacks": "Manage language packs...",
@@ -55,9 +55,9 @@
     "about": "About PDF_Viewer_Editor"
   },
   "tooltips": {
-    "findComing": "Coming in Phase 3",
-    "fillSignComing": "Coming in Phase 4",
-    "scanComing": "Scanner integration arrives in Phase 5.1. For now, use the OS Scan app then drag the saved PDF into this app to run OCR.",
+    "findComing": "Find is planned for an upcoming release.",
+    "pageFromFileComing": "Insert pages from another PDF is planned for an upcoming release.",
+    "scanDeferred": "Use your OS scan utility, then drag the saved PDF here to run OCR.",
     "mailMergeNeedsField": "Detect or author at least one form field first."
   }
 }

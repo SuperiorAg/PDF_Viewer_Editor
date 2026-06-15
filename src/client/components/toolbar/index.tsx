@@ -84,9 +84,6 @@ export function Toolbar(): JSX.Element {
     };
   };
 
-  const phase3 = (feature: string) =>
-    dispatch(pushToast({ kind: 'info', message: t('common:comingInLaterPhase', { feature }) }));
-
   const rotate = (cw: boolean): void => {
     if (!doc) return;
     const page = doc.pages[currentPage];
@@ -253,13 +250,20 @@ export function Toolbar(): JSX.Element {
           active={textEditActive}
           onClick={() => dispatch(setTextEditMode(!textEditActive))}
         />
+        {/* Shapes button: the underlying ShapeToolbar component exists but is
+            not mounted in the production UI yet. Per Phase 7.4 A1 honesty
+            refresh the tooltip no longer promises a specific phase, and the
+            dead "coming later" toast (the button is disabled, so it never
+            fired) is removed. Tracked for the future Shapes wave. */}
         <ToolbarButton
           {...rb()}
           icon="shapes"
           label={t('toolbar:shapes')}
           tooltip={t('toolbar:shapesTooltip')}
           disabled
-          onClick={() => phase3(t('toolbar:shapes'))}
+          onClick={() => {
+            // Disabled — nothing happens; the tooltip explains.
+          }}
         />
       </div>
 
@@ -274,13 +278,19 @@ export function Toolbar(): JSX.Element {
           disabled={!doc}
           onClick={insertBlank}
         />
+        {/* Insert from file: genuinely deferred (no shipped dispatcher for
+            insert-pages-from-another-PDF). Phase 7.4 A1 honesty refresh:
+            disable the button rather than fire a "coming later" toast on a
+            visibly-enabled control. Tooltip explains the deferral. */}
         <ToolbarButton
           {...rb()}
           icon="page-import"
           label={t('toolbar:insertFromFile')}
           tooltip={t('toolbar:insertFromFileTooltip')}
-          disabled={!doc}
-          onClick={() => phase3(t('toolbar:insertFromFile'))}
+          disabled
+          onClick={() => {
+            // Disabled — nothing happens; the tooltip explains.
+          }}
         />
         <ToolbarButton
           {...rb()}
@@ -399,8 +409,10 @@ export function Toolbar(): JSX.Element {
           active={ocrOverlayVisible}
           onClick={() => dispatch(toggleOcrOverlay())}
         />
-        {/* Scan button intentionally disabled with tooltip — Phase 5.1.
-            Per docs/architecture-phase-5.md §7 (Q-E deferral verdict). */}
+        {/* Scan button intentionally disabled — TWAIN/WIA deferred indefinitely
+            per docs/architecture-phase-5.md §7 + groomed roadmap (0a09f4c) +
+            Phase 7.4 A1 honesty refresh. Tooltip points users at the OS scan
+            utility + drag-and-drop fallback — not a future-phase version promise. */}
         <ToolbarButton
           {...rb()}
           icon="scanner"

@@ -15,7 +15,9 @@ import formsReducer from '../../state/slices/forms-slice';
 import historyReducer from '../../state/slices/history-slice';
 import mailMergeReducer from '../../state/slices/mail-merge-slice';
 import ocrReducer from '../../state/slices/ocr-slice';
+import signaturesReducer from '../../state/slices/signatures-slice';
 import uiReducer from '../../state/slices/ui-slice';
+import viewportReducer from '../../state/slices/viewport-slice';
 import { type PDFDocumentModel } from '../../types/ipc-contract';
 
 import { MenuBar } from './index';
@@ -50,6 +52,13 @@ function makeStore() {
       mailMerge: mailMergeReducer,
       history: historyReducer,
       ocr: ocrReducer,
+      // Phase 7.4 A1 (Riley) — MenuBar now reads selectCurrentPage so it can
+      // dispatch the same insertBlank applyEdit as the toolbar. The viewport
+      // reducer is required even though no Phase-5 wiring test touches it
+      // directly; without it the new selector throws on first render.
+      viewport: viewportReducer,
+      // Phase 7.4 A1 (Riley) — Fill & Sign menu entry dispatches openCaptureModal.
+      signatures: signaturesReducer,
     },
   });
 }
@@ -70,7 +79,12 @@ describe('MenuBar — Phase 5 wiring', () => {
     expect((store.getState() as any).ocr.openModal).toBe('run');
   });
 
-  it('Tools > Scan from device is disabled with Phase 5.1 tooltip', () => {
+  it('Tools > Scan from device is disabled with an honest deferral tooltip (Phase 7.4 A1)', () => {
+    // Was: assertion that the tooltip contained "Phase 5.1". The 5.1 promise is
+    // gone (TWAIN/WIA deferred indefinitely per groomed roadmap 0a09f4c); the
+    // tooltip now points users at the OS scan utility + drag-drop fallback —
+    // which is what the scan-modal body has always said. See acrobat-parity-
+    // audit.md §3.5 + Bucket A1 (Phase 7.4 Riley).
     const store = makeStore();
     store.dispatch(setDocument(DOC));
     render(
@@ -82,7 +96,8 @@ describe('MenuBar — Phase 5 wiring', () => {
     const scan = screen.getByText('Scan from device...').closest('button');
     expect(scan).not.toBeNull();
     expect((scan as HTMLButtonElement).disabled).toBe(true);
-    expect((scan as HTMLButtonElement).title).toContain('Phase 5.1');
+    expect((scan as HTMLButtonElement).title).toMatch(/OS scan utility/i);
+    expect((scan as HTMLButtonElement).title).not.toMatch(/Phase 5\.1/i);
   });
 
   it('Tools > Manage language packs opens the language pack manager', () => {

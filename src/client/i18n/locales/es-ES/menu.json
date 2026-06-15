@@ -43,6 +43,7 @@
     "formDesigner": "Diseñador de formularios",
     "mailMerge": "Combinar correspondencia...",
     "flattenForms": "Aplanar formularios",
+    "fillAndSign": "Rellenar y firmar...",
     "scanDevice": "Escanear desde dispositivo...",
     "runOcr": "Ejecutar OCR...",
     "manageLanguagePacks": "Administrar paquetes de idioma...",
@@ -54,6 +55,9 @@
     "about": "Acerca de PDF_Viewer_Editor"
   },
   "tooltips": {
+    "findComing": "La función Buscar está planificada para una versión futura.",
+    "pageFromFileComing": "Insertar páginas desde otro PDF está planificado para una versión futura.",
+    "scanDeferred": "Use la utilidad de escaneo de su sistema operativo, luego arrastre el PDF guardado aquí para ejecutar OCR.",
     "mailMergeNeedsField": "Detecte o cree al menos un campo de formulario primero."
   }
 }

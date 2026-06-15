@@ -21,7 +21,6 @@ import {
   openHelpModal,
   openImageImportModal,
   openModal,
-  pushToast,
   setTextEditMode,
   toggleInspector,
   toggleSidebar,
@@ -227,8 +226,13 @@ export function useAppShortcuts(): void {
           dispatch(setTextEditMode(!textEditActive));
           break;
         case 'find':
-          // Phase 3+
-          dispatch(pushToast({ kind: 'info', message: 'Find: coming in Phase 3.' }));
+          // Phase 7.4 A1 (Riley) — Find is genuinely deferred. The previous
+          // toast read "Coming in Phase 3" three phases AFTER Phase 3 shipped.
+          // Per honesty refresh: do nothing on Ctrl+F (the menu entry is the
+          // single surface for the deferral message; broadcasting it from a
+          // keypress added no value). The shortcut entry stays registered for
+          // the future Find wave (Bucket B3) — that wave wires the search UI.
+          e.preventDefault();
           break;
         case 'toggle-form-designer':
           e.preventDefault();

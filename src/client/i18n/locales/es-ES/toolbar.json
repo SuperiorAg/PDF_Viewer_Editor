@@ -60,7 +60,7 @@
   "confidenceOverlay": "Capa de confianza",
   "confidenceOverlayTooltip": "Alternar la capa de confianza de OCR",
   "scanDevice": "Escanear desde dispositivo",
-  "scanDeviceTooltip": "La integración del escáner llegará en la fase 5.1",
+  "scanDeviceTooltip": "Use la utilidad de escaneo de su sistema operativo, luego arrastre el PDF guardado aquí para ejecutar OCR.",
   "combine": "Combinar",
   "combineTooltip": "Combinar PDF...",
   "settings": "Configuración",
