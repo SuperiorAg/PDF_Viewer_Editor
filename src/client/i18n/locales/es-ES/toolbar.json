@@ -66,5 +66,32 @@
   "settings": "Configuración",
   "settingsTooltip": "Configuración (Ctrl+,)",
   "annotationLayerIdle": "Capa de anotaciones. Seleccione una herramienta en la barra de anotaciones y luego dibuje con el ratón o el lápiz. Usuarios de teclado: elija una herramienta en la barra; las anotaciones existentes se pueden seleccionar y editar desde el Inspector.",
-  "annotationLayerDrawing": "Superficie de dibujo de anotaciones — herramienta {{tool}} activa. Arrastre con el ratón o el lápiz para dibujar. Usuarios de teclado: use el Inspector para añadir y posicionar anotaciones."
+  "annotationLayerDrawing": "Superficie de dibujo de anotaciones — herramienta {{tool}} activa. Arrastre con el ratón o el lápiz para dibujar. Usuarios de teclado: use el Inspector para añadir y posicionar anotaciones.",
+  "shapeTools": {
+    "label": "Herramientas de anotación de forma",
+    "rect": "Rect.",
+    "rectAria": "Rectángulo (Q)",
+    "rectTooltip": "Rectángulo (Q)",
+    "ellipse": "Elipse",
+    "ellipseAria": "Elipse (C)",
+    "ellipseTooltip": "Elipse (C)",
+    "polygon": "Polígono",
+    "polygonAria": "Polígono (G)",
+    "polygonTooltip": "Polígono (G)",
+    "line": "Línea",
+    "lineAria": "Línea / Flecha (L)",
+    "lineTooltip": "Línea / Flecha (L)",
+    "arrow": "Flecha",
+    "arrowAria": "Flecha (L)",
+    "arrowTooltip": "Flecha (L)",
+    "callout": "Llamada",
+    "calloutAria": "Llamada (B)",
+    "calloutTooltip": "Llamada (B)",
+    "lineMeasure": "Medir",
+    "lineMeasureAria": "Medición de línea (M)",
+    "lineMeasureTooltip": "Medición de línea (M)",
+    "polylineMeasure": "Polimedir",
+    "polylineMeasureAria": "Medición de polilínea (Mayús+M)",
+    "polylineMeasureTooltip": "Medición de polilínea (Mayús+M)"
+  }
 }

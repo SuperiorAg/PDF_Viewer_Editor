@@ -70,5 +70,32 @@
   "settings": "Settings",
   "settingsTooltip": "Settings (Ctrl+,)",
   "annotationLayerIdle": "Annotation layer. Select a tool from the Annotation toolbar, then draw with the mouse or pen. Keyboard users: pick a tool from the toolbar; existing annotations are selectable and editable from the Inspector.",
-  "annotationLayerDrawing": "Annotation drawing surface — {{tool}} tool active. Drag with the mouse or pen to draw. Keyboard users: use the Inspector to add and position annotations."
+  "annotationLayerDrawing": "Annotation drawing surface — {{tool}} tool active. Drag with the mouse or pen to draw. Keyboard users: use the Inspector to add and position annotations.",
+  "shapeTools": {
+    "label": "Shape annotation tools",
+    "rect": "Rect",
+    "rectAria": "Rectangle (Q)",
+    "rectTooltip": "Rectangle (Q)",
+    "ellipse": "Ellipse",
+    "ellipseAria": "Ellipse (C)",
+    "ellipseTooltip": "Ellipse (C)",
+    "polygon": "Polygon",
+    "polygonAria": "Polygon (G)",
+    "polygonTooltip": "Polygon (G)",
+    "line": "Line",
+    "lineAria": "Line / Arrow (L)",
+    "lineTooltip": "Line / Arrow (L)",
+    "arrow": "Arrow",
+    "arrowAria": "Arrow (L)",
+    "arrowTooltip": "Arrow (L)",
+    "callout": "Callout",
+    "calloutAria": "Callout (B)",
+    "calloutTooltip": "Callout (B)",
+    "lineMeasure": "Measure",
+    "lineMeasureAria": "Line measure (M)",
+    "lineMeasureTooltip": "Line measure (M)",
+    "polylineMeasure": "Poly-Measure",
+    "polylineMeasureAria": "Polyline measure (Shift+M)",
+    "polylineMeasureTooltip": "Polyline measure (Shift+M)"
+  }
 }
