@@ -59,6 +59,7 @@ import { PDFArray, PDFDict, PDFDocument, PDFName, type PDFObject } from 'pdf-lib
 import { fail, ok, type Result } from '../../shared/result.js';
 
 import { stripDocLevelJavaScript } from './form-engine.js';
+import { detectPriorPadesSignatures } from './pades-detect.js';
 
 // ============================================================================
 // Public types
@@ -86,9 +87,24 @@ export type SanitizeCategory =
 export interface SanitizeOptions {
   pdfBytes: Uint8Array;
   categories: ReadonlyArray<SanitizeCategory>;
+  /**
+   * Wave 5 carry-over (David, 2026-06-17): when the input PDF carries a prior
+   * PAdES signature, sanitize is content-mutating per architecture §6 AR4 and
+   * MUST invalidate the cryptographic seal. The engine refuses to proceed
+   * unless the caller has explicitly confirmed (renderer surfaces Riley's
+   * existing "Signature will be invalidated" panel). Default `false`.
+   *
+   * The detection delegates to `pades-detect.ts` so the rule is consistent
+   * with replay-engine + OCR + every other content-mutating handler.
+   */
+  confirmSignedDocOverwrite?: boolean;
 }
 
-export type SanitizeEngineError = 'invalid_payload' | 'pdf_load_failed' | 'engine_failed';
+export type SanitizeEngineError =
+  | 'invalid_payload'
+  | 'pdf_load_failed'
+  | 'signed_pdf_requires_confirm'
+  | 'engine_failed';
 
 export interface SanitizeResult {
   bytes: Uint8Array;
@@ -127,6 +143,23 @@ export async function sanitizeDocument(
       'pdf_load_failed',
       e instanceof Error && e.message ? e.message : 'pdf load failed',
     );
+  }
+
+  // 1a. Wave 5 carry-over (David, 2026-06-17): signed-PDF early-return.
+  //
+  // Sanitize is content-mutating (rebuild-from-scratch always invalidates the
+  // signature byte-range). When the source carries a prior PAdES signature,
+  // refuse to proceed unless the caller explicitly opted in. Riley's UI panel
+  // surfaces the variant to the user before retrying with the confirm flag.
+  if (opts.confirmSignedDocOverwrite !== true) {
+    const fields = detectPriorPadesSignatures(src);
+    if (fields.length > 0) {
+      return fail<SanitizeEngineError>(
+        'signed_pdf_requires_confirm',
+        'document carries a prior PAdES signature; sanitize would invalidate it',
+        { signatureFieldNames: fields },
+      );
+    }
   }
 
   const categories = dedupe(opts.categories);

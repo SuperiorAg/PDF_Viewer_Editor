@@ -203,4 +203,77 @@ describe('sanitizeDocument', () => {
     if (!res.ok) return;
     expect(res.value.categoriesApplied).toEqual(['metadata', 'js']);
   });
+
+  // ==========================================================================
+  // Wave 5 carry-over (David, 2026-06-17): signed-PDF early-return.
+  // ==========================================================================
+
+  async function makeSignedPdf(): Promise<Uint8Array> {
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([200, 300]);
+    const ctx = doc.context;
+
+    // /V dict carrying a non-empty /Contents (the hex string is the placeholder
+    // for the CMS signature byte range).
+    const { PDFHexString } = await import('pdf-lib');
+    const vDict = PDFDict.withContext(ctx);
+    vDict.set(PDFName.of('Contents'), PDFHexString.of('aabbccdd'.repeat(64)));
+
+    const fieldDict = PDFDict.withContext(ctx);
+    fieldDict.set(PDFName.of('FT'), PDFName.of('Sig'));
+    fieldDict.set(PDFName.of('T'), PDFString.of('Signature1'));
+    fieldDict.set(PDFName.of('V'), vDict);
+    const fieldRef = ctx.register(fieldDict);
+
+    const widgetDict = PDFDict.withContext(ctx);
+    widgetDict.set(PDFName.of('Type'), PDFName.of('Annot'));
+    widgetDict.set(PDFName.of('Subtype'), PDFName.of('Widget'));
+    widgetDict.set(PDFName.of('Rect'), ctx.obj([50, 50, 150, 100]));
+    widgetDict.set(PDFName.of('F'), ctx.obj(4));
+    widgetDict.set(PDFName.of('P'), page.ref);
+    widgetDict.set(PDFName.of('Parent'), fieldRef);
+    const widgetRef = ctx.register(widgetDict);
+
+    const kidsArray = PDFArray.withContext(ctx);
+    kidsArray.push(widgetRef);
+    fieldDict.set(PDFName.of('Kids'), kidsArray);
+
+    const fieldsArr = PDFArray.withContext(ctx);
+    fieldsArr.push(fieldRef);
+    const acroForm = PDFDict.withContext(ctx);
+    acroForm.set(PDFName.of('Fields'), fieldsArr);
+    doc.catalog.set(PDFName.of('AcroForm'), acroForm);
+
+    const annots = PDFArray.withContext(ctx);
+    annots.push(widgetRef);
+    page.node.set(PDFName.of('Annots'), annots);
+
+    return doc.save({ useObjectStreams: false });
+  }
+
+  it('refuses signed PDF without confirmation; returns signed_pdf_requires_confirm', async () => {
+    const bytes = await makeSignedPdf();
+    const res = await sanitizeDocument({
+      pdfBytes: bytes,
+      categories: ['metadata'],
+    });
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.error).toBe('signed_pdf_requires_confirm');
+    expect(res.details?.['signatureFieldNames']).toEqual(['Signature1']);
+  });
+
+  it('proceeds on signed PDF when confirmSignedDocOverwrite=true', async () => {
+    const bytes = await makeSignedPdf();
+    const res = await sanitizeDocument({
+      pdfBytes: bytes,
+      categories: ['metadata', 'form-fields'],
+      confirmSignedDocOverwrite: true,
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    // Rebuild-from-scratch dropped the AcroForm by construction.
+    const out = await PDFDocument.load(res.value.bytes);
+    expect(out.catalog.has(PDFName.of('AcroForm'))).toBe(false);
+  });
 });

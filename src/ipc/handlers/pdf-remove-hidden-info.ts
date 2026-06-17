@@ -46,6 +46,10 @@ const categorySchema = z.union([
 const requestSchema = z.object({
   handle: z.number().int().positive(),
   categories: z.array(categorySchema).min(1),
+  // Wave 5 carry-over (David, 2026-06-17): signed-PDF confirmation flag.
+  // Default false (or absent); the renderer sets `true` on the second call
+  // after the user acknowledges Riley's confirmation panel.
+  confirmSignedDocOverwrite: z.boolean().optional(),
 });
 
 // ============================================================================
@@ -86,6 +90,9 @@ export async function handlePdfRemoveHiddenInfo(
     engineRes = await engine({
       pdfBytes: bytes,
       categories: r.categories as ReadonlyArray<EngineCategory>,
+      ...(r.confirmSignedDocOverwrite !== undefined
+        ? { confirmSignedDocOverwrite: r.confirmSignedDocOverwrite }
+        : {}),
     });
   } catch (e) {
     return fail<PdfRemoveHiddenInfoError>('engine_failed', safeMessage(e, 'sanitize engine threw'));
@@ -116,6 +123,8 @@ function mapEngineErr(
   switch (engineErr) {
     case 'invalid_payload':
       return fail<PdfRemoveHiddenInfoError>('invalid_payload', message, details);
+    case 'signed_pdf_requires_confirm':
+      return fail<PdfRemoveHiddenInfoError>('signed_pdf_requires_confirm', message, details);
     case 'pdf_load_failed':
     case 'engine_failed':
     default:

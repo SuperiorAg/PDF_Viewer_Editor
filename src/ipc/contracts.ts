@@ -1816,9 +1816,21 @@ export type SanitizeCategory =
 export interface PdfRemoveHiddenInfoRequest {
   handle: DocumentHandle;
   categories: SanitizeCategory[];
+  /**
+   * Wave 5 carry-over (David, 2026-06-17): when the document carries a prior
+   * PAdES signature, sanitize is content-mutating and invalidates the seal.
+   * The first call (without this flag) returns `signed_pdf_requires_confirm`;
+   * the renderer surfaces Riley's confirmation panel; the second call sets
+   * this to `true`. Default `false` (or absent).
+   */
+  confirmSignedDocOverwrite?: boolean;
 }
 
-export type PdfRemoveHiddenInfoError = 'invalid_payload' | 'handle_not_found' | 'engine_failed';
+export type PdfRemoveHiddenInfoError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'signed_pdf_requires_confirm'
+  | 'engine_failed';
 
 export interface PdfRemoveHiddenInfoValue {
   categoriesApplied: SanitizeCategory[];
@@ -1937,6 +1949,128 @@ export type PdfSwapEmbeddedFontResponse = Result<
   PdfSwapEmbeddedFontValue,
   PdfSwapEmbeddedFontError
 >;
+
+// ============================================================================
+// Phase 7.5 Wave 5a — Read Aloud (C1) + Preflight (C2)
+// Contract: docs/api-contracts.md §19.5 (TTS), §19.6 (Preflight).
+// Engines:  src/main/tts/tts-engine.ts, src/main/pdf-ops/preflight-engine.ts.
+// ============================================================================
+
+// ---- tts:listVoices (C1) --------------------------------------------------
+
+export interface TtsListVoicesRequest {
+  /** Empty for v1. Reserved for future locale-filter / engine-pin parameters. */
+}
+
+export type TtsListVoicesError = 'engine_unavailable';
+
+export interface TtsVoice {
+  /** OS-stable identifier. SAPI returns the registry key; `say` returns the
+   *  voice display name; espeak returns the voice file basename. */
+  id: string;
+  name: string;
+  /** BCP-47 (e.g. 'en-US'). Best-effort — some Linux espeak voices return
+   *  ISO 639-1 only; the adapter normalizes to BCP-47 where possible. */
+  locale: string;
+  gender: 'male' | 'female' | 'neutral' | 'unknown';
+}
+
+export interface TtsListVoicesValue {
+  voices: TtsVoice[];
+  engineName: 'sapi' | 'say' | 'espeak';
+}
+
+export type TtsListVoicesResponse = Result<TtsListVoicesValue, TtsListVoicesError>;
+
+// ---- tts:speakText (C1) ---------------------------------------------------
+
+export interface TtsSpeakTextRequest {
+  text: string;
+  /** null / undefined = OS default for active locale. */
+  voiceId?: string;
+  /** 0.5..2.0; default 1.0. Validated by handler. */
+  rate?: number;
+  /** 0.5..2.0; default 1.0. Validated by handler. */
+  pitch?: number;
+  /**
+   * Renderer-computed sentence boundaries over the `text` string. The engine
+   * uses these to emit `tts:boundary` events as speech advances (best-effort
+   * on Linux — espeak word boundaries are coarse).
+   */
+  sentenceBoundaries: { offset: number; length: number }[];
+}
+
+export type TtsSpeakTextError =
+  | 'invalid_payload'
+  | 'engine_unavailable'
+  | 'engine_busy'
+  | 'engine_failed';
+
+export interface TtsSpeakTextValue {
+  /** Correlation id for pause/resume/stop and boundary events. */
+  jobId: string;
+}
+
+export type TtsSpeakTextResponse = Result<TtsSpeakTextValue, TtsSpeakTextError>;
+
+// ---- tts:pause / tts:resume / tts:stop (C1) -------------------------------
+
+export interface TtsControlRequest {
+  jobId: string;
+}
+
+export type TtsControlError = 'invalid_payload' | 'job_not_found' | 'engine_failed';
+
+export interface TtsControlValue {
+  state: 'paused' | 'resumed' | 'stopped';
+}
+
+export type TtsControlResponse = Result<TtsControlValue, TtsControlError>;
+
+// ---- tts:boundary event stream (C1) ---------------------------------------
+//
+// Main -> renderer push channel. Emitted as the TTS engine advances through
+// the text so the Read Aloud bar can highlight the active sentence.
+
+export interface TtsBoundaryEvent {
+  jobId: string;
+  kind: 'sentence-start' | 'sentence-end' | 'finished' | 'error';
+  sentenceIndex?: number;
+  errorMessage?: string;
+}
+
+// ---- pdf:runPreflight (C2) ------------------------------------------------
+
+export type PreflightProfile = 'pdf-x-1a' | 'pdf-x-4' | 'pdf-a-1b' | 'pdf-a-2b';
+export type PreflightSeverity = 'error' | 'warning' | 'info';
+
+export interface PdfRunPreflightRequest {
+  handle: DocumentHandle;
+  profiles: PreflightProfile[];
+}
+
+export type PdfRunPreflightError = 'invalid_payload' | 'handle_not_found' | 'engine_failed';
+
+export interface PreflightRuleResult {
+  /** See docs/preflight-spec.md §3 (e.g. `preflight.fonts.all-embedded`). */
+  ruleId: string;
+  profile: PreflightProfile;
+  severity: PreflightSeverity;
+  passed: boolean;
+  /** i18n key — renderer resolves via `t()` per §19.19. */
+  message: string;
+  locations: { pageIndex: number; bbox?: [number, number, number, number] }[];
+}
+
+export interface PdfRunPreflightValue {
+  results: PreflightRuleResult[];
+  /** ms epoch — for the "Last run at ..." display. */
+  ranAt: number;
+  /** Total rules in the SHIPPED rule set (Wave 5a subset; honest disclosure). */
+  shippedRuleCount: number;
+}
+
+export type PdfRunPreflightResponse = Result<PdfRunPreflightValue, PdfRunPreflightError>;
 
 // ---- pdf:applyStamp (B7) ---------------------------------------------------
 
@@ -4061,6 +4195,17 @@ export const Channels = {
   PdfGetDocumentProperties: 'pdf:getDocumentProperties',
   PdfSetDocumentProperties: 'pdf:setDocumentProperties',
   PdfSwapEmbeddedFont: 'pdf:swapEmbeddedFont',
+  // Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud (TTS) + C2 Preflight.
+  // TTS via per-OS subprocess (SAPI/PowerShell on Windows; `say` on macOS;
+  // `espeak` SUBPROCESS-ONLY on Linux per Diego license vet). Preflight is
+  // pure pdf-lib, no new deps. See docs/api-contracts.md §19.5–§19.6.
+  TtsListVoices: 'tts:listVoices',
+  TtsSpeakText: 'tts:speakText',
+  TtsPause: 'tts:pause',
+  TtsResume: 'tts:resume',
+  TtsStop: 'tts:stop',
+  TtsBoundary: 'tts:boundary',
+  PdfRunPreflight: 'pdf:runPreflight',
   // Phase 2 fs (replay-engine entry point)
   FsApplyEditOps: 'fs:applyEditOps',
   // Phase 4.1 (api-contracts.md §15, David)
@@ -4257,6 +4402,18 @@ export interface PdfApi {
       req: PdfSetDocumentPropertiesRequest,
     ) => Promise<PdfSetDocumentPropertiesResponse>;
     swapEmbeddedFont: (req: PdfSwapEmbeddedFontRequest) => Promise<PdfSwapEmbeddedFontResponse>;
+    // Phase 7.5 Wave 5a (David, 2026-06-17) — C2 Preflight (pure pdf-lib).
+    runPreflight: (req: PdfRunPreflightRequest) => Promise<PdfRunPreflightResponse>;
+  };
+  // Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud (TTS).
+  tts: {
+    listVoices: (req: TtsListVoicesRequest) => Promise<TtsListVoicesResponse>;
+    speakText: (req: TtsSpeakTextRequest) => Promise<TtsSpeakTextResponse>;
+    pause: (req: TtsControlRequest) => Promise<TtsControlResponse>;
+    resume: (req: TtsControlRequest) => Promise<TtsControlResponse>;
+    stop: (req: TtsControlRequest) => Promise<TtsControlResponse>;
+    /** Subscribe to tts:boundary push events. Returns unsubscribe fn. */
+    onBoundary: (handler: (event: TtsBoundaryEvent) => void) => () => void;
   };
   // Phase 7.5 Wave 3 (David, 2026-06-17) — stamps_library CRUD.
   stamps: {

@@ -114,6 +114,16 @@ import type {
   PdfSwapEmbeddedFontResponse,
   PdfReplaceTextRequest,
   PdfReplaceTextResponse,
+  // Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud + C2 Preflight.
+  PdfRunPreflightRequest,
+  PdfRunPreflightResponse,
+  TtsListVoicesRequest,
+  TtsListVoicesResponse,
+  TtsSpeakTextRequest,
+  TtsSpeakTextResponse,
+  TtsControlRequest,
+  TtsControlResponse,
+  TtsBoundaryEvent,
   RecentsAddRequest,
   RecentsAddResponse,
   RecentsClearResponse,
@@ -380,6 +390,29 @@ const pdfApi: PdfApi = {
       ) as Promise<PdfSetDocumentPropertiesResponse>,
     swapEmbeddedFont: (req: PdfSwapEmbeddedFontRequest) =>
       ipcRenderer.invoke(Channels.PdfSwapEmbeddedFont, req) as Promise<PdfSwapEmbeddedFontResponse>,
+    // Phase 7.5 Wave 5a (David, 2026-06-17) — C2 Preflight.
+    runPreflight: (req: PdfRunPreflightRequest) =>
+      ipcRenderer.invoke(Channels.PdfRunPreflight, req) as Promise<PdfRunPreflightResponse>,
+  },
+  // Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud (TTS).
+  tts: {
+    listVoices: (req: TtsListVoicesRequest) =>
+      ipcRenderer.invoke(Channels.TtsListVoices, req) as Promise<TtsListVoicesResponse>,
+    speakText: (req: TtsSpeakTextRequest) =>
+      ipcRenderer.invoke(Channels.TtsSpeakText, req) as Promise<TtsSpeakTextResponse>,
+    pause: (req: TtsControlRequest) =>
+      ipcRenderer.invoke(Channels.TtsPause, req) as Promise<TtsControlResponse>,
+    resume: (req: TtsControlRequest) =>
+      ipcRenderer.invoke(Channels.TtsResume, req) as Promise<TtsControlResponse>,
+    stop: (req: TtsControlRequest) =>
+      ipcRenderer.invoke(Channels.TtsStop, req) as Promise<TtsControlResponse>,
+    onBoundary: (handler: (event: TtsBoundaryEvent) => void) => {
+      const wrapped = (_e: unknown, event: TtsBoundaryEvent): void => handler(event);
+      ipcRenderer.on(Channels.TtsBoundary, wrapped);
+      return () => {
+        ipcRenderer.removeListener(Channels.TtsBoundary, wrapped);
+      };
+    },
   },
   // Phase 7.5 Wave 3 (David, 2026-06-17) — stamps_library CRUD.
   stamps: {

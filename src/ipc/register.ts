@@ -37,6 +37,7 @@ import type { WiaAddon } from '../main/pdf-ops/wia-scanner.js';
 import { dispatchPrintViaElectron, exportViaChromium } from '../main/print-window.js';
 import { sanitizeDirectoryPath, sanitizePath } from '../main/security/path-sanitizer.js';
 import type { TelemetryService } from '../main/telemetry.js';
+import { TtsEngine } from '../main/tts/tts-engine.js';
 import type { Result } from '../shared/result.js';
 
 import { Channels } from './contracts.js';
@@ -144,6 +145,8 @@ import { handlePdfPrint } from './handlers/pdf-print.js';
 import { handlePdfRemoveHiddenInfo } from './handlers/pdf-remove-hidden-info.js';
 import { handlePdfReplacePages } from './handlers/pdf-replace-pages.js';
 import { handlePdfReplaceText } from './handlers/pdf-replace-text.js';
+// Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud + C2 Preflight.
+import { handlePdfRunPreflight } from './handlers/pdf-run-preflight.js';
 import { handlePdfSetPasswordProtection } from './handlers/pdf-set-password-protection.js';
 import { handlePdfSplitDocument } from './handlers/pdf-split-document.js';
 import { handlePdfSwapEmbeddedFont } from './handlers/pdf-swap-embedded-font.js';
@@ -167,6 +170,7 @@ import {
   handleStampsDelete,
   handleStampsList,
 } from './handlers/stamps-handlers.js';
+// Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud (TTS) handlers.
 // Phase 5 (Wave 20, David) — OCR + scan handlers + worker pool wiring.
 // Phase 6 (Wave 24, David) — export-to-Office channels.
 // Phase 7 (Wave 28a, David) — auto-update + telemetry + i18n handlers.
@@ -186,6 +190,13 @@ import { registerTestSeedOcrJob } from './handlers/test-seed-ocr-job.js';
 // `docs/phase-7.2-test-design.md §2.6`.
 import { registerTestSeedSignatureAudit } from './handlers/test-seed-signature-audit.js';
 import { registerTestWhichBridge } from './handlers/test-which-bridge.js';
+import {
+  handleTtsListVoices,
+  handleTtsPause,
+  handleTtsResume,
+  handleTtsSpeakText,
+  handleTtsStop,
+} from './handlers/tts-handlers.js';
 // Phase 7.2 7.2.4 (Diego, 2026-06-10) — test-only signature_audit_log seed +
 // readback channels for the signed-PDF + OCR invalidation e2e. Same structural
 // gate (early-return when NODE_ENV !== 'test'). See
@@ -1084,6 +1095,35 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
       setBytes: (h, b) => documentStore.setBytes(h, b),
     }),
   );
+
+  // Phase 7.5 Wave 5a (David, 2026-06-17) — C2 Preflight + C1 Read Aloud (TTS).
+  //
+  // Preflight is pure pdf-lib (no new deps). TTS is per-OS subprocess via the
+  // sapi/say/espeak adapters; the engine is constructed once per session
+  // here and forwards boundary events to the main window over the
+  // `tts:boundary` push channel.
+  ipcMain.handle(Channels.PdfRunPreflight, (_evt, payload) =>
+    handlePdfRunPreflight(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+    }),
+  );
+
+  const ttsEngine = new TtsEngine();
+  const ttsDeps = { engine: ttsEngine };
+  ttsEngine.subscribeBoundaries((event) => {
+    const win = getMainWindow();
+    if (!win || win.isDestroyed()) return;
+    try {
+      win.webContents.send(Channels.TtsBoundary, event);
+    } catch {
+      /* defensive — window may be torn down */
+    }
+  });
+  ipcMain.handle(Channels.TtsListVoices, (_evt, payload) => handleTtsListVoices(payload, ttsDeps));
+  ipcMain.handle(Channels.TtsSpeakText, (_evt, payload) => handleTtsSpeakText(payload, ttsDeps));
+  ipcMain.handle(Channels.TtsPause, (_evt, payload) => handleTtsPause(payload, ttsDeps));
+  ipcMain.handle(Channels.TtsResume, (_evt, payload) => handleTtsResume(payload, ttsDeps));
+  ipcMain.handle(Channels.TtsStop, (_evt, payload) => handleTtsStop(payload, ttsDeps));
 
   ipcMain.handle(Channels.BookmarksListTree, (_evt, payload) =>
     handleBookmarksListTree(payload, { repo: getDbBridge().bookmarks }),
