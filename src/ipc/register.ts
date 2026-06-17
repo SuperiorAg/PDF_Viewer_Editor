@@ -121,8 +121,12 @@ import { handlePdfApplyHeaderFooter } from './handlers/pdf-apply-header-footer.j
 import { handlePdfApplyRedactions } from './handlers/pdf-apply-redactions.js';
 import { handlePdfApplyStamp } from './handlers/pdf-apply-stamp.js';
 import { handlePdfApplyWatermark } from './handlers/pdf-apply-watermark.js';
+// Phase 7.5 Wave 4 (David, 2026-06-17) — B6 / B13 / B19.
+import { handlePdfAutoBookmarkFromHeadings } from './handlers/pdf-auto-bookmark-from-headings.js';
 import { handlePdfCombine } from './handlers/pdf-combine.js';
+import { handlePdfCompressDocument } from './handlers/pdf-compress-document.js';
 import { handlePdfCropPages } from './handlers/pdf-crop-pages.js';
+import { handlePdfEditLinks } from './handlers/pdf-edit-links.js';
 import { handlePdfEmbedImage } from './handlers/pdf-embed-image.js';
 import { defaultPickEngine, handlePdfExport } from './handlers/pdf-export-pdf.js';
 import { handlePdfExtractPages } from './handlers/pdf-extract-pages.js';
@@ -305,6 +309,103 @@ export interface RegisterIpcOptions {
 // Reference unused imports to keep them from being tree-shaken in type-only
 // usage contexts (verbatimModuleSyntax discipline).
 export type _UnusedOcrEngineError = OcrEngineError;
+
+// ============================================================================
+// Phase 7.5 Wave 4 — production pdf.js text-item extractor for
+// `pdf:autoBookmarkFromHeadings`.
+//
+// L-004 / L-005 compliance:
+//   - Polyfills (canvas globals) must land on `globalThis` BEFORE the dynamic
+//     `import('pdfjs-dist/...')` resolves. We delegate to the SAME canonical
+//     bootstrap path that ocr-bootstrap uses (`tryLoadCanvas` installs the
+//     globals; the dynamic import is wrapped in the same lazy cache).
+//   - The bytes passed to `getDocument({data})` are a fresh `.slice()` so
+//     pdf.js's fake-worker transport can detach the buffer without
+//     invalidating the caller's view (the L-004 rule).
+//
+// Failure mode: if pdf.js / @napi-rs/canvas isn't loadable, this function
+// throws. The handler maps it to `engine_failed` with a non-leaking message.
+// ============================================================================
+
+type AutoBookmarkPdfJsTextItem = {
+  str?: string;
+  transform?: number[];
+  height?: number;
+};
+
+type AutoBookmarkPdfJsPage = {
+  getTextContent(): Promise<{ items: AutoBookmarkPdfJsTextItem[] }>;
+};
+
+type AutoBookmarkPdfJsDoc = {
+  numPages: number;
+  getPage(n: number): Promise<AutoBookmarkPdfJsPage>;
+  destroy?: () => Promise<void> | void;
+};
+
+type AutoBookmarkPdfJsModule = {
+  getDocument(opts: { data: Uint8Array }): { promise: Promise<AutoBookmarkPdfJsDoc> };
+};
+
+let _autoBookmarkPdfJs: AutoBookmarkPdfJsModule | null = null;
+
+async function loadAutoBookmarkPdfJs(): Promise<AutoBookmarkPdfJsModule> {
+  if (_autoBookmarkPdfJs !== null) return _autoBookmarkPdfJs;
+  // Polyfills FIRST (L-005). The dynamic import below captures globalThis at
+  // module-evaluation time. We reuse ocr-bootstrap's `tryLoadCanvas` indirectly
+  // by importing it; that helper installs canvas globals on globalThis as a
+  // side effect of its lazy require. Install is idempotent.
+  const ocrBootstrap = await import('../main/pdf-ops/ocr-bootstrap.js');
+  ocrBootstrap.tryLoadCanvas();
+  const moduleName = 'pdfjs-dist' + '/legacy/build/pdf.mjs';
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+  const mod = (await import(moduleName)) as AutoBookmarkPdfJsModule;
+  _autoBookmarkPdfJs = mod;
+  return mod;
+}
+
+/** Production extractor for B19 auto-bookmark heuristic. */
+async function productionExtractPageTextItems(
+  bytes: Uint8Array,
+  pageIndex: number,
+): Promise<{ text: string; fontSize: number }[]> {
+  const pdfjs = await loadAutoBookmarkPdfJs();
+  // L-004: pass an OWNED copy so pdf.js's fake-worker transport doesn't detach
+  // the caller's view.
+  const ownedCopy = new Uint8Array(bytes).slice();
+  const doc = await pdfjs.getDocument({ data: ownedCopy }).promise;
+  try {
+    if (pageIndex >= doc.numPages) return [];
+    const page = await doc.getPage(pageIndex + 1); // pdf.js is 1-indexed
+    const content = await page.getTextContent();
+    const items: { text: string; fontSize: number }[] = [];
+    for (const it of content.items) {
+      const text = typeof it.str === 'string' ? it.str : '';
+      if (text.length === 0) continue;
+      // pdf.js's transform[3] is the vertical scale ≈ font size in user-space
+      // points; `height` is an alternate signal. Fall back to height if
+      // transform is missing.
+      const tform = Array.isArray(it.transform) ? it.transform : null;
+      const fromTransform =
+        tform && tform.length >= 4 && Number.isFinite(tform[3]!) ? Math.abs(tform[3]!) : null;
+      const fontSize =
+        fromTransform !== null
+          ? fromTransform
+          : Number.isFinite(it.height ?? NaN)
+            ? (it.height as number)
+            : 0;
+      if (fontSize <= 0) continue;
+      items.push({ text, fontSize });
+    }
+    return items;
+  } finally {
+    try {
+      await doc.destroy?.();
+    } catch {
+      /* best-effort */
+    }
+  }
+}
 
 export function registerIpcHandlers(opts: RegisterIpcOptions): void {
   const {
@@ -877,6 +978,45 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
         const dest = documentStore.issueDirectoryToken(directory, displayName, baseFilename);
         return { token: dest.token, displayName: dest.displayName };
       },
+    }),
+  );
+
+  // ============================================================================
+  // Phase 7.5 Wave 4 (David, 2026-06-17) — B6 Compress + B13 Hyperlinks +
+  // B19 Auto-bookmarks.
+  //
+  // - B6/B13 engines are pure pdf-lib; handlers wire documentStore for byte
+  //   get/set.
+  // - B19 engine is pure (pdf.js-free) with a deps-injected text extractor.
+  //   The production extractor is wired here lazily via the SAME loadPdfJs
+  //   pattern ocr-bootstrap uses (polyfills BEFORE the dynamic import per
+  //   L-005). The handler surfaces engine_failed on extractor errors, so a
+  //   pdf.js cold-start issue is honestly reported rather than silently
+  //   swallowed.
+  // ============================================================================
+
+  ipcMain.handle(Channels.PdfCompressDocument, (_evt, payload) =>
+    handlePdfCompressDocument(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+    }),
+  );
+
+  ipcMain.handle(Channels.PdfEditLinks, (_evt, payload) =>
+    handlePdfEditLinks(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+    }),
+  );
+
+  ipcMain.handle(Channels.PdfAutoBookmarkFromHeadings, (_evt, payload) =>
+    handlePdfAutoBookmarkFromHeadings(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      getPageCount: async (bytes) => {
+        const meta = await loadPdfMetadata(bytes);
+        return meta.pageCount;
+      },
+      extractPageTextItems: productionExtractPageTextItems,
     }),
   );
 

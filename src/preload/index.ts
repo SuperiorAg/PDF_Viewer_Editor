@@ -94,6 +94,13 @@ import type {
   StampsCreateResponse,
   StampsDeleteRequest,
   StampsDeleteResponse,
+  // Phase 7.5 Wave 4 (David, 2026-06-17) — B6 / B13 / B19.
+  PdfCompressDocumentRequest,
+  PdfCompressDocumentResponse,
+  PdfAutoBookmarkFromHeadingsRequest,
+  PdfAutoBookmarkFromHeadingsResponse,
+  PdfEditLinksRequest,
+  PdfEditLinksResponse,
   PdfReplaceTextRequest,
   PdfReplaceTextResponse,
   RecentsAddRequest,
@@ -332,6 +339,16 @@ const pdfApi: PdfApi = {
       ipcRenderer.invoke(Channels.PdfApplyBackground, req) as Promise<PdfApplyBackgroundResponse>,
     applyStamp: (req: PdfApplyStampRequest) =>
       ipcRenderer.invoke(Channels.PdfApplyStamp, req) as Promise<PdfApplyStampResponse>,
+    // Phase 7.5 Wave 4 (David, 2026-06-17) — B6 + B13 + B19.
+    compressDocument: (req: PdfCompressDocumentRequest) =>
+      ipcRenderer.invoke(Channels.PdfCompressDocument, req) as Promise<PdfCompressDocumentResponse>,
+    autoBookmarkFromHeadings: (req: PdfAutoBookmarkFromHeadingsRequest) =>
+      ipcRenderer.invoke(
+        Channels.PdfAutoBookmarkFromHeadings,
+        req,
+      ) as Promise<PdfAutoBookmarkFromHeadingsResponse>,
+    editLinks: (req: PdfEditLinksRequest) =>
+      ipcRenderer.invoke(Channels.PdfEditLinks, req) as Promise<PdfEditLinksResponse>,
   },
   // Phase 7.5 Wave 3 (David, 2026-06-17) — stamps_library CRUD.
   stamps: {

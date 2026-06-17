@@ -1631,6 +1631,119 @@ export interface PdfApplyBackgroundValue {
 
 export type PdfApplyBackgroundResponse = Result<PdfApplyBackgroundValue, PdfApplyBackgroundError>;
 
+// ---- pdf:compressDocument (B6, Wave 4) ------------------------------------
+//
+// Contract: docs/api-contracts.md §19.4.1.
+// Engine:   src/main/pdf-ops/compress-engine.ts.
+
+export interface PdfCompressDocumentRequest {
+  handle: DocumentHandle;
+  /** null = do not downsample. Values typically 96 / 150 / 300. */
+  imageDownsampleDpi: number | null;
+  /** 0..1; null = keep originals untouched. */
+  jpegRecompressQuality: number | null;
+  /** Default true; subset all custom-embedded fonts. */
+  fontSubsetting: boolean;
+  /** Default true; rebuild-from-scratch already discards unreachable objects. */
+  removeUnusedObjects: boolean;
+}
+
+export type PdfCompressDocumentError = 'invalid_payload' | 'handle_not_found' | 'engine_failed';
+
+export interface PdfCompressDocumentValue {
+  originalBytes: number;
+  compressedBytes: number;
+  /** `(1 - compressed/original) * 100`, clamped to [0, 100]. */
+  reductionPercent: number;
+  /** Honest signals for options the engine couldn't apply (e.g. image
+   *  recompression when no raster dep is vendored). Empty on full apply. */
+  warnings: string[];
+}
+
+export type PdfCompressDocumentResponse = Result<
+  PdfCompressDocumentValue,
+  PdfCompressDocumentError
+>;
+
+// ---- pdf:autoBookmarkFromHeadings (B19, Wave 4) ---------------------------
+//
+// Contract: docs/api-contracts.md §19.14.1.
+// Engine:   src/main/pdf-ops/auto-bookmark-engine.ts.
+
+export interface ProposedBookmark {
+  title: string;
+  pageIndex: number;
+  /** 0 = top-level; deeper values nest under the preceding sibling. */
+  depth: number;
+}
+
+export interface PdfAutoBookmarkFromHeadingsRequest {
+  handle: DocumentHandle;
+  heuristic: 'font-size-cluster';
+  /** Default 3 (H1, H2, H3). Caller may pass 2 for H1/H2 only. */
+  maxDepth: number;
+}
+
+export type PdfAutoBookmarkFromHeadingsError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'no_headings_detected'
+  | 'engine_failed';
+
+export interface PdfAutoBookmarkFromHeadingsValue {
+  /** User reviews + accepts before persisting via `bookmarks:upsert`. */
+  proposed: ProposedBookmark[];
+  warnings: string[];
+}
+
+export type PdfAutoBookmarkFromHeadingsResponse = Result<
+  PdfAutoBookmarkFromHeadingsValue,
+  PdfAutoBookmarkFromHeadingsError
+>;
+
+// ---- pdf:editLinks (B13, Wave 4) ------------------------------------------
+//
+// Contract: docs/api-contracts.md §19.15.1.
+// Engine:   src/main/pdf-ops/link-engine.ts.
+
+/** Hyperlink target: external URI, goto-page action, or goto-bookmark.
+ *  `goto-bookmark` is resolved by the renderer/repo at apply time; the
+ *  engine stores it as a private dict key (no PDF-level support v1). */
+export type LinkTarget =
+  | { kind: 'uri'; uri: string }
+  | { kind: 'goto-page'; pageIndex: number; zoom?: 'fit-page' | 'fit-width' | number }
+  | { kind: 'goto-bookmark'; bookmarkId: number };
+
+export type LinkAction =
+  | {
+      kind: 'add';
+      pageIndex: number;
+      /** [llx, lly, urx, ury] in PDF user-space coordinates. */
+      bbox: [number, number, number, number];
+      target: LinkTarget;
+    }
+  | { kind: 'update'; linkId: string; target: LinkTarget }
+  | { kind: 'remove'; linkId: string };
+
+export interface PdfEditLinksRequest {
+  handle: DocumentHandle;
+  actions: LinkAction[];
+}
+
+export type PdfEditLinksError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'link_not_found'
+  | 'engine_failed';
+
+export interface PdfEditLinksValue {
+  /** Stable ids for every added/updated link, in request order. Remove ops
+   *  contribute no id. Renderer correlates by index against the request. */
+  linkIds: string[];
+}
+
+export type PdfEditLinksResponse = Result<PdfEditLinksValue, PdfEditLinksError>;
+
 // ---- pdf:applyStamp (B7) ---------------------------------------------------
 
 export interface PdfApplyStampRequest {
@@ -3741,6 +3854,13 @@ export const Channels = {
   StampsCreate: 'stamps:create',
   StampsDelete: 'stamps:delete',
   DialogPickFolder: 'dialog:pickFolder',
+  // Phase 7.5 Wave 4 (David, 2026-06-17) — B6 Compress + B13 Hyperlinks +
+  // B19 Auto-bookmarks. Engines are pure pdf-lib (B6/B13) or pdf-lib + an
+  // injectable text extractor (B19). See docs/api-contracts.md §19.4.1,
+  // §19.14.1, §19.15.1.
+  PdfCompressDocument: 'pdf:compressDocument',
+  PdfAutoBookmarkFromHeadings: 'pdf:autoBookmarkFromHeadings',
+  PdfEditLinks: 'pdf:editLinks',
   // Phase 2 fs (replay-engine entry point)
   FsApplyEditOps: 'fs:applyEditOps',
   // Phase 4.1 (api-contracts.md §15, David)
@@ -3919,6 +4039,12 @@ export interface PdfApi {
     applyHeaderFooter: (req: PdfApplyHeaderFooterRequest) => Promise<PdfApplyHeaderFooterResponse>;
     applyBackground: (req: PdfApplyBackgroundRequest) => Promise<PdfApplyBackgroundResponse>;
     applyStamp: (req: PdfApplyStampRequest) => Promise<PdfApplyStampResponse>;
+    // Phase 7.5 Wave 4 (David, 2026-06-17) — B6 + B13 + B19.
+    compressDocument: (req: PdfCompressDocumentRequest) => Promise<PdfCompressDocumentResponse>;
+    autoBookmarkFromHeadings: (
+      req: PdfAutoBookmarkFromHeadingsRequest,
+    ) => Promise<PdfAutoBookmarkFromHeadingsResponse>;
+    editLinks: (req: PdfEditLinksRequest) => Promise<PdfEditLinksResponse>;
   };
   // Phase 7.5 Wave 3 (David, 2026-06-17) — stamps_library CRUD.
   stamps: {
