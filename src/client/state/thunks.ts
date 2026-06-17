@@ -291,6 +291,16 @@ export const closeDocumentThunk = createAsyncThunk<
  */
 const measureInflight = new Set<number>();
 
+// Bulk measurement is fast for small docs but for large ones (1000+ pages) the
+// sequential getPage round-trips monopolize the pdf.js worker for many seconds
+// — visible-page renders queue behind 1000+ metadata reads and the viewer
+// looks blank. Above this threshold we skip the bulk pass entirely and rely
+// on PdfCanvas's per-page lazy dispatch (it already calls getPage when
+// rendering, so the dims come free). The Letter default stays for unscrolled
+// pages; scrollbar drifts very slightly as pages are scrolled into view, which
+// is the price of unblocking the visible render path.
+const BULK_MEASURE_PAGE_LIMIT = 50;
+
 export const measurePageDimensionsThunk = createAsyncThunk<
   void,
   void,
@@ -298,6 +308,7 @@ export const measurePageDimensionsThunk = createAsyncThunk<
 >('document/measurePageDimensions', async (_arg, { dispatch, getState }) => {
   const docAtStart = getState().document.current;
   if (!docAtStart) return;
+  if (docAtStart.pageCount > BULK_MEASURE_PAGE_LIMIT) return;
   const handle = docAtStart.handle;
   if (measureInflight.has(handle)) return;
   measureInflight.add(handle);

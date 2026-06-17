@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { loadDocumentByHandle, type PdfLoaderError } from '../../services/pdf-loader';
 import { type PdfPageProxy, type RenderJob } from '../../services/pdf-render';
-import { useAppSelector } from '../../state/hooks';
+import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { selectAnnotationsForPage } from '../../state/slices/document-parameterized-selectors';
 import { selectCurrentDocument } from '../../state/slices/document-selectors';
+import { setPageDimensions } from '../../state/slices/document-slice';
 import { type FitMode } from '../../state/slices/viewport-slice';
 import { type PageModel } from '../../types/ipc-contract';
 import { AnnotationLayer } from '../annotation-layer';
@@ -52,6 +53,7 @@ interface PdfCanvasProps {
 // canvas needs to lay out (or fall back to the Letter default for the brief
 // pre-measure paint, which is visually fine).
 export function PdfCanvas(props: PdfCanvasProps): JSX.Element {
+  const dispatch = useAppDispatch();
   const doc = useAppSelector(selectCurrentDocument);
   const handle = doc?.handle;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -160,9 +162,24 @@ export function PdfCanvas(props: PdfCanvasProps): JSX.Element {
           return;
         }
         pageProxyRef.current = pageProxy;
-        // Phase 4.1.1: page dims now flow from `measurePageDimensionsThunk`
-        // into Redux (props.page.width/height), so PdfCanvas does not need to
-        // update component-local measured dims here.
+        // Lazy dim measurement: we already paid for getPage, so the proxy's
+        // width/height are free. For large docs the bulk
+        // measurePageDimensionsThunk skips eager measurement to free the
+        // worker for visible renders; this dispatch fills in dims as the
+        // user actually scrolls each page into view. Skip if dims already
+        // match (no needless action) and on rotated pages where the proxy's
+        // axis already lines up with PageModel's natural-orientation dims.
+        if (pageProxy.width !== props.page.width || pageProxy.height !== props.page.height) {
+          dispatch(
+            setPageDimensions([
+              {
+                pageIndex: props.index,
+                width: pageProxy.width,
+                height: pageProxy.height,
+              },
+            ]),
+          );
+        }
         runningJob = pageProxy.render(canvas, props.zoom);
         try {
           await runningJob.promise;
@@ -193,6 +210,13 @@ export function PdfCanvas(props: PdfCanvasProps): JSX.Element {
       pageProxyRef.current?.cleanup();
       pageProxyRef.current = null;
     };
+    // `dispatch` is Redux-stable; `props.page.width/height` are intentionally
+    // omitted — including them would re-fire the effect every time the lazy
+    // setPageDimensions dispatch above updates Redux, cancelling the in-flight
+    // render and re-fetching the same page proxy in a worker-thrashing loop.
+    // The dims-mismatch guard inside the effect already prevents redundant
+    // dispatches once Redux matches the proxy.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handle, props.index, props.zoom, isVisible]);
 
   return (
