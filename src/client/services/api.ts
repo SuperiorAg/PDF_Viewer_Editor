@@ -77,6 +77,15 @@ function makeBridgeUnavailableFallback(): PdfApi {
       print: unavailable,
       // Phase 7.4 B1 — Riley design §3.1.
       applyRedactions: unavailable,
+      // Phase 7.5 B5/B10/B11 — David Wave 2 IPC stubs. Riley pre-wires the
+      // unavailable fallback so the renderer typechecks before David's preload
+      // implementation lands. Real impl is in David's IPC handler + preload
+      // expose. See docs/api-contracts.md §19.2.
+      cropPages: unavailable,
+      extractPages: unavailable,
+      splitDocument: unavailable,
+      replacePages: unavailable,
+      insertPagesFromFile: unavailable,
     },
     // Phase 3 (api-contracts §13)
     forms: {

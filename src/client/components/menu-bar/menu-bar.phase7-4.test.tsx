@@ -207,7 +207,12 @@ describe('MenuBar — Phase 7.4 A4 (toolbar-only mirror entries)', () => {
       expect((store.getState() as any).signatures.openModal).toBe('capture');
     });
 
-    it('Edit > Find is disabled with no shortcut and an honest tooltip', () => {
+    it('Edit > Find opens the find bar (Phase 7.5 B3 ships Find)', () => {
+      // Phase 7.4 honesty: previously Find was disabled with an "upcoming
+      // release" tooltip. Phase 7.5 B3 ships the Find bar; the menu item now
+      // dispatches setFindBarOpen(true) like Ctrl+F does. Test rewritten to
+      // assert the new behavior (and verify the stale "Phase 3" string never
+      // re-appears in the tooltip).
       const store = makeStore();
       store.dispatch(setDocument(DOC));
       render(
@@ -218,10 +223,10 @@ describe('MenuBar — Phase 7.4 A4 (toolbar-only mirror entries)', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
       const findBtn = screen.getByText('Find...').closest('button');
       expect(findBtn).not.toBeNull();
-      expect((findBtn as HTMLButtonElement).disabled).toBe(true);
-      const tip = (findBtn as HTMLButtonElement).title;
-      expect(tip).toMatch(/upcoming release/i);
-      expect(tip).not.toMatch(/Phase 3/i);
+      expect((findBtn as HTMLButtonElement).disabled).toBe(false);
+      fireEvent.click(findBtn as HTMLButtonElement);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((store.getState() as any).ui.findBarOpen).toBe(true);
     });
   });
 

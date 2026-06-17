@@ -15,7 +15,11 @@ import { useT } from '../../i18n/use-t';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { redoAction, undoAction } from '../../state/middleware/history-middleware';
 import { selectActiveTool } from '../../state/slices/annotations-selectors';
-import { type AnnotationTool, setActiveTool } from '../../state/slices/annotations-slice';
+import {
+  type AnnotationTool,
+  selectAnnotation,
+  setActiveTool,
+} from '../../state/slices/annotations-slice';
 import { selectCurrentDocument, selectIsDirty } from '../../state/slices/document-selectors';
 import { applyEdit } from '../../state/slices/document-slice';
 import { openExportModal } from '../../state/slices/export-slice';
@@ -61,7 +65,9 @@ import styles from './toolbar.module.css';
 // would leave a button out of the roving order. Guarded by a dev assertion.
 // Phase 7.4 A6: bumped 30 → 31 for the Fill & Sign button.
 // Phase 7.4 B1: bumped 31 → 32 for the Redact button.
-const TOOLBAR_BUTTON_COUNT = 32;
+// Phase 7.5 A5: bumped 32 → 33 for the Cursor (V) button at the start of
+// the annotation group.
+const TOOLBAR_BUTTON_COUNT = 33;
 
 export function Toolbar(): JSX.Element {
   const { t } = useT();
@@ -201,6 +207,20 @@ export function Toolbar(): JSX.Element {
       <div className={styles.divider} />
 
       <div className={styles.group} aria-label={t('toolbar:groups.annotation')}>
+        {/* Phase 7.5 A5 — Cursor / selection button at the start of the
+            annotation group (mirrors Acrobat's V shortcut). Clears the active
+            tool to 'cursor' and clears the selected annotation. */}
+        <ToolbarButton
+          {...rb()}
+          icon="type-cursor"
+          label={t('toolbar:cursorDefault')}
+          tooltip={t('toolbar:cursorDefaultTooltip')}
+          active={activeTool === 'cursor'}
+          onClick={() => {
+            dispatch(setActiveTool('cursor'));
+            dispatch(selectAnnotation(null));
+          }}
+        />
         <ToolbarButton
           {...rb()}
           icon="highlight"

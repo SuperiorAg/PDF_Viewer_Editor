@@ -48,7 +48,21 @@ export type ShortcutId =
   | 'open-export-office'
   // Phase 7.4 B1 — Redaction
   | 'redaction-apply'
-  | 'redaction-mark-rect';
+  | 'redaction-mark-rect'
+  // Phase 7.5 A3 — missing-shortcut suffixes for Bookmarks edit / Run OCR / Combine.
+  | 'bookmark-edit'
+  | 'ocr-run'
+  | 'combine-open'
+  // Phase 7.5 A7 — Find-a-tool palette (intrinsic; opens the registry-driven
+  // search palette modal). Not surfaced as a ToolDef — it's a meta affordance.
+  | 'find-a-tool'
+  // Phase 7.5 B3 — Find bar Next / Prev across the document. F3 / Shift+F3.
+  | 'find-next'
+  | 'find-prev'
+  // Phase 7.5 B16 — View-only rotation. Renderer-only CSS rotation; does NOT
+  // write to the PDF. Distinct from `rotate-cw`/`rotate-ccw` which mutate.
+  | 'view-rotate-cw'
+  | 'view-rotate-ccw';
 
 export interface ShortcutSpec {
   id: ShortcutId;
@@ -238,6 +252,81 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
     id: 'redaction-mark-rect',
     label: 'Mark rectangle for redaction',
     key: 'R',
+    shift: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  // Phase 7.5 A3 — three previously-toolbar-only actions get Alt-chord
+  // shortcuts so keyboard-first users can reach them without the mouse. Alt+B
+  // (Bookmarks edit), Alt+O (Run OCR), Alt+C (Combine PDFs).
+  {
+    id: 'bookmark-edit',
+    label: 'Toggle bookmarks edit mode',
+    key: 'b',
+    alt: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  {
+    id: 'ocr-run',
+    label: 'Run OCR on this document',
+    key: 'o',
+    alt: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  {
+    id: 'combine-open',
+    label: 'Combine PDFs',
+    key: 'c',
+    alt: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  // Phase 7.5 A7 — Find-a-tool palette. Ctrl+/ opens the registry-driven
+  // search palette. Intrinsic (not a ToolDef) per tool-registry-spec §1.1.
+  {
+    id: 'find-a-tool',
+    label: 'Find a tool',
+    key: '/',
+    ctrl: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  // Phase 7.5 B3 — Find bar navigation. F3 / Shift+F3 cycle next / prev match
+  // while the Find bar is open. The handler is a no-op when the bar is closed.
+  {
+    id: 'find-next',
+    label: 'Find next match',
+    key: 'F3',
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  {
+    id: 'find-prev',
+    label: 'Find previous match',
+    key: 'F3',
+    shift: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  // Phase 7.5 B16 — View-only rotation (renderer CSS only — does NOT mutate
+  // the PDF). Acrobat uses Ctrl+Shift+Plus/Minus; we use Ctrl+Shift+ArrowRight
+  // / ArrowLeft so it doesn't conflict with zoom-in (Ctrl+'+').
+  {
+    id: 'view-rotate-cw',
+    label: 'Rotate view 90 CW',
+    key: 'ArrowRight',
+    ctrl: true,
+    shift: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  {
+    id: 'view-rotate-ccw',
+    label: 'Rotate view 90 CCW',
+    key: 'ArrowLeft',
+    ctrl: true,
     shift: true,
     enabledInPhase1: false,
     enabledInPhases: [7],

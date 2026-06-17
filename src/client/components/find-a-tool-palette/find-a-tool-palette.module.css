@@ -1,0 +1,96 @@
+/* Find-a-tool palette — ui-spec-phase-7.5.md §1.7. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 18vh;
+}
+
+.palette {
+  width: min(600px, calc(100% - 32px));
+  background: var(--surface-1, #1f1f1f);
+  color: var(--text-primary, #f0f0f0);
+  border: 1px solid var(--border, #555);
+  border-radius: 6px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.input {
+  padding: 12px 14px;
+  background: transparent;
+  color: inherit;
+  border: none;
+  border-bottom: 1px solid var(--border, #444);
+  outline: none;
+  font-size: 15px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.item {
+  padding: 0;
+  font-size: 14px;
+}
+
+.itemRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.itemActive,
+.item:hover {
+  background: var(--accent-bg, #2a4d70);
+}
+
+.itemName {
+  flex: 1;
+}
+
+.itemMenu {
+  color: var(--text-secondary, #aaa);
+  font-size: 12px;
+  margin-left: 12px;
+}
+
+.noResults {
+  padding: 16px;
+  color: var(--text-secondary, #aaa);
+  text-align: center;
+}
+
+.instructions {
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--text-secondary, #aaa);
+  border-top: 1px solid var(--border, #444);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

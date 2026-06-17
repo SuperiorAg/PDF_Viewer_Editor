@@ -333,5 +333,38 @@
     "warningSignaturesInvalidated_other": "{{count}} firmas digitales fueron invalidadas por esta redacción.",
     "clearConfirm_one": "¿Eliminar {{count}} marca de redacción pendiente?",
     "clearConfirm_other": "¿Eliminar {{count}} marcas de redacción pendientes?"
+  },
+  "find": {
+    "bar": "Buscar en el documento",
+    "placeholder": "Buscar en el documento",
+    "caseSensitive": "Distinguir mayúsculas",
+    "wholeWord": "Palabra completa",
+    "previous": "Coincidencia anterior (Mayús+F3)",
+    "next": "Coincidencia siguiente (F3)",
+    "close": "Cerrar barra de búsqueda",
+    "matchCounter_one": "{{current}} de {{total}}",
+    "matchCounter_other": "{{current}} de {{total}}",
+    "noMatches": "Sin coincidencias",
+    "searchingPage": "Buscando página {{current}} de {{total}}..."
+  },
+  "findATool": {
+    "title": "Buscar herramienta",
+    "placeholder": "Buscar herramienta...",
+    "noResults": "Ninguna herramienta coincide con \"{{query}}\".",
+    "instructions": "↑↓ para navegar · Entrar para ejecutar · Esc para cerrar",
+    "menuSuffix": "menú {{menu}}",
+    "shortcutLabel": "Atajo",
+    "regionAria": "Resultados de búsqueda de herramientas"
+  },
+  "pageDisplay": {
+    "menuLabel": "Visualización de página",
+    "singlePageContinuous": "Una página continua",
+    "twoUpContinuous": "Dos páginas continuas",
+    "singlePage": "Una página",
+    "twoUp": "Dos páginas"
+  },
+  "readMode": {
+    "exitPill": "Salir del modo lectura (F11)",
+    "regionAria": "Alternar barras del modo lectura"
   }
 }

@@ -723,5 +723,38 @@
     "warningSignaturesInvalidated_other": "{{count}} digital signatures were invalidated by this redaction.",
     "clearConfirm_one": "Remove {{count}} pending redaction mark?",
     "clearConfirm_other": "Remove {{count}} pending redaction marks?"
+  },
+  "find": {
+    "bar": "Find in document",
+    "placeholder": "Find in document",
+    "caseSensitive": "Case sensitive",
+    "wholeWord": "Whole word",
+    "previous": "Previous match (Shift+F3)",
+    "next": "Next match (F3)",
+    "close": "Close find bar",
+    "matchCounter_one": "{{current}} of {{total}}",
+    "matchCounter_other": "{{current}} of {{total}}",
+    "noMatches": "No matches",
+    "searchingPage": "Searching page {{current}} of {{total}}..."
+  },
+  "findATool": {
+    "title": "Find a tool",
+    "placeholder": "Find a tool...",
+    "noResults": "No tools match \"{{query}}\".",
+    "instructions": "↑↓ to navigate · Enter to run · Esc to close",
+    "menuSuffix": "{{menu}} menu",
+    "shortcutLabel": "Shortcut",
+    "regionAria": "Find a tool results"
+  },
+  "pageDisplay": {
+    "menuLabel": "Page Display",
+    "singlePageContinuous": "Single Page Continuous",
+    "twoUpContinuous": "Two-Up Continuous",
+    "singlePage": "Single Page",
+    "twoUp": "Two-Up"
+  },
+  "readMode": {
+    "exitPill": "Exit Read Mode (F11)",
+    "regionAria": "Read mode chrome toggle"
   }
 }

@@ -3,6 +3,8 @@ import { useEffect } from 'react';
 import styles from './app.module.css';
 import { EmptyState } from './components/empty-state';
 import { ErrorBoundary } from './components/error-boundary';
+// Phase 7.5 A7 — Find-a-tool palette (registry-driven, Ctrl+/).
+import { FindAToolPalette } from './components/find-a-tool-palette';
 import { FormDesignerToolbar } from './components/form-designer';
 import { Inspector } from './components/inspector';
 import { MenuBar } from './components/menu-bar';
@@ -49,8 +51,18 @@ import { selectMailMergeOpen } from './state/slices/mail-merge-selectors';
 import { selectOcrOpenModal } from './state/slices/ocr-selectors';
 // Phase 6 — Export-to-Office modal owns its own openness flag on the export slice.
 import { selectScanModalOpen } from './state/slices/scan-selectors';
-import { selectActiveModal, selectRedactionApplyModalOpen } from './state/slices/ui-selectors';
-import { openImageImportModal, pushToast, setImageImportPreload } from './state/slices/ui-slice';
+import {
+  selectActiveModal,
+  selectFindAToolOpen,
+  selectReadMode,
+  selectRedactionApplyModalOpen,
+} from './state/slices/ui-selectors';
+import {
+  openImageImportModal,
+  pushToast,
+  setImageImportPreload,
+  setReadMode,
+} from './state/slices/ui-slice';
 import { openDroppedPathThunk, refreshRecentsThunk } from './state/thunks';
 import { subscribeOcrPackDownloadProgress, subscribeOcrProgress } from './state/thunks-phase5';
 // Phase 6 — subscribe to export:progress events at app mount.
@@ -66,6 +78,9 @@ export function App(): JSX.Element {
   const scanOpen = useAppSelector(selectScanModalOpen);
   const exportModalOpen = useAppSelector(selectExportModalOpen);
   const redactionApplyModalOpen = useAppSelector(selectRedactionApplyModalOpen);
+  // Phase 7.5 A7 / B16 — registry palette + Read Mode visibility gates.
+  const findAToolOpen = useAppSelector(selectFindAToolOpen);
+  const readMode = useAppSelector(selectReadMode);
 
   useAppShortcuts();
 
@@ -111,6 +126,26 @@ export function App(): JSX.Element {
       unsub();
     };
   }, [dispatch]);
+
+  // Phase 7.5 B16 — Esc exits Read Mode (and exits OS fullscreen if active).
+  // The global Esc handler is scoped to read-mode-on so it doesn't fight with
+  // modal dismiss handlers (each modal owns its own Esc). The find-a-tool
+  // palette also has its own Esc handler — that fires first because the
+  // palette's container has focus when open.
+  useEffect(() => {
+    if (!readMode) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        dispatch(setReadMode(false));
+        if (document.fullscreenElement) {
+          void document.exitFullscreen();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [dispatch, readMode]);
 
   // Window-level drag/drop hand-off. Phase 2 extends the file-type matrix:
   //   - .pdf  -> openDroppedPathThunk (Phase 1 behavior, untouched per L-001)
@@ -212,31 +247,35 @@ export function App(): JSX.Element {
 
   return (
     <ErrorBoundary>
-      <div className={styles.app}>
-        <MenuBar />
-        <Toolbar />
+      <div className={styles.app} data-read-mode={readMode ? 'on' : 'off'}>
+        {/* Phase 7.5 B16 — Read Mode hides menu / toolbars / sidebar / status
+            bar. F11 toggles; Esc exits. Implemented as conditional render so
+            the chrome surfaces are not in the layout while hidden (preserves
+            keyboard tab order — there's nothing to focus through). */}
+        {!readMode && <MenuBar />}
+        {!readMode && <Toolbar />}
         {/* Phase 3 — designer field-type pills toolbar (visible only in designer mode). */}
-        <FormDesignerToolbar />
+        {!readMode && <FormDesignerToolbar />}
         {/* Phase 7.4 A5 — shape tools sub-toolbar (visible only when the main
             toolbar's Shapes toggle is on). Component returns null while the
             ui.shapesPanelOpen flag is false. */}
-        <ShapeToolbar />
+        {!readMode && <ShapeToolbar />}
         {/* Phase 7.4 B1 — redaction tools sub-toolbar. Same sibling-under-Toolbar
             mount as ShapeToolbar; returns null while ui.redactionPanelOpen
             is false. The Apply modal mounts below with the other modals. */}
-        <RedactionToolbar />
+        {!readMode && <RedactionToolbar />}
         <main className={styles.main}>
           {doc ? (
             <>
-              <Sidebar />
+              {!readMode && <Sidebar />}
               <PdfViewer />
-              <Inspector />
+              {!readMode && <Inspector />}
             </>
           ) : (
             <EmptyState />
           )}
         </main>
-        <StatusBar />
+        {!readMode && <StatusBar />}
         <ToastStack />
         {activeModal === 'combine' && <CombineModal />}
         {activeModal === 'settings' && <SettingsModal />}
@@ -264,6 +303,9 @@ export function App(): JSX.Element {
             open flag (ui.redactionApplyModalOpen) independent of activeModal
             since the redaction sub-toolbar mounts in parallel to other modals. */}
         {redactionApplyModalOpen && <ApplyRedactionsModal />}
+        {/* Phase 7.5 A7 — Find-a-tool palette (Ctrl+/). Reads from the tool
+            registry; dispatches the chosen tool's action on Enter. */}
+        {findAToolOpen && <FindAToolPalette />}
         <TextEditOverlay />
       </div>
     </ErrorBoundary>

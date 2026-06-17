@@ -9,6 +9,35 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-5);
+  position: relative; /* Phase 7.5 B3 — FindBar overlay anchors here. */
+}
+
+.viewerInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  width: 100%;
+}
+
+.viewerInnerTwoUp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  width: 100%;
+}
+
+.pageWrap {
+  display: flex;
+  justify-content: center;
+}
+
+.pagePair {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: var(--space-3);
 }
 
 .empty {

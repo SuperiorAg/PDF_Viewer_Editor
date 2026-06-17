@@ -41,20 +41,29 @@ import {
 } from '../../state/slices/redactions-slice';
 // Phase 7.4 A1 — Fill & Sign menu entry dispatches the existing signature-capture flow.
 import { openCaptureModal } from '../../state/slices/signatures-slice';
+import { selectPageDisplayMode } from '../../state/slices/ui-selectors';
 import {
   openImageImportModal,
   openModal,
   // Phase 7.4 A4 — Delete Page menu mirror reuses the toolbar's "cannot delete
   // the only page" warning toast.
   pushToast,
+  rotateViewCcw,
+  rotateViewCw,
+  setFindAToolOpen,
+  setFindBarOpen,
+  setPageDisplayMode,
+  setReadMode,
   setRedactionApplyModalOpen,
   setRedactionPanelOpen,
   setSidebarTab,
   setTextEditMode,
+  setViewRotation,
   toggleBookmarksEditMode,
   toggleInspector,
   toggleSidebar,
 } from '../../state/slices/ui-slice';
+// Phase 7.5 B15 — page display mode selector in the View menu.
 import { selectCurrentPage } from '../../state/slices/viewport-selectors';
 import {
   closeDocumentThunk,
@@ -95,6 +104,7 @@ export function MenuBar(): JSX.Element {
   const currentPage = useAppSelector(selectCurrentPage);
   const redactionShowMarks = useAppSelector(selectRedactionShowMarks);
   const redactionTotalMarks = useAppSelector(selectRedactionTotalMarks);
+  const pageDisplayMode = useAppSelector(selectPageDisplayMode);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   // Phase 7.4 A1 (Riley) — Honest dispatcher for the previously toast-only
@@ -297,15 +307,21 @@ export function MenuBar(): JSX.Element {
           disabled: !doc,
           onClick: () => dispatch(setTextEditMode(true)),
         },
-        // Phase 7.4 A1 — Find is genuinely deferred. The previous tooltip read
-        // "Coming in Phase 3" three phases AFTER Phase 3 shipped, and Ctrl+F
-        // fired a matching toast. The honest UX: visible-but-disabled with a
-        // refreshed tooltip (no version promise), no shortcut. Ctrl+F's
-        // toast-dispatch was removed from use-app-shortcuts.ts in the same commit.
+        // Phase 7.5 B3 (Riley) — Find ships in this wave. The menu item now
+        // opens the Find bar (anchored top-right of the viewer) via the same
+        // setFindBarOpen action Ctrl+F dispatches. Replaces the previous
+        // honest-deferral disabled-with-tooltip state.
         {
           label: t('menu:items.find'),
-          disabled: true,
-          tooltip: t('menu:tooltips.findComing'),
+          shortcut: 'Ctrl+F',
+          disabled: !doc,
+          onClick: () => dispatch(setFindBarOpen(true)),
+        },
+        // Phase 7.5 A7 — Find a tool palette (Ctrl+/).
+        {
+          label: t('menu:items.findATool'),
+          shortcut: 'Ctrl+/',
+          onClick: () => dispatch(setFindAToolOpen(true)),
         },
         { label: '', divider: true },
         {
@@ -410,9 +426,65 @@ export function MenuBar(): JSX.Element {
           onClick: () => dispatch(toggleOcrOverlay()),
         },
         { label: '', divider: true },
+        // Phase 7.5 B15 — Page Display modes. Single Page Continuous remains
+        // the default; the other three preserve virtualization (PdfCanvas owns
+        // the per-page IntersectionObserver). Per docs/ui-spec-phase-7.5.md §15.
+        {
+          label:
+            (pageDisplayMode === 'single-page-continuous' ? '• ' : '  ') +
+            t('menu:items.pageDisplaySinglePageContinuous'),
+          disabled: !doc,
+          onClick: () => dispatch(setPageDisplayMode('single-page-continuous')),
+        },
+        {
+          label:
+            (pageDisplayMode === 'two-up-continuous' ? '• ' : '  ') +
+            t('menu:items.pageDisplayTwoUpContinuous'),
+          disabled: !doc,
+          onClick: () => dispatch(setPageDisplayMode('two-up-continuous')),
+        },
+        {
+          label:
+            (pageDisplayMode === 'single-page' ? '• ' : '  ') +
+            t('menu:items.pageDisplaySinglePage'),
+          disabled: !doc,
+          onClick: () => dispatch(setPageDisplayMode('single-page')),
+        },
+        {
+          label: (pageDisplayMode === 'two-up' ? '• ' : '  ') + t('menu:items.pageDisplayTwoUp'),
+          disabled: !doc,
+          onClick: () => dispatch(setPageDisplayMode('two-up')),
+        },
+        { label: '', divider: true },
+        // Phase 7.5 B16 — view-only rotation (renderer CSS only — does NOT
+        // mutate the PDF). Distinct from "Rotate Page" under Edit menu.
+        {
+          label: t('menu:items.viewRotateCw'),
+          shortcut: 'Ctrl+Shift+→',
+          disabled: !doc,
+          onClick: () => dispatch(rotateViewCw()),
+        },
+        {
+          label: t('menu:items.viewRotateCcw'),
+          shortcut: 'Ctrl+Shift+←',
+          disabled: !doc,
+          onClick: () => dispatch(rotateViewCcw()),
+        },
+        {
+          label: t('menu:items.viewRotateReset'),
+          disabled: !doc,
+          onClick: () => dispatch(setViewRotation(0)),
+        },
+        { label: '', divider: true },
+        // Phase 7.5 B16 — True Read Mode (chromeless). F11.
+        {
+          label: t('menu:items.readMode'),
+          shortcut: 'F11',
+          disabled: !doc,
+          onClick: () => dispatch(setReadMode(true)),
+        },
         {
           label: t('menu:items.fullscreen'),
-          shortcut: 'F11',
           onClick: () => {
             if (document.fullscreenElement) void document.exitFullscreen();
             else void document.documentElement.requestFullscreen();

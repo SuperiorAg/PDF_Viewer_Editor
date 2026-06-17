@@ -101,6 +101,18 @@ interface UiState {
   redactionPanelOpen: boolean;
   /** Phase 7.4 B1 — Apply-confirmation modal open flag. Independent of activeModal. */
   redactionApplyModalOpen: boolean;
+  /** Phase 7.5 B3 — Find bar visibility. Opened by Ctrl+F; closed by Esc/×. */
+  findBarOpen: boolean;
+  /** Phase 7.5 A7 — Find-a-tool palette visibility. Opened by Ctrl+/. */
+  findAToolOpen: boolean;
+  /** Phase 7.5 B15 — Page display mode (single-page-continuous default). */
+  pageDisplayMode: 'single-page-continuous' | 'two-up-continuous' | 'single-page' | 'two-up';
+  /** Phase 7.5 B16 — View-only rotation in 90° increments. Renderer-only CSS;
+   * does NOT mutate the PDF (distinct from page rotation in document-slice). */
+  viewRotation: 0 | 90 | 180 | 270;
+  /** Phase 7.5 B16 — True Read Mode hides toolbar / sidebar / inspector /
+   * status bar. F11 enters; Esc exits. Per-session only. */
+  readMode: boolean;
 }
 
 const initialState: UiState = {
@@ -131,6 +143,11 @@ const initialState: UiState = {
   shapesPanelOpen: false,
   redactionPanelOpen: false,
   redactionApplyModalOpen: false,
+  findBarOpen: false,
+  findAToolOpen: false,
+  pageDisplayMode: 'single-page-continuous',
+  viewRotation: 0,
+  readMode: false,
 };
 
 export const uiSlice = createSlice({
@@ -251,6 +268,40 @@ export const uiSlice = createSlice({
     setRedactionApplyModalOpen(state, action: PayloadAction<boolean>) {
       state.redactionApplyModalOpen = action.payload;
     },
+    // Phase 7.5 B3 — Find bar open/close.
+    setFindBarOpen(state, action: PayloadAction<boolean>) {
+      state.findBarOpen = action.payload;
+    },
+    toggleFindBar(state) {
+      state.findBarOpen = !state.findBarOpen;
+    },
+    // Phase 7.5 A7 — Find-a-tool palette open/close.
+    setFindAToolOpen(state, action: PayloadAction<boolean>) {
+      state.findAToolOpen = action.payload;
+    },
+    // Phase 7.5 B15 — Page display mode.
+    setPageDisplayMode(state, action: PayloadAction<UiState['pageDisplayMode']>) {
+      state.pageDisplayMode = action.payload;
+    },
+    // Phase 7.5 B16 — View-only rotation. 0/90/180/270 only.
+    setViewRotation(state, action: PayloadAction<UiState['viewRotation']>) {
+      state.viewRotation = action.payload;
+    },
+    rotateViewCw(state) {
+      const next = ((state.viewRotation + 90) % 360) as UiState['viewRotation'];
+      state.viewRotation = next;
+    },
+    rotateViewCcw(state) {
+      const next = ((state.viewRotation + 270) % 360) as UiState['viewRotation'];
+      state.viewRotation = next;
+    },
+    // Phase 7.5 B16 — Read Mode (chromeless).
+    setReadMode(state, action: PayloadAction<boolean>) {
+      state.readMode = action.payload;
+    },
+    toggleReadMode(state) {
+      state.readMode = !state.readMode;
+    },
   },
 });
 
@@ -280,6 +331,16 @@ export const {
   toggleRedactionPanel,
   setRedactionPanelOpen,
   setRedactionApplyModalOpen,
+  // Phase 7.5
+  setFindBarOpen,
+  toggleFindBar,
+  setFindAToolOpen,
+  setPageDisplayMode,
+  setViewRotation,
+  rotateViewCw,
+  rotateViewCcw,
+  setReadMode,
+  toggleReadMode,
 } = uiSlice.actions;
 
 // Phase 2 — image-import modal convenience action creators.

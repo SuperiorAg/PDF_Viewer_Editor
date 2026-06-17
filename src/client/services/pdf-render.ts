@@ -102,6 +102,14 @@ export interface PdfPageProxy {
    * memory hygiene.
    */
   render(canvas: HTMLCanvasElement, zoom: number): RenderJob;
+  /**
+   * Phase 7.5 B3 — extract the page's text content as a single concatenated
+   * string for the Find bar. Lazy by design: each call awaits pdf.js's per-page
+   * TextLayer extraction; the caller decides when to invoke (e.g. only when the
+   * user navigates to the next page). Per architecture P7.5-L-8 (no eager
+   * full-document index).
+   */
+  getTextString(): Promise<string>;
   cleanup(): void;
 }
 
@@ -174,6 +182,19 @@ function wrapPage(pdfPage: PdfJsPageProxy, pageIndex: number): PdfPageProxy {
           ctx.drawImage(off, 0, 0);
         }),
       };
+    },
+    async getTextString(): Promise<string> {
+      // Phase 7.5 B3 — lazy text extraction. pdf.js's getTextContent returns
+      // an array of text items; we join their `str` fields with spaces. This
+      // is intentionally not a fully-spaced/layout-aware extraction (export's
+      // layout pipeline handles that) — Find just needs a flat haystack for
+      // case-insensitive / whole-word substring search.
+      const tc = await pdfPage.getTextContent();
+      const items = tc.items as ReadonlyArray<{ str?: string }>;
+      return items
+        .map((it) => (typeof it.str === 'string' ? it.str : ''))
+        .filter((s) => s.length > 0)
+        .join(' ');
     },
     cleanup(): void {
       pdfPage.cleanup();

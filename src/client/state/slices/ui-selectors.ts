@@ -22,3 +22,13 @@ export const selectRedactionApplyModalOpen = (s: RootState): boolean =>
 export const selectToasts = (s: RootState) => s.ui.toasts;
 export const selectIsLoading = (s: RootState) => s.ui.isLoading;
 export const selectLoadingMessage = (s: RootState) => s.ui.loadingMessage;
+// Phase 7.5 B3 — Find bar visibility.
+export const selectFindBarOpen = (s: RootState): boolean => s.ui.findBarOpen;
+// Phase 7.5 A7 — Find-a-tool palette visibility.
+export const selectFindAToolOpen = (s: RootState): boolean => s.ui.findAToolOpen;
+// Phase 7.5 B15 — Page display mode.
+export const selectPageDisplayMode = (s: RootState) => s.ui.pageDisplayMode;
+// Phase 7.5 B16 — View-only rotation (renderer CSS only).
+export const selectViewRotation = (s: RootState) => s.ui.viewRotation;
+// Phase 7.5 B16 — Read Mode (chromeless).
+export const selectReadMode = (s: RootState): boolean => s.ui.readMode;

@@ -3,12 +3,20 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { releaseLoadedDocument } from '../../services/pdf-loader';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { selectCurrentDocument } from '../../state/slices/document-selectors';
+import { selectPageDisplayMode, selectViewRotation } from '../../state/slices/ui-selectors';
 import {
   selectCurrentPage,
   selectFitMode,
   selectZoom,
 } from '../../state/slices/viewport-selectors';
-import { setCurrentPage, setZoom, ZOOM_MAX, ZOOM_MIN } from '../../state/slices/viewport-slice';
+import {
+  setCurrentPage,
+  setFitMode,
+  setZoom,
+  ZOOM_MAX,
+  ZOOM_MIN,
+} from '../../state/slices/viewport-slice';
+import { FindBar } from '../find-bar';
 import { PdfCanvas } from '../pdf-canvas';
 
 import styles from './pdf-viewer.module.css';
@@ -43,6 +51,8 @@ export function PdfViewer(): JSX.Element {
   const zoom = useAppSelector(selectZoom);
   const fitMode = useAppSelector(selectFitMode);
   const currentPage = useAppSelector(selectCurrentPage);
+  const viewRotation = useAppSelector(selectViewRotation);
+  const pageDisplayMode = useAppSelector(selectPageDisplayMode);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   // Two-tier zoom (see ARCHITECTURE / zoom plan): `zoom` (committed Redux value)
@@ -262,6 +272,58 @@ export function PdfViewer(): JSX.Element {
     if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }, [currentPage]);
 
+  // Phase 7.5 A6 — fit-width / fit-page handlers. When the viewport-slice's
+  // fitMode is 'fit-width' or 'fit-page', compute the correct zoom from the
+  // scroller's current size + the largest page's dims and commit it via
+  // setZoom. Recomputes on viewport resize (ResizeObserver) and on document
+  // change. setZoom flips fitMode to 'custom' as a side effect — that's
+  // intentional: a manual zoom should clear the sticky fit-mode, but a
+  // resize should re-apply the fit. We track the desired mode in a ref so the
+  // recompute loop knows what to do.
+  const fitModeRef = useRef(fitMode);
+  fitModeRef.current = fitMode;
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller || !doc) return;
+    const recompute = (): void => {
+      const m = fitModeRef.current;
+      if (m === 'custom') return;
+      const pages = doc.pages;
+      if (pages.length === 0) return;
+      let maxW = 0;
+      let maxH = 0;
+      for (const p of pages) {
+        const isRotated90 = p.rotation === 90 || p.rotation === 270;
+        const w = isRotated90 ? p.height : p.width;
+        const h = isRotated90 ? p.width : p.height;
+        if (w > maxW) maxW = w;
+        if (h > maxH) maxH = h;
+      }
+      if (maxW <= 0 || maxH <= 0) return;
+      // Leave room for the scrollbar gutter + page margin (~32px combined).
+      const vw = Math.max(0, scroller.clientWidth - 32);
+      const vh = Math.max(0, scroller.clientHeight - 32);
+      let nextZoom: number;
+      if (m === 'fit-width') {
+        nextZoom = vw / maxW;
+      } else {
+        nextZoom = Math.min(vw / maxW, vh / maxH);
+      }
+      if (!Number.isFinite(nextZoom) || nextZoom <= 0) return;
+      const rounded = Math.round(nextZoom * 1000) / 1000;
+      // setZoom flips fitMode to 'custom' — re-restore after the dispatch so
+      // resizes keep recomputing.
+      dispatch(setZoom(rounded));
+      dispatch(setFitMode(m));
+    };
+    recompute();
+    const ro = new ResizeObserver(() => {
+      recompute();
+    });
+    ro.observe(scroller);
+    return () => ro.disconnect();
+  }, [dispatch, doc, fitMode]);
+
   // Phase 4.1 — release the pdf-loader cache entry for this document handle
   // when it changes (next open) or when the component unmounts (document
   // close / app close). This calls `pdfDoc.destroy()` per ARCHITECTURE §4.4
@@ -279,27 +341,76 @@ export function PdfViewer(): JSX.Element {
     return <div className={styles.empty} aria-hidden="true" />;
   }
 
+  // Phase 7.5 B15 — two-up display lays pages in pairs (cover page singleton
+  // when applicable). The PdfCanvas children are wrapped in flex rows of 2 in
+  // two-up modes. Virtualization is preserved because PdfCanvas itself owns
+  // the IntersectionObserver — visibility lives on the page box regardless of
+  // wrapper. Single Page / Two-Up (non-continuous) only render the active page
+  // (and its pair); PgUp/PgDn navigate between pages.
+  const isTwoUp = pageDisplayMode === 'two-up' || pageDisplayMode === 'two-up-continuous';
+  const isContinuous =
+    pageDisplayMode === 'single-page-continuous' || pageDisplayMode === 'two-up-continuous';
+  const pagesToRender = isContinuous
+    ? doc.pages
+    : isTwoUp
+      ? doc.pages.slice(currentPage, Math.min(doc.pageCount, currentPage + 2))
+      : doc.pages.slice(currentPage, currentPage + 1);
+
+  // Phase 7.5 B16 — view-only rotation: CSS transform on the inner container.
+  // Does NOT write to the PDF (distinct from page rotation in document-slice).
+  const viewRotationStyle =
+    viewRotation === 0
+      ? undefined
+      : { transform: `rotate(${viewRotation}deg)`, transformOrigin: 'center center' };
+
+  // Two-up grouping: pair pages [0,1], [2,3] ...; first page may be a singleton
+  // depending on document convention. v1 uses naive pairing — Acrobat-cover-
+  // first convention can land in a later wave.
+  const groups: ReadonlyArray<ReadonlyArray<(typeof pagesToRender)[number]>> = (() => {
+    if (!isTwoUp) return pagesToRender.map((p) => [p] as const);
+    const out: Array<ReadonlyArray<(typeof pagesToRender)[number]>> = [];
+    for (let i = 0; i < pagesToRender.length; i += 2) {
+      const pair = pagesToRender.slice(i, i + 2);
+      out.push(pair);
+    }
+    return out;
+  })();
+
   return (
-    <div className={styles.viewer} ref={scrollerRef} role="region" aria-label="Document viewer">
-      {doc.pages.map((page, i) => {
-        // Cursor-anchored zoom: the page under the wheel cursor scales from
-        // the cursor's page-local point; all other pages keep the default
-        // '50% 0' (horizontal-center, top) anchor. Spread the override prop
-        // conditionally — TS `exactOptionalPropertyTypes` (renderer tsconfig)
-        // rejects an explicit `undefined` value on an optional prop.
-        const originOverride = pageOrigins[i];
-        return (
-          <PdfCanvas
-            key={`p-${i}-${page.pageIndex}`}
-            page={page}
-            index={i}
-            zoom={zoom}
-            displayScale={zoom === 0 ? 1 : displayZoom / zoom}
-            {...(originOverride !== undefined ? { transformOriginOverride: originOverride } : {})}
-            fitMode={fitMode}
-          />
-        );
-      })}
+    <div
+      className={styles.viewer}
+      ref={scrollerRef}
+      role="region"
+      aria-label="Document viewer"
+      data-page-display={pageDisplayMode}
+    >
+      <FindBar />
+      <div
+        className={isTwoUp ? styles.viewerInnerTwoUp : styles.viewerInner}
+        {...(viewRotationStyle !== undefined ? { style: viewRotationStyle } : {})}
+      >
+        {groups.map((group, gi) => (
+          <div key={`grp-${gi}`} className={isTwoUp ? styles.pagePair : styles.pageWrap}>
+            {group.map((page) => {
+              const i = doc.pages.indexOf(page);
+              const originOverride = pageOrigins[i];
+              return (
+                <PdfCanvas
+                  key={`p-${i}-${page.pageIndex}`}
+                  page={page}
+                  index={i}
+                  zoom={zoom}
+                  displayScale={zoom === 0 ? 1 : displayZoom / zoom}
+                  {...(originOverride !== undefined
+                    ? { transformOriginOverride: originOverride }
+                    : {})}
+                  fitMode={fitMode}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
