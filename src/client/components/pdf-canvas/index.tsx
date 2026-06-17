@@ -55,10 +55,22 @@ export function PdfCanvas(props: PdfCanvasProps): JSX.Element {
   const doc = useAppSelector(selectCurrentDocument);
   const handle = doc?.handle;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const pageBoxRef = useRef<HTMLDivElement | null>(null);
   const pageProxyRef = useRef<PdfPageProxy | null>(null);
   const [loadError, setLoadError] = useState<{ error: PdfLoaderError; message: string } | null>(
     null,
   );
+  // Visibility-gated render. Until this flips true the render effect below
+  // bails on entry. Without this gate, opening a 1000+-page PDF mounts a
+  // PdfCanvas per page and queues 1000+ concurrent pdf.js worker jobs — the
+  // user sees blank page boxes for tens of seconds while the worker grinds
+  // through them in index order. Default false; the IntersectionObserver
+  // effect below flips it true for pages near the scroll viewport. Pages
+  // scrolled away flip back to false, which triggers the render effect's
+  // cleanup (cancel + page-proxy.cleanup) — honoring the ARCHITECTURE §4.4
+  // page-cleanup-on-scroll-out contract that the walking-skeleton previously
+  // only honored on full component unmount.
+  const [isVisible, setIsVisible] = useState(false);
 
   const isRotated90 = props.page.rotation === 90 || props.page.rotation === 270;
   const baseWidth = isRotated90 ? props.page.height : props.page.width;
@@ -86,9 +98,42 @@ export function PdfCanvas(props: PdfCanvasProps): JSX.Element {
     [screenWidth, screenHeight, props.zoom],
   );
 
-  // Lifecycle: fetch + render. We split the effect into two so that re-renders
-  // caused by zoom changes don't re-fetch the page proxy.
+  // Visibility observer. Observe the outer page box against the window
+  // viewport (`root: null`). PdfViewer's `.viewer` scroller fills the
+  // available area within the window, so a page clipped by `.viewer`'s
+  // overflow:auto is also outside the window viewport — the observer
+  // reports those pages as non-intersecting correctly. `rootMargin` gives
+  // ~1 page of overscan above/below the visible window so a fast scroll
+  // already has rendered neighbors in memory instead of blank boxes during
+  // the gesture. The render effect below reacts to `isVisible` changes.
   useEffect(() => {
+    const node = pageBoxRef.current;
+    if (node === null) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      // SSR / very old browsers — no observer available, render eagerly.
+      setIsVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.target === node) {
+            setIsVisible(entry.isIntersecting);
+          }
+        }
+      },
+      { root: null, rootMargin: '1000px 0px 1000px 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  // Lifecycle: fetch + render. We split the effect into two so that re-renders
+  // caused by zoom changes don't re-fetch the page proxy. Gated on
+  // `isVisible` (see the state comment above) so off-screen pages in long
+  // documents do not queue concurrent worker jobs on mount.
+  useEffect(() => {
+    if (!isVisible) return;
     let cancelled = false;
     let runningJob: RenderJob | null = null;
     if (handle === undefined) {
@@ -143,15 +188,16 @@ export function PdfCanvas(props: PdfCanvasProps): JSX.Element {
       runningJob?.cancel();
       // Cleanup the page proxy from the previous render before the next one
       // grabs a fresh proxy. This honors ARCHITECTURE §4.4 page-cleanup-on-
-      // scroll-out for the simple case (component unmount), and pre-empts the
-      // proxy for the re-render case where the effect runs again.
+      // scroll-out (visibility flips false → effect cleanup runs) and pre-
+      // empts the proxy for the re-render case where the effect runs again.
       pageProxyRef.current?.cleanup();
       pageProxyRef.current = null;
     };
-  }, [handle, props.index, props.zoom]);
+  }, [handle, props.index, props.zoom, isVisible]);
 
   return (
     <div
+      ref={pageBoxRef}
       className={styles.page}
       data-page-index={props.index}
       // Layout box stays at the COMMITTED zoom size (no per-frame reflow). The

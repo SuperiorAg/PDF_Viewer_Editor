@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useRef } from 'react';
+import { type CSSProperties, useEffect, useRef, useState } from 'react';
 
 import { loadDocumentByHandle } from '../../services/pdf-loader';
 import { type RenderJob } from '../../services/pdf-render';
@@ -39,6 +39,13 @@ export function ThumbnailItem(props: ThumbnailItemProps): JSX.Element {
   const doc = useAppSelector(selectCurrentDocument);
   const handle = doc?.handle;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const itemRef = useRef<HTMLLIElement | null>(null);
+  // Visibility-gated render — same rationale as PdfCanvas. Without it, a
+  // 1000+-page PDF queues a render job per thumbnail at mount time and the
+  // pdf.js worker grinds through them in index order, starving the visible
+  // PdfCanvas pages of worker bandwidth. The IntersectionObserver below
+  // flips this true for thumbnails near the strip's scroll viewport.
+  const [isVisible, setIsVisible] = useState(false);
 
   // Phase 4.1.1: PageModel.width/height come from `measurePageDimensionsThunk`
   // which fires once on document open. We no longer maintain a component-local
@@ -50,9 +57,38 @@ export function ThumbnailItem(props: ThumbnailItemProps): JSX.Element {
   const thumbWidth = THUMB_WIDTH_PX;
   const thumbHeight = thumbWidth / aspect;
 
-  // Render the page into the thumbnail canvas. Same lifecycle pattern as
-  // PdfCanvas but at fixed thumbnail scale. Skipped for blank pages.
+  // Visibility observer on the outer <li>. `root: null` (window viewport)
+  // works because the thumbnail strip's scroll container fills the available
+  // sidebar height within the window; thumbnails scrolled out of the strip
+  // are also outside the window viewport. ~1 thumbnail of overscan
+  // (rootMargin 200px) keeps neighbors warm on a quick scroll.
   useEffect(() => {
+    const node = itemRef.current;
+    if (node === null) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setIsVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.target === node) {
+            setIsVisible(entry.isIntersecting);
+          }
+        }
+      },
+      { root: null, rootMargin: '200px 0px 200px 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  // Render the page into the thumbnail canvas. Same lifecycle pattern as
+  // PdfCanvas but at fixed thumbnail scale. Skipped for blank pages and for
+  // thumbnails outside the strip's scroll viewport (see visibility comment
+  // above) — the latter is the 1000+-page perf gate.
+  useEffect(() => {
+    if (!isVisible) return;
     if (handle === undefined) return;
     if (props.page.sourcePageRef.kind === 'blank') return;
     let cancelled = false;
@@ -91,7 +127,7 @@ export function ThumbnailItem(props: ThumbnailItemProps): JSX.Element {
       cancelled = true;
       runningJob?.cancel();
     };
-  }, [handle, props.index, props.page.sourcePageRef.kind, thumbWidth]);
+  }, [handle, props.index, props.page.sourcePageRef.kind, thumbWidth, isVisible]);
 
   const classes = [
     styles.item,
@@ -119,6 +155,7 @@ export function ThumbnailItem(props: ThumbnailItemProps): JSX.Element {
   // The `id` lets the parent move focus on arrow-key navigation.
   return (
     <li
+      ref={itemRef}
       id={`thumb-option-${props.index}`}
       className={classes}
       role="option"

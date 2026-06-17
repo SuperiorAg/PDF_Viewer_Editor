@@ -85,6 +85,49 @@ const baseProps = {
   onDrop: noopDrag,
 };
 
+// IntersectionObserver mock that fires `isIntersecting: true` on observe so
+// the visibility-gated render lifecycle actually runs in the lifecycle
+// specs below. The vitest.setup.ts global stub is a no-op (it leaves
+// `isVisible` false), which is correct for tests that DON'T care about
+// the render path — but every spec in this file does. Install in beforeEach
+// and restore the original in afterEach so we don't leak to other suites.
+let originalIO: typeof globalThis.IntersectionObserver;
+
+class IntersectingMock {
+  private cb: IntersectionObserverCallback;
+  root: Element | Document | null = null;
+  rootMargin = '';
+  thresholds: ReadonlyArray<number> = [];
+  constructor(cb: IntersectionObserverCallback) {
+    this.cb = cb;
+  }
+  observe(target: Element): void {
+    // Microtask so React has finished commit before we trigger the state
+    // update (matches real browser behavior — callback fires async).
+    queueMicrotask(() => {
+      this.cb(
+        [
+          {
+            isIntersecting: true,
+            target,
+            intersectionRatio: 1,
+            time: 0,
+            boundingClientRect: target.getBoundingClientRect(),
+            intersectionRect: target.getBoundingClientRect(),
+            rootBounds: null,
+          } as IntersectionObserverEntry,
+        ],
+        this as unknown as IntersectionObserver,
+      );
+    });
+  }
+  unobserve(): void {}
+  disconnect(): void {}
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
+}
+
 beforeEach(() => {
   renderMock.mockReset();
   cleanupMock.mockReset();
@@ -95,10 +138,14 @@ beforeEach(() => {
   }));
   nextPageProxy = null;
   nextLoadResult = { ok: false, error: 'bridge_unavailable', message: 'test' };
+  originalIO = globalThis.IntersectionObserver;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).IntersectionObserver = IntersectingMock;
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  globalThis.IntersectionObserver = originalIO;
 });
 
 describe('ThumbnailItem — Phase 4.1.1 render lifecycle', () => {
