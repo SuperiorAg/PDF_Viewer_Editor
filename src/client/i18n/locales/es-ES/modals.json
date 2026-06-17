@@ -366,5 +366,32 @@
   "readMode": {
     "exitPill": "Salir del modo lectura (F11)",
     "regionAria": "Alternar barras del modo lectura"
+  },
+  "addStamp": {
+    "title": "Añadir sello personalizado",
+    "kind": "Tipo",
+    "kindText": "Texto",
+    "kindImage": "Imagen (próximamente en v0.9.x)",
+    "name": "Nombre",
+    "namePlaceholder": "Mi sello de aprobación",
+    "text": "Texto del sello",
+    "textPlaceholder": "APROBADO — J.D.",
+    "color": "Color",
+    "width": "Ancho (pt)",
+    "cancel": "Cancelar",
+    "add": "Añadir",
+    "validationNameRequired": "El nombre es obligatorio.",
+    "validationTextRequired": "El texto es obligatorio para los sellos de texto.",
+    "imageDeferredNote": "Los sellos personalizados basados en imagen llegarán en v0.9.x. v0.8.0 solo incluye sellos de texto."
+  },
+  "regionClipboard": {
+    "ghostBanner": "Región copiada — haga clic en una página para pegar, Esc para cancelar.",
+    "ghostAria": "Imagen fantasma para pegar región (arrastre para posicionar, haga clic para confirmar)",
+    "selectionAria": "Selección de región de página — clic derecho para Cortar / Copiar / Pegar",
+    "noteImageOnly": "El portapapeles de regiones copia el área como imagen. La edición de texto fuente no se conserva (diferido a v0.9.x).",
+    "menuCut": "Cortar región",
+    "menuCopy": "Copiar región",
+    "menuPaste": "Pegar región",
+    "exit": "Cancelar selección (Esc)"
   }
 }

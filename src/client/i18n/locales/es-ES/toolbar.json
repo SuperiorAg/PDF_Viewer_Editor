@@ -73,6 +73,14 @@
   "combineTooltip": "Combinar PDF (Alt+C)",
   "settings": "Configuración",
   "settingsTooltip": "Configuración (Ctrl+,)",
+  "stamps": "Sellos",
+  "stampsTooltip": "Abrir panel de sellos (Ctrl+Shift+T)",
+  "regionCut": "Cortar región",
+  "regionCutTooltip": "Cortar la región seleccionada de la página como imagen",
+  "regionCopy": "Copiar región",
+  "regionCopyTooltip": "Copiar la región seleccionada de la página como imagen",
+  "regionPaste": "Pegar región",
+  "regionPasteTooltip": "Pegar la región copiada de la página como imagen",
   "annotationLayerIdle": "Capa de anotaciones. Seleccione una herramienta en la barra de anotaciones y luego dibuje con el ratón o el lápiz. Usuarios de teclado: elija una herramienta en la barra; las anotaciones existentes se pueden seleccionar y editar desde el Inspector.",
   "annotationLayerDrawing": "Superficie de dibujo de anotaciones — herramienta {{tool}} activa. Arrastre con el ratón o el lápiz para dibujar. Usuarios de teclado: use el Inspector para añadir y posicionar anotaciones.",
   "shapeTools": {
@@ -100,7 +108,10 @@
     "lineMeasureTooltip": "Medición de línea (M)",
     "polylineMeasure": "Polimedir",
     "polylineMeasureAria": "Medición de polilínea (Mayús+M)",
-    "polylineMeasureTooltip": "Medición de polilínea (Mayús+M)"
+    "polylineMeasureTooltip": "Medición de polilínea (Mayús+M)",
+    "areaMeasure": "Área",
+    "areaMeasureAria": "Medición de área (Mayús+A)",
+    "areaMeasureTooltip": "Medición de área por polígono cerrado (Mayús+A — doble clic o Intro para cerrar)"
   },
   "redactionTools": {
     "label": "Herramientas de redacción",

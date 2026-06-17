@@ -62,7 +62,22 @@ export type ShortcutId =
   // Phase 7.5 B16 — View-only rotation. Renderer-only CSS rotation; does NOT
   // write to the PDF. Distinct from `rotate-cw`/`rotate-ccw` which mutate.
   | 'view-rotate-cw'
-  | 'view-rotate-ccw';
+  | 'view-rotate-ccw'
+  // Phase 7.5 B17 — closed-polygon area measure tool (Shift+A). Shape
+  // sub-toolbar peer of line-measure / polyline-measure.
+  | 'tool-area-measure'
+  // Phase 7.5 B7 — open Stamps panel (sidebar tab) via Ctrl+Shift+T.
+  // Distinct from `tool-sticky` (S, sticky note) — stamps are reusable
+  // text/image overlays managed in a sidebar panel.
+  | 'comment-stamps';
+
+// Phase 7.5 B12 NOTE: page-content region Cut / Copy / Paste are NOT
+// registered as ShortcutIds. They are CONTEXT-SENSITIVE — only active when
+// a region marquee is drawn on a page — so the region-clipboard overlay
+// binds Ctrl+X / Ctrl+C / Ctrl+V directly via React event handlers and
+// short-circuits when focus is on an editable element or no marquee
+// exists. Promoting them to ShortcutIds would pre-empt the OS-default
+// clipboard on every text input in the app.
 
 export interface ShortcutSpec {
   id: ShortcutId;
@@ -326,6 +341,29 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
     id: 'view-rotate-ccw',
     label: 'Rotate view 90 CCW',
     key: 'ArrowLeft',
+    ctrl: true,
+    shift: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  // Phase 7.5 B17 — area measure (closed polygon). 'A' alone would clash
+  // with text input; require Shift to match the polyline-measure (Shift+M)
+  // and area-tool convention.
+  {
+    id: 'tool-area-measure',
+    label: 'Closed-polygon area measure',
+    key: 'A',
+    shift: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  // Phase 7.5 B7 — Stamps panel toggle. Ctrl+Shift+T mirrors the convention
+  // of two-character chords for sidebar tab toggles. Doesn't conflict with
+  // any existing 'T' shortcut (text-box is plain 'T').
+  {
+    id: 'comment-stamps',
+    label: 'Open Stamps panel',
+    key: 'T',
     ctrl: true,
     shift: true,
     enabledInPhase1: false,

@@ -18,11 +18,15 @@ import { openWizard as openMailMergeWizard } from '../state/slices/mail-merge-sl
 import { openRunModal as openOcrRunModal } from '../state/slices/ocr-slice';
 import { setActiveRedactionTool } from '../state/slices/redactions-slice';
 import { selectAll, clearSelection } from '../state/slices/selection-slice';
+// Phase 7.5 B17 (Riley Wave 3) — area-measure shortcut arms the shape sub-toolbar's area tool.
+import { setActiveShapeTool } from '../state/slices/shapes-slice';
 import {
   selectFindBarOpen,
   selectReadMode,
   selectRedactionApplyModalOpen,
   selectRedactionPanelOpen,
+  selectShapesPanelOpen,
+  selectSidebarCollapsed,
   selectTextEditMode,
 } from '../state/slices/ui-selectors';
 import {
@@ -37,6 +41,8 @@ import {
   setReadMode,
   setRedactionApplyModalOpen,
   setRedactionPanelOpen,
+  setShapesPanelOpen,
+  setSidebarTab,
   setTextEditMode,
   toggleBookmarksEditMode,
   toggleInspector,
@@ -72,6 +78,11 @@ export function useAppShortcuts(): void {
   const redactionTotalMarks = useAppSelector((s) => s.redactions.totalMarks);
   const findBarOpen = useAppSelector(selectFindBarOpen);
   const readMode = useAppSelector(selectReadMode);
+  // Phase 7.5 Wave 3 — Stamps + area-measure shortcuts need to know sidebar /
+  // shape-toolbar visibility so the handler can auto-open the right surface
+  // (mirrors the redaction-mark-rect "open panel if closed" idiom).
+  const shapesPanelOpen = useAppSelector(selectShapesPanelOpen);
+  const sidebarCollapsed = useAppSelector(selectSidebarCollapsed);
 
   const handler = useCallback(
     (id: ShortcutId, e: KeyboardEvent) => {
@@ -361,6 +372,24 @@ export function useAppShortcuts(): void {
           if (!redactionPanelOpen) dispatch(setRedactionPanelOpen(true));
           dispatch(setActiveRedactionTool('rect'));
           break;
+        case 'tool-area-measure':
+          // Phase 7.5 B17 (Riley Wave 3) — Shift+A arms the closed-polygon
+          // area measure tool. Opens the shape sub-toolbar if not already
+          // open so the tool button shows armed (mirrors `redaction-mark-rect`
+          // auto-open idiom).
+          e.preventDefault();
+          if (!doc) break;
+          if (!shapesPanelOpen) dispatch(setShapesPanelOpen(true));
+          dispatch(setActiveShapeTool('area-measure'));
+          break;
+        case 'comment-stamps':
+          // Phase 7.5 B7 (Riley Wave 3) — Ctrl+Shift+T opens the Stamps
+          // sidebar tab. Auto-expands the sidebar if collapsed.
+          e.preventDefault();
+          if (!doc) break;
+          dispatch(setSidebarTab('stamps'));
+          if (sidebarCollapsed) dispatch(toggleSidebar());
+          break;
         case 'fit-width':
           // Phase 7.5 A6 — Ctrl+1 = Fit width. PdfViewer's ResizeObserver
           // effect listens for the viewport-slice fitMode change and computes
@@ -388,6 +417,8 @@ export function useAppShortcuts(): void {
       redactionTotalMarks,
       findBarOpen,
       readMode,
+      shapesPanelOpen,
+      sidebarCollapsed,
     ],
   );
 

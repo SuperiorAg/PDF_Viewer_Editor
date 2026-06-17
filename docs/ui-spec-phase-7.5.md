@@ -474,6 +474,37 @@ Image kind swaps Text/Color/Width for "Image: [Browse…]".
 
 `stamps.title`, `stamps.builtIn`, `stamps.mine`, `stamps.recent`, `stamps.addButton`, `stamps.addModal.title`, `stamps.kind.text`, `stamps.kind.image`, `stamps.name`, `stamps.text`, `stamps.color`, `stamps.width`, `stamps.image`, `stamps.cardAria`, `stamps.placementAria`, `stamps.builtin.approved`, `stamps.builtin.confidential`, `stamps.builtin.draft`, `stamps.builtin.sample`, `stamps.builtin.reviewed`, `stamps.builtin.urgent`, `stamps.builtin.notForDistribution`, `stamps.builtin.received`, `stamps.builtin.faxed`, `stamps.builtin.copy`.
 
+### 7.6 Wave 3 refinements (Riley)
+
+The eight existing i18n namespaces in `src/client/i18n/locales-meta.ts`
+(`common, toolbar, menu, sidebar, modals, settings, errors, trustfloor`)
+are stable through the Phase 7 typed-key migration. Adding a new `stamps`
+namespace requires updating `resolve.ts`'s `BUNDLES` table + every
+baseline-coverage test — out of scope for Wave 3. The Wave 3 ship therefore
+nests the stamps keys under `sidebar.stamps.*` (panel + cards) and
+`modals.addStamp.*` (Add Stamp modal) so the existing namespace tree
+absorbs them without infrastructure churn. The 10 built-in stamp i18n
+labels live at `sidebar:stamps.builtin.<id>` (10 entries) so the catalog
+in `services/builtin-stamps.ts` can fan them through `t()`. A future
+audit may consolidate this into a dedicated `stamps` namespace.
+
+Stamps panel is the **6th** sidebar tab (`stamps`) — `cycleSidebarTab`
+rotates `… → exports → stamps → thumbnails`. `Ctrl+Shift+T` opens the
+panel (registered shortcut `comment-stamps`). The placement banner mounts
+at the app level (`StampPlacementOverlay`) and installs a global
+capture-phase click listener that resolves the page via
+`[data-page-index]` on PdfCanvas. The placement materializes as a
+`FreeText` AnnotationModel via the existing `kind: 'annot-add'`
+EditOperation — no new EditOperation variant or IPC channel was needed for
+v0.8.0. The future `pdf:applyStamp` channel (api-contracts §19.10) remains
+reserved for image-based stamps in v0.9.x.
+
+The repo-pattern `stamps:list / stamps:add / stamps:remove` channels are
+NOT yet exposed on `window.pdfApi` (open question for Marcus). Until
+David lands them, `services/stamps-api.ts` returns
+`'bridge_unavailable'` and the renderer keeps custom stamps
+session-only — built-in stamps still work via the in-renderer catalog.
+
 ---
 
 ## 8. B8 Password protection (Wave 5 — bundled with B21 Document Properties)
@@ -723,6 +754,34 @@ System clipboard receives a PNG raster of the selected rect as a fallback for cr
 
 `pageContent.selectAria`, `pageContent.cut`, `pageContent.copy`, `pageContent.paste`, `pageContent.pasteGhostAria`.
 
+### 12.5 Wave 3 refinements (Riley)
+
+For namespace stability (see §7.6) the region-clipboard keys land under
+`modals:regionClipboard.*` (the in-renderer paste-ghost banner + context
+menu) and `toolbar:region{Cut,Copy,Paste}[Tooltip]` (the registry's tool
+entries). Implementation files: `src/client/components/region-clipboard/`
+(new) plus a `src/client/state/slices/region-clipboard-slice.ts` that
+owns the marquee-active flag, the live selection, and the clipboard
+entry.
+
+**Scope honesty (v0.8.0 ships RASTER only):** the tooltip + the success
+toast both say "Region clipboard copies the area as an image. Source-text
+editing is not preserved (deferred to v0.9.x)." A "Cut" overlays a 1×1
+white PNG via the existing `image-overlay` EditOperation — the rectangle
+is a visual delete that persists through Save, NOT a true content-stream
+remove. This matches architecture §6 AR9 ("the actual content extracts on
+paste; cross-app paste degrades to PNG raster of the bbox"). True
+content-stream cut/paste extraction is the same engine path as B18 font
+swap + B20 sanitize and is sequenced for a later wave.
+
+**Shortcut binding (context-sensitive):** `Ctrl+X / Ctrl+C / Ctrl+V` are
+NOT registered in the `SHORTCUTS` table — they would pre-empt the OS
+clipboard on every text input. The overlay binds them directly via React
+event handlers and short-circuits when focus is on an editable element
+or no marquee selection exists. The registry tool entries
+(`edit:region-cut/copy/paste`) carry `shortcutId: null` and advertise the
+chord text in the tooltip as documentation only.
+
 ---
 
 ## 13. B13 Hyperlinks (Wave 4)
@@ -881,6 +940,21 @@ Cursor + polygon drawing pattern (mirrors existing polyline measure):
 ### 17.2 i18n keys (extends `shapes` namespace)
 
 `shapes.area.label`, `shapes.area.tooltip`, `shapes.area.aria`, `shapes.area.units.sqIn`, `shapes.area.units.sqMm`, etc.
+
+### 17.3 Wave 3 refinements (Riley)
+
+Implementation lives at `src/client/components/shape-tools/shape-toolbar.tsx`
+(the eighth entry) — there is no standalone `area-measure.tsx` file because
+the closed-polygon collection logic re-uses the existing `polygon` +
+`polyline-measure` draft pipeline (vertex collection in `shapes-slice` +
+build via `build-shape-annotation.ts`). The build helper attaches a
+`measure` block when `draft.tool === 'area-measure'` so the saved
+annotation carries the calibration; the live area label is computed in
+the overlay via the shoelace formula. The i18n keys land under
+`toolbar:shapeTools.areaMeasure[/Aria/Tooltip]` (the eighth shape entry
+joins the existing seven there, keeping the `shapeTools.*` sub-tree
+contiguous) rather than the spec's hypothetical `shapes.*` namespace —
+this matches the convention the Phase 7.4 A2 wrap already established.
 
 ---
 
@@ -1331,7 +1405,7 @@ Reaffirming architecture §8. The four Wave 12 Nathan obligations:
 | Wave | New components                                                                                                                                                                   | Reuses                                                                                |
 | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | 2    | A7 palette, find-bar, page-display switch, read-mode toggle, crop-tool, page-ops-modal extract/split/replace, insert-pages-modal, A5 cursor button, A4 menu mirrors via registry | Tool registry (just landed), pdf-canvas viewport, existing menu-bar shell             |
-| 3    | stamps-panel, stamp-add-modal, area-measure (shape sub-toolbar), page-content clipboard handler                                                                                  | shape-toolbar from Phase 7.4 A5, annotation overlay                                   |
+| 3    | stamps-panel + stamp-add-modal + stamp-placement-overlay, area-measure (8th entry in shape sub-toolbar), region-clipboard overlay + slice, crop dispatch thunk, pickFolder shim  | shape-toolbar from Phase 7.4 A5, annotation overlay, image-overlay EditOperation      |
 | 4    | page-design-modal (watermark/H&F/background), link-tool/link-edit-modal, auto-bookmark-modal step-1                                                                              | inspector tabs                                                                        |
 | 5    | document-properties-modal (description/security/fonts/custom), font-swap-modal, sanitize-modal, auto-bookmark-modal step-2                                                       | bookmarks tree picker                                                                 |
 | 5a   | read-aloud-bar, preflight-panel                                                                                                                                                  | text-layer for sentence highlight                                                     |

@@ -1166,5 +1166,73 @@ export const cancelMailMergeThunk = createAsyncThunk<
   }
 });
 
+// =============================================================================
+// Phase 7.5 B5 — Crop dispatch thunk (Riley Wave 3).
+//
+// David's Wave 2 handler accepts a `pages` union that includes the literal
+// 'current' as a renderer-friendly sentinel. To keep the engine deterministic
+// the brief specifies: the renderer thunk MUST resolve 'current' to the
+// active `viewport.currentPage` BEFORE firing `pdf:cropPages`. David's
+// handler falls back to page 0 if it sees 'current' — that fallback is the
+// belt-and-braces safety net, not the contract this side honors.
+// =============================================================================
+
+export interface CropPagesThunkArg {
+  pages: 'all' | 'current' | { start: number; end: number } | readonly number[];
+  cropBox: { top: number; right: number; bottom: number; left: number };
+  respectRotation?: boolean;
+}
+
+export const cropPagesThunk = createAsyncThunk<
+  void,
+  CropPagesThunkArg,
+  { dispatch: AppDispatch; state: RootState }
+>('document/cropPages', async (arg, { dispatch, getState }) => {
+  const state = getState();
+  const doc = state.document.current;
+  if (!doc) return;
+
+  // P7.5 Wave 3 brief — resolve `'current'` BEFORE the IPC fires.
+  const resolvedPages: 'all' | { start: number; end: number } | number[] =
+    arg.pages === 'current'
+      ? [state.viewport.currentPage]
+      : Array.isArray(arg.pages)
+        ? Array.from(arg.pages)
+        : (arg.pages as 'all' | { start: number; end: number });
+
+  try {
+    const res = await api.pdf.cropPages({
+      handle: doc.handle,
+      pages: resolvedPages,
+      cropBox: arg.cropBox,
+      ...(arg.respectRotation !== undefined ? { respectRotation: arg.respectRotation } : {}),
+    });
+    if (!res.ok) {
+      dispatch(
+        pushToast({
+          kind: 'error',
+          message: `Crop failed: ${res.message}`,
+        }),
+      );
+      return;
+    }
+    dispatch(
+      pushToast({
+        kind: 'success',
+        message: `Cropped ${res.value.pagesAffected} page${
+          res.value.pagesAffected === 1 ? '' : 's'
+        }.`,
+      }),
+    );
+  } catch (e) {
+    dispatch(
+      pushToast({
+        kind: 'error',
+        message: e instanceof Error ? e.message : 'Crop dispatch failed.',
+      }),
+    );
+  }
+});
+
 // Re-export for component imports.
 export type { FormFieldDefinition, FormFieldValue, MailMergeJob, MailMergeOutputMode };

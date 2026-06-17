@@ -756,5 +756,32 @@
   "readMode": {
     "exitPill": "Exit Read Mode (F11)",
     "regionAria": "Read mode chrome toggle"
+  },
+  "addStamp": {
+    "title": "Add custom stamp",
+    "kind": "Kind",
+    "kindText": "Text",
+    "kindImage": "Image (coming in v0.9.x)",
+    "name": "Name",
+    "namePlaceholder": "My approval stamp",
+    "text": "Stamp text",
+    "textPlaceholder": "APPROVED — J.D.",
+    "color": "Color",
+    "width": "Width (pt)",
+    "cancel": "Cancel",
+    "add": "Add",
+    "validationNameRequired": "Name is required.",
+    "validationTextRequired": "Stamp text is required for text stamps.",
+    "imageDeferredNote": "Image-based custom stamps will arrive in v0.9.x. v0.8.0 ships with text stamps only."
+  },
+  "regionClipboard": {
+    "ghostBanner": "Region copied — click on a page to paste, Esc to cancel.",
+    "ghostAria": "Region paste ghost (drag to position, click to commit)",
+    "selectionAria": "Page region selection — right-click for Cut / Copy / Paste",
+    "noteImageOnly": "Region clipboard copies the area as an image. Source-text editing is not preserved (deferred to v0.9.x).",
+    "menuCut": "Cut region",
+    "menuCopy": "Copy region",
+    "menuPaste": "Paste region",
+    "exit": "Cancel selection (Esc)"
   }
 }

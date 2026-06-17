@@ -76,7 +76,12 @@
     "redactShowMarks": "Show Redaction Markups",
     "redactClearMarks": "Clear Redaction Marks",
     "redactApply": "Apply Redactions...",
-    "invalidatedByRedaction": "invalidated by redaction"
+    "invalidatedByRedaction": "invalidated by redaction",
+    "stamps": "Stamps...",
+    "areaMeasure": "Area Measure",
+    "regionCut": "Cut Page Region",
+    "regionCopy": "Copy Page Region",
+    "regionPaste": "Paste Page Region"
   },
   "tooltips": {
     "findComing": "Find (Ctrl+F)",

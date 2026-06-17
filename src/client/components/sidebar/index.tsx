@@ -9,6 +9,8 @@ import { BookmarksPanel } from '../bookmarks-panel';
 import { FormsPanel } from '../forms-panel';
 // Phase 5 — OCR results panel as the 4th sidebar tab.
 import { OcrResultsPanel } from '../ocr-results-panel';
+// Phase 7.5 B7 (Riley Wave 3) — Stamps panel as the 6th sidebar tab.
+import { StampsPanel } from '../stamps-panel';
 import { ThumbnailStrip } from '../thumbnail-strip';
 
 // Phase 6 — Exports tab as the 5th sidebar tab (ui-spec §15.4).
@@ -36,6 +38,8 @@ const SIDEBAR_TABS: readonly SidebarTabDef[] = [
   { id: 'forms', labelKey: 'sidebar:tabs.forms' },
   { id: 'ocr-results', labelKey: 'sidebar:tabs.ocrResults' },
   { id: 'exports', labelKey: 'sidebar:tabs.exports', testId: 'sidebar-tab-exports' },
+  // Phase 7.5 B7 (Riley Wave 3).
+  { id: 'stamps', labelKey: 'sidebar:tabs.stamps', testId: 'sidebar-tab-stamps' },
 ];
 
 const TAB_IDS: readonly SidebarTab[] = SIDEBAR_TABS.map((t) => t.id);
@@ -65,9 +69,12 @@ export function Sidebar(): JSX.Element | null {
       <FormsPanel />
     ) : tab === 'ocr-results' ? (
       <OcrResultsPanel />
-    ) : (
+    ) : tab === 'exports' ? (
       // Phase 6 — Exports tab.
       <ExportsPanel />
+    ) : (
+      // Phase 7.5 B7 (Riley Wave 3) — Stamps tab.
+      <StampsPanel />
     );
 
   return (

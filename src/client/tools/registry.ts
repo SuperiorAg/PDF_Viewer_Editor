@@ -26,6 +26,17 @@ import { toggleDesignerMode } from '../state/slices/forms-slice';
 import { openWizard as openMailMergeWizard } from '../state/slices/mail-merge-slice';
 import { openRunModal as openOcrRunModal } from '../state/slices/ocr-slice';
 import { setActiveRedactionTool } from '../state/slices/redactions-slice';
+// Phase 7.5 Wave 3 (Riley) — region clipboard cut/copy/paste delegate to the
+// region-clipboard service shared with the menu mirrors.
+import {
+  regionClipboardCopy,
+  regionClipboardCut,
+  regionClipboardPaste,
+  selectRegionClipboardCanPaste,
+  selectRegionClipboardHasSelection,
+} from '../state/slices/region-clipboard-slice';
+// Phase 7.5 Wave 3 (Riley) — area-measure tool arms the shape sub-toolbar.
+import { setActiveShapeTool } from '../state/slices/shapes-slice';
 import {
   openImageImportModal,
   openModal,
@@ -34,6 +45,8 @@ import {
   setReadMode,
   setRedactionApplyModalOpen,
   setRedactionPanelOpen,
+  setShapesPanelOpen,
+  setSidebarTab,
   setTextEditMode,
   toggleBookmarksEditMode,
   toggleInspector,
@@ -108,6 +121,12 @@ export type ToolId =
   | 'tools:text-edit-mode'
   // bookmarks
   | 'bookmarks:edit-mode'
+  // Phase 7.5 Wave 3 (Riley) — stamps + area measure + page-content clipboard.
+  | 'comment:stamps'
+  | 'shape:area-measure'
+  | 'edit:region-cut'
+  | 'edit:region-copy'
+  | 'edit:region-paste'
   // help
   | 'help:help'
   | 'help:about';
@@ -824,6 +843,89 @@ export const TOOLS: readonly ToolDef[] = [
     dispatch: (d) => d(setTextEditMode(true)),
     searchKeywords: ['text edit', 'edit text'],
     deprecationNote: 'duplicate of annotation:text-edit; menu mirror only',
+  },
+
+  // ---- Phase 7.5 Wave 3 (Riley) — Stamps + Area measure + Region clipboard ----
+  // Stamps panel toggle (opens the sidebar tab + ensures the sidebar is
+  // expanded). The stamps:list / stamps:add / stamps:remove IPC channels are
+  // open questions for Marcus; the panel renders the 10 built-in text stamps
+  // from `services/builtin-stamps.ts` regardless of bridge availability.
+  {
+    id: 'comment:stamps',
+    nameKey: 'toolbar:stamps',
+    tooltipKey: 'toolbar:stampsTooltip',
+    ariaLabelKey: 'toolbar:stamps',
+    icon: 'stamps',
+    shortcutId: 'comment-stamps',
+    menu: { top: 'comment', section: 'stamps' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: docOpen,
+    dispatch: (d, s) => {
+      d(setSidebarTab('stamps'));
+      if (s.ui.sidebarCollapsed) d(toggleSidebar());
+    },
+    searchKeywords: ['stamp', 'stamps', 'approved', 'draft', 'confidential', 'mark'],
+  },
+  // B17 area-measure — arms the shape sub-toolbar's area tool.
+  {
+    id: 'shape:area-measure',
+    nameKey: 'toolbar:shapeTools.areaMeasure',
+    tooltipKey: 'toolbar:shapeTools.areaMeasureTooltip',
+    ariaLabelKey: 'toolbar:shapeTools.areaMeasureAria',
+    icon: 'area-measure',
+    shortcutId: 'tool-area-measure',
+    menu: { top: 'comment', section: 'mark-up' },
+    surfaces: { toolbar: 'shapes', menu: true, palette: true },
+    enabledWhen: docOpen,
+    dispatch: (d) => {
+      d(setShapesPanelOpen(true));
+      d(setActiveShapeTool('area-measure'));
+    },
+    searchKeywords: ['area', 'measure', 'polygon', 'closed', 'calibrate'],
+  },
+  // B12 region clipboard — menu-only entries (Cut / Copy / Paste). The actual
+  // Ctrl+X / Ctrl+C / Ctrl+V chords are context-sensitive and bound by the
+  // region-clipboard overlay, NOT the global shortcuts table — so these tools
+  // have `shortcutId: null`. The chord text is shown inside the tooltip as
+  // documentation only.
+  {
+    id: 'edit:region-cut',
+    nameKey: 'toolbar:regionCut',
+    tooltipKey: 'toolbar:regionCutTooltip',
+    ariaLabelKey: 'toolbar:regionCut',
+    icon: null,
+    shortcutId: null,
+    menu: { top: 'edit', section: 'clipboard' },
+    surfaces: { menu: true, palette: true, contextMenu: 'page-content-selection' },
+    enabledWhen: selectRegionClipboardHasSelection,
+    dispatch: (d) => d(regionClipboardCut()),
+    searchKeywords: ['cut', 'region', 'clipboard'],
+  },
+  {
+    id: 'edit:region-copy',
+    nameKey: 'toolbar:regionCopy',
+    tooltipKey: 'toolbar:regionCopyTooltip',
+    ariaLabelKey: 'toolbar:regionCopy',
+    icon: null,
+    shortcutId: null,
+    menu: { top: 'edit', section: 'clipboard' },
+    surfaces: { menu: true, palette: true, contextMenu: 'page-content-selection' },
+    enabledWhen: selectRegionClipboardHasSelection,
+    dispatch: (d) => d(regionClipboardCopy()),
+    searchKeywords: ['copy', 'region', 'clipboard'],
+  },
+  {
+    id: 'edit:region-paste',
+    nameKey: 'toolbar:regionPaste',
+    tooltipKey: 'toolbar:regionPasteTooltip',
+    ariaLabelKey: 'toolbar:regionPaste',
+    icon: null,
+    shortcutId: null,
+    menu: { top: 'edit', section: 'clipboard' },
+    surfaces: { menu: true, palette: true, contextMenu: 'page-content-selection' },
+    enabledWhen: selectRegionClipboardCanPaste,
+    dispatch: (d) => d(regionClipboardPaste()),
+    searchKeywords: ['paste', 'region', 'clipboard'],
   },
 
   // ---- bookmarks ----

@@ -76,7 +76,12 @@
     "redactShowMarks": "Mostrar marcas de redacción",
     "redactClearMarks": "Borrar marcas de redacción",
     "redactApply": "Aplicar redacciones...",
-    "invalidatedByRedaction": "invalidada por redacción"
+    "invalidatedByRedaction": "invalidada por redacción",
+    "stamps": "Sellos...",
+    "areaMeasure": "Medir área",
+    "regionCut": "Cortar región de página",
+    "regionCopy": "Copiar región de página",
+    "regionPaste": "Pegar región de página"
   },
   "tooltips": {
     "findComing": "Buscar (Ctrl+F)",

@@ -26,10 +26,17 @@ import { PdfViewer } from './components/pdf-viewer';
 // pattern as ShapeToolbar above, gated on ui.redactionPanelOpen / Modal flag).
 import { ApplyRedactionsModal } from './components/redaction-tools/apply-redactions-modal';
 import { RedactionToolbar } from './components/redaction-tools/redaction-toolbar';
+// Phase 7.5 B12 (Riley Wave 3) — page-content region clipboard overlay.
+import { RegionClipboardOverlay } from './components/region-clipboard';
 // Phase 7.4 A5 — ShapeToolbar mounts as a sibling under the main Toolbar,
 // gated on ui.shapesPanelOpen (mirrors the FormDesignerToolbar pattern).
 import { ShapeToolbar } from './components/shape-tools/shape-toolbar';
 import { Sidebar } from './components/sidebar';
+// Phase 7.5 B7 (Riley Wave 3) — Stamps Add modal + placement overlay mount
+// at the app level so they compose with other modals and the placement
+// banner stays visible across sidebar tab switches.
+import { AddStampModal } from './components/stamps-panel/add-stamp-modal';
+import { StampPlacementOverlay } from './components/stamps-panel/stamp-placement-overlay';
 import { StatusBar } from './components/status-bar';
 import { TextEditOverlay } from './components/text-edit-overlay';
 import { ToastStack } from './components/toast';
@@ -306,6 +313,15 @@ export function App(): JSX.Element {
         {/* Phase 7.5 A7 — Find-a-tool palette (Ctrl+/). Reads from the tool
             registry; dispatches the chosen tool's action on Enter. */}
         {findAToolOpen && <FindAToolPalette />}
+        {/* Phase 7.5 B7 (Riley Wave 3) — Stamps modal + placement overlay.
+            Both gate on their own slice flags. The placement overlay mounts
+            unconditionally (returns null when no placement) so the global
+            click listener installs and tears down cleanly across renders. */}
+        <AddStampModal />
+        <StampPlacementOverlay />
+        {/* Phase 7.5 B12 (Riley Wave 3) — region-clipboard overlay. Returns
+            only render-effects when no marquee / paste-ghost is active. */}
+        <RegionClipboardOverlay />
         <TextEditOverlay />
       </div>
     </ErrorBoundary>

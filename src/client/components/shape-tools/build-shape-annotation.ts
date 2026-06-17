@@ -94,13 +94,24 @@ export function buildShapeAnnotationFromDraft(
   if (subtype === 'Polygon') {
     const vertices = draft.vertices ?? [];
     if (vertices.length < 6) return null; // need ≥3 points
-    return {
+    // Phase 7.5 B17 — area-measure rides through Polygon with a measure block
+    // attached. The renderer's overlay computes the area from the shoelace
+    // formula; here we only persist the calibration so re-renders + label
+    // recomputation stay deterministic on reload.
+    const polygonModel: ShapeAnnotationModel = {
       ...base,
       subtype,
       vertices,
       fillEnabled: defaults.fillEnabled,
       fillColor: defaults.fillColor,
     };
+    if (draft.tool === 'area-measure') {
+      polygonModel.measure = {
+        unit: opts.measureUnit ?? 'inch',
+        scale: opts.measureScale ?? 1,
+      };
+    }
+    return polygonModel;
   }
 
   if (subtype === 'PolyLine') {

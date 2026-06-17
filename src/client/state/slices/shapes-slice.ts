@@ -26,7 +26,12 @@ export type ShapeTool =
   | 'arrow'
   | 'callout'
   | 'line-measure'
-  | 'polyline-measure';
+  | 'polyline-measure'
+  // Phase 7.5 B17 (Riley Wave 3) — closed-polygon area measure tool.
+  // Vertex collection mirrors `polyline-measure`; on close (double-click /
+  // Enter) the build-shape helper emits a Polygon annotation with a
+  // measure block + computed area in calibrated units.
+  | 'area-measure';
 
 /** Map a ShapeTool to the underlying ShapeAnnotationSubtype. */
 export function shapeToolToSubtype(tool: ShapeTool): ShapeAnnotationSubtype | null {
@@ -47,6 +52,10 @@ export function shapeToolToSubtype(tool: ShapeTool): ShapeAnnotationSubtype | nu
       return 'FreeTextCallout';
     case 'polyline-measure':
       return 'PolyLine';
+    // Phase 7.5 B17 — closed-polygon area measure renders as a Polygon
+    // (closed shape) carrying a measure block.
+    case 'area-measure':
+      return 'Polygon';
   }
 }
 
@@ -117,7 +126,12 @@ export const shapesSlice = createSlice({
     },
     beginShapeDraft(state, action: PayloadAction<{ pageIndex: number; x: number; y: number }>) {
       if (state.activeTool === 'cursor') return;
-      const useVertices = state.activeTool === 'polygon' || state.activeTool === 'polyline-measure';
+      // Phase 7.5 B17 — `area-measure` collects vertices like polygon /
+      // polyline-measure.
+      const useVertices =
+        state.activeTool === 'polygon' ||
+        state.activeTool === 'polyline-measure' ||
+        state.activeTool === 'area-measure';
       const draft: DraftShape = {
         pageIndex: action.payload.pageIndex,
         tool: state.activeTool,

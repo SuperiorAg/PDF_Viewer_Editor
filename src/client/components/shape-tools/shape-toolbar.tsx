@@ -94,6 +94,15 @@ const TOOLS: readonly ShapeToolEntry[] = [
     tooltipKey: 'toolbar:shapeTools.polylineMeasureTooltip',
     shortcut: 'Shift+M',
   },
+  // Phase 7.5 B17 (Riley Wave 3) — closed-polygon area measure tool. Joins
+  // the shape sub-toolbar as the eighth measure entry.
+  {
+    id: 'area-measure',
+    labelKey: 'toolbar:shapeTools.areaMeasure',
+    ariaKey: 'toolbar:shapeTools.areaMeasureAria',
+    tooltipKey: 'toolbar:shapeTools.areaMeasureTooltip',
+    shortcut: 'Shift+A',
+  },
 ];
 
 export function ShapeToolbar(): JSX.Element | null {

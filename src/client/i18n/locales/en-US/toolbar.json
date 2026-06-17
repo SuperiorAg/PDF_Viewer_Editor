@@ -75,6 +75,14 @@
   "combineTooltip": "Combine PDFs (Alt+C)",
   "settings": "Settings",
   "settingsTooltip": "Settings (Ctrl+,)",
+  "stamps": "Stamps",
+  "stampsTooltip": "Open Stamps panel (Ctrl+Shift+T)",
+  "regionCut": "Cut region",
+  "regionCutTooltip": "Cut the selected page-content region as an image",
+  "regionCopy": "Copy region",
+  "regionCopyTooltip": "Copy the selected page-content region as an image",
+  "regionPaste": "Paste region",
+  "regionPasteTooltip": "Paste the copied page-content region as an image",
   "annotationLayerIdle": "Annotation layer. Select a tool from the Annotation toolbar, then draw with the mouse or pen. Keyboard users: pick a tool from the toolbar; existing annotations are selectable and editable from the Inspector.",
   "annotationLayerDrawing": "Annotation drawing surface — {{tool}} tool active. Drag with the mouse or pen to draw. Keyboard users: use the Inspector to add and position annotations.",
   "shapeTools": {
@@ -102,7 +110,10 @@
     "lineMeasureTooltip": "Line measure (M)",
     "polylineMeasure": "Poly-Measure",
     "polylineMeasureAria": "Polyline measure (Shift+M)",
-    "polylineMeasureTooltip": "Polyline measure (Shift+M)"
+    "polylineMeasureTooltip": "Polyline measure (Shift+M)",
+    "areaMeasure": "Area",
+    "areaMeasureAria": "Area measure (Shift+A)",
+    "areaMeasureTooltip": "Closed-polygon area measure (Shift+A — double-click or Enter to close)"
   },
   "redactionTools": {
     "label": "Redaction tools",

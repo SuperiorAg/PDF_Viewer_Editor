@@ -6,7 +6,8 @@
     "bookmarks": "Bookmarks",
     "forms": "Forms",
     "ocrResults": "OCR",
-    "exports": "Exports"
+    "exports": "Exports",
+    "stamps": "Stamps"
   },
   "pageCount_one": "{{count}} page",
   "pageCount_other": "{{count}} pages",
@@ -42,5 +43,31 @@
     "empty": "No export jobs yet.",
     "openFolder": "Open containing folder",
     "openFile": "Open file"
+  },
+  "stamps": {
+    "label": "Stamps library",
+    "builtIn": "Built-in",
+    "mine": "My Stamps",
+    "recent": "Recently used",
+    "addButton": "Add custom stamp",
+    "cardAria": "Place {{name}} stamp",
+    "placementBanner": "Stamp {{name}} selected — click on a page to place. Esc to cancel.",
+    "placementAria": "Stamp placement in progress",
+    "exitPlacement": "Cancel placement (Esc)",
+    "remove": "Remove",
+    "removeAria": "Remove custom stamp {{name}}",
+    "empty": "No custom stamps yet — click \"Add custom stamp\" to create one.",
+    "builtin": {
+      "approved": "Approved",
+      "confidential": "Confidential",
+      "draft": "Draft",
+      "sample": "Sample",
+      "reviewed": "Reviewed",
+      "urgent": "Urgent",
+      "notForDistribution": "Not for distribution",
+      "received": "Received",
+      "faxed": "Faxed",
+      "copy": "Copy"
+    }
   }
 }

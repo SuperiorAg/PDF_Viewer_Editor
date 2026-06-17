@@ -5,7 +5,15 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 // rotation. Per docs/ui-spec.md §14 amendment.
 // Phase 6: 'exports' joins as the 5th tab (Pages -> Bookmarks -> Forms ->
 // OCR -> Exports). Per docs/ui-spec.md §15.4.
-export type SidebarTab = 'thumbnails' | 'bookmarks' | 'forms' | 'ocr-results' | 'exports';
+// Phase 7.5 B7 (Riley Wave 3): 'stamps' joins as the 6th tab — sidebar
+// sibling of Bookmarks per docs/ui-spec-phase-7.5.md §7.1.
+export type SidebarTab =
+  | 'thumbnails'
+  | 'bookmarks'
+  | 'forms'
+  | 'ocr-results'
+  | 'exports'
+  | 'stamps';
 export type ModalKind =
   | 'combine'
   | 'settings'
@@ -158,15 +166,16 @@ export const uiSlice = createSlice({
       state.sidebarTab = action.payload;
     },
     cycleSidebarTab(state) {
-      // Phase 6 (was Phase 5): rotate Thumbnails -> Bookmarks -> Forms ->
-      // OCR results -> Exports -> Thumbnails. Order matches sidebar tab
-      // visual order (ui-spec §15.4).
+      // Phase 7.5 B7 (Riley Wave 3): rotate Thumbnails -> Bookmarks -> Forms ->
+      // OCR results -> Exports -> Stamps -> Thumbnails. Order matches sidebar
+      // tab visual order (ui-spec §15.4 + ui-spec-phase-7.5 §7.1).
       const next: Record<SidebarTab, SidebarTab> = {
         thumbnails: 'bookmarks',
         bookmarks: 'forms',
         forms: 'ocr-results',
         'ocr-results': 'exports',
-        exports: 'thumbnails',
+        exports: 'stamps',
+        stamps: 'thumbnails',
       };
       state.sidebarTab = next[state.sidebarTab];
     },

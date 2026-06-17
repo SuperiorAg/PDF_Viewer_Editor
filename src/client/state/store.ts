@@ -16,6 +16,8 @@ import ocrReducer from './slices/ocr-slice';
 import recentsReducer from './slices/recents-slice';
 // Phase 7.4 B1
 import redactionsReducer from './slices/redactions-slice';
+// Phase 7.5 B12 (Riley Wave 3) — region clipboard.
+import regionClipboardReducer from './slices/region-clipboard-slice';
 import scanReducer from './slices/scan-slice';
 import selectionReducer from './slices/selection-slice';
 // Phase 7
@@ -23,6 +25,8 @@ import selectionReducer from './slices/selection-slice';
 import shapesReducer from './slices/shapes-slice';
 import signatureAuditReducer from './slices/signature-audit-slice';
 import signaturesReducer from './slices/signatures-slice';
+// Phase 7.5 B7 (Riley Wave 3) — Stamps library.
+import stampsReducer from './slices/stamps-slice';
 import telemetryReducer from './slices/telemetry-slice';
 import uiReducer from './slices/ui-slice';
 import updateReducer from './slices/update-slice';
@@ -52,6 +56,9 @@ export const store = configureStore({
     scan: scanReducer,
     // Phase 7.4 B1
     redactions: redactionsReducer,
+    // Phase 7.5 B7 / B12 (Riley Wave 3)
+    stamps: stampsReducer,
+    regionClipboard: regionClipboardReducer,
     // Phase 7
     update: updateReducer,
     telemetry: telemetryReducer,

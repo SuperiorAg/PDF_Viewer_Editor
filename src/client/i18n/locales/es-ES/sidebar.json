@@ -6,7 +6,8 @@
     "bookmarks": "Marcadores",
     "forms": "Formularios",
     "ocrResults": "OCR",
-    "exports": "Exportaciones"
+    "exports": "Exportaciones",
+    "stamps": "Sellos"
   },
   "pageCount_one": "{{count}} página",
   "pageCount_other": "{{count}} páginas",
@@ -42,5 +43,31 @@
     "empty": "Aún no hay trabajos de exportación.",
     "openFolder": "Abrir carpeta contenedora",
     "openFile": "Abrir archivo"
+  },
+  "stamps": {
+    "label": "Biblioteca de sellos",
+    "builtIn": "Predefinidos",
+    "mine": "Mis sellos",
+    "recent": "Usados recientemente",
+    "addButton": "Añadir sello personalizado",
+    "cardAria": "Colocar sello {{name}}",
+    "placementBanner": "Sello {{name}} seleccionado — haga clic en una página para colocarlo. Esc para cancelar.",
+    "placementAria": "Colocación de sello en curso",
+    "exitPlacement": "Cancelar colocación (Esc)",
+    "remove": "Eliminar",
+    "removeAria": "Eliminar sello personalizado {{name}}",
+    "empty": "Aún no hay sellos personalizados — haga clic en \"Añadir sello personalizado\" para crear uno.",
+    "builtin": {
+      "approved": "Aprobado",
+      "confidential": "Confidencial",
+      "draft": "Borrador",
+      "sample": "Muestra",
+      "reviewed": "Revisado",
+      "urgent": "Urgente",
+      "notForDistribution": "No distribuir",
+      "received": "Recibido",
+      "faxed": "Enviado por fax",
+      "copy": "Copia"
+    }
   }
 }

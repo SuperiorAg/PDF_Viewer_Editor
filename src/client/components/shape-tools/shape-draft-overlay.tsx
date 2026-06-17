@@ -43,7 +43,7 @@ export function ShapeDraftOverlay(): JSX.Element | null {
         className={styles.draftShape}
       />
     );
-  } else if (draft.tool === 'polygon' && draft.vertices) {
+  } else if ((draft.tool === 'polygon' || draft.tool === 'area-measure') && draft.vertices) {
     const pts = draft.vertices
       .reduce<string[]>((acc, v, i) => {
         if (i % 2 === 0) acc.push(`${v},`);
