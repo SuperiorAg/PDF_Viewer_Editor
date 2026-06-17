@@ -66,6 +66,21 @@ export async function loadPdfMetadata(bytes: Uint8Array): Promise<LoadedPdfMetad
     throw new Error('Could not parse PDF: missing %PDF- header');
   }
 
+  // PERF (1064-page PDF unblock): pdf-lib's PDFDocument.load() parses the
+  // ENTIRE document tree synchronously on the main thread — for a 1000+-page
+  // PDF that wedges main for many tens of seconds while dialog:openPdf has
+  // not yet returned, and the renderer's visible-page render path waits
+  // behind it (main is single-threaded IPC). We only need pageCount here;
+  // try a fast byte scan for /Type/Pages /Count first — this works for the
+  // vast majority of PDFs (the page-tree root dict is in plain text in the
+  // xref-table format and in most xref-stream variants too). Fall back to
+  // pdf-lib only when the scan can't find a count (e.g. fully compressed
+  // object streams), preserving correctness for unusual PDFs.
+  const quick = quickScanPageCount(bytes);
+  if (quick !== null) {
+    return { pageCount: quick, warnings: [] };
+  }
+
   let doc: PDFDocument;
   let pageCount: number;
   try {
@@ -99,4 +114,44 @@ export async function loadPdfMetadata(bytes: Uint8Array): Promise<LoadedPdfMetad
     // contract stable; future iterations may wire a parser observer.
     warnings: [],
   };
+}
+
+/**
+ * Fast byte-scan for the page tree's /Count. Returns the LARGEST /Count
+ * found in any `/Type /Pages` dict — the root /Pages dict always has the
+ * largest count because it sums every leaf in its subtree. Returns null
+ * when no in-plaintext /Type /Pages dict is present (e.g. the root is
+ * inside a compressed object stream), in which case callers should fall
+ * back to pdf-lib's full parse.
+ *
+ * Performance: Buffer.indexOf is a native C scan; even on a 200MB PDF this
+ * completes in milliseconds.
+ */
+function quickScanPageCount(bytes: Uint8Array): number | null {
+  const buf = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  // PDF tokens: `/Type/Pages` (compact, no space) and `/Type /Pages`
+  // (canonical, single space) are the two common forms. Other whitespace
+  // (LF, CR, TAB) is permitted by the spec between tokens but rare for the
+  // /Type key.
+  const patterns = [Buffer.from('/Type/Pages'), Buffer.from('/Type /Pages')];
+  let best: number | null = null;
+  for (const pattern of patterns) {
+    let pos = buf.indexOf(pattern);
+    while (pos !== -1) {
+      // Scan forward up to ~2KB for /Count <num>. The /Count entry is
+      // typically within a few dozen bytes of /Type /Pages inside the same
+      // dict, but allow slack for /Kids arrays and verbose formatting.
+      const end = Math.min(pos + 2048, buf.length);
+      const region = buf.subarray(pos, end).toString('latin1');
+      const m = /\/Count\s+(\d+)/.exec(region);
+      if (m && m[1] !== undefined) {
+        const n = Number.parseInt(m[1], 10);
+        if (Number.isFinite(n) && n > 0 && (best === null || n > best)) {
+          best = n;
+        }
+      }
+      pos = buf.indexOf(pattern, pos + pattern.length);
+    }
+  }
+  return best;
 }
