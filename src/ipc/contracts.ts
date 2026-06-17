@@ -1744,6 +1744,200 @@ export interface PdfEditLinksValue {
 
 export type PdfEditLinksResponse = Result<PdfEditLinksValue, PdfEditLinksError>;
 
+// ---- pdf:setPasswordProtection (B8, Wave 5) -------------------------------
+//
+// Contract: docs/api-contracts.md §19.4.2.
+// Engine:   src/main/pdf-ops/encryption-engine.ts (qpdf subprocess).
+
+export type EncryptionAlgorithm = 'aes-128' | 'aes-256';
+
+export interface EncryptionPermissions {
+  print: boolean;
+  modify: boolean;
+  copy: boolean;
+  annotate: boolean;
+  fillForms: boolean;
+  extract: boolean;
+  assemble: boolean;
+  printHighRes: boolean;
+}
+
+export interface PdfSetPasswordProtectionRequest {
+  handle: DocumentHandle;
+  openPassword: string | null;
+  permissionsPassword: string | null;
+  permissions: EncryptionPermissions;
+  encryption: EncryptionAlgorithm;
+}
+
+export type PdfSetPasswordProtectionError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'engine_unavailable'
+  | 'password_too_short'
+  | 'wrong_password'
+  | 'engine_failed';
+
+export interface PdfSetPasswordProtectionValue {
+  outputBytes: number;
+  warnings: string[];
+}
+
+export type PdfSetPasswordProtectionResponse = Result<
+  PdfSetPasswordProtectionValue,
+  PdfSetPasswordProtectionError
+>;
+
+// ---- pdf:removeHiddenInfo (B20, Wave 5) -----------------------------------
+//
+// Contract: docs/api-contracts.md §19.4.3.
+// Engine:   src/main/pdf-ops/sanitize-engine.ts (rebuild-from-scratch per
+//           P7.5-L-12).
+
+export type SanitizeCategory =
+  | 'metadata'
+  | 'attachments'
+  | 'comments'
+  | 'form-fields'
+  | 'bookmarks'
+  | 'js'
+  | 'hidden-text'
+  | 'hidden-layers'
+  | 'deleted-content'
+  | 'object-data'
+  | 'thumbnails'
+  | 'web-capture-info'
+  | 'links'
+  | 'overlapping-objects'
+  | 'cross-reference-data'
+  | 'content-not-on-page'
+  | 'private-application-data';
+
+export interface PdfRemoveHiddenInfoRequest {
+  handle: DocumentHandle;
+  categories: SanitizeCategory[];
+}
+
+export type PdfRemoveHiddenInfoError = 'invalid_payload' | 'handle_not_found' | 'engine_failed';
+
+export interface PdfRemoveHiddenInfoValue {
+  categoriesApplied: SanitizeCategory[];
+  itemsRemoved: Record<SanitizeCategory, number>;
+  warnings: string[];
+}
+
+export type PdfRemoveHiddenInfoResponse = Result<
+  PdfRemoveHiddenInfoValue,
+  PdfRemoveHiddenInfoError
+>;
+
+// ---- pdf:getDocumentProperties / pdf:setDocumentProperties (B21, Wave 5) --
+//
+// Contract: docs/api-contracts.md §19.4.4.
+// Engine:   src/main/pdf-ops/document-properties.ts.
+
+export interface DocumentProperties {
+  title: string | null;
+  author: string | null;
+  subject: string | null;
+  keywords: string[];
+  creator: string | null;
+  producer: string | null;
+  creationDate: number | null;
+  modificationDate: number | null;
+  trapped: 'true' | 'false' | 'unknown' | null;
+  customMetadata: Record<string, string>;
+}
+
+export interface PdfGetDocumentPropertiesRequest {
+  handle: DocumentHandle;
+}
+
+export type PdfGetDocumentPropertiesError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'engine_failed';
+
+export interface PdfGetDocumentPropertiesValue {
+  properties: DocumentProperties;
+  securitySummary: {
+    encrypted: boolean;
+    encryptionAlgorithm: 'aes-128' | 'aes-256' | 'rc4-128' | 'none';
+    permissions: Record<string, boolean>;
+  };
+  pageSizes: { pageIndex: number; widthPt: number; heightPt: number }[];
+}
+
+export type PdfGetDocumentPropertiesResponse = Result<
+  PdfGetDocumentPropertiesValue,
+  PdfGetDocumentPropertiesError
+>;
+
+export interface PdfSetDocumentPropertiesRequest {
+  handle: DocumentHandle;
+  properties: Partial<DocumentProperties>;
+}
+
+export type PdfSetDocumentPropertiesError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'engine_failed';
+
+export interface PdfSetDocumentPropertiesValue {
+  applied: true;
+  warnings: string[];
+}
+
+export type PdfSetDocumentPropertiesResponse = Result<
+  PdfSetDocumentPropertiesValue,
+  PdfSetDocumentPropertiesError
+>;
+
+// ---- pdf:swapEmbeddedFont (B18, Wave 5) -----------------------------------
+//
+// Contract: docs/api-contracts.md §19.16.1 (adapted: v0.8.0 ships
+// standard-PDF-font targets only; custom-font embed deferred to v0.9.0).
+// Engine:   src/main/pdf-ops/font-swap-engine.ts.
+
+export type StandardPdfFontName =
+  | 'Helvetica'
+  | 'Helvetica-Bold'
+  | 'Helvetica-Oblique'
+  | 'Helvetica-BoldOblique'
+  | 'Times-Roman'
+  | 'Times-Bold'
+  | 'Times-Italic'
+  | 'Times-BoldItalic'
+  | 'Courier'
+  | 'Courier-Bold'
+  | 'Courier-Oblique'
+  | 'Courier-BoldOblique'
+  | 'Symbol'
+  | 'ZapfDingbats';
+
+export interface PdfSwapEmbeddedFontRequest {
+  handle: DocumentHandle;
+  fromFontName: string;
+  toFontName: StandardPdfFontName;
+}
+
+export type PdfSwapEmbeddedFontError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'from_font_not_found'
+  | 'to_font_invalid'
+  | 'engine_failed';
+
+export interface PdfSwapEmbeddedFontValue {
+  fontsRewritten: number;
+  warnings: string[];
+}
+
+export type PdfSwapEmbeddedFontResponse = Result<
+  PdfSwapEmbeddedFontValue,
+  PdfSwapEmbeddedFontError
+>;
+
 // ---- pdf:applyStamp (B7) ---------------------------------------------------
 
 export interface PdfApplyStampRequest {
@@ -3861,6 +4055,12 @@ export const Channels = {
   PdfCompressDocument: 'pdf:compressDocument',
   PdfAutoBookmarkFromHeadings: 'pdf:autoBookmarkFromHeadings',
   PdfEditLinks: 'pdf:editLinks',
+  // Phase 7.5 Wave 5 (David, 2026-06-17) — B8 + B18 + B20 + B21.
+  PdfSetPasswordProtection: 'pdf:setPasswordProtection',
+  PdfRemoveHiddenInfo: 'pdf:removeHiddenInfo',
+  PdfGetDocumentProperties: 'pdf:getDocumentProperties',
+  PdfSetDocumentProperties: 'pdf:setDocumentProperties',
+  PdfSwapEmbeddedFont: 'pdf:swapEmbeddedFont',
   // Phase 2 fs (replay-engine entry point)
   FsApplyEditOps: 'fs:applyEditOps',
   // Phase 4.1 (api-contracts.md §15, David)
@@ -4045,6 +4245,18 @@ export interface PdfApi {
       req: PdfAutoBookmarkFromHeadingsRequest,
     ) => Promise<PdfAutoBookmarkFromHeadingsResponse>;
     editLinks: (req: PdfEditLinksRequest) => Promise<PdfEditLinksResponse>;
+    // Phase 7.5 Wave 5 (David, 2026-06-17) — B8 / B18 / B20 / B21.
+    setPasswordProtection: (
+      req: PdfSetPasswordProtectionRequest,
+    ) => Promise<PdfSetPasswordProtectionResponse>;
+    removeHiddenInfo: (req: PdfRemoveHiddenInfoRequest) => Promise<PdfRemoveHiddenInfoResponse>;
+    getDocumentProperties: (
+      req: PdfGetDocumentPropertiesRequest,
+    ) => Promise<PdfGetDocumentPropertiesResponse>;
+    setDocumentProperties: (
+      req: PdfSetDocumentPropertiesRequest,
+    ) => Promise<PdfSetDocumentPropertiesResponse>;
+    swapEmbeddedFont: (req: PdfSwapEmbeddedFontRequest) => Promise<PdfSwapEmbeddedFontResponse>;
   };
   // Phase 7.5 Wave 3 (David, 2026-06-17) — stamps_library CRUD.
   stamps: {

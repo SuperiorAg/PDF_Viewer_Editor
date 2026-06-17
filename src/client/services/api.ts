@@ -97,6 +97,15 @@ function makeBridgeUnavailableFallback(): PdfApi {
       compressDocument: unavailable,
       autoBookmarkFromHeadings: unavailable,
       editLinks: unavailable,
+      // Phase 7.5 Wave 5 (David, 2026-06-17): B8 / B18 / B20 / B21.
+      // Minimal unavailable-fallback so Riley's Wave 5 thunks compile in
+      // parallel. Same pattern Riley used for Waves 2-4. Lives here to keep
+      // the PdfApi typecheck green; not a renderer behavior change.
+      setPasswordProtection: unavailable,
+      removeHiddenInfo: unavailable,
+      getDocumentProperties: unavailable,
+      setDocumentProperties: unavailable,
+      swapEmbeddedFont: unavailable,
     },
     // Phase 3 (api-contracts §13)
     forms: {

@@ -126,6 +126,11 @@ import { handlePdfAutoBookmarkFromHeadings } from './handlers/pdf-auto-bookmark-
 import { handlePdfCombine } from './handlers/pdf-combine.js';
 import { handlePdfCompressDocument } from './handlers/pdf-compress-document.js';
 import { handlePdfCropPages } from './handlers/pdf-crop-pages.js';
+// Phase 7.5 Wave 5 (David, 2026-06-17) — B8 / B18 / B20 / B21.
+import {
+  handlePdfGetDocumentProperties,
+  handlePdfSetDocumentProperties,
+} from './handlers/pdf-document-properties.js';
 import { handlePdfEditLinks } from './handlers/pdf-edit-links.js';
 import { handlePdfEmbedImage } from './handlers/pdf-embed-image.js';
 import { defaultPickEngine, handlePdfExport } from './handlers/pdf-export-pdf.js';
@@ -136,9 +141,12 @@ import { handlePdfGetOutline } from './handlers/pdf-ops.js';
 // Wave-30 follow-up (H-30.1, David 2026-06-01): real combine handler +
 // path-only file picker. Replaces the Phase-1 `not_implemented` stub.
 import { handlePdfPrint } from './handlers/pdf-print.js';
+import { handlePdfRemoveHiddenInfo } from './handlers/pdf-remove-hidden-info.js';
 import { handlePdfReplacePages } from './handlers/pdf-replace-pages.js';
 import { handlePdfReplaceText } from './handlers/pdf-replace-text.js';
+import { handlePdfSetPasswordProtection } from './handlers/pdf-set-password-protection.js';
 import { handlePdfSplitDocument } from './handlers/pdf-split-document.js';
+import { handlePdfSwapEmbeddedFont } from './handlers/pdf-swap-embedded-font.js';
 import { handleRecentsAdd } from './handlers/recents-add.js';
 import { handleRecentsClear } from './handlers/recents-clear.js';
 import { handleRecentsList } from './handlers/recents-list.js';
@@ -1006,6 +1014,21 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
     handlePdfEditLinks(payload, {
       getBytes: (h) => documentStore.getBytes(h),
       setBytes: (h, b) => documentStore.setBytes(h, b),
+      // Phase 7.5 Wave 5 carry-over (David, 2026-06-17): goto-bookmark
+      // targets resolve via the bookmarks repo SO THE ENGINE CAN EMIT A
+      // REAL /Dest (works in Acrobat too). Repo lookup is by file_hash
+      // — the document store carries that for every open handle.
+      resolveBookmark: (handle, bookmarkId): number | null => {
+        const rec = documentStore.get(handle);
+        if (!rec) return null;
+        try {
+          const all = getDbBridge().bookmarks.listByFile(rec.fileHash);
+          const match = all.find((b) => b.id === bookmarkId);
+          return match ? match.pageIndex : null;
+        } catch {
+          return null;
+        }
+      },
     }),
   );
 
@@ -1017,6 +1040,48 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
         return meta.pageCount;
       },
       extractPageTextItems: productionExtractPageTextItems,
+    }),
+  );
+
+  // Phase 7.5 Wave 5 (David, 2026-06-17) — B8 password encryption, B20
+  // sanitize, B21 document properties, B18 font swap. Engines are
+  // dependency-injected so tests stub them without spawning qpdf.
+  ipcMain.handle(Channels.PdfSetPasswordProtection, (_evt, payload) =>
+    handlePdfSetPasswordProtection(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+      // qpdfDiscovery defaults to {} — engine probes process.resourcesPath +
+      // '/qpdf/qpdf(.exe)' at first call. Diego wires the bundled binary in
+      // Wave 11. Without a bundled binary the engine returns
+      // engine_unavailable with guidance (honest failure, no silent no-op).
+    }),
+  );
+
+  ipcMain.handle(Channels.PdfRemoveHiddenInfo, (_evt, payload) =>
+    handlePdfRemoveHiddenInfo(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+    }),
+  );
+
+  ipcMain.handle(Channels.PdfGetDocumentProperties, (_evt, payload) =>
+    handlePdfGetDocumentProperties(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+    }),
+  );
+
+  ipcMain.handle(Channels.PdfSetDocumentProperties, (_evt, payload) =>
+    handlePdfSetDocumentProperties(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+    }),
+  );
+
+  ipcMain.handle(Channels.PdfSwapEmbeddedFont, (_evt, payload) =>
+    handlePdfSwapEmbeddedFont(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
     }),
   );
 

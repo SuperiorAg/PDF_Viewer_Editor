@@ -9,6 +9,7 @@ import {
   editLinks,
   type EngineLinkAction,
   type EngineLinkTarget,
+  type LinkBookmarkResolver,
   type LinkEngineError as EngineErr,
 } from '../../main/pdf-ops/link-engine.js';
 import { fail, ok, safeMessage } from '../../shared/result.js';
@@ -69,6 +70,14 @@ export interface PdfEditLinksDeps {
   getBytes: (handle: DocumentHandle) => Uint8Array | null;
   setBytes: (handle: DocumentHandle, bytes: Uint8Array) => void;
   linkEngine?: typeof editLinks;
+  /**
+   * Wave 5 carry-over (David, 2026-06-17): goto-bookmark targets resolve to a
+   * pageIndex at apply time so the engine can emit a real /Dest (works in
+   * Acrobat). The handler builds this from the bookmarks repo at the
+   * register site (`register.ts`). Tests can stub directly. When absent the
+   * engine falls back to the legacy private-key-only path.
+   */
+  resolveBookmark?: (handle: DocumentHandle, bookmarkId: number) => number | null;
 }
 
 // ============================================================================
@@ -95,7 +104,15 @@ export async function handlePdfEditLinks(
   const engine = deps.linkEngine ?? editLinks;
   let engineRes;
   try {
-    engineRes = await engine(bytes, actions);
+    const bookmarksResolver: LinkBookmarkResolver | undefined =
+      deps.resolveBookmark !== undefined
+        ? (bookmarkId: number): number | null => deps.resolveBookmark!(r.handle, bookmarkId)
+        : undefined;
+    engineRes = await engine(
+      bytes,
+      actions,
+      bookmarksResolver !== undefined ? { bookmarksResolver } : {},
+    );
   } catch (e) {
     return fail<PdfEditLinksError>('engine_failed', safeMessage(e, 'link engine threw'));
   }

@@ -1,6 +1,6 @@
 // Unit tests for the Phase 7.5 Wave 4 B13 Link engine.
 
-import { PDFDocument } from 'pdf-lib';
+import { PDFArray, PDFDict, PDFDocument, PDFName, PDFRef } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 
 import { editLinks, listLinks } from './link-engine.js';
@@ -240,5 +240,84 @@ describe('editLinks add + list round-trip', () => {
     if (!listed.ok) return;
     expect(listed.value.links).toHaveLength(1);
     expect(listed.value.links[0]!.target).toEqual({ kind: 'goto-bookmark', bookmarkId: 42 });
+  });
+
+  // Wave 5 carry-over (2026-06-17, David): when a bookmarksResolver is
+  // provided, goto-bookmark must produce a real /Dest so the link works in
+  // Acrobat — AND the private /ConductorBookmarkId stays put so the round-
+  // trip still surfaces as goto-bookmark (renderer intent preservation).
+  it('Wave-5 carry-over: goto-bookmark with resolver emits /Dest AND preserves bookmark id', async () => {
+    const bytes = await makePdf(4);
+    const resolver = (bookmarkId: number): number | null => {
+      if (bookmarkId === 7) return 2; // bookmarkId 7 → page index 2
+      return null;
+    };
+    const added = await editLinks(
+      bytes,
+      [
+        {
+          kind: 'add',
+          pageIndex: 0,
+          bbox: [0, 0, 50, 20],
+          target: { kind: 'goto-bookmark', bookmarkId: 7 },
+        },
+      ],
+      { bookmarksResolver: resolver },
+    );
+    expect(added.ok).toBe(true);
+    if (!added.ok) return;
+
+    // Inspect the raw PDF dict to confirm /Dest was written.
+    const out = await PDFDocument.load(added.value.bytes);
+    const page0 = out.getPage(0);
+    const annots = page0.node.lookupMaybe(PDFName.of('Annots'), PDFArray);
+    expect(annots).toBeDefined();
+    const annotDict = annots!.lookupMaybe(0, PDFDict);
+    expect(annotDict).toBeDefined();
+    const dest = annotDict!.lookupMaybe(PDFName.of('Dest'), PDFArray);
+    expect(dest).toBeDefined();
+    expect(dest!.size()).toBeGreaterThanOrEqual(2);
+    // First entry of /Dest must be a page ref pointing at page 2 of the output.
+    const pageRef = dest!.get(0);
+    expect(pageRef).toBeInstanceOf(PDFRef);
+    const targetPage = out.getPage(2);
+    expect((pageRef as PDFRef).objectNumber).toBe(targetPage.ref.objectNumber);
+    // Second entry is the /Fit name.
+    const fitName = dest!.lookupMaybe(1, PDFName);
+    expect(fitName?.asString()).toBe('/Fit');
+
+    // Round-trip: list still surfaces this as goto-bookmark (renderer intent
+    // preserved). The /Dest is for Acrobat; /ConductorBookmarkId is for us.
+    const listed = await listLinks(added.value.bytes);
+    expect(listed.ok).toBe(true);
+    if (!listed.ok) return;
+    expect(listed.value.links).toHaveLength(1);
+    expect(listed.value.links[0]!.target).toEqual({ kind: 'goto-bookmark', bookmarkId: 7 });
+  });
+
+  it('Wave-5 carry-over: resolver returning null falls back to private key only', async () => {
+    const bytes = await makePdf(3);
+    const resolver = (): number | null => null; // unknown bookmark
+    const added = await editLinks(
+      bytes,
+      [
+        {
+          kind: 'add',
+          pageIndex: 0,
+          bbox: [0, 0, 50, 20],
+          target: { kind: 'goto-bookmark', bookmarkId: 999 },
+        },
+      ],
+      { bookmarksResolver: resolver },
+    );
+    expect(added.ok).toBe(true);
+    if (!added.ok) return;
+    // /Dest must NOT have been emitted.
+    const out = await PDFDocument.load(added.value.bytes);
+    const annots = out.getPage(0).node.lookupMaybe(PDFName.of('Annots'), PDFArray);
+    const annotDict = annots!.lookupMaybe(0, PDFDict);
+    expect(annotDict!.lookupMaybe(PDFName.of('Dest'), PDFArray)).toBeUndefined();
+    // Private key still present.
+    expect(annotDict!.has(PDFName.of('ConductorBookmarkId'))).toBe(true);
   });
 });

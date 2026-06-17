@@ -11,11 +11,20 @@
 //       `/A /S /URI /URI <string>` action subdictionary.
 //     - Goto-page: jump to a 0-based page index in the SAME document.
 //       Authored as `/Dest [<pageRef> /Fit | /FitH ... | /XYZ ...]`.
-//     - Goto-bookmark: opaque metadata stored on the annotation as a custom
-//       `/ConductorBookmarkId` key (a private extension). The renderer
-//       resolves at navigate-time via `bookmarks:listTree`. v1 does NOT
-//       emit a `/Dest` for goto-bookmark because the bookmark target is
-//       not necessarily a page reference (could be a structure element).
+//     - Goto-bookmark: at APPLY TIME the engine resolves the bookmarkId to
+//       a page index via the injected `bookmarksResolver` and writes a
+//       proper `/Dest [<pageRef> /Fit]` entry. The bookmarkId is ALSO
+//       stamped on the annotation as `/ConductorBookmarkId` so list+round-
+//       trip preserves the user's intent (bookmark vs raw page). This way
+//       the link works in Adobe Acrobat AND our own viewer.
+//
+// Wave 5 carry-over (David, 2026-06-17): the original Wave 4 implementation
+// wrote ONLY the private `/ConductorBookmarkId` key with no `/Dest`. That
+// meant clicks in Acrobat / other PDF viewers did nothing — they have no
+// idea what `/ConductorBookmarkId` is. The fix resolves bookmark → page
+// at the moment the link is added/updated, so the link works everywhere.
+// Callers without a resolver fall back to the legacy private-key path
+// (engine still emits a link, viewer-only navigation, no /Dest).
 //
 // What this module does NOT do (honest deferrals):
 //   - JavaScript actions on links (`/A /S /JavaScript`). By design we do not
@@ -97,6 +106,21 @@ export interface ListLinksValue {
   links: LinkInfo[];
 }
 
+/**
+ * Optional resolver injected by the IPC handler so goto-bookmark targets
+ * land in the PDF as a real `/Dest` (works in Acrobat too) instead of an
+ * opaque private dict key. Returning `null` means "bookmarkId is unknown"
+ * — the engine still writes the link but falls back to the private-key
+ * pattern so the user's intent survives a future re-save where the
+ * resolver does know the answer. (Wave 5 carry-over from Wave 4.)
+ */
+export type LinkBookmarkResolver = (bookmarkId: number) => number | null;
+
+export interface EditLinksOptions {
+  /** Optional bookmark→pageIndex resolver. See LinkBookmarkResolver doc. */
+  bookmarksResolver?: LinkBookmarkResolver;
+}
+
 // ============================================================================
 // List
 // ============================================================================
@@ -152,6 +176,7 @@ export async function listLinks(
 export async function editLinks(
   pdfBytes: Uint8Array,
   actions: ReadonlyArray<EngineLinkAction>,
+  options: EditLinksOptions = {},
 ): Promise<Result<EditLinksValue, LinkEngineError>> {
   if (!(pdfBytes instanceof Uint8Array) || pdfBytes.byteLength === 0) {
     return fail<LinkEngineError>('invalid_payload', 'pdfBytes must be a non-empty Uint8Array');
@@ -159,6 +184,7 @@ export async function editLinks(
   if (!Array.isArray(actions)) {
     return fail<LinkEngineError>('invalid_payload', 'actions must be an array');
   }
+  const bookmarksResolver = options.bookmarksResolver ?? null;
 
   let doc: PDFDocument;
   try {
@@ -224,12 +250,12 @@ export async function editLinks(
 
   for (const action of actions) {
     if (action.kind === 'add') {
-      const linkId = applyAdd(doc, ctx, action);
+      const linkId = applyAdd(doc, ctx, action, bookmarksResolver);
       if (!linkId.ok) return linkId;
       newLinkIds.push(linkId.value);
     } else if (action.kind === 'update') {
       const parsed = parseLinkId(action.linkId)!;
-      const updated = applyUpdate(doc, ctx, parsed, action.target);
+      const updated = applyUpdate(doc, ctx, parsed, action.target, bookmarksResolver);
       if (!updated.ok) return updated;
       // Update keeps the same id.
       newLinkIds.push(action.linkId);
@@ -271,6 +297,7 @@ function applyAdd(
   doc: PDFDocument,
   ctx: PDFContext,
   action: Extract<EngineLinkAction, { kind: 'add' }>,
+  bookmarksResolver: LinkBookmarkResolver | null,
 ): Result<string, LinkEngineError> {
   const page = doc.getPage(action.pageIndex);
   const annotDict = PDFDict.withContext(ctx);
@@ -291,7 +318,7 @@ function applyAdd(
   annotDict.set(PDFName.of('Border'), border);
 
   // Wire the target.
-  const wireErr = writeTarget(doc, ctx, annotDict, action.target);
+  const wireErr = writeTarget(doc, ctx, annotDict, action.target, bookmarksResolver);
   if (wireErr) return fail<LinkEngineError>(wireErr.error, wireErr.message);
 
   // Attach to page.
@@ -311,6 +338,7 @@ function applyUpdate(
   ctx: PDFContext,
   parsed: { pageIndex: number; annotIndex: number },
   target: EngineLinkTarget,
+  bookmarksResolver: LinkBookmarkResolver | null,
 ): Result<true, LinkEngineError> {
   const page = doc.getPage(parsed.pageIndex);
   const annots = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray);
@@ -326,7 +354,7 @@ function applyUpdate(
   annotDict.delete(PDFName.of('Dest'));
   annotDict.delete(PDFName.of('ConductorBookmarkId'));
 
-  const wireErr = writeTarget(doc, ctx, annotDict, target);
+  const wireErr = writeTarget(doc, ctx, annotDict, target, bookmarksResolver);
   if (wireErr) return fail<LinkEngineError>(wireErr.error, wireErr.message);
   return ok(true);
 }
@@ -341,6 +369,7 @@ function writeTarget(
   ctx: PDFContext,
   annotDict: PDFDict,
   target: EngineLinkTarget,
+  bookmarksResolver: LinkBookmarkResolver | null,
 ): WriteTargetErr | null {
   const pageCount = doc.getPageCount();
   if (target.kind === 'uri') {
@@ -380,8 +409,27 @@ function writeTarget(
     annotDict.set(PDFName.of('Dest'), dest);
     return null;
   }
-  // goto-bookmark — opaque key. The renderer resolves via bookmarks repo.
+  // goto-bookmark — Wave 5 carry-over (2026-06-17, David): resolve to a real
+  // /Dest at apply time when we know how. Two paths:
+  //   1. Resolver present + returns a valid pageIndex → emit
+  //      `/Dest [<pageRef> /Fit]` SO THE LINK WORKS IN ACROBAT, plus stamp
+  //      the bookmarkId on `/ConductorBookmarkId` so we can round-trip the
+  //      user's intent (bookmark, not raw page) for re-edit.
+  //   2. No resolver or resolver returns null → legacy path: only the
+  //      private `/ConductorBookmarkId` key. The renderer resolves at
+  //      navigate-time. Acrobat won't follow it, but our viewer will. This
+  //      is the behavior the pre-Wave-5 engine had.
   annotDict.set(PDFName.of('ConductorBookmarkId'), PDFNumber.of(target.bookmarkId));
+  if (bookmarksResolver !== null) {
+    const resolved = bookmarksResolver(target.bookmarkId);
+    if (resolved !== null && Number.isInteger(resolved) && resolved >= 0 && resolved < pageCount) {
+      const destPage = doc.getPage(resolved);
+      const dest = PDFArray.withContext(ctx);
+      dest.push(destPage.ref);
+      dest.push(PDFName.of('Fit'));
+      annotDict.set(PDFName.of('Dest'), dest);
+    }
+  }
   return null;
 }
 

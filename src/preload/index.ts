@@ -101,6 +101,17 @@ import type {
   PdfAutoBookmarkFromHeadingsResponse,
   PdfEditLinksRequest,
   PdfEditLinksResponse,
+  // Phase 7.5 Wave 5 (David, 2026-06-17) — B8 / B18 / B20 / B21.
+  PdfSetPasswordProtectionRequest,
+  PdfSetPasswordProtectionResponse,
+  PdfRemoveHiddenInfoRequest,
+  PdfRemoveHiddenInfoResponse,
+  PdfGetDocumentPropertiesRequest,
+  PdfGetDocumentPropertiesResponse,
+  PdfSetDocumentPropertiesRequest,
+  PdfSetDocumentPropertiesResponse,
+  PdfSwapEmbeddedFontRequest,
+  PdfSwapEmbeddedFontResponse,
   PdfReplaceTextRequest,
   PdfReplaceTextResponse,
   RecentsAddRequest,
@@ -349,6 +360,26 @@ const pdfApi: PdfApi = {
       ) as Promise<PdfAutoBookmarkFromHeadingsResponse>,
     editLinks: (req: PdfEditLinksRequest) =>
       ipcRenderer.invoke(Channels.PdfEditLinks, req) as Promise<PdfEditLinksResponse>,
+    // Phase 7.5 Wave 5 (David, 2026-06-17) — B8 / B18 / B20 / B21.
+    setPasswordProtection: (req: PdfSetPasswordProtectionRequest) =>
+      ipcRenderer.invoke(
+        Channels.PdfSetPasswordProtection,
+        req,
+      ) as Promise<PdfSetPasswordProtectionResponse>,
+    removeHiddenInfo: (req: PdfRemoveHiddenInfoRequest) =>
+      ipcRenderer.invoke(Channels.PdfRemoveHiddenInfo, req) as Promise<PdfRemoveHiddenInfoResponse>,
+    getDocumentProperties: (req: PdfGetDocumentPropertiesRequest) =>
+      ipcRenderer.invoke(
+        Channels.PdfGetDocumentProperties,
+        req,
+      ) as Promise<PdfGetDocumentPropertiesResponse>,
+    setDocumentProperties: (req: PdfSetDocumentPropertiesRequest) =>
+      ipcRenderer.invoke(
+        Channels.PdfSetDocumentProperties,
+        req,
+      ) as Promise<PdfSetDocumentPropertiesResponse>,
+    swapEmbeddedFont: (req: PdfSwapEmbeddedFontRequest) =>
+      ipcRenderer.invoke(Channels.PdfSwapEmbeddedFont, req) as Promise<PdfSwapEmbeddedFontResponse>,
   },
   // Phase 7.5 Wave 3 (David, 2026-06-17) — stamps_library CRUD.
   stamps: {
