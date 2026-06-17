@@ -76,7 +76,13 @@ export type ShortcutId =
   // Phase 7.5 B21 (Riley Wave 5) — open File → Properties dialog.
   // Acrobat uses Ctrl+D. Free in our app (the existing "delete-page" is bound
   // to Del/Backspace via ThumbnailStrip + a global clear-selection on Delete).
-  | 'file-properties';
+  | 'file-properties'
+  // Phase 7.5 C1 (Riley Wave 5a) — Read Aloud floating bar toggle.
+  // The ui-spec §22 suggested `Ctrl+Shift+R` but that chord already binds to
+  // `rotate-ccw` (Phase 1). Wave-5a tracks a Marcus follow-up to migrate
+  // either chord; for now we ship Read Aloud on `Ctrl+Alt+R` so the bar is
+  // reachable via keyboard without breaking existing rotate semantics.
+  | 'read-aloud';
 
 // Phase 7.5 B12 NOTE: page-content region Cut / Copy / Paste are NOT
 // registered as ShortcutIds. They are CONTEXT-SENSITIVE — only active when
@@ -392,6 +398,17 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
     label: 'Document properties',
     key: 'd',
     ctrl: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  // Phase 7.5 C1 (Riley Wave 5a) — Read Aloud floating bar toggle.
+  // Ctrl+Alt+R picked to avoid the existing rotate-ccw chord (Ctrl+Shift+R).
+  {
+    id: 'read-aloud',
+    label: 'Toggle Read Aloud bar',
+    key: 'r',
+    ctrl: true,
+    alt: true,
     enabledInPhase1: false,
     enabledInPhases: [7],
   },

@@ -106,6 +106,13 @@ function makeBridgeUnavailableFallback(): PdfApi {
       getDocumentProperties: unavailable,
       setDocumentProperties: unavailable,
       swapEmbeddedFont: unavailable,
+      // Phase 7.5 Wave 5a (David, 2026-06-17): C2 Preflight engine. The
+      // renderer thunk (`runPreflightThunk`) feature-detects this field on
+      // `window.pdfApi.pdf` so the typecheck doesn't depend on the
+      // canonical `PdfApi` shape gaining `runPreflight` first. The
+      // unavailable fallback below keeps the fallback object's runtime
+      // shape rectangular when tests rely on the proxy directly.
+      runPreflight: unavailable,
     },
     // Phase 3 (api-contracts §13)
     forms: {
@@ -216,6 +223,18 @@ function makeBridgeUnavailableFallback(): PdfApi {
       list: unavailable,
       create: unavailable,
       delete: unavailable,
+    },
+    // Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud (TTS) fallback.
+    // Same `bridge_unavailable` shape every other namespace returns. The
+    // event-stream subscriber returns a no-op unsubscribe so the renderer's
+    // cleanup paths don't blow up under Vitest.
+    tts: {
+      listVoices: unavailable,
+      speakText: unavailable,
+      pause: unavailable,
+      resume: unavailable,
+      stop: unavailable,
+      onBoundary: () => () => undefined,
     },
   };
 }

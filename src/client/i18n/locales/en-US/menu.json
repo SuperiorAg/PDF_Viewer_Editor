@@ -89,7 +89,9 @@
     "linkTool": "Add Link Tool",
     "properties": "Properties...",
     "sanitize": "Remove Hidden Information...",
-    "autoBookmark": "Auto-generate Bookmarks..."
+    "autoBookmark": "Auto-generate Bookmarks...",
+    "readAloud": "Read Aloud",
+    "preflight": "Preflight..."
   },
   "tooltips": {
     "findComing": "Find (Ctrl+F)",

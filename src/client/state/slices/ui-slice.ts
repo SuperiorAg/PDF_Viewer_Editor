@@ -7,13 +7,16 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 // OCR -> Exports). Per docs/ui-spec.md §15.4.
 // Phase 7.5 B7 (Riley Wave 3): 'stamps' joins as the 6th tab — sidebar
 // sibling of Bookmarks per docs/ui-spec-phase-7.5.md §7.1.
+// Phase 7.5 C2 (Riley Wave 5a): 'preflight' joins as the 7th tab — the
+// Preflight report panel per docs/ui-spec-phase-7.5.md §23.
 export type SidebarTab =
   | 'thumbnails'
   | 'bookmarks'
   | 'forms'
   | 'ocr-results'
   | 'exports'
-  | 'stamps';
+  | 'stamps'
+  | 'preflight';
 export type ModalKind =
   | 'combine'
   | 'settings'
@@ -175,7 +178,8 @@ export const uiSlice = createSlice({
         forms: 'ocr-results',
         'ocr-results': 'exports',
         exports: 'stamps',
-        stamps: 'thumbnails',
+        stamps: 'preflight',
+        preflight: 'thumbnails',
       };
       state.sidebarTab = next[state.sidebarTab];
     },

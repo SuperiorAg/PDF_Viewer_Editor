@@ -19,6 +19,8 @@ import mailMergeReducer from './slices/mail-merge-slice';
 // Phase 5
 import ocrReducer from './slices/ocr-slice';
 import pageDesignReducer from './slices/page-design-slice';
+// Phase 7.5 Wave 5a (Riley) — C2 Preflight panel.
+import preflightReducer from './slices/preflight-slice';
 import recentsReducer from './slices/recents-slice';
 // Phase 7.4 B1
 import redactionsReducer from './slices/redactions-slice';
@@ -37,6 +39,8 @@ import signaturesReducer from './slices/signatures-slice';
 import stampsReducer from './slices/stamps-slice';
 // Phase 7.5 B4 / B13 (Riley Wave 4) — Page Design modal + hyperlinks.
 import telemetryReducer from './slices/telemetry-slice';
+// Phase 7.5 Wave 5a (Riley) — C1 Read Aloud floating bar.
+import ttsReducer from './slices/tts-slice';
 import uiReducer from './slices/ui-slice';
 import updateReducer from './slices/update-slice';
 import viewportReducer from './slices/viewport-slice';
@@ -75,6 +79,9 @@ export const store = configureStore({
     autoBookmark: autoBookmarkReducer,
     sanitize: sanitizeReducer,
     documentProperties: documentPropertiesReducer,
+    // Phase 7.5 Wave 5a (Riley) — C1 Read Aloud + C2 Preflight.
+    tts: ttsReducer,
+    preflight: preflightReducer,
     // Phase 7
     update: updateReducer,
     telemetry: telemetryReducer,

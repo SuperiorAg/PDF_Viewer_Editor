@@ -153,6 +153,12 @@
   "autoBookmark": "Generar marcadores automáticamente",
   "autoBookmarkTooltip": "Generar marcadores a partir de títulos (heurística)",
   "autoBookmarkAria": "Generar marcadores a partir de títulos",
+  "readAloud": "Leer en voz alta",
+  "readAloudTooltip": "Alternar la barra Leer en voz alta (Ctrl+Alt+R)",
+  "readAloudAria": "Alternar la barra flotante Leer en voz alta (Ctrl+Alt+R)",
+  "preflight": "Comprobación previa",
+  "preflightTooltip": "Abrir el panel Comprobación previa (subconjunto de reglas PDF/X + PDF/A)",
+  "preflightAria": "Abrir el panel lateral Comprobación previa",
   "linkOverlayUrlPrefix": "Enlace →",
   "linkContextMenu": {
     "edit": "Editar enlace",

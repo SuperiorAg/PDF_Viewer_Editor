@@ -9,6 +9,8 @@ import { BookmarksPanel } from '../bookmarks-panel';
 import { FormsPanel } from '../forms-panel';
 // Phase 5 — OCR results panel as the 4th sidebar tab.
 import { OcrResultsPanel } from '../ocr-results-panel';
+// Phase 7.5 C2 (Riley Wave 5a) — Preflight panel as the 7th sidebar tab.
+import { PreflightPanel } from '../preflight-panel';
 // Phase 7.5 B7 (Riley Wave 3) — Stamps panel as the 6th sidebar tab.
 import { StampsPanel } from '../stamps-panel';
 import { ThumbnailStrip } from '../thumbnail-strip';
@@ -40,6 +42,8 @@ const SIDEBAR_TABS: readonly SidebarTabDef[] = [
   { id: 'exports', labelKey: 'sidebar:tabs.exports', testId: 'sidebar-tab-exports' },
   // Phase 7.5 B7 (Riley Wave 3).
   { id: 'stamps', labelKey: 'sidebar:tabs.stamps', testId: 'sidebar-tab-stamps' },
+  // Phase 7.5 C2 (Riley Wave 5a).
+  { id: 'preflight', labelKey: 'sidebar:tabs.preflight', testId: 'sidebar-tab-preflight' },
 ];
 
 const TAB_IDS: readonly SidebarTab[] = SIDEBAR_TABS.map((t) => t.id);
@@ -72,9 +76,12 @@ export function Sidebar(): JSX.Element | null {
     ) : tab === 'exports' ? (
       // Phase 6 — Exports tab.
       <ExportsPanel />
-    ) : (
+    ) : tab === 'stamps' ? (
       // Phase 7.5 B7 (Riley Wave 3) — Stamps tab.
       <StampsPanel />
+    ) : (
+      // Phase 7.5 C2 (Riley Wave 5a) — Preflight tab.
+      <PreflightPanel />
     );
 
   return (

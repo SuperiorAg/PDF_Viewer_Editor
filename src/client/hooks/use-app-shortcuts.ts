@@ -22,6 +22,8 @@ import { setActiveRedactionTool } from '../state/slices/redactions-slice';
 import { selectAll, clearSelection } from '../state/slices/selection-slice';
 // Phase 7.5 B17 (Riley Wave 3) — area-measure shortcut arms the shape sub-toolbar's area tool.
 import { setActiveShapeTool } from '../state/slices/shapes-slice';
+// Phase 7.5 C1 (Riley Wave 5a) — Read Aloud floating bar toggle.
+import { closeReadAloud, openReadAloud } from '../state/slices/tts-slice';
 // Phase 7.5 B13 (Riley Wave 4) — Add Link tool arming.
 // Phase 7.5 B21 (Riley Wave 5) — Ctrl+D opens the Document Properties dialog.
 import {
@@ -87,6 +89,9 @@ export function useAppShortcuts(): void {
   // (mirrors the redaction-mark-rect "open panel if closed" idiom).
   const shapesPanelOpen = useAppSelector(selectShapesPanelOpen);
   const sidebarCollapsed = useAppSelector(selectSidebarCollapsed);
+  // Phase 7.5 C1 (Riley Wave 5a) — Read Aloud bar visibility drives the
+  // Ctrl+Alt+R shortcut's toggle direction.
+  const readAloudOpen = useAppSelector((s) => s.tts.open);
 
   const handler = useCallback(
     (id: ShortcutId, e: KeyboardEvent) => {
@@ -410,6 +415,15 @@ export function useAppShortcuts(): void {
           if (!doc) break;
           dispatch(openDocumentProperties(undefined));
           break;
+        case 'read-aloud':
+          // Phase 7.5 C1 (Riley Wave 5a) — Ctrl+Alt+R toggles the Read Aloud
+          // floating bar. Document-gated: the bar reads text from the open
+          // doc, so it stays closed when none is loaded.
+          e.preventDefault();
+          if (!doc) break;
+          if (readAloudOpen) dispatch(closeReadAloud());
+          else dispatch(openReadAloud());
+          break;
         case 'fit-width':
           // Phase 7.5 A6 — Ctrl+1 = Fit width. PdfViewer's ResizeObserver
           // effect listens for the viewport-slice fitMode change and computes
@@ -439,6 +453,7 @@ export function useAppShortcuts(): void {
       readMode,
       shapesPanelOpen,
       sidebarCollapsed,
+      readAloudOpen,
     ],
   );
 

@@ -28,6 +28,8 @@ import { ScanModal } from './components/modals/scan-modal';
 import { SettingsModal } from './components/modals/settings-modal';
 import { PageDesignModal } from './components/page-design-modal';
 import { PdfViewer } from './components/pdf-viewer';
+// Phase 7.5 C1 (Riley Wave 5a) — Read Aloud floating bar.
+import { ReadAloudBar } from './components/read-aloud-bar';
 // Phase 7.4 B1 — Redaction sub-toolbar + Apply confirm modal (same mount
 // pattern as ShapeToolbar above, gated on ui.redactionPanelOpen / Modal flag).
 import { ApplyRedactionsModal } from './components/redaction-tools/apply-redactions-modal';
@@ -360,6 +362,10 @@ export function App(): JSX.Element {
         {docPropertiesOpen && <DocumentPropertiesModal />}
         {sanitizeOpen && <SanitizeModal />}
         {autoBookmarkOpen && <AutoBookmarkModal />}
+        {/* Phase 7.5 C1 (Riley Wave 5a) — Read Aloud floating bar. Returns
+            null when closed; renders fixed-position over the viewer when
+            open so it stays visible across sidebar/inspector toggles. */}
+        <ReadAloudBar />
         <TextEditOverlay />
       </div>
     </ErrorBoundary>

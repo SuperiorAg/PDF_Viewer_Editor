@@ -45,6 +45,8 @@ import {
 import { openSanitize } from '../state/slices/sanitize-slice';
 // Phase 7.5 Wave 3 (Riley) — area-measure tool arms the shape sub-toolbar.
 import { setActiveShapeTool } from '../state/slices/shapes-slice';
+// Phase 7.5 Wave 5a (Riley) — C1 Read Aloud registry dispatcher.
+import { openReadAloud } from '../state/slices/tts-slice';
 // Phase 7.5 Wave 4 (Riley) — B4 page-design + B13 Add Link tool dispatchers.
 import {
   openImageImportModal,
@@ -148,6 +150,12 @@ export type ToolId =
   | 'file:properties'
   | 'tools:sanitize'
   | 'bookmarks:auto-bookmark'
+  // Phase 7.5 Wave 5a (Riley) — C1 Read Aloud + C2 Preflight registry entries.
+  // Read Aloud is a View-menu toggle (opens the floating bar). Preflight is a
+  // Tools-menu entry that switches the sidebar to the Preflight tab + opens
+  // the sidebar if collapsed.
+  | 'view:readAloud'
+  | 'tools:preflight'
   // help
   | 'help:help'
   | 'help:about';
@@ -1061,6 +1069,40 @@ export const TOOLS: readonly ToolDef[] = [
     enabledWhen: docOpen,
     dispatch: (d) => d(openAutoBookmark()),
     searchKeywords: ['bookmark', 'auto', 'heading', 'outline', 'toc', 'generate'],
+  },
+
+  // ---- Phase 7.5 Wave 5a (Riley) — C1 Read Aloud + C2 Preflight ----
+  // Both are menu + palette only (no toolbar surface in v0.8.0). The L-007
+  // ratchet picks them up via the registry; the Find-a-tool palette
+  // surfaces them by id so a user typing "read" or "preflight" lands here.
+  {
+    id: 'view:readAloud',
+    nameKey: 'toolbar:readAloud',
+    tooltipKey: 'toolbar:readAloudTooltip',
+    ariaLabelKey: 'toolbar:readAloudAria',
+    icon: null,
+    shortcutId: 'read-aloud',
+    menu: { top: 'view' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: docOpen,
+    dispatch: (d) => d(openReadAloud()),
+    searchKeywords: ['read', 'aloud', 'tts', 'speech', 'speak', 'voice', 'accessibility'],
+  },
+  {
+    id: 'tools:preflight',
+    nameKey: 'toolbar:preflight',
+    tooltipKey: 'toolbar:preflightTooltip',
+    ariaLabelKey: 'toolbar:preflightAria',
+    icon: null,
+    shortcutId: null,
+    menu: { top: 'tools' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: docOpen,
+    dispatch: (d, s) => {
+      d(setSidebarTab('preflight'));
+      if (s.ui.sidebarCollapsed) d(toggleSidebar());
+    },
+    searchKeywords: ['preflight', 'pdfx', 'pdfa', 'compliance', 'validation', 'subset', 'print'],
   },
 
   // ---- help ----

@@ -89,7 +89,9 @@
     "linkTool": "Herramienta añadir enlace",
     "properties": "Propiedades...",
     "sanitize": "Eliminar información oculta...",
-    "autoBookmark": "Generar marcadores automáticamente..."
+    "autoBookmark": "Generar marcadores automáticamente...",
+    "readAloud": "Leer en voz alta",
+    "preflight": "Comprobación previa..."
   },
   "tooltips": {
     "findComing": "Buscar (Ctrl+F)",

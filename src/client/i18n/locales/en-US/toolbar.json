@@ -155,6 +155,12 @@
   "autoBookmark": "Auto-generate Bookmarks",
   "autoBookmarkTooltip": "Auto-generate bookmarks from headings (heuristic)",
   "autoBookmarkAria": "Auto-generate bookmarks from headings",
+  "readAloud": "Read Aloud",
+  "readAloudTooltip": "Toggle Read Aloud bar (Ctrl+Alt+R)",
+  "readAloudAria": "Toggle Read Aloud floating bar (Ctrl+Alt+R)",
+  "preflight": "Preflight",
+  "preflightTooltip": "Open Preflight panel (subset of PDF/X + PDF/A rules)",
+  "preflightAria": "Open Preflight sidebar panel",
   "linkOverlayUrlPrefix": "Link →",
   "linkContextMenu": {
     "edit": "Edit link",

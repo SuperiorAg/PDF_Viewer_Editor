@@ -7,7 +7,8 @@
     "forms": "Forms",
     "ocrResults": "OCR",
     "exports": "Exports",
-    "stamps": "Stamps"
+    "stamps": "Stamps",
+    "preflight": "Preflight"
   },
   "pageCount_one": "{{count}} page",
   "pageCount_other": "{{count}} pages",

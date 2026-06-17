@@ -1,8 +1,9 @@
 // Sidebar — Wave 28a a11y spec (a11y-audit.md R-1).
 //
 // Asserts the restored WAI-ARIA tab pattern:
-//   1. role="tablist" (vertical) with six role="tab" buttons (Phase 7.5 B7
-//      Wave 3 added the Stamps tab; previously five).
+//   1. role="tablist" (vertical) with seven role="tab" buttons (Phase 7.5 B7
+//      Wave 3 added the Stamps tab; Phase 7.5 C2 Wave 5a added the Preflight
+//      tab; previously five → six → seven).
 //   2. aria-selected reflects the active tab; roving tabindex (active=0, rest=-1).
 //   3. ArrowDown / ArrowUp move the active tab (and aria-selected follows);
 //      Home/End jump first/last; wrap-around at the ends.
@@ -25,12 +26,12 @@ function renderSidebar(): ReturnType<typeof render> {
 }
 
 describe('Sidebar — ARIA tab pattern (R-1)', () => {
-  it('renders a vertical tablist with six tabs', () => {
+  it('renders a vertical tablist with seven tabs', () => {
     renderSidebar();
     const tablist = screen.getByRole('tablist', { name: 'Sidebar panels' });
     expect(tablist).toHaveAttribute('aria-orientation', 'vertical');
     const tabs = within(tablist).getAllByRole('tab');
-    expect(tabs).toHaveLength(6);
+    expect(tabs).toHaveLength(7);
     expect(tabs.map((t) => t.textContent)).toEqual([
       'Pages',
       'Bookmarks',
@@ -38,6 +39,7 @@ describe('Sidebar — ARIA tab pattern (R-1)', () => {
       'OCR',
       'Exports',
       'Stamps',
+      'Preflight',
     ]);
   });
 
@@ -61,19 +63,19 @@ describe('Sidebar — ARIA tab pattern (R-1)', () => {
     expect(screen.getByRole('tab', { name: 'Bookmarks' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('ArrowUp from the first tab wraps to the last (Stamps)', () => {
+  it('ArrowUp from the first tab wraps to the last (Preflight)', () => {
     renderSidebar();
     fireEvent.click(screen.getByRole('tab', { name: 'Pages' }));
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Pages' }), { key: 'ArrowUp' });
-    expect(screen.getByRole('tab', { name: 'Stamps' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Preflight' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('Home jumps to the first tab and End to the last', () => {
     renderSidebar();
     fireEvent.click(screen.getByRole('tab', { name: 'Forms' }));
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Forms' }), { key: 'End' });
-    expect(screen.getByRole('tab', { name: 'Stamps' })).toHaveAttribute('aria-selected', 'true');
-    fireEvent.keyDown(screen.getByRole('tab', { name: 'Stamps' }), { key: 'Home' });
+    expect(screen.getByRole('tab', { name: 'Preflight' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Preflight' }), { key: 'Home' });
     expect(screen.getByRole('tab', { name: 'Pages' })).toHaveAttribute('aria-selected', 'true');
   });
 
