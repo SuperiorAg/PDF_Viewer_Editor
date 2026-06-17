@@ -134,5 +134,22 @@
     "overlayPageLabel_other": "{{count}} marcas de redacción en la página {{page}}",
     "statusBarPending_one": "{{rects}} marca de redacción pendiente en {{pages}} página",
     "statusBarPending_other": "{{rects}} marcas de redacción pendientes en {{pages}} página(s)"
+  },
+  "addLink": "Añadir enlace",
+  "addLinkTooltip": "Añadir hipervínculo — arrastre un marco en una página (Mayús+L)",
+  "addLinkAria": "Herramienta añadir enlace (Mayús+L)",
+  "watermark": "Marca de agua",
+  "watermarkTooltip": "Aplicar marca de agua al documento (abre Diseño de página)",
+  "headerFooter": "Encabezado y pie",
+  "headerFooterTooltip": "Aplicar encabezado / pie al documento (abre Diseño de página)",
+  "background": "Fondo",
+  "backgroundTooltip": "Aplicar color o imagen de fondo (abre Diseño de página)",
+  "linkOverlayUrlPrefix": "Enlace →",
+  "linkContextMenu": {
+    "edit": "Editar enlace",
+    "remove": "Eliminar enlace",
+    "openExternal": "Abrir URL en el navegador",
+    "jumpToPage": "Ir a la página {{page}}",
+    "jumpToBookmark": "Ir al marcador"
   }
 }

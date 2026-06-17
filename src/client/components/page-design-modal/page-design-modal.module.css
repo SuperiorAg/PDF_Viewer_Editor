@@ -1,0 +1,134 @@
+.tabs {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-2);
+}
+
+.tab {
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.tabActive {
+  border-bottom-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  min-width: 130px;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.input,
+.numberInput,
+.select {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.numberInput {
+  width: 90px;
+}
+
+.colorInput {
+  width: 40px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.rangeRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.preview {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  min-height: 120px;
+  background: var(--color-bg-elevated);
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+}
+
+.previewBoxWrap {
+  display: flex;
+  justify-content: center;
+}
+
+.previewBox {
+  position: relative;
+  width: 200px;
+  height: 260px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.previewWatermark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-weight: bold;
+  user-select: none;
+}
+
+.error {
+  color: var(--color-danger, #b00020);
+  font-size: 0.875rem;
+}
+
+.hint {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+}
+
+.tabPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.checkboxRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.875rem;
+}

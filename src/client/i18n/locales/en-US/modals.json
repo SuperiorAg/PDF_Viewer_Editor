@@ -780,8 +780,109 @@
     "selectionAria": "Page region selection — right-click for Cut / Copy / Paste",
     "noteImageOnly": "Region clipboard copies the area as an image. Source-text editing is not preserved (deferred to v0.9.x).",
     "menuCut": "Cut region",
+    "menuCutDisabledTooltip": "Cut requires content-removal — coming in B20 sanitize wave.",
     "menuCopy": "Copy region",
     "menuPaste": "Paste region",
     "exit": "Cancel selection (Esc)"
+  },
+  "pageDesign": {
+    "title": "Page design",
+    "tabs": {
+      "watermark": "Watermark",
+      "headerFooter": "Header & Footer",
+      "background": "Background"
+    },
+    "source": {
+      "label": "Source",
+      "text": "Text",
+      "image": "Image"
+    },
+    "watermark": {
+      "text": "Text",
+      "fontSize": "Font size",
+      "color": "Color",
+      "rotation": "Rotation (°)",
+      "opacity": "Opacity",
+      "position": "Position",
+      "layer": "Layer",
+      "layerOverlay": "Overlay (on top)",
+      "layerUnderlay": "Underlay (behind page)",
+      "imagePick": "Pick image…",
+      "imageHint": "PNG, JPEG, or TIFF."
+    },
+    "position": {
+      "topLeft": "Top-left",
+      "topRight": "Top-right",
+      "center": "Center",
+      "bottomLeft": "Bottom-left",
+      "bottomRight": "Bottom-right"
+    },
+    "headerFooter": {
+      "header": "Header",
+      "footer": "Footer",
+      "left": "Left",
+      "center": "Center",
+      "right": "Right",
+      "fontSize": "Font size",
+      "marginTop": "Margin top (pt)",
+      "marginBottom": "Margin bottom (pt)",
+      "startPageNumber": "Start page number",
+      "includeTotalPages": "Include total page count ({{token}})",
+      "tokenHint": "Use {page} for the current page, {totalPages} for total, {date} for today's date."
+    },
+    "background": {
+      "color": "Color",
+      "image": "Image"
+    },
+    "range": {
+      "label": "Apply to",
+      "all": "All pages",
+      "range": "Pages",
+      "rangeHint": "e.g. 1-5,8,10-12",
+      "current": "Current page"
+    },
+    "preview": {
+      "title": "Preview",
+      "noteAria": "Preview of the active page with the page-design overlay applied",
+      "empty": "No preview yet — fill in some content above."
+    },
+    "apply": "Apply",
+    "cancel": "Cancel",
+    "applying": "Applying…",
+    "successToast_one": "Applied to {{count}} page.",
+    "successToast_other": "Applied to {{count}} pages.",
+    "errorInvalidRange": "Page range is invalid. Use formats like 1-5,8,10-12.",
+    "errorEngineFailed": "The engine reported a failure: {{message}}",
+    "errorImageRequired": "Pick an image first."
+  },
+  "addLink": {
+    "title": "Add link",
+    "editTitle": "Edit link",
+    "type": {
+      "label": "Link target",
+      "uri": "Web URL",
+      "gotoPage": "Page in this document",
+      "gotoBookmark": "Bookmark"
+    },
+    "uri": {
+      "label": "URL",
+      "placeholder": "https://example.com",
+      "invalid": "Enter a full URL starting with http:// or https://"
+    },
+    "page": {
+      "label": "Page number",
+      "currentPage": "Current page",
+      "outOfRange": "Page must be between 1 and {{total}}."
+    },
+    "bookmark": {
+      "label": "Bookmark",
+      "none": "This document has no bookmarks yet."
+    },
+    "rectInfo": "Marquee: page {{page}}, {{width}}×{{height}} pt.",
+    "add": "Add",
+    "save": "Save",
+    "cancel": "Cancel",
+    "removeLink": "Remove link",
+    "engineDeferredNote": "Hyperlinks are saved in this session. Document-level persistence ships once David's link engine lands (Wave 5)."
   }
 }

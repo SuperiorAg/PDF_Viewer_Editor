@@ -10,9 +10,11 @@ import formsReducer from './slices/forms-slice';
 import formsTemplatesReducer from './slices/forms-templates-slice';
 import historyReducer from './slices/history-slice';
 import i18nReducer from './slices/i18n-slice';
+import linksReducer from './slices/links-slice';
 import mailMergeReducer from './slices/mail-merge-slice';
 // Phase 5
 import ocrReducer from './slices/ocr-slice';
+import pageDesignReducer from './slices/page-design-slice';
 import recentsReducer from './slices/recents-slice';
 // Phase 7.4 B1
 import redactionsReducer from './slices/redactions-slice';
@@ -27,6 +29,7 @@ import signatureAuditReducer from './slices/signature-audit-slice';
 import signaturesReducer from './slices/signatures-slice';
 // Phase 7.5 B7 (Riley Wave 3) — Stamps library.
 import stampsReducer from './slices/stamps-slice';
+// Phase 7.5 B4 / B13 (Riley Wave 4) — Page Design modal + hyperlinks.
 import telemetryReducer from './slices/telemetry-slice';
 import uiReducer from './slices/ui-slice';
 import updateReducer from './slices/update-slice';
@@ -59,6 +62,9 @@ export const store = configureStore({
     // Phase 7.5 B7 / B12 (Riley Wave 3)
     stamps: stampsReducer,
     regionClipboard: regionClipboardReducer,
+    // Phase 7.5 B4 / B13 (Riley Wave 4)
+    pageDesign: pageDesignReducer,
+    links: linksReducer,
     // Phase 7
     update: updateReducer,
     telemetry: telemetryReducer,
@@ -81,6 +87,10 @@ export const store = configureStore({
           'payload.source.bytes',
           'payload.captured.source.pngBytes',
           'payload.captured.source.bytes',
+          // Phase 7.5 B4 (Riley Wave 4) — page-design watermark/background
+          // image bytes transit through the slice form-state while the
+          // modal is open; cleared on close.
+          'payload.imageBytes',
         ],
         ignoredPaths: [
           // Phase 3: the mail-merge slice transiently holds the data-source bytes.
@@ -89,6 +99,10 @@ export const store = configureStore({
           // until applyVisual/applyPades ships them across IPC.
           'signatures.captured.source.pngBytes',
           'signatures.captured.source.bytes',
+          // Phase 7.5 B4 (Riley Wave 4) — page-design form-state holds
+          // user-picked watermark/background image bytes until Apply or Cancel.
+          'pageDesign.watermark.imageBytes',
+          'pageDesign.background.imageBytes',
         ],
       },
     }).concat(historyMiddleware, formCommitMiddleware),

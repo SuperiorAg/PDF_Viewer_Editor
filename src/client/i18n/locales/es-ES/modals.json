@@ -390,8 +390,109 @@
     "selectionAria": "Selección de región de página — clic derecho para Cortar / Copiar / Pegar",
     "noteImageOnly": "El portapapeles de regiones copia el área como imagen. La edición de texto fuente no se conserva (diferido a v0.9.x).",
     "menuCut": "Cortar región",
+    "menuCutDisabledTooltip": "Cortar requiere eliminar contenido — llegará en la ola B20 de sanitización.",
     "menuCopy": "Copiar región",
     "menuPaste": "Pegar región",
     "exit": "Cancelar selección (Esc)"
+  },
+  "pageDesign": {
+    "title": "Diseño de página",
+    "tabs": {
+      "watermark": "Marca de agua",
+      "headerFooter": "Encabezado y pie",
+      "background": "Fondo"
+    },
+    "source": {
+      "label": "Origen",
+      "text": "Texto",
+      "image": "Imagen"
+    },
+    "watermark": {
+      "text": "Texto",
+      "fontSize": "Tamaño de fuente",
+      "color": "Color",
+      "rotation": "Rotación (°)",
+      "opacity": "Opacidad",
+      "position": "Posición",
+      "layer": "Capa",
+      "layerOverlay": "Sobre la página",
+      "layerUnderlay": "Detrás de la página",
+      "imagePick": "Elegir imagen…",
+      "imageHint": "PNG, JPEG o TIFF."
+    },
+    "position": {
+      "topLeft": "Arriba izquierda",
+      "topRight": "Arriba derecha",
+      "center": "Centro",
+      "bottomLeft": "Abajo izquierda",
+      "bottomRight": "Abajo derecha"
+    },
+    "headerFooter": {
+      "header": "Encabezado",
+      "footer": "Pie de página",
+      "left": "Izquierda",
+      "center": "Centro",
+      "right": "Derecha",
+      "fontSize": "Tamaño de fuente",
+      "marginTop": "Margen superior (pt)",
+      "marginBottom": "Margen inferior (pt)",
+      "startPageNumber": "Número de página inicial",
+      "includeTotalPages": "Incluir el total de páginas ({{token}})",
+      "tokenHint": "Use {page} para la página actual, {totalPages} para el total, {date} para la fecha de hoy."
+    },
+    "background": {
+      "color": "Color",
+      "image": "Imagen"
+    },
+    "range": {
+      "label": "Aplicar a",
+      "all": "Todas las páginas",
+      "range": "Páginas",
+      "rangeHint": "p. ej. 1-5,8,10-12",
+      "current": "Página actual"
+    },
+    "preview": {
+      "title": "Vista previa",
+      "noteAria": "Vista previa de la página activa con el diseño de página aplicado",
+      "empty": "Sin vista previa — complete algún contenido arriba."
+    },
+    "apply": "Aplicar",
+    "cancel": "Cancelar",
+    "applying": "Aplicando…",
+    "successToast_one": "Aplicado a {{count}} página.",
+    "successToast_other": "Aplicado a {{count}} páginas.",
+    "errorInvalidRange": "El rango de páginas no es válido. Use formatos como 1-5,8,10-12.",
+    "errorEngineFailed": "El motor reportó un error: {{message}}",
+    "errorImageRequired": "Elija primero una imagen."
+  },
+  "addLink": {
+    "title": "Añadir enlace",
+    "editTitle": "Editar enlace",
+    "type": {
+      "label": "Destino del enlace",
+      "uri": "URL web",
+      "gotoPage": "Página en este documento",
+      "gotoBookmark": "Marcador"
+    },
+    "uri": {
+      "label": "URL",
+      "placeholder": "https://example.com",
+      "invalid": "Introduzca una URL completa que comience con http:// o https://"
+    },
+    "page": {
+      "label": "Número de página",
+      "currentPage": "Página actual",
+      "outOfRange": "La página debe estar entre 1 y {{total}}."
+    },
+    "bookmark": {
+      "label": "Marcador",
+      "none": "Este documento aún no tiene marcadores."
+    },
+    "rectInfo": "Marco: página {{page}}, {{width}}×{{height}} pt.",
+    "add": "Añadir",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "removeLink": "Eliminar enlace",
+    "engineDeferredNote": "Los hipervínculos se guardan en esta sesión. La persistencia a nivel de documento llegará cuando David despliegue el motor de enlaces (Ola 5)."
   }
 }

@@ -136,5 +136,22 @@
     "overlayPageLabel_other": "{{count}} redaction marks on page {{page}}",
     "statusBarPending_one": "{{rects}} redaction mark pending on {{pages}} page",
     "statusBarPending_other": "{{rects}} redaction marks pending on {{pages}} page(s)"
+  },
+  "addLink": "Add link",
+  "addLinkTooltip": "Add hyperlink — drag a marquee on a page (Shift+L)",
+  "addLinkAria": "Add link tool (Shift+L)",
+  "watermark": "Watermark",
+  "watermarkTooltip": "Apply watermark to current document (opens Page Design)",
+  "headerFooter": "Header & Footer",
+  "headerFooterTooltip": "Apply header / footer to current document (opens Page Design)",
+  "background": "Background",
+  "backgroundTooltip": "Apply background color or image (opens Page Design)",
+  "linkOverlayUrlPrefix": "Link →",
+  "linkContextMenu": {
+    "edit": "Edit link",
+    "remove": "Remove link",
+    "openExternal": "Open URL in browser",
+    "jumpToPage": "Go to page {{page}}",
+    "jumpToBookmark": "Go to bookmark"
   }
 }

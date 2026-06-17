@@ -13,6 +13,7 @@ import { selectCurrentDocument } from '../state/slices/document-selectors';
 import { applyEdit } from '../state/slices/document-slice';
 import { openExportModal } from '../state/slices/export-slice';
 import { toggleDesignerMode } from '../state/slices/forms-slice';
+import { setLinkTool } from '../state/slices/links-slice';
 import { openWizard as openMailMergeWizard } from '../state/slices/mail-merge-slice';
 // Phase 7.4 B1 — Redaction shortcuts dispatch into the redactions + ui slices.
 import { openRunModal as openOcrRunModal } from '../state/slices/ocr-slice';
@@ -20,6 +21,7 @@ import { setActiveRedactionTool } from '../state/slices/redactions-slice';
 import { selectAll, clearSelection } from '../state/slices/selection-slice';
 // Phase 7.5 B17 (Riley Wave 3) — area-measure shortcut arms the shape sub-toolbar's area tool.
 import { setActiveShapeTool } from '../state/slices/shapes-slice';
+// Phase 7.5 B13 (Riley Wave 4) — Add Link tool arming.
 import {
   selectFindBarOpen,
   selectReadMode,
@@ -389,6 +391,14 @@ export function useAppShortcuts(): void {
           if (!doc) break;
           dispatch(setSidebarTab('stamps'));
           if (sidebarCollapsed) dispatch(toggleSidebar());
+          break;
+        case 'tool-add-link':
+          // Phase 7.5 B13 (Riley Wave 4) — Shift+L arms the Add Link tool.
+          // The Links overlay catches subsequent marquee drags and opens the
+          // Add Link modal on pointer-up.
+          e.preventDefault();
+          if (!doc) break;
+          dispatch(setLinkTool('add-link'));
           break;
         case 'fit-width':
           // Phase 7.5 A6 — Ctrl+1 = Fit width. PdfViewer's ResizeObserver

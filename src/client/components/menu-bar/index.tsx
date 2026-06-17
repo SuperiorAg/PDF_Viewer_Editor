@@ -23,6 +23,7 @@ import { openExportModal } from '../../state/slices/export-slice';
 import { selectFormFields } from '../../state/slices/forms-selectors';
 import { setDesignerMode, toggleDesignerMode } from '../../state/slices/forms-slice';
 import { selectCanRedo, selectCanUndo } from '../../state/slices/history-selectors';
+import { setLinkTool } from '../../state/slices/links-slice';
 import { openWizard as openMailMergeWizard } from '../../state/slices/mail-merge-slice';
 import { selectOcrOverlayVisible } from '../../state/slices/ocr-selectors';
 import {
@@ -32,6 +33,7 @@ import {
 } from '../../state/slices/ocr-slice';
 // Phase 7.4 B1 — Redact menu entries dispatch into the redactions slice +
 // ui-slice flags. Same action shapes the toolbar's RedactionToolbar fires.
+import { openPageDesign } from '../../state/slices/page-design-slice';
 import {
   clearMarks,
   selectRedactionShowMarks,
@@ -41,6 +43,7 @@ import {
 } from '../../state/slices/redactions-slice';
 // Phase 7.4 A1 — Fill & Sign menu entry dispatches the existing signature-capture flow.
 import { openCaptureModal } from '../../state/slices/signatures-slice';
+// Phase 7.5 Wave 4 (Riley) — B4 page-design entries + B13 Add Link tool.
 import { selectPageDisplayMode } from '../../state/slices/ui-selectors';
 import {
   openImageImportModal,
@@ -324,6 +327,15 @@ export function MenuBar(): JSX.Element {
           onClick: () => dispatch(setFindAToolOpen(true)),
         },
         { label: '', divider: true },
+        // Phase 7.5 B13 (Riley Wave 4) — Add Link tool menu mirror. Arms
+        // the Links overlay marquee; user drags on a page → Add Link modal.
+        {
+          label: t('menu:items.addLink'),
+          shortcut: 'Shift+L',
+          disabled: !doc,
+          onClick: () => dispatch(setLinkTool('add-link')),
+        },
+        { label: '', divider: true },
         {
           label: t('menu:items.settings'),
           shortcut: 'Ctrl+,',
@@ -379,6 +391,24 @@ export function MenuBar(): JSX.Element {
           label: t('menu:items.formFieldSignature'),
           disabled: !doc,
           onClick: () => dispatch(setDesignerMode(true)),
+        },
+        { label: '', divider: true },
+        // Phase 7.5 B4 (Riley Wave 4) — Page Design entries open the same
+        // three-tab modal pre-selected to the chosen tab.
+        {
+          label: t('menu:items.watermark'),
+          disabled: !doc,
+          onClick: () => dispatch(openPageDesign('watermark')),
+        },
+        {
+          label: t('menu:items.headerFooter'),
+          disabled: !doc,
+          onClick: () => dispatch(openPageDesign('header-footer')),
+        },
+        {
+          label: t('menu:items.background'),
+          disabled: !doc,
+          onClick: () => dispatch(openPageDesign('background')),
         },
       ],
     },

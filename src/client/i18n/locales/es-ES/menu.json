@@ -81,7 +81,12 @@
     "areaMeasure": "Medir área",
     "regionCut": "Cortar región de página",
     "regionCopy": "Copiar región de página",
-    "regionPaste": "Pegar región de página"
+    "regionPaste": "Pegar región de página",
+    "watermark": "Marca de agua...",
+    "headerFooter": "Encabezado y pie...",
+    "background": "Fondo...",
+    "addLink": "Añadir enlace...",
+    "linkTool": "Herramienta añadir enlace"
   },
   "tooltips": {
     "findComing": "Buscar (Ctrl+F)",

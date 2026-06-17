@@ -23,8 +23,10 @@ import { setActiveTool } from '../state/slices/annotations-slice';
 import { applyEdit } from '../state/slices/document-slice';
 import { openExportModal } from '../state/slices/export-slice';
 import { toggleDesignerMode } from '../state/slices/forms-slice';
+import { setLinkTool } from '../state/slices/links-slice';
 import { openWizard as openMailMergeWizard } from '../state/slices/mail-merge-slice';
 import { openRunModal as openOcrRunModal } from '../state/slices/ocr-slice';
+import { openPageDesign } from '../state/slices/page-design-slice';
 import { setActiveRedactionTool } from '../state/slices/redactions-slice';
 // Phase 7.5 Wave 3 (Riley) — region clipboard cut/copy/paste delegate to the
 // region-clipboard service shared with the menu mirrors.
@@ -37,6 +39,7 @@ import {
 } from '../state/slices/region-clipboard-slice';
 // Phase 7.5 Wave 3 (Riley) — area-measure tool arms the shape sub-toolbar.
 import { setActiveShapeTool } from '../state/slices/shapes-slice';
+// Phase 7.5 Wave 4 (Riley) — B4 page-design + B13 Add Link tool dispatchers.
 import {
   openImageImportModal,
   openModal,
@@ -127,6 +130,11 @@ export type ToolId =
   | 'edit:region-cut'
   | 'edit:region-copy'
   | 'edit:region-paste'
+  // Phase 7.5 Wave 4 (Riley) — B4 page-design entries + B13 Add Link tool.
+  | 'pages:watermark'
+  | 'pages:header-footer'
+  | 'pages:background'
+  | 'annotation:add-link'
   // help
   | 'help:help'
   | 'help:about';
@@ -941,6 +949,64 @@ export const TOOLS: readonly ToolDef[] = [
     enabledWhen: docOpen,
     dispatch: (d) => d(toggleBookmarksEditMode()),
     searchKeywords: ['bookmarks', 'edit', 'outline', 'toc'],
+  },
+
+  // ---- Phase 7.5 Wave 4 (Riley) — B4 Page Design + B13 Add Link ----
+  // B4 — three menu entries open the same modal pre-selected to the right
+  // tab so the user can land directly in Watermark / H&F / Background.
+  {
+    id: 'pages:watermark',
+    nameKey: 'toolbar:watermark',
+    tooltipKey: 'toolbar:watermarkTooltip',
+    ariaLabelKey: 'toolbar:watermark',
+    icon: null,
+    shortcutId: null,
+    menu: { top: 'insertAndPages', section: 'page-design' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: docOpen,
+    dispatch: (d) => d(openPageDesign('watermark')),
+    searchKeywords: ['watermark', 'overlay', 'draft', 'confidential'],
+  },
+  {
+    id: 'pages:header-footer',
+    nameKey: 'toolbar:headerFooter',
+    tooltipKey: 'toolbar:headerFooterTooltip',
+    ariaLabelKey: 'toolbar:headerFooter',
+    icon: null,
+    shortcutId: null,
+    menu: { top: 'insertAndPages', section: 'page-design' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: docOpen,
+    dispatch: (d) => d(openPageDesign('header-footer')),
+    searchKeywords: ['header', 'footer', 'page number', 'date'],
+  },
+  {
+    id: 'pages:background',
+    nameKey: 'toolbar:background',
+    tooltipKey: 'toolbar:backgroundTooltip',
+    ariaLabelKey: 'toolbar:background',
+    icon: null,
+    shortcutId: null,
+    menu: { top: 'insertAndPages', section: 'page-design' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: docOpen,
+    dispatch: (d) => d(openPageDesign('background')),
+    searchKeywords: ['background', 'color', 'image'],
+  },
+  // B13 — Add Link tool. Arms the Links overlay; user drags marquee and
+  // the Add Link modal opens with the captured rect.
+  {
+    id: 'annotation:add-link',
+    nameKey: 'toolbar:addLink',
+    tooltipKey: 'toolbar:addLinkTooltip',
+    ariaLabelKey: 'toolbar:addLinkAria',
+    icon: 'link',
+    shortcutId: 'tool-add-link',
+    menu: { top: 'edit', section: 'links' },
+    surfaces: { menu: true, palette: true, contextMenu: 'link-annotation' },
+    enabledWhen: docOpen,
+    dispatch: (d) => d(setLinkTool('add-link')),
+    searchKeywords: ['link', 'hyperlink', 'url', 'add link'],
   },
 
   // ---- help ----

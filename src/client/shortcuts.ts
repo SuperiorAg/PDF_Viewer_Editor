@@ -69,7 +69,10 @@ export type ShortcutId =
   // Phase 7.5 B7 — open Stamps panel (sidebar tab) via Ctrl+Shift+T.
   // Distinct from `tool-sticky` (S, sticky note) — stamps are reusable
   // text/image overlays managed in a sidebar panel.
-  | 'comment-stamps';
+  | 'comment-stamps'
+  // Phase 7.5 B13 (Riley Wave 4) — arm the Add Link tool. Shift+L because
+  // plain L is the existing Line / Arrow shape tool (shape-toolbar.tsx).
+  | 'tool-add-link';
 
 // Phase 7.5 B12 NOTE: page-content region Cut / Copy / Paste are NOT
 // registered as ShortcutIds. They are CONTEXT-SENSITIVE — only active when
@@ -365,6 +368,16 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
     label: 'Open Stamps panel',
     key: 'T',
     ctrl: true,
+    shift: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  // Phase 7.5 B13 (Riley Wave 4) — Add Link tool. Shift+L avoids clashing
+  // with the existing Line / Arrow tool ('L' alone) on the shape sub-toolbar.
+  {
+    id: 'tool-add-link',
+    label: 'Add Link tool',
+    key: 'L',
     shift: true,
     enabledInPhase1: false,
     enabledInPhases: [7],

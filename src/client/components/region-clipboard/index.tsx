@@ -443,14 +443,17 @@ export function RegionClipboardOverlay(): JSX.Element | null {
           // eslint-disable-next-line react/forbid-dom-props
           style={{ left: ctxMenu.x, top: ctxMenu.y }}
         >
+          {/* Phase 7.5 B12 Wave 4 (Riley) — CUT scope-reduced to disabled-with-
+              tooltip for v0.8.0. True page-content removal piggy-backs on B20
+              sanitize engine (Wave 5). Mirrors the Phase 7.4 A1 "dishonest
+              placeholder removal" pattern. */}
           <button
             type="button"
             role="menuitem"
             className={styles.contextMenuItem}
-            onClick={() => {
-              window.dispatchEvent(new Event('regionClipboard/requestCut'));
-              setCtxMenu(null);
-            }}
+            disabled
+            title={t('modals:regionClipboard.menuCutDisabledTooltip')}
+            aria-disabled="true"
           >
             {t('modals:regionClipboard.menuCut')}
           </button>

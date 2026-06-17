@@ -93,6 +93,10 @@ function makeBridgeUnavailableFallback(): PdfApi {
       applyHeaderFooter: unavailable,
       applyBackground: unavailable,
       applyStamp: unavailable,
+      // Phase 7.5 Wave 4 (David, 2026-06-17): B6 / B13 / B19.
+      compressDocument: unavailable,
+      autoBookmarkFromHeadings: unavailable,
+      editLinks: unavailable,
     },
     // Phase 3 (api-contracts §13)
     forms: {

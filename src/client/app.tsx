@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
 
 import styles from './app.module.css';
+import { AddLinkModal } from './components/add-link-modal';
 import { EmptyState } from './components/empty-state';
 import { ErrorBoundary } from './components/error-boundary';
 // Phase 7.5 A7 — Find-a-tool palette (registry-driven, Ctrl+/).
 import { FindAToolPalette } from './components/find-a-tool-palette';
 import { FormDesignerToolbar } from './components/form-designer';
 import { Inspector } from './components/inspector';
+import { LinksOverlay } from './components/links-overlay';
 import { MenuBar } from './components/menu-bar';
 import { AboutModal } from './components/modals/about-modal';
 import { CombineModal } from './components/modals/combine-modal';
@@ -21,6 +23,7 @@ import { OcrRunModal } from './components/modals/ocr-run-modal';
 import { SaveTemplateModal } from './components/modals/save-template-modal';
 import { ScanModal } from './components/modals/scan-modal';
 import { SettingsModal } from './components/modals/settings-modal';
+import { PageDesignModal } from './components/page-design-modal';
 import { PdfViewer } from './components/pdf-viewer';
 // Phase 7.4 B1 — Redaction sub-toolbar + Apply confirm modal (same mount
 // pattern as ShapeToolbar above, gated on ui.redactionPanelOpen / Modal flag).
@@ -30,7 +33,10 @@ import { RedactionToolbar } from './components/redaction-tools/redaction-toolbar
 import { RegionClipboardOverlay } from './components/region-clipboard';
 // Phase 7.4 A5 — ShapeToolbar mounts as a sibling under the main Toolbar,
 // gated on ui.shapesPanelOpen (mirrors the FormDesignerToolbar pattern).
+import { ShapeDrawOverlay } from './components/shape-tools/shape-draw-overlay';
 import { ShapeToolbar } from './components/shape-tools/shape-toolbar';
+// Phase 7.5 Wave 4 (Riley) — shape pointer wiring (closes Wave-3 open
+// question #3) + hyperlink overlay + Page Design + Add Link modals.
 import { Sidebar } from './components/sidebar';
 // Phase 7.5 B7 (Riley Wave 3) — Stamps Add modal + placement overlay mount
 // at the app level so they compose with other modals and the placement
@@ -88,6 +94,11 @@ export function App(): JSX.Element {
   // Phase 7.5 A7 / B16 — registry palette + Read Mode visibility gates.
   const findAToolOpen = useAppSelector(selectFindAToolOpen);
   const readMode = useAppSelector(selectReadMode);
+  // Phase 7.5 Wave 4 (Riley) — Page Design + Add Link modal gates.
+  const pageDesignOpen = useAppSelector((s) => s.pageDesign.open);
+  const addLinkOpen = useAppSelector(
+    (s) => s.links.addModal !== null || s.links.editModalLinkId !== null,
+  );
 
   useAppShortcuts();
 
@@ -322,6 +333,17 @@ export function App(): JSX.Element {
         {/* Phase 7.5 B12 (Riley Wave 3) — region-clipboard overlay. Returns
             only render-effects when no marquee / paste-ghost is active. */}
         <RegionClipboardOverlay />
+        {/* Phase 7.5 Wave 4 (Riley) — Shape drawing pointer-event wiring.
+            Returns null when no shape tool is armed. Closes the Wave-3
+            open question #3 — line / polyline / area measure tools can now
+            actually draw on a page. */}
+        <ShapeDrawOverlay />
+        {/* Phase 7.5 B13 (Riley Wave 4) — Hyperlink overlay. Always mounted
+            so persisted-link badges render over visible pages; arms the
+            marquee when `links.tool === 'add-link'`. */}
+        <LinksOverlay />
+        {pageDesignOpen && <PageDesignModal />}
+        {addLinkOpen && <AddLinkModal />}
         <TextEditOverlay />
       </div>
     </ErrorBoundary>

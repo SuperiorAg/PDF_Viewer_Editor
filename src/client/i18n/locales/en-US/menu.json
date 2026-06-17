@@ -81,7 +81,12 @@
     "areaMeasure": "Area Measure",
     "regionCut": "Cut Page Region",
     "regionCopy": "Copy Page Region",
-    "regionPaste": "Paste Page Region"
+    "regionPaste": "Paste Page Region",
+    "watermark": "Watermark...",
+    "headerFooter": "Header & Footer...",
+    "background": "Background...",
+    "addLink": "Add Link...",
+    "linkTool": "Add Link Tool"
   },
   "tooltips": {
     "findComing": "Find (Ctrl+F)",
