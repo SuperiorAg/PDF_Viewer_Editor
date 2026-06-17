@@ -62,6 +62,19 @@ export function FormsPanel(): JSX.Element {
     void dispatch(listFormTemplatesThunk());
   }, [dispatch]);
 
+  // Auto-trigger form detection when this panel mounts AND detection has not
+  // already run (status === 'idle'). For large docs (1000+ pages),
+  // openDocumentThunk skips the eager detect on open because detectForms
+  // serializes a full PDFDocument.load on main and blocks visible-page
+  // rendering for tens of seconds; this lazy fire-on-mount keeps the Forms
+  // feature working transparently — the user pays the detect cost only when
+  // they actually open the panel.
+  useEffect(() => {
+    if (doc && detectionStatus === 'unknown') {
+      void dispatch(detectFormsThunk());
+    }
+  }, [dispatch, doc, detectionStatus]);
+
   // Group fields by pageIndex.
   const fieldsByPage = useMemo(() => {
     const out: Map<number, FormFieldDefinition[]> = new Map();

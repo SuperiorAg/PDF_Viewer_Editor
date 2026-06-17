@@ -129,8 +129,16 @@ export const openDocumentThunk = createAsyncThunk<
     dispatch(setDocument(buildInitialDocument(res.value)));
     // Refresh recents list after a successful open.
     void dispatch(refreshRecentsThunk());
-    // Phase 3: kick off form detection in the background.
-    void dispatch(detectFormsThunk());
+    // Phase 3: kick off form detection in the background — but ONLY for small
+    // docs. detectForms runs PDFDocument.load(bytes) on the SINGLE main thread;
+    // for a 1000+-page PDF that blocks main for many tens of seconds and the
+    // renderer's fs.readBytesByHandle for the visible-page render path waits
+    // behind it (main is single-threaded IPC). For large docs we defer
+    // detection to FormsPanel mount (auto-trigger when status is idle), so
+    // opening the document does not stall on a feature the user may not use.
+    if (res.value.pageCount <= EAGER_DETECT_FORMS_PAGE_LIMIT) {
+      void dispatch(detectFormsThunk());
+    }
     // Phase 4.1.1: refresh PageModel dims with pdf.js-measured natural dims so
     // pdf-coords + page-metadata + AnnotationLayer agree with the rendered
     // bitmap aspect ratio (was Letter-defaulted at thunks.ts:82-92).
@@ -145,6 +153,10 @@ export const openDocumentThunk = createAsyncThunk<
     dispatch(setLoading({ loading: false }));
   }
 });
+
+// Above this page count the eager detectForms call on open is skipped — see
+// the FormsPanel auto-trigger and the comment in openDocumentThunk above.
+const EAGER_DETECT_FORMS_PAGE_LIMIT = 100;
 
 export const openDroppedPathThunk = createAsyncThunk<
   void,
@@ -168,7 +180,11 @@ export const openDroppedPathThunk = createAsyncThunk<
     }
     dispatch(setDocument(buildInitialDocument(res.value)));
     void dispatch(refreshRecentsThunk());
-    void dispatch(detectFormsThunk());
+    // See openDocumentThunk for the page-count gating rationale (detectForms
+    // blocks the main thread for tens of seconds on 1000+ pages).
+    if (res.value.pageCount <= EAGER_DETECT_FORMS_PAGE_LIMIT) {
+      void dispatch(detectFormsThunk());
+    }
     void dispatch(measurePageDimensionsThunk());
     // v0.7.17: same OCR-summary hydration as openDocumentThunk above.
     void dispatch(loadOcrResultsThunk());
