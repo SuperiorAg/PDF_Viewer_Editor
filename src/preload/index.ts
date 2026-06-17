@@ -65,6 +65,17 @@ import type {
   PdfPrintResponse,
   PdfApplyRedactionsRequest,
   PdfApplyRedactionsResponse,
+  // Phase 7.5 Wave 2 (David, 2026-06-17) — B5 / B10 / B11 page operations.
+  PdfCropPagesRequest,
+  PdfCropPagesResponse,
+  PdfExtractPagesRequest,
+  PdfExtractPagesResponse,
+  PdfSplitDocumentRequest,
+  PdfSplitDocumentResponse,
+  PdfReplacePagesRequest,
+  PdfReplacePagesResponse,
+  PdfInsertPagesFromFileRequest,
+  PdfInsertPagesFromFileResponse,
   PdfReplaceTextRequest,
   PdfReplaceTextResponse,
   RecentsAddRequest,
@@ -274,6 +285,20 @@ const pdfApi: PdfApi = {
     // Phase 7.4 B1 (Riley design §3.1) — R1 rasterize-redact + sanitize.
     applyRedactions: (req: PdfApplyRedactionsRequest) =>
       ipcRenderer.invoke(Channels.PdfApplyRedactions, req) as Promise<PdfApplyRedactionsResponse>,
+    // Phase 7.5 Wave 2 (David, 2026-06-17) — B5 / B10 / B11 page operations.
+    cropPages: (req: PdfCropPagesRequest) =>
+      ipcRenderer.invoke(Channels.PdfCropPages, req) as Promise<PdfCropPagesResponse>,
+    extractPages: (req: PdfExtractPagesRequest) =>
+      ipcRenderer.invoke(Channels.PdfExtractPages, req) as Promise<PdfExtractPagesResponse>,
+    splitDocument: (req: PdfSplitDocumentRequest) =>
+      ipcRenderer.invoke(Channels.PdfSplitDocument, req) as Promise<PdfSplitDocumentResponse>,
+    replacePages: (req: PdfReplacePagesRequest) =>
+      ipcRenderer.invoke(Channels.PdfReplacePages, req) as Promise<PdfReplacePagesResponse>,
+    insertPagesFromFile: (req: PdfInsertPagesFromFileRequest) =>
+      ipcRenderer.invoke(
+        Channels.PdfInsertPagesFromFile,
+        req,
+      ) as Promise<PdfInsertPagesFromFileResponse>,
   },
   app: {
     getVersion: () =>

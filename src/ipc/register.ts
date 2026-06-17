@@ -113,14 +113,20 @@ import { handleFsApplyEditOps } from './handlers/pdf-apply-edit-ops.js';
 import type { FsApplyEditOpsDeps } from './handlers/pdf-apply-edit-ops.js';
 import { handlePdfApplyRedactions } from './handlers/pdf-apply-redactions.js';
 import { handlePdfCombine } from './handlers/pdf-combine.js';
+// Phase 7.5 Wave 2 (David, 2026-06-17) — B5 / B10 / B11 page operations.
+import { handlePdfCropPages } from './handlers/pdf-crop-pages.js';
 import { handlePdfEmbedImage } from './handlers/pdf-embed-image.js';
 import { defaultPickEngine, handlePdfExport } from './handlers/pdf-export-pdf.js';
+import { handlePdfExtractPages } from './handlers/pdf-extract-pages.js';
 import { handlePdfIdentifyTextSpan } from './handlers/pdf-identify-text-span.js';
+import { handlePdfInsertPagesFromFile } from './handlers/pdf-insert-pages-from-file.js';
 import { handlePdfGetOutline } from './handlers/pdf-ops.js';
 // Wave-30 follow-up (H-30.1, David 2026-06-01): real combine handler +
 // path-only file picker. Replaces the Phase-1 `not_implemented` stub.
 import { handlePdfPrint } from './handlers/pdf-print.js';
+import { handlePdfReplacePages } from './handlers/pdf-replace-pages.js';
 import { handlePdfReplaceText } from './handlers/pdf-replace-text.js';
+import { handlePdfSplitDocument } from './handlers/pdf-split-document.js';
 import { handleRecentsAdd } from './handlers/recents-add.js';
 import { handleRecentsClear } from './handlers/recents-clear.js';
 import { handleRecentsList } from './handlers/recents-list.js';
@@ -673,6 +679,73 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
           }
         : null,
       defaultRasterDpi: 200, // Riley §1.2 design default; UI can override per-request.
+    }),
+  );
+
+  // ============================================================================
+  // Phase 7.5 Wave 2 (David, 2026-06-17) — B5 crop + B10 extract/split/replace
+  // + B11 insert-from-file. Each engine is pure pdf-lib; the handlers wire
+  // documentStore + fs + sanitizePath the same way pdf-combine + pdf-apply-
+  // redactions do. NOTE: `pdf:splitDocument`'s `destinationDirectoryToken`
+  // resolver is a stub — there is no folder-picker dialog as of Wave 2; the
+  // handler accepts a token and the production resolver below returns null
+  // until Riley lands the folder dialog (token_expired surfaces honestly).
+  // Open question forwarded to Marcus.
+  // ============================================================================
+  ipcMain.handle(Channels.PdfCropPages, (_evt, payload) =>
+    handlePdfCropPages(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+      // The renderer must substitute its `'current'` page literally; we expose
+      // a `null` resolver so a forgetful caller defaults to page 0 (handler
+      // contract). When Riley wires the renderer-side `currentPage` mirror,
+      // this becomes a real lookup.
+      resolveCurrentPage: () => null,
+    }),
+  );
+
+  ipcMain.handle(Channels.PdfExtractPages, (_evt, payload) =>
+    handlePdfExtractPages(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      consumeDestinationToken: (t) => documentStore.consumeDestinationToken(t),
+      writeFile: async (p, b) => {
+        await fsPromises.writeFile(p, b);
+      },
+      computeBufferHash,
+    }),
+  );
+
+  ipcMain.handle(Channels.PdfSplitDocument, (_evt, payload) =>
+    handlePdfSplitDocument(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      // OPEN QUESTION (#1, flagged to Marcus): no dialog:pickFolder helper
+      // exists as of Phase 7.5 Wave 2. The resolver returns null until Riley
+      // (or a follow-up wave) lands the folder dialog + a directory-token
+      // store on documentStore. Renderer callers receive `token_expired` —
+      // honest "feature not yet available" rather than a silent no-op.
+      resolveDestinationDirectory: () => null,
+      writeFile: async (p, b) => {
+        await fsPromises.writeFile(p, b);
+      },
+      joinPath: (dir, name) => joinPath(dir, name),
+    }),
+  );
+
+  ipcMain.handle(Channels.PdfReplacePages, (_evt, payload) =>
+    handlePdfReplacePages(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+      readFile: async (p) => new Uint8Array(await fsPromises.readFile(p)),
+      sanitizePath: (raw) => sanitizePath(raw),
+    }),
+  );
+
+  ipcMain.handle(Channels.PdfInsertPagesFromFile, (_evt, payload) =>
+    handlePdfInsertPagesFromFile(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+      readFile: async (p) => new Uint8Array(await fsPromises.readFile(p)),
+      sanitizePath: (raw) => sanitizePath(raw),
     }),
   );
 

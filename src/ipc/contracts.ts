@@ -1347,6 +1347,138 @@ export interface PdfApplyRedactionsValue {
 
 export type PdfApplyRedactionsResponse = Result<PdfApplyRedactionsValue, PdfApplyRedactionsError>;
 
+// ============================================================================
+// Phase 7.5 Wave 2 — Page operations (B5 crop, B10 extract/split/replace, B11 insert)
+// (David, 2026-06-17). Contract matches docs/api-contracts.md §19.2 verbatim.
+// ============================================================================
+
+// ---- pdf:cropPages (B5) -----------------------------------------------------
+
+export interface PdfCropPagesRequest {
+  handle: DocumentHandle;
+  pages: 'all' | 'current' | { start: number; end: number } | number[];
+  cropBox: { top: number; right: number; bottom: number; left: number };
+  respectRotation?: boolean;
+}
+
+export type PdfCropPagesError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'page_out_of_range'
+  | 'engine_failed';
+
+export interface PdfCropPagesValue {
+  pagesAffected: number;
+}
+
+export type PdfCropPagesResponse = Result<PdfCropPagesValue, PdfCropPagesError>;
+
+// ---- pdf:extractPages (B10) -------------------------------------------------
+
+export interface PdfExtractPagesRequest {
+  handle: DocumentHandle;
+  pages: { start: number; end: number } | number[];
+  destinationToken: string;
+  includeBookmarks?: boolean;
+}
+
+export type PdfExtractPagesError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'page_out_of_range'
+  | 'token_expired'
+  | 'fs_write_failed'
+  | 'engine_failed';
+
+export interface PdfExtractPagesValue {
+  bytesWritten: number;
+  outputFileHash: FileHash;
+}
+
+export type PdfExtractPagesResponse = Result<PdfExtractPagesValue, PdfExtractPagesError>;
+
+// ---- pdf:splitDocument (B10) ------------------------------------------------
+
+export type PdfSplitStrategy =
+  | { kind: 'by-page-count'; pagesPerFile: number }
+  | { kind: 'by-file-count'; targetFileCount: number }
+  | { kind: 'by-bookmarks'; topLevelOnly: boolean };
+
+export interface PdfSplitDocumentRequest {
+  handle: DocumentHandle;
+  strategy: PdfSplitStrategy;
+  destinationDirectoryToken: string;
+  filenamePattern: string;
+}
+
+export type PdfSplitDocumentError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'no_bookmarks_for_split'
+  | 'token_expired'
+  | 'fs_write_failed'
+  | 'engine_failed';
+
+export interface PdfSplitDocumentValue {
+  files: Array<{
+    path: string;
+    bytesWritten: number;
+    pageRange: { start: number; end: number };
+  }>;
+}
+
+export type PdfSplitDocumentResponse = Result<PdfSplitDocumentValue, PdfSplitDocumentError>;
+
+// ---- pdf:replacePages (B10) -------------------------------------------------
+
+export interface PdfReplacePagesRequest {
+  handle: DocumentHandle;
+  targetPages: { start: number; end: number };
+  sourcePath: string;
+  sourcePages: { start: number; end: number };
+}
+
+export type PdfReplacePagesError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'page_out_of_range'
+  | 'source_invalid_pdf'
+  | 'source_page_out_of_range'
+  | 'engine_failed';
+
+export interface PdfReplacePagesValue {
+  pagesReplaced: number;
+}
+
+export type PdfReplacePagesResponse = Result<PdfReplacePagesValue, PdfReplacePagesError>;
+
+// ---- pdf:insertPagesFromFile (B11) ------------------------------------------
+
+export interface PdfInsertPagesFromFileRequest {
+  handle: DocumentHandle;
+  sourcePath: string;
+  sourcePages: 'all' | { start: number; end: number } | number[];
+  insertAfterPageIndex: number;
+}
+
+export type PdfInsertPagesFromFileError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'page_out_of_range'
+  | 'source_invalid_pdf'
+  | 'source_page_out_of_range'
+  | 'engine_failed';
+
+export interface PdfInsertPagesFromFileValue {
+  pagesInserted: number;
+  newPageCount: number;
+}
+
+export type PdfInsertPagesFromFileResponse = Result<
+  PdfInsertPagesFromFileValue,
+  PdfInsertPagesFromFileError
+>;
+
 // ---- pdf:applyEditOps -------------------------------------------------------
 // Phase 2 (architecture-phase-2.md §2.5): convenience channel that wraps
 // fs:writePdf kind:'ops' so the renderer thunk has a clean async surface
@@ -3299,6 +3431,12 @@ export const Channels = {
   PdfPrint: 'pdf:print',
   // Phase 7.4 B1 (Riley design §3.1) — R1 rasterize-redact + sanitize.
   PdfApplyRedactions: 'pdf:applyRedactions',
+  // Phase 7.5 Wave 2 (David, 2026-06-17) — B5 / B10 / B11 page operations.
+  PdfCropPages: 'pdf:cropPages',
+  PdfExtractPages: 'pdf:extractPages',
+  PdfSplitDocument: 'pdf:splitDocument',
+  PdfReplacePages: 'pdf:replacePages',
+  PdfInsertPagesFromFile: 'pdf:insertPagesFromFile',
   // Phase 2 fs (replay-engine entry point)
   FsApplyEditOps: 'fs:applyEditOps',
   // Phase 4.1 (api-contracts.md §15, David)
@@ -3460,6 +3598,14 @@ export interface PdfApi {
     print: (req: PdfPrintRequest) => Promise<PdfPrintResponse>;
     // Phase 7.4 B1 (Riley design §3.1) — R1 rasterize-redact + sanitize.
     applyRedactions: (req: PdfApplyRedactionsRequest) => Promise<PdfApplyRedactionsResponse>;
+    // Phase 7.5 Wave 2 (David, 2026-06-17) — B5 / B10 / B11 page operations.
+    cropPages: (req: PdfCropPagesRequest) => Promise<PdfCropPagesResponse>;
+    extractPages: (req: PdfExtractPagesRequest) => Promise<PdfExtractPagesResponse>;
+    splitDocument: (req: PdfSplitDocumentRequest) => Promise<PdfSplitDocumentResponse>;
+    replacePages: (req: PdfReplacePagesRequest) => Promise<PdfReplacePagesResponse>;
+    insertPagesFromFile: (
+      req: PdfInsertPagesFromFileRequest,
+    ) => Promise<PdfInsertPagesFromFileResponse>;
   };
   app: {
     getVersion: () => Promise<AppGetVersionResponse>;
