@@ -2993,3 +2993,1023 @@ pdfApi.__test?.seedOcrJob(req: TestSeedOcrJobRequest): Promise<TestSeedOcrJobRes
 ```
 
 The `__test` prefix is intentionally grep-detectable so a future L-006-class ratchet can fail the build on any production call site (`pdfApi\.__test` outside `tests/`).
+
+---
+
+## 19. Phase 7.5 additions (2026-06-17, Riley)
+
+> ### Phase 7.5 amendment (2026-06-17, Riley)
+>
+> §1–§18 above remain authoritative for Phase 1–7 IPC. Phase 7.5 introduces **41 new IPC channels** for the Bucket B parity closes (B2–B21) and Bucket C accessibility + print-prep (C1–C6). Every channel follows the §0 conventions (`Result<T, ChannelError>`, named string-literal error variants, zod-validated requests, no payload logging). Architecture cross-refs: `docs/architecture-phase-7.5.md` §4 (engine routing).
+
+### 19.1 Channel-shape conventions reaffirmed
+
+All Phase 7.5 channels:
+
+- Are `ipcRenderer.invoke` request/response (no new event streams except the explicitly-marked `tts:onProgress` in §19.5).
+- Validate via zod `.strict()` schemas in David's handler files.
+- Return discriminated `Result<T, E>` per §0.
+- Use the same `DocumentHandle` opaque integer (§1) for any channel that addresses an open document.
+- New error variants `'engine_unavailable'` (qpdf, espeak, dictionary missing) and `'side_table_corrupt'` (accessibility edit session merge failure) join the per-channel error unions where applicable.
+
+### 19.2 Page operations — extract, split, replace, insert, crop (B5, B10, B11)
+
+#### 19.2.1 `pdf:cropPages`
+
+```ts
+interface PdfCropPagesRequest {
+  handle: DocumentHandle;
+  pages: 'all' | 'current' | { start: number; end: number } | number[]; // inclusive page indices
+  cropBox: { top: number; right: number; bottom: number; left: number }; // points to crop from each edge
+  respectRotation: boolean; // default true
+}
+type PdfCropPagesError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'page_out_of_range'
+  | 'engine_failed';
+interface PdfCropPagesValue {
+  pagesAffected: number;
+}
+type PdfCropPagesResponse = Result<PdfCropPagesValue, PdfCropPagesError>;
+```
+
+#### 19.2.2 `pdf:extractPages`
+
+Export a range as a new PDF; the user picks a destination via `dialog:saveAs` first, then the renderer passes the token.
+
+```ts
+interface PdfExtractPagesRequest {
+  handle: DocumentHandle;
+  pages: { start: number; end: number } | number[];
+  destinationToken: string; // from dialog:saveAs
+  includeBookmarks: boolean; // default true — copies bookmarks that point at extracted pages
+}
+type PdfExtractPagesError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'page_out_of_range'
+  | 'token_expired'
+  | 'fs_write_failed'
+  | 'engine_failed';
+interface PdfExtractPagesValue {
+  bytesWritten: number;
+  outputFileHash: string;
+}
+type PdfExtractPagesResponse = Result<PdfExtractPagesValue, PdfExtractPagesError>;
+```
+
+#### 19.2.3 `pdf:splitDocument`
+
+```ts
+interface PdfSplitDocumentRequest {
+  handle: DocumentHandle;
+  strategy:
+    | { kind: 'by-page-count'; pagesPerFile: number }
+    | { kind: 'by-file-count'; targetFileCount: number }
+    | { kind: 'by-bookmarks'; topLevelOnly: boolean };
+  destinationDirectoryToken: string; // from a new dialog:pickFolder helper
+  filenamePattern: string; // e.g. "{base}-part-{index}.pdf"
+}
+type PdfSplitDocumentError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'no_bookmarks_for_split'
+  | 'token_expired'
+  | 'fs_write_failed'
+  | 'engine_failed';
+interface PdfSplitDocumentValue {
+  files: { path: string; bytesWritten: number; pageRange: { start: number; end: number } }[];
+}
+type PdfSplitDocumentResponse = Result<PdfSplitDocumentValue, PdfSplitDocumentError>;
+```
+
+#### 19.2.4 `pdf:replacePages`
+
+```ts
+interface PdfReplacePagesRequest {
+  handle: DocumentHandle;
+  targetPages: { start: number; end: number };
+  sourcePath: string; // OS-validated absolute path (drag-drop or dialog)
+  sourcePages: { start: number; end: number };
+}
+type PdfReplacePagesError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'page_out_of_range'
+  | 'source_invalid_pdf'
+  | 'source_page_out_of_range'
+  | 'engine_failed';
+interface PdfReplacePagesValue {
+  pagesReplaced: number;
+}
+type PdfReplacePagesResponse = Result<PdfReplacePagesValue, PdfReplacePagesError>;
+```
+
+#### 19.2.5 `pdf:insertPagesFromFile`
+
+```ts
+interface PdfInsertPagesFromFileRequest {
+  handle: DocumentHandle;
+  sourcePath: string;
+  sourcePages: 'all' | { start: number; end: number } | number[];
+  insertAfterPageIndex: number; // -1 means insert at start
+}
+type PdfInsertPagesFromFileError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'page_out_of_range'
+  | 'source_invalid_pdf'
+  | 'source_page_out_of_range'
+  | 'engine_failed';
+interface PdfInsertPagesFromFileValue {
+  pagesInserted: number;
+  newPageCount: number;
+}
+type PdfInsertPagesFromFileResponse = Result<
+  PdfInsertPagesFromFileValue,
+  PdfInsertPagesFromFileError
+>;
+```
+
+### 19.3 Page design — watermark, header/footer, background (B4)
+
+Three logical channels share one engine (`page-design-engine.ts`) per architecture §4.3. The request shapes share a common `target` field but the content payload differs.
+
+#### 19.3.1 `pdf:applyWatermark`
+
+```ts
+interface PdfApplyWatermarkRequest {
+  handle: DocumentHandle;
+  target: 'all' | { start: number; end: number } | number[];
+  source:
+    | {
+        kind: 'text';
+        text: string;
+        fontSize: number;
+        fontColor: string /* #RRGGBB */;
+        rotationDegrees: number;
+      }
+    | { kind: 'image'; imagePath: string };
+  opacity: number; // 0..1
+  position: 'center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  layer: 'overlay' | 'underlay'; // default 'overlay'
+}
+type PdfApplyWatermarkError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'page_out_of_range'
+  | 'image_invalid'
+  | 'engine_failed';
+interface PdfApplyWatermarkValue {
+  pagesAffected: number;
+}
+type PdfApplyWatermarkResponse = Result<PdfApplyWatermarkValue, PdfApplyWatermarkError>;
+```
+
+#### 19.3.2 `pdf:applyHeaderFooter`
+
+```ts
+interface PdfApplyHeaderFooterRequest {
+  handle: DocumentHandle;
+  target: 'all' | { start: number; end: number } | number[];
+  header?: { left: string; center: string; right: string; fontSize: number };
+  footer?: { left: string; center: string; right: string; fontSize: number };
+  marginTop: number; // points
+  marginBottom: number;
+  startPageNumber: number; // for {page} substitution
+  totalPageCountToken: boolean; // whether to substitute {totalPages}
+}
+type PdfApplyHeaderFooterError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'page_out_of_range'
+  | 'engine_failed';
+interface PdfApplyHeaderFooterValue {
+  pagesAffected: number;
+}
+type PdfApplyHeaderFooterResponse = Result<PdfApplyHeaderFooterValue, PdfApplyHeaderFooterError>;
+```
+
+#### 19.3.3 `pdf:applyBackground`
+
+```ts
+interface PdfApplyBackgroundRequest {
+  handle: DocumentHandle;
+  target: 'all' | { start: number; end: number } | number[];
+  source: { kind: 'color'; color: string } | { kind: 'image'; imagePath: string; opacity: number };
+}
+type PdfApplyBackgroundError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'page_out_of_range'
+  | 'image_invalid'
+  | 'engine_failed';
+interface PdfApplyBackgroundValue {
+  pagesAffected: number;
+}
+type PdfApplyBackgroundResponse = Result<PdfApplyBackgroundValue, PdfApplyBackgroundError>;
+```
+
+### 19.4 Sanitize family — compress, encrypt, remove-hidden-info, document properties (B6, B8, B20, B21)
+
+#### 19.4.1 `pdf:compressDocument`
+
+```ts
+interface PdfCompressDocumentRequest {
+  handle: DocumentHandle;
+  imageDownsampleDpi: number | null; // null = do not downsample
+  jpegRecompressQuality: number | null; // 0..1; null = keep originals
+  fontSubsetting: boolean; // default true
+  removeUnusedObjects: boolean; // default true (rebuild-from-scratch already handles this)
+}
+type PdfCompressDocumentError = 'invalid_payload' | 'handle_not_found' | 'engine_failed';
+interface PdfCompressDocumentValue {
+  originalBytes: number;
+  compressedBytes: number;
+  reductionPercent: number; // (1 - compressed/original) * 100
+}
+type PdfCompressDocumentResponse = Result<PdfCompressDocumentValue, PdfCompressDocumentError>;
+```
+
+#### 19.4.2 `pdf:setPasswordProtection`
+
+qpdf subprocess (Apache-2.0, bundled per P7.5-L-2). On Windows the binary is at `process.resourcesPath + '/qpdf/qpdf.exe'`; macOS/Linux at `.../qpdf/qpdf`.
+
+```ts
+interface PdfSetPasswordProtectionRequest {
+  handle: DocumentHandle;
+  openPassword: string | null; // null = no open password (printing-only restriction case)
+  permissionsPassword: string | null; // null = no permissions password
+  permissions: {
+    print: boolean;
+    modify: boolean;
+    copy: boolean;
+    annotate: boolean;
+    fillForms: boolean;
+    extract: boolean;
+    assemble: boolean;
+    printHighRes: boolean;
+  };
+  encryption: 'aes-128' | 'aes-256'; // default 'aes-256'
+}
+type PdfSetPasswordProtectionError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'engine_unavailable' // qpdf binary missing or failed to spawn
+  | 'password_too_short' // qpdf rejects empty passwords on aes-256
+  | 'engine_failed';
+interface PdfSetPasswordProtectionValue {
+  outputBytes: number;
+  newFileHash: string;
+}
+type PdfSetPasswordProtectionResponse = Result<
+  PdfSetPasswordProtectionValue,
+  PdfSetPasswordProtectionError
+>;
+```
+
+> **Security contract:** the renderer NEVER persists the open or permissions password. Both flow through this channel one time, are passed to qpdf via stdin (not argv — argv is process-list visible), and are zeroed in main-process memory immediately after qpdf's stdin closes. The Action Wizard recorder (B9) REFUSES to record this op (architecture §6 AR5).
+
+#### 19.4.3 `pdf:removeHiddenInfo`
+
+```ts
+type SanitizeCategory =
+  | 'metadata' // /Info dict + XMP
+  | 'attachments' // /EmbeddedFiles
+  | 'comments' // annotations
+  | 'form-fields' // AcroForm
+  | 'bookmarks' // outline
+  | 'js' // /JS, /JavaScript actions (also a always-on baseline per §14.6)
+  | 'hidden-text' // text with non-printing rendering mode
+  | 'hidden-layers' // OCGs with Off state
+  | 'deleted-content' // pdf-lib rebuild-from-scratch always drops this
+  | 'object-data' // /Names, /OpenAction, /Threads
+  | 'thumbnails'
+  | 'web-capture-info'
+  | 'links'
+  | 'overlapping-objects'
+  | 'cross-reference-data'
+  | 'content-not-on-page'
+  | 'private-application-data';
+
+interface PdfRemoveHiddenInfoRequest {
+  handle: DocumentHandle;
+  categories: SanitizeCategory[];
+}
+type PdfRemoveHiddenInfoError = 'invalid_payload' | 'handle_not_found' | 'engine_failed';
+interface PdfRemoveHiddenInfoValue {
+  categoriesApplied: SanitizeCategory[]; // echoed for confirmation
+  itemsRemoved: Record<SanitizeCategory, number>;
+}
+type PdfRemoveHiddenInfoResponse = Result<PdfRemoveHiddenInfoValue, PdfRemoveHiddenInfoError>;
+```
+
+#### 19.4.4 `pdf:getDocumentProperties` / `pdf:setDocumentProperties`
+
+```ts
+interface DocumentProperties {
+  title: string | null;
+  author: string | null;
+  subject: string | null;
+  keywords: string[]; // split on commas in the PDF
+  creator: string | null; // application that authored
+  producer: string | null; // last-write tool (set by us on save)
+  creationDate: number | null; // ms epoch
+  modificationDate: number | null;
+  trapped: 'true' | 'false' | 'unknown' | null;
+  customMetadata: Record<string, string>; // /Info dict extras
+}
+
+interface PdfGetDocumentPropertiesRequest {
+  handle: DocumentHandle;
+}
+type PdfGetDocumentPropertiesError = 'invalid_payload' | 'handle_not_found' | 'engine_failed';
+interface PdfGetDocumentPropertiesValue {
+  properties: DocumentProperties;
+  securitySummary: {
+    encrypted: boolean;
+    encryptionAlgorithm: 'aes-128' | 'aes-256' | 'rc4-128' | 'none';
+    permissions: Record<string, boolean>; // empty for encrypted: false
+  };
+  pageSizes: { pageIndex: number; widthPt: number; heightPt: number }[]; // for Document Properties → Description panel
+}
+type PdfGetDocumentPropertiesResponse = Result<
+  PdfGetDocumentPropertiesValue,
+  PdfGetDocumentPropertiesError
+>;
+
+interface PdfSetDocumentPropertiesRequest {
+  handle: DocumentHandle;
+  properties: Partial<DocumentProperties>; // only fields the user changed
+}
+type PdfSetDocumentPropertiesError = 'invalid_payload' | 'handle_not_found' | 'engine_failed';
+type PdfSetDocumentPropertiesValue = { applied: true };
+type PdfSetDocumentPropertiesResponse = Result<
+  PdfSetDocumentPropertiesValue,
+  PdfSetDocumentPropertiesError
+>;
+```
+
+### 19.5 Read Aloud — TTS (C1)
+
+Five channels + one event stream. The event stream surfaces engine progress so the Read Aloud bar can highlight the active sentence.
+
+#### 19.5.1 `tts:listVoices`
+
+```ts
+interface TtsListVoicesRequest {} // empty
+type TtsListVoicesError = 'engine_unavailable'; // no engine for current OS (e.g. espeak missing on Linux)
+interface TtsVoice {
+  id: string; // OS-stable identifier
+  name: string; // human label
+  locale: string; // BCP-47 (e.g. 'en-US')
+  gender: 'male' | 'female' | 'neutral' | 'unknown';
+}
+interface TtsListVoicesValue {
+  voices: TtsVoice[];
+  engineName: 'sapi' | 'say' | 'espeak';
+}
+type TtsListVoicesResponse = Result<TtsListVoicesValue, TtsListVoicesError>;
+```
+
+#### 19.5.2 `tts:speakText`
+
+```ts
+interface TtsSpeakTextRequest {
+  text: string;
+  voiceId?: string; // null = OS default for active locale
+  rate?: number; // 0.5..2.0; default 1.0
+  pitch?: number; // 0.5..2.0; default 1.0
+  sentenceBoundaries: { offset: number; length: number }[]; // for progress events
+}
+type TtsSpeakTextError = 'invalid_payload' | 'engine_unavailable' | 'engine_busy' | 'engine_failed';
+interface TtsSpeakTextValue {
+  speakId: string; // correlation id for pause/resume/stop and progress events
+}
+type TtsSpeakTextResponse = Result<TtsSpeakTextValue, TtsSpeakTextError>;
+```
+
+#### 19.5.3 `tts:pause` / `tts:resume` / `tts:stop`
+
+```ts
+interface TtsControlRequest {
+  speakId: string;
+}
+type TtsControlError = 'invalid_payload' | 'speak_id_not_found' | 'engine_failed';
+type TtsControlValue = { state: 'paused' | 'resumed' | 'stopped' };
+type TtsControlResponse = Result<TtsControlValue, TtsControlError>;
+```
+
+The three control channels share the same request/response shape.
+
+#### 19.5.4 Event stream `tts:onProgress`
+
+Main → renderer. Emits as the OS speech engine advances. Best-effort on Linux (espeak word-boundary events are coarse).
+
+```ts
+interface TtsProgressEvent {
+  speakId: string;
+  kind: 'sentence-start' | 'sentence-end' | 'finished' | 'error';
+  sentenceIndex?: number; // for sentence-start / sentence-end
+  errorMessage?: string; // for kind: 'error'
+}
+```
+
+### 19.6 Preflight (C2)
+
+#### 19.6.1 `pdf:runPreflight`
+
+```ts
+type PreflightProfile = 'pdf-x-1a' | 'pdf-x-4' | 'pdf-a-1b' | 'pdf-a-2b';
+
+interface PdfRunPreflightRequest {
+  handle: DocumentHandle;
+  profiles: PreflightProfile[]; // one or more
+}
+type PdfRunPreflightError = 'invalid_payload' | 'handle_not_found' | 'engine_failed';
+interface PreflightRuleResult {
+  ruleId: string; // see docs/preflight-spec.md §3
+  profile: PreflightProfile;
+  severity: 'error' | 'warning' | 'info';
+  passed: boolean;
+  message: string; // i18n key resolved by renderer (handler returns raw i18n key)
+  locations: { pageIndex: number; bbox?: [number, number, number, number] }[];
+}
+interface PdfRunPreflightValue {
+  results: PreflightRuleResult[];
+  ranAt: number; // ms epoch
+  shippedRuleCount: number; // for the honest "subset of X" disclosure
+}
+type PdfRunPreflightResponse = Result<PdfRunPreflightValue, PdfRunPreflightError>;
+```
+
+### 19.7 Accessibility authoring — Tag PDF, Reading Order, Alt Text (C3, C4, C5)
+
+#### 19.7.1 `pdf:getStructTree`
+
+```ts
+interface PdfGetStructTreeRequest {
+  handle: DocumentHandle;
+  mergeWithEditSession: boolean; // true = include uncommitted edits from accessibility_edit_session
+}
+type PdfGetStructTreeError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'side_table_corrupt'
+  | 'engine_failed';
+interface PdfGetStructTreeValue {
+  root: StructTreeNode | null; // null when doc has no /StructTreeRoot
+  hasExistingTags: boolean; // load-bearing for save-as-copy-by-default (P7.5-L-5)
+}
+type PdfGetStructTreeResponse = Result<PdfGetStructTreeValue, PdfGetStructTreeError>;
+```
+
+`StructTreeNode` shape per `docs/architecture-phase-7.5.md` §4.8 and `docs/accessibility-authoring-spec.md` §2.
+
+#### 19.7.2 `pdf:setStructTree`
+
+Persists edits to the SQLite side-table; does NOT touch the in-PDF `/StructTreeRoot` until Save.
+
+```ts
+interface PdfSetStructTreeRequest {
+  handle: DocumentHandle;
+  root: StructTreeNode; // full tree replacement (CRDT-style ops left for v2)
+}
+type PdfSetStructTreeError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'side_table_corrupt'
+  | 'engine_failed';
+type PdfSetStructTreeValue = { sessionId: number };
+type PdfSetStructTreeResponse = Result<PdfSetStructTreeValue, PdfSetStructTreeError>;
+```
+
+#### 19.7.3 `pdf:autoTagPages`
+
+```ts
+interface PdfAutoTagPagesRequest {
+  handle: DocumentHandle;
+  pages: 'all' | { start: number; end: number };
+  heuristic: 'font-size-cluster'; // v1; reserved for future variants
+}
+type PdfAutoTagPagesError = 'invalid_payload' | 'handle_not_found' | 'engine_failed';
+interface PdfAutoTagPagesValue {
+  proposedRoot: StructTreeNode; // user reviews before pdf:setStructTree
+  warnings: string[]; // e.g. "Page 14: single font size — no headings detected"
+}
+type PdfAutoTagPagesResponse = Result<PdfAutoTagPagesValue, PdfAutoTagPagesError>;
+```
+
+#### 19.7.4 `pdf:getReadingOrder` / `pdf:setReadingOrder`
+
+```ts
+interface ReadingOrderEntry {
+  structNodeId: string; // FK into StructTreeNode.id
+  pageIndex: number;
+  order: number; // 0-based within the doc
+  bbox: [number, number, number, number]; // for the overlay badges
+}
+
+interface PdfGetReadingOrderRequest {
+  handle: DocumentHandle;
+}
+type PdfGetReadingOrderError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'no_struct_tree'
+  | 'engine_failed';
+interface PdfGetReadingOrderValue {
+  order: ReadingOrderEntry[];
+}
+type PdfGetReadingOrderResponse = Result<PdfGetReadingOrderValue, PdfGetReadingOrderError>;
+
+interface PdfSetReadingOrderRequest {
+  handle: DocumentHandle;
+  order: ReadingOrderEntry[]; // full ordering — server rejects partial
+}
+type PdfSetReadingOrderError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'no_struct_tree'
+  | 'order_inconsistent'
+  | 'engine_failed';
+type PdfSetReadingOrderValue = { applied: true };
+type PdfSetReadingOrderResponse = Result<PdfSetReadingOrderValue, PdfSetReadingOrderError>;
+```
+
+#### 19.7.5 `pdf:setAltText` / `pdf:listFiguresWithoutAltText`
+
+```ts
+interface PdfSetAltTextRequest {
+  handle: DocumentHandle;
+  structNodeId: string;
+  altText: string; // empty string = remove alt
+  actualText?: string; // optional /ActualText
+}
+type PdfSetAltTextError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'node_not_found'
+  | 'engine_failed';
+type PdfSetAltTextValue = { applied: true };
+type PdfSetAltTextResponse = Result<PdfSetAltTextValue, PdfSetAltTextError>;
+
+interface PdfListFiguresWithoutAltTextRequest {
+  handle: DocumentHandle;
+}
+type PdfListFiguresWithoutAltTextError = 'invalid_payload' | 'handle_not_found' | 'engine_failed';
+interface FigureWithoutAlt {
+  structNodeId: string;
+  pageIndex: number;
+  bbox: [number, number, number, number];
+}
+interface PdfListFiguresWithoutAltTextValue {
+  figures: FigureWithoutAlt[];
+}
+type PdfListFiguresWithoutAltTextResponse = Result<
+  PdfListFiguresWithoutAltTextValue,
+  PdfListFiguresWithoutAltTextError
+>;
+```
+
+### 19.8 Accessibility Checker (C6)
+
+#### 19.8.1 `pdf:runAccessibilityCheck`
+
+```ts
+interface PdfRunAccessibilityCheckRequest {
+  handle: DocumentHandle;
+}
+type PdfRunAccessibilityCheckError = 'invalid_payload' | 'handle_not_found' | 'engine_failed';
+
+interface AccessibilityRuleResult {
+  ruleId: string; // see docs/accessibility-authoring-spec.md §5
+  severity: 'error' | 'warning' | 'info';
+  passed: boolean;
+  message: string; // i18n key
+  locations: { pageIndex: number; structNodeId?: string }[];
+  quickFix?: {
+    kind: 'open-tag-editor' | 'open-reading-order' | 'open-alt-text-inspector';
+    targetNodeId?: string;
+  };
+}
+
+interface PdfRunAccessibilityCheckValue {
+  results: AccessibilityRuleResult[];
+  ranAt: number;
+  shippedRuleCount: number; // honest "subset" disclosure
+  docHash: string;
+}
+type PdfRunAccessibilityCheckResponse = Result<
+  PdfRunAccessibilityCheckValue,
+  PdfRunAccessibilityCheckError
+>;
+```
+
+### 19.9 Compare Files (B2)
+
+#### 19.9.1 `pdf:compareDocuments`
+
+Opens a compare session. Returns a session ID; subsequent per-page diff calls reference it.
+
+```ts
+interface PdfCompareDocumentsRequest {
+  baselinePath: string;
+  modifiedPath: string;
+  computeVisualDiff: boolean; // false = text diff only; true = visual diff prepared lazily
+}
+type PdfCompareDocumentsError =
+  | 'invalid_payload'
+  | 'baseline_invalid_pdf'
+  | 'modified_invalid_pdf'
+  | 'engine_failed';
+interface PdfCompareDocumentsValue {
+  sessionId: number;
+  baselinePageCount: number;
+  modifiedPageCount: number;
+  summary: {
+    totalPagesWithDiff: number;
+    insertedSpans: number;
+    deletedSpans: number;
+  };
+}
+type PdfCompareDocumentsResponse = Result<PdfCompareDocumentsValue, PdfCompareDocumentsError>;
+```
+
+Per-page diff details are read via a session-keyed follow-up channel `pdf:getCompareDiff` (one row per page, lazy):
+
+```ts
+interface PdfGetCompareDiffRequest {
+  sessionId: number;
+  pageIndex: number;
+  includeVisualDiff: boolean; // user explicitly opted in for this page
+}
+type PdfGetCompareDiffError =
+  | 'invalid_payload'
+  | 'session_not_found'
+  | 'page_out_of_range'
+  | 'engine_failed';
+interface PdfGetCompareDiffValue {
+  textDiffSpans: { kind: 'unchanged' | 'inserted' | 'deleted'; text: string }[];
+  visualDiffPng: string | null; // base64-encoded PNG of the pixel-diff overlay; null when includeVisualDiff=false
+  visualDiffPixelCount: number | null;
+}
+type PdfGetCompareDiffResponse = Result<PdfGetCompareDiffValue, PdfGetCompareDiffError>;
+```
+
+`pdf:closeCompareSession`:
+
+```ts
+interface PdfCloseCompareSessionRequest {
+  sessionId: number;
+}
+type PdfCloseCompareSessionError = 'invalid_payload' | 'session_not_found';
+type PdfCloseCompareSessionValue = { closed: true };
+type PdfCloseCompareSessionResponse = Result<
+  PdfCloseCompareSessionValue,
+  PdfCloseCompareSessionError
+>;
+```
+
+### 19.10 Stamps (B7)
+
+#### 19.10.1 `pdf:applyStamp`
+
+```ts
+interface PdfApplyStampRequest {
+  handle: DocumentHandle;
+  stampId: string; // FK into stamps_library.id (or 'builtin:approved', 'builtin:confidential', etc.)
+  pageIndex: number;
+  position: { xPt: number; yPt: number; rotationDegrees: number; opacity: number };
+}
+type PdfApplyStampError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'stamp_not_found'
+  | 'page_out_of_range'
+  | 'engine_failed';
+interface PdfApplyStampValue {
+  annotationId: string; // the new stamp annotation's id (for undo)
+}
+type PdfApplyStampResponse = Result<PdfApplyStampValue, PdfApplyStampError>;
+```
+
+The renderer manages stamps_library CRUD via standard repo-pattern IPC (not enumerated here; follows the Phase 1 `bookmarks:*` shape — `stamps:list`, `stamps:add`, `stamps:remove`).
+
+### 19.11 Find / Search (B3)
+
+#### 19.11.1 `pdf:findInDocument`
+
+Optional cross-page helper (architecture §4.2 v1 ships renderer-only; this channel reserved). The renderer uses the channel only for "find next match starting from page N" cases where main-process walking is cheaper than dispatching per-page TextLayer extracts back to the renderer.
+
+```ts
+interface PdfFindInDocumentRequest {
+  handle: DocumentHandle;
+  query: string;
+  startPageIndex: number;
+  direction: 'forward' | 'backward';
+  caseSensitive: boolean;
+  wholeWord: boolean;
+}
+type PdfFindInDocumentError = 'invalid_payload' | 'handle_not_found' | 'engine_failed';
+interface PdfFindMatch {
+  pageIndex: number;
+  bbox: [number, number, number, number];
+  matchText: string;
+}
+interface PdfFindInDocumentValue {
+  match: PdfFindMatch | null; // null = no more matches in direction
+  searchedPageCount: number; // for "Searched N of M pages" UX
+}
+type PdfFindInDocumentResponse = Result<PdfFindInDocumentValue, PdfFindInDocumentError>;
+```
+
+### 19.12 Action Wizard (B9)
+
+#### 19.12.1 `pdf:recordActionScript`
+
+```ts
+interface PdfRecordActionScriptRequest {
+  name: string;
+  ops: EditOperationSerialized[]; // from the renderer's recording buffer
+}
+type PdfRecordActionScriptError = 'invalid_payload' | 'op_not_recordable' | 'engine_failed';
+interface PdfRecordActionScriptValue {
+  scriptId: number; // FK into action_wizard_scripts
+}
+type PdfRecordActionScriptResponse = Result<PdfRecordActionScriptValue, PdfRecordActionScriptError>;
+```
+
+`op_not_recordable` returned when the buffer contains a banned op (B8 password, B20 sanitize beyond a baseline allowlist) per architecture §6 AR5.
+
+#### 19.12.2 `pdf:replayActionScript`
+
+```ts
+interface PdfReplayActionScriptRequest {
+  scriptId: number;
+  targetPaths: string[]; // OS-validated absolute paths
+  destinationFolderToken: string; // from dialog:pickFolder
+  filenamePattern: string; // {base}-acted.pdf default
+}
+type PdfReplayActionScriptError =
+  | 'invalid_payload'
+  | 'script_not_found'
+  | 'token_expired'
+  | 'fs_write_failed'
+  | 'engine_failed';
+interface PdfReplayActionScriptValue {
+  successCount: number;
+  failures: { sourcePath: string; error: string }[];
+}
+type PdfReplayActionScriptResponse = Result<PdfReplayActionScriptValue, PdfReplayActionScriptError>;
+```
+
+### 19.13 Spell check (B14)
+
+#### 19.13.1 `pdf:spellCheckRange`
+
+Optional channel for the cross-doc case (v1 ships renderer-only worker per architecture §4.7). Reserved here.
+
+```ts
+interface PdfSpellCheckRangeRequest {
+  handle: DocumentHandle;
+  pageRange: { start: number; end: number };
+  locale: AppLocale;
+}
+type PdfSpellCheckRangeError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'dictionary_unavailable'
+  | 'engine_failed';
+interface SpellMisspelling {
+  pageIndex: number;
+  bbox: [number, number, number, number];
+  word: string;
+  suggestions: string[];
+}
+interface PdfSpellCheckRangeValue {
+  misspellings: SpellMisspelling[];
+}
+type PdfSpellCheckRangeResponse = Result<PdfSpellCheckRangeValue, PdfSpellCheckRangeError>;
+```
+
+### 19.14 Auto-bookmarks (B19)
+
+#### 19.14.1 `pdf:autoBookmarkFromHeadings`
+
+```ts
+interface PdfAutoBookmarkFromHeadingsRequest {
+  handle: DocumentHandle;
+  heuristic: 'font-size-cluster'; // v1
+  maxDepth: number; // default 3 (H1, H2, H3)
+}
+type PdfAutoBookmarkFromHeadingsError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'no_headings_detected'
+  | 'engine_failed';
+interface ProposedBookmark {
+  title: string;
+  pageIndex: number;
+  depth: number; // 0 = top-level
+}
+interface PdfAutoBookmarkFromHeadingsValue {
+  proposed: ProposedBookmark[]; // user reviews + accepts before writing via bookmarks:* channels
+}
+type PdfAutoBookmarkFromHeadingsResponse = Result<
+  PdfAutoBookmarkFromHeadingsValue,
+  PdfAutoBookmarkFromHeadingsError
+>;
+```
+
+### 19.15 Hyperlinks (B13)
+
+#### 19.15.1 `pdf:editLinks`
+
+```ts
+type LinkAction =
+  | { kind: 'add'; pageIndex: number; bbox: [number, number, number, number]; target: LinkTarget }
+  | { kind: 'update'; linkId: string; target: LinkTarget }
+  | { kind: 'remove'; linkId: string };
+
+type LinkTarget =
+  | { kind: 'uri'; uri: string }
+  | { kind: 'goto-page'; pageIndex: number; zoom?: 'fit-page' | 'fit-width' | number }
+  | { kind: 'goto-bookmark'; bookmarkId: number };
+
+interface PdfEditLinksRequest {
+  handle: DocumentHandle;
+  actions: LinkAction[];
+}
+type PdfEditLinksError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'link_not_found'
+  | 'engine_failed';
+interface PdfEditLinksValue {
+  linkIds: string[]; // ids of all added/updated links in request order
+}
+type PdfEditLinksResponse = Result<PdfEditLinksValue, PdfEditLinksError>;
+```
+
+### 19.16 Font swap (B18)
+
+#### 19.16.1 `pdf:swapEmbeddedFont`
+
+```ts
+interface PdfSwapEmbeddedFontRequest {
+  handle: DocumentHandle;
+  fromFontName: string; // PostScript name in the PDF
+  toFontPath: string; // OS path to .ttf/.otf
+  pages: 'all' | { start: number; end: number };
+}
+type PdfSwapEmbeddedFontError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'from_font_not_found'
+  | 'to_font_invalid'
+  | 'glyph_coverage_insufficient' // honest signal — replacement font lacks glyphs the original used
+  | 'engine_failed';
+interface PdfSwapEmbeddedFontValue {
+  pagesAffected: number;
+  glyphsMappedCount: number;
+  glyphsMissing: string[]; // empty if all mapped
+}
+type PdfSwapEmbeddedFontResponse = Result<PdfSwapEmbeddedFontValue, PdfSwapEmbeddedFontError>;
+```
+
+### 19.17 Page-content clipboard (B12)
+
+#### 19.17.1 `pdf:applyPageContentPaste`
+
+```ts
+interface PdfApplyPageContentPasteRequest {
+  handle: DocumentHandle;
+  targetPageIndex: number;
+  targetPosition: { xPt: number; yPt: number };
+  payload:
+    | {
+        kind: 'internal';
+        sourceHandle: DocumentHandle;
+        sourcePageIndex: number;
+        sourceBbox: [number, number, number, number];
+      }
+    | { kind: 'png'; pngBytes: Uint8Array }; // cross-app paste from another app's clipboard
+}
+type PdfApplyPageContentPasteError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'source_handle_not_found'
+  | 'engine_failed';
+interface PdfApplyPageContentPasteValue {
+  appliedAsAnnotation: boolean; // true = annotation overlay; false = embedded into page stream
+}
+type PdfApplyPageContentPasteResponse = Result<
+  PdfApplyPageContentPasteValue,
+  PdfApplyPageContentPasteError
+>;
+```
+
+Renderer-side Cut/Copy is local clipboard state — no IPC channel.
+
+### 19.18 Aggregate `PdfApi` shape additions
+
+```ts
+interface PdfApi {
+  // ...Phase 1–7 surfaces (frozen)...
+  pdf: {
+    // ...frozen Phase 1–7.4 surfaces...
+    cropPages: (req: PdfCropPagesRequest) => Promise<PdfCropPagesResponse>;
+    extractPages: (req: PdfExtractPagesRequest) => Promise<PdfExtractPagesResponse>;
+    splitDocument: (req: PdfSplitDocumentRequest) => Promise<PdfSplitDocumentResponse>;
+    replacePages: (req: PdfReplacePagesRequest) => Promise<PdfReplacePagesResponse>;
+    insertPagesFromFile: (
+      req: PdfInsertPagesFromFileRequest,
+    ) => Promise<PdfInsertPagesFromFileResponse>;
+    applyWatermark: (req: PdfApplyWatermarkRequest) => Promise<PdfApplyWatermarkResponse>;
+    applyHeaderFooter: (req: PdfApplyHeaderFooterRequest) => Promise<PdfApplyHeaderFooterResponse>;
+    applyBackground: (req: PdfApplyBackgroundRequest) => Promise<PdfApplyBackgroundResponse>;
+    compressDocument: (req: PdfCompressDocumentRequest) => Promise<PdfCompressDocumentResponse>;
+    setPasswordProtection: (
+      req: PdfSetPasswordProtectionRequest,
+    ) => Promise<PdfSetPasswordProtectionResponse>;
+    removeHiddenInfo: (req: PdfRemoveHiddenInfoRequest) => Promise<PdfRemoveHiddenInfoResponse>;
+    getDocumentProperties: (
+      req: PdfGetDocumentPropertiesRequest,
+    ) => Promise<PdfGetDocumentPropertiesResponse>;
+    setDocumentProperties: (
+      req: PdfSetDocumentPropertiesRequest,
+    ) => Promise<PdfSetDocumentPropertiesResponse>;
+    runPreflight: (req: PdfRunPreflightRequest) => Promise<PdfRunPreflightResponse>;
+    getStructTree: (req: PdfGetStructTreeRequest) => Promise<PdfGetStructTreeResponse>;
+    setStructTree: (req: PdfSetStructTreeRequest) => Promise<PdfSetStructTreeResponse>;
+    autoTagPages: (req: PdfAutoTagPagesRequest) => Promise<PdfAutoTagPagesResponse>;
+    getReadingOrder: (req: PdfGetReadingOrderRequest) => Promise<PdfGetReadingOrderResponse>;
+    setReadingOrder: (req: PdfSetReadingOrderRequest) => Promise<PdfSetReadingOrderResponse>;
+    setAltText: (req: PdfSetAltTextRequest) => Promise<PdfSetAltTextResponse>;
+    listFiguresWithoutAltText: (
+      req: PdfListFiguresWithoutAltTextRequest,
+    ) => Promise<PdfListFiguresWithoutAltTextResponse>;
+    runAccessibilityCheck: (
+      req: PdfRunAccessibilityCheckRequest,
+    ) => Promise<PdfRunAccessibilityCheckResponse>;
+    compareDocuments: (req: PdfCompareDocumentsRequest) => Promise<PdfCompareDocumentsResponse>;
+    getCompareDiff: (req: PdfGetCompareDiffRequest) => Promise<PdfGetCompareDiffResponse>;
+    closeCompareSession: (
+      req: PdfCloseCompareSessionRequest,
+    ) => Promise<PdfCloseCompareSessionResponse>;
+    applyStamp: (req: PdfApplyStampRequest) => Promise<PdfApplyStampResponse>;
+    findInDocument: (req: PdfFindInDocumentRequest) => Promise<PdfFindInDocumentResponse>;
+    recordActionScript: (
+      req: PdfRecordActionScriptRequest,
+    ) => Promise<PdfRecordActionScriptResponse>;
+    replayActionScript: (
+      req: PdfReplayActionScriptRequest,
+    ) => Promise<PdfReplayActionScriptResponse>;
+    spellCheckRange: (req: PdfSpellCheckRangeRequest) => Promise<PdfSpellCheckRangeResponse>;
+    autoBookmarkFromHeadings: (
+      req: PdfAutoBookmarkFromHeadingsRequest,
+    ) => Promise<PdfAutoBookmarkFromHeadingsResponse>;
+    editLinks: (req: PdfEditLinksRequest) => Promise<PdfEditLinksResponse>;
+    swapEmbeddedFont: (req: PdfSwapEmbeddedFontRequest) => Promise<PdfSwapEmbeddedFontResponse>;
+    applyPageContentPaste: (
+      req: PdfApplyPageContentPasteRequest,
+    ) => Promise<PdfApplyPageContentPasteResponse>;
+  };
+  tts: {
+    listVoices: (req: TtsListVoicesRequest) => Promise<TtsListVoicesResponse>;
+    speakText: (req: TtsSpeakTextRequest) => Promise<TtsSpeakTextResponse>;
+    pause: (req: TtsControlRequest) => Promise<TtsControlResponse>;
+    resume: (req: TtsControlRequest) => Promise<TtsControlResponse>;
+    stop: (req: TtsControlRequest) => Promise<TtsControlResponse>;
+    onProgress: (handler: (event: TtsProgressEvent) => void) => () => void;
+  };
+  stamps: {
+    list: () => Promise<StampsListResponse>;
+    add: (req: StampsAddRequest) => Promise<StampsAddResponse>;
+    remove: (req: StampsRemoveRequest) => Promise<StampsRemoveResponse>;
+  };
+}
+```
+
+`stamps:list`/`add`/`remove` follow the Phase 1 `bookmarks:*` repo-pattern shape (Riley spec → Ravi schema → David handler); detailed shapes in the per-feature UI spec.
+
+### 19.19 Validation responsibilities — extends §10 / §14.12 / §16.13 / §17.11 / §18.10
+
+In addition to standard §10 rules, Phase 7.5 handlers MUST:
+
+- **`pdf:setPasswordProtection`** — pass password to qpdf via stdin (NOT argv). Zero passwords in main-process memory immediately after subprocess close. Reject empty open password when `encryption: 'aes-256'` (qpdf rejects; surface honest error).
+- **`pdf:applyStamp`** — for `'builtin:*'` IDs, look up from the bundled stamp library; for user-supplied IDs, look up from `stamps_library` table. Reject if either lookup misses.
+- **`pdf:getStructTree`** — when `mergeWithEditSession === true`, the merge MUST be deterministic across calls (sort children by stable id) so the renderer's React tree does not thrash.
+- **`pdf:setStructTree`** — server-side reject if the tree's MarkedContentRefs reference pages outside the doc's range OR mcids that do not exist on the referenced page.
+- **`pdf:runPreflight` / `pdf:runAccessibilityCheck`** — every rule's `message` field is an i18n key (not pre-resolved English). Renderer resolves via existing `t()`.
+- **`pdf:compareDocuments`** — open both files via `loadPdfJs` per L-005. Bytes copied per L-004. Session row created; renderer must call `pdf:closeCompareSession` on close.
+- **`pdf:recordActionScript`** — refuse `EditOperation.kind === 'set-password'` and any future op marked `notRecordable: true` in the EditOperation discriminator.
+- **`tts:speakText`** — sentence boundaries are sanitized: each `{offset, length}` must lie within `text.length` and not overlap.
+
+### 19.20 Phase 7.5 contract is ADDITIVE — Phase 7 freeze respected
+
+Phase 7's §18 declared a contract freeze (P{N}-L-FREEZE). Phase 7.5 honors the freeze by adding ONLY new channels — no existing channel's request/response shape changes. The `PdfApi` aggregate gains new sub-namespaces and new methods inside `pdf.*`, `tts.*`, `stamps.*` but does not modify any existing surface. This is the same additive pattern Phase 7.4 B1 used (`pdf:applyRedactions` added without altering any prior channel).
+
+End of Phase-7.5 api-contracts amendment.

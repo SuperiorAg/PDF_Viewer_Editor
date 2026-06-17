@@ -2198,3 +2198,104 @@ rg -n "enableDragDropFiles" src/main/window-manager.ts        # must NOT be set 
 - [x] L-001 untouched — this section does not weaken or reference `enableDragDropFiles`; §18.7 INCLUDES the L-001 verification grep (last verification per phase-7-plan acceptance criteria)
 
 End of Phase-7 conventions amendment. This is the final additive amendment to the conventions document for the roadmap.
+
+---
+
+## 19. Well-marked tools (Phase 7.5 addition, 2026-06-17, Riley)
+
+> ### Phase 7.5 amendment (2026-06-17, Riley)
+>
+> Phase 7's §18 declared itself "the final additive amendment to the conventions document for the roadmap." That declaration anticipated the roadmap ending at Phase 7. The principal's Phase 7.5 "do all" ruling brought 24 new features into scope, with a cross-cutting marking foundation (R1 tool registry + R2 contract tests + R3 conventions update). This §19 IS the R3 update. The original "final amendment" framing is honored in spirit — §19 adds NO new code-style rule, NO new IPC discipline, NO new trust-floor obligation beyond Phase 7. It is one focused section codifying the "well-marked tool" definition that Riley's audit (`docs/acrobat-parity-audit.md` §5.1) demonstrated was a real, recurring failure mode.
+
+### 19.1 The 7-dimension definition (verbatim from audit §5.1)
+
+A tool is **well marked** if and only if all seven items hold:
+
+1. **Icon** in a toolbar button (Lucide or equivalent) OR a menu-only entry with a clear human-readable name. Hidden-only-via-shortcut tools are NOT well marked. (Exception: shortcuts in `INTRINSIC_SHORTCUTS` per `docs/tool-registry-spec.md` §1.1 — page-nav and zoom controls that are inherently mouseless-irrelevant.)
+2. **Tooltip** that includes the human name + the keyboard shortcut (if one exists). Tooltip must be a real `title=` AND an `aria-describedby` so screen readers receive it. **No "Coming in Phase N" tooltip for a shipped phase.** (Test 4 in `registry.contract.test.ts` enforces.)
+3. **ARIA label** that matches the tooltip's name component (not the whole sentence). `aria-label` MUST NOT contain hardcoded English (§18.3 rule 8's `aria-label="[A-Z]"` grep is the structural enforcement).
+4. **Menu entry** under the correct top-level menu (File / Edit / View / Insert & Pages / Comment / Tools / Help). Annotation tools MUST appear under Comment (or Tools→Comment). Page ops MUST appear under Insert & Pages. **Every well-marked tool reaches the user via at least two surfaces (toolbar + menu, OR menu + palette, OR registered shortcut + menu).**
+5. **i18n key** in `en-US` AND `es-ES` (per Phase 7 i18n scope) — both label and tooltip and ARIA label. No hardcoded English in `aria-label=`, `title=`, or button text. Caught by §18.3 rule 8.
+6. **Keyboard shortcut** registered in `src/client/shortcuts.ts` AND wired in `use-app-shortcuts.ts` — unless the tool is truly mouseless-irrelevant (a sub-menu opener, a context-menu-only entry). Even then, the tool MUST be reachable via the Find-a-tool palette (Phase 7.5 A7).
+7. **Discoverable** via the top-level "Find a tool…" palette (Phase 7.5 A7, opened by `Ctrl+/`) AND via the in-app Help modal's shortcuts table.
+
+### 19.2 The mechanism — `src/client/tools/registry.ts`
+
+Every tool MUST be declared in `src/client/tools/registry.ts` as a `ToolDef` per the interface in `docs/tool-registry-spec.md` §1. The four UI surfaces (toolbar, menu-bar, shape sub-toolbar, Find-a-tool palette) are **renderers of the same registry** — no per-surface hand-wiring of a new tool.
+
+**Anti-pattern (what §19 forbids):**
+
+```tsx
+// ❌ NOT WELL MARKED — toolbar button without a matching ToolDef
+// (toolbar/index.tsx)
+<ToolbarButton
+  icon="awesome-feature"
+  label="Awesome Feature"
+  tooltip="Awesome Feature (Ctrl+W)"
+  onClick={() => dispatch(awesomeFeature())}
+/>
+```
+
+**Pattern (what §19 requires):**
+
+```tsx
+// ✅ WELL MARKED — registry-declared, toolbar renders it
+// (registry.ts)
+{
+  id: 'tools:awesome-feature',
+  nameKey: 'tools.awesomeFeature.name',
+  tooltipKey: 'tools.awesomeFeature.tooltip',
+  ariaLabelKey: 'tools.awesomeFeature.aria',
+  icon: 'awesome-feature',
+  shortcutId: 'awesome-feature',
+  menu: { top: 'tools' },
+  surfaces: { toolbar: 'forms', menu: true, palette: true },
+  enabledWhen: (s) => s.document.handle !== null,
+  dispatch: (d) => d(awesomeFeature()),
+  searchKeywords: ['awesome', 'feature', 'cool'],
+}
+
+// (toolbar/index.tsx — generic, no per-tool change)
+const tools = TOOLS.filter((t) => t.surfaces.toolbar !== undefined);
+// ...
+```
+
+### 19.3 The four enforcement tests (R2)
+
+File: `src/client/tools/registry.contract.test.ts`. Test bodies in `docs/tool-registry-spec.md` §3:
+
+1. **Every tool is well marked** — all 7 dimensions present; i18n keys resolve in both locales; `searchKeywords` non-empty.
+2. **Tooltips advertise their shortcut** — every tool with a `shortcutId` has its formatted shortcut text in the en-US tooltip.
+3. **Every shortcut surfaces in the registry** — no orphan shortcut in `shortcuts.ts` that isn't either an `IntrinsicShortcut` (page-nav/zoom) or referenced by a `ToolDef`.
+4. **No stale "Coming in Phase N" tooltips** — for all shipped phases, the en-US tooltip must not contain "Coming in Phase N".
+
+These four tests run in CI on every PR (Phase 7.5 Wave 2 onward).
+
+### 19.4 The CI ratchet (L-007, Wave 11)
+
+`scripts/ratchet-tool-registry-coverage.mjs` (Diego, Wave 11) parses `src/client/components/{toolbar,menu-bar,shape-tools,tool-search-palette}/` JSX, computes the set of `ToolId` values rendered, computes the set declared in `registry.ts`, fails the build if the two sets diverge. L-007 lock entry in `.learnings/locked-instructions.md` references the ratchet as enforcement.
+
+### 19.5 Cutover — registry-additive then UI-cutover
+
+Wave 2 Riley splits the registry rollout into TWO commits per `docs/tool-registry-spec.md` §4:
+
+1. Registry-additive — declare all tools, land contract tests; UI unchanged.
+2. UI cutover — rewrite four UI surface files to render from the registry; land the Find-a-tool palette.
+
+The two-commit pattern matches the proven Phase 7 i18n migration cutover. Risk mitigation R4 from `docs/project-plan.md`.
+
+### 19.6 Anti-pattern — strip-post-hoc on sanitize-class ops
+
+Adjacent convention, related to the marking foundation only by being a Phase 7.5 cross-cutting discipline: every new sanitize-class op (B6 Compress, B8 Encryption round-trip, B20 Sanitize) MUST use **rebuild-from-scratch** (`PDFDocument.create() + copyPages()`), NOT `catalog.delete()` + `save()`. The latter leaves orphan dicts in the output xref because pdf-lib emits every object in `context.indirectObjects` regardless of reachability. Phase 7.4 B1 R1 Redaction proved the rebuild pattern is strictly stronger (David, 2026-06-15, `commit:1078669`). Julian's Wave 11 review re-checks every new sanitize-class op for the rebuild pattern.
+
+### 19.7 Convention §19 cross-reference checklist
+
+- [x] 7-dimension "well marked" definition (§19.1) — sourced from audit §5.1 verbatim.
+- [x] Tool registry mechanism (§19.2) — sourced from `docs/tool-registry-spec.md` §1.
+- [x] Four contract tests (§19.3) — sourced from `docs/tool-registry-spec.md` §3.
+- [x] L-007 CI ratchet pointer (§19.4) — sourced from `docs/tool-registry-spec.md` §6.
+- [x] Cutover discipline (§19.5) — sourced from `docs/tool-registry-spec.md` §4.
+- [x] Rebuild-from-scratch sanitize discipline (§19.6) — sourced from `.learnings/learnings.jsonl` 2026-06-15 (David Phase 7.4 B1 entry).
+- [x] L-001 untouched — this section does not weaken or reference `enableDragDropFiles`. The §18.7 verification grep continues to hold.
+
+End of Phase-7.5 conventions amendment. §19 is the marking-foundation addition; no other code-style or discipline rules are introduced this wave.

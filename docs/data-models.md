@@ -2304,3 +2304,336 @@ None new — all Phase 7 design questions from the Wave-27 brief (Q-A through Q-
 | Q-E. Cross-platform native modules | architecture-phase-7.md §6 — `better-sqlite3` (HIGH risk; per-platform rebuild), `@napi-rs/canvas` (MEDIUM; universal-mac merge of both arch prebuilds), `tesseract.js-core` (LOW; WASM is portable); the riskiest part of the UNVERIFIED configs |
 
 End of Phase-7 data-models amendment.
+
+---
+
+## 13. Phase 7.5 additions (2026-06-17, Riley)
+
+> ### Phase 7.5 amendment (2026-06-17, Riley)
+>
+> §1–§12 above remain authoritative for Phase 1–7 data. Phase 7.5 introduces **six new SQLite tables** to support the Bucket B parity closes (B2, B3, B7, B9) and Bucket C accessibility + TTS (C1, C3–C6) per the principal "do all" ruling. **Zero existing table or column is altered** — additive forward-only migration v9. The in-memory document model gains four new types (`StructTreeNode`, `ActionScript`, `CompareSession`, `StampLibraryEntry`); `EditOperation` is NOT extended (its new variants land in the per-feature designs, which read this file).
+
+### 13.1 Schema v9 migration overview
+
+| Migration | File                                         | Adds                                                                                                                                                                         |
+| --------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v9        | `migrations/0009_phase7.5.sql` (Ravi Wave 2) | Six new tables + their indexes + zero ALTERs. Followed by the standard `schema_migrations` version row + a settings seed for stamp/find/tts defaults via `INSERT OR IGNORE`. |
+
+**This section specifies columns + indexes + relationships + index intent.** Ravi authors the actual SQL in Wave 2 (`migrations/0009_phase7.5.sql`). Per the Phase 1 convention (§1), all `*_at` columns are `INTEGER` ms-epoch; all JSON values live in `TEXT` columns parsed at the channel layer; primary keys are explicit; prepared statements only; multi-row writes wrap in a transaction.
+
+### 13.2 `stamps_library` — B7 Stamps
+
+User-defined and built-in stamp library. Built-in entries (Approved / Confidential / Draft / Sample / Reviewed / etc.) are seeded by the migration; user-added stamps insert at runtime.
+
+```
+TABLE stamps_library
+  id              INTEGER PRIMARY KEY AUTOINCREMENT
+  builtin_key     TEXT UNIQUE                       -- e.g. 'builtin:approved'; NULL for user stamps
+  name            TEXT NOT NULL                     -- display name (i18n key for built-ins; raw string for user)
+  kind            TEXT NOT NULL CHECK (kind IN ('text','image'))
+  text_value      TEXT                              -- present when kind='text' (the stamp's rendered text)
+  image_path      TEXT                              -- absolute path to PNG/JPG; present when kind='image'
+  width_pt        REAL NOT NULL                     -- default render width in points
+  height_pt       REAL NOT NULL
+  color           TEXT                              -- #RRGGBB; only meaningful for kind='text'
+  created_at      INTEGER NOT NULL
+  last_used_at    INTEGER                           -- NULL until first use (nullable + late-init; NO sentinel 0)
+  use_count       INTEGER NOT NULL DEFAULT 0
+INDEX idx_stamps_library_last_used_at ON stamps_library(last_used_at DESC)
+INDEX idx_stamps_library_kind ON stamps_library(kind)
+```
+
+**Index intent:** `last_used_at DESC` powers the "Recently used stamps" panel; `kind` powers the text/image filter in the library UI.
+
+**Seed rows (built-ins):** the migration `INSERT OR IGNORE`s ten built-in stamps with `builtin_key` set so re-runs don't duplicate. Per-row image bytes for built-ins ship in `resources/stamps/<key>.png` and are NOT stored in SQLite — `image_path` references the bundled resource via `process.resourcesPath + '/stamps/<key>.png'`. **Honesty note:** `image_path` for built-ins is an absolute path that varies per install — Ravi's seed handles this by storing a placeholder token `BUILTIN:<key>` that the engine resolves at read time. Built-in stamps therefore survive moves of the install directory.
+
+### 13.3 `find_history` — B3 Find/Search
+
+Recent search queries per file_hash, capped at 20 per doc and 200 total.
+
+```
+TABLE find_history
+  id              INTEGER PRIMARY KEY AUTOINCREMENT
+  file_hash       TEXT NOT NULL                     -- FK convention to the open doc (no SQL FK; renderer-controlled lifecycle)
+  query           TEXT NOT NULL
+  case_sensitive  INTEGER NOT NULL DEFAULT 0        -- 0/1 boolean
+  whole_word      INTEGER NOT NULL DEFAULT 0
+  last_used_at    INTEGER NOT NULL
+  UNIQUE (file_hash, query, case_sensitive, whole_word)
+INDEX idx_find_history_file_hash_last_used ON find_history(file_hash, last_used_at DESC)
+```
+
+**Index intent:** the composite `(file_hash, last_used_at DESC)` covers the dominant query "give me my last 5 searches for this doc". Per-doc cap of 20 + total cap of 200 are enforced at write time by a renderer-side housekeeping pass (delete rows beyond rank 20 per doc; delete oldest beyond 200 globally).
+
+**Privacy note:** `query` strings can contain document content fragments. They are NOT cross-doc shared, NOT included in telemetry (Phase 7 telemetry §12.4 ring buffer is in-memory only and does not record event payloads). Stored locally in the per-user SQLite DB.
+
+### 13.4 `action_wizard_scripts` — B9 Action Wizard
+
+Recorded action scripts the user has saved. The script body lives as a JSON blob (`v1.actionScript` per architecture §4.6).
+
+```
+TABLE action_wizard_scripts
+  id              INTEGER PRIMARY KEY AUTOINCREMENT
+  name            TEXT NOT NULL UNIQUE              -- user-chosen name; UNIQUE prevents accidental overwrite
+  schema_version  INTEGER NOT NULL                  -- starts at 1; future engine changes get a migration test (R5)
+  script_json     TEXT NOT NULL                     -- JSON-serialized {schemaVersion, name, createdAt, ops}
+  created_at      INTEGER NOT NULL
+  last_run_at     INTEGER                           -- NULL until first run (nullable + late-init)
+  run_count       INTEGER NOT NULL DEFAULT 0
+INDEX idx_action_wizard_scripts_last_run_at ON action_wizard_scripts(last_run_at DESC)
+```
+
+**Index intent:** `last_run_at DESC` powers the "Recently used scripts" picker. `name` is the natural key for the picker; UNIQUE prevents accidental overwrite.
+
+**Migration test (R5):** a Wave 6 test inserts a `schema_version=1` row, runs the engine, asserts replay output matches expected. Any future engine change that breaks v1 scripts triggers a new schema_version + an upgrade pass; this test catches the breakage.
+
+### 13.5 `compare_sessions` — B2 Compare Files
+
+One row per open compare session. Per-page diff cache stored as JSON in two columns to keep the row size bounded.
+
+```
+TABLE compare_sessions
+  id                            INTEGER PRIMARY KEY AUTOINCREMENT
+  baseline_file_hash            TEXT NOT NULL
+  modified_file_hash            TEXT NOT NULL
+  baseline_path                 TEXT NOT NULL       -- absolute path (renderer-validated)
+  modified_path                 TEXT NOT NULL
+  baseline_page_count           INTEGER NOT NULL
+  modified_page_count           INTEGER NOT NULL
+  per_page_text_baseline_json   TEXT NOT NULL DEFAULT '{}'   -- map: pageIndex -> extracted text
+  per_page_text_modified_json   TEXT NOT NULL DEFAULT '{}'
+  per_page_diff_json            TEXT NOT NULL DEFAULT '{}'   -- map: pageIndex -> {textDiffSpans, visualDiffPixelCount?}
+  per_page_visual_diff_json     TEXT NOT NULL DEFAULT '{}'   -- map: pageIndex -> base64 PNG (lazy; only pages user opened visual diff for)
+  total_pages_with_diff         INTEGER NOT NULL DEFAULT 0
+  inserted_spans                INTEGER NOT NULL DEFAULT 0
+  deleted_spans                 INTEGER NOT NULL DEFAULT 0
+  last_diff_computed_at         INTEGER                       -- NULL until first per-page diff (nullable + late-init)
+  created_at                    INTEGER NOT NULL
+INDEX idx_compare_sessions_created_at ON compare_sessions(created_at DESC)
+```
+
+**Bounded growth (AR4 mitigation):**
+
+1. Startup GC deletes rows where `created_at < (now - 7 days)`.
+2. Per-row size cap (~5 MB total JSON) enforced at write time. Over-cap sessions truncate `per_page_visual_diff_json` first (largest column), then write a banner key into `per_page_diff_json` documenting the truncation.
+
+### 13.6 `tts_voice_prefs` — C1 Read Aloud
+
+Per-locale preferred voice + rate + pitch. One row per `(locale, engine_name)`.
+
+```
+TABLE tts_voice_prefs
+  locale            TEXT NOT NULL                   -- BCP-47 (e.g. 'en-US')
+  engine_name       TEXT NOT NULL CHECK (engine_name IN ('sapi','say','espeak'))
+  preferred_voice_id TEXT                            -- NULL until user picks (nullable + late-init)
+  rate              REAL NOT NULL DEFAULT 1.0       -- 0.5..2.0
+  pitch             REAL NOT NULL DEFAULT 1.0       -- 0.5..2.0
+  updated_at        INTEGER NOT NULL
+  PRIMARY KEY (locale, engine_name)
+```
+
+**No secondary index needed** — the composite PK covers the dominant query "what's my preferred voice for en-US on this OS?".
+
+### 13.7 `accessibility_check_history` — C6 Accessibility Checker
+
+Recent rule-set results per doc hash. One row per check run.
+
+```
+TABLE accessibility_check_history
+  id              INTEGER PRIMARY KEY AUTOINCREMENT
+  doc_hash        TEXT NOT NULL                     -- file_hash of the doc at check time
+  ran_at          INTEGER NOT NULL
+  results_json    TEXT NOT NULL                     -- JSON-serialized AccessibilityRuleResult[]
+  pass_count      INTEGER NOT NULL                  -- materialized counts for fast UI summary
+  warn_count      INTEGER NOT NULL
+  fail_count      INTEGER NOT NULL
+  shipped_rule_count INTEGER NOT NULL               -- snapshot of how many rules existed at check time (honest disclosure)
+INDEX idx_accessibility_check_history_doc_hash_ran_at ON accessibility_check_history(doc_hash, ran_at DESC)
+```
+
+**Index intent:** composite `(doc_hash, ran_at DESC)` covers "most recent run for this doc" and the trend view. Cap: keep the 10 most recent runs per doc (renderer housekeeping after each successful run).
+
+### 13.8 `accessibility_edit_session` — C3–C5 structure-tree side-table
+
+The Phase 7.5 distinguished design (P7.5-L-5): edits to the structure tree accumulate here during a session; on Save they materialize to the in-PDF `/StructTreeRoot`. Survives app crash so the user does not lose work.
+
+```
+TABLE accessibility_edit_session
+  id                 INTEGER PRIMARY KEY AUTOINCREMENT
+  doc_hash           TEXT NOT NULL UNIQUE            -- one session per open doc
+  struct_tree_json   TEXT NOT NULL                   -- JSON-serialized StructTreeNode root
+  reading_order_json TEXT NOT NULL DEFAULT '[]'      -- JSON-serialized ReadingOrderEntry[]
+  alt_text_overrides_json TEXT NOT NULL DEFAULT '{}' -- map: structNodeId -> {altText, actualText}
+  has_existing_tags  INTEGER NOT NULL                -- 0/1 — snapshot of the doc's state on session open (drives save-as-copy default)
+  created_at         INTEGER NOT NULL
+  updated_at         INTEGER NOT NULL
+```
+
+**No secondary index needed** — `doc_hash UNIQUE` covers the dominant query "do we have an in-progress edit session for this doc?".
+
+**Lifecycle (architecture §4.8):**
+
+1. Opened by the renderer on first call to `pdf:setStructTree` / `pdf:setReadingOrder` / `pdf:setAltText` for a given doc.
+2. Updated incrementally on subsequent calls.
+3. Deleted by the main process on successful Save (after materialization to the in-PDF `/StructTreeRoot`).
+4. Survives app crash — startup GC offers to resume any session with `updated_at > (now - 14 days)`; older sessions get deleted with a one-time banner ("Discarded stale accessibility edit session for X.pdf").
+
+**Privacy / size (AR2 mitigation):** the side-table stores STRUCTURE only (tag types, parent refs, mcid pointers, alt-text strings the user types). It does NOT store page content bytes. Wave 5b includes a unit test verifying row size is bounded.
+
+### 13.9 Settings keys added by 0009
+
+Per the Phase 1 convention, settings are seeded via `INSERT OR IGNORE`:
+
+```
+INSERT OR IGNORE INTO settings (key, value) VALUES
+  ('find.maxHistoryPerDoc',         '20'),
+  ('find.maxHistoryTotal',          '200'),
+  ('compare.sessionMaxBytes',       '5242880'),     -- 5 MB
+  ('compare.sessionTtlDays',        '7'),
+  ('accessibility.editSessionTtlDays', '14'),
+  ('accessibility.checkHistoryPerDoc', '10'),
+  ('tts.defaultRate',               '1.0'),
+  ('tts.defaultPitch',              '1.0'),
+  ('stamps.recentLimit',            '12'),
+  ('actionWizard.maxRecordingOps',  '5000');        -- hard cap to prevent runaway recordings
+```
+
+`SettingKey` union (David + Ravi co-own per Wave-7 zero-drift lesson) gains:
+
+```ts
+type SettingKey =
+  // ...Phase 1–7 keys (frozen)...
+  | 'find.maxHistoryPerDoc'
+  | 'find.maxHistoryTotal'
+  | 'compare.sessionMaxBytes'
+  | 'compare.sessionTtlDays'
+  | 'accessibility.editSessionTtlDays'
+  | 'accessibility.checkHistoryPerDoc'
+  | 'tts.defaultRate'
+  | 'tts.defaultPitch'
+  | 'stamps.recentLimit'
+  | 'actionWizard.maxRecordingOps';
+```
+
+### 13.10 New in-memory model types
+
+Renderer mirrors these in their respective slices (architecture §5).
+
+```ts
+// StructTreeNode — see docs/architecture-phase-7.5.md §4.8 for the full shape
+
+interface ActionScript {
+  schemaVersion: 1;
+  name: string;
+  createdAt: number;
+  ops: EditOperationSerialized[];
+}
+
+interface CompareSession {
+  id: number;
+  baselinePath: string;
+  modifiedPath: string;
+  baselinePageCount: number;
+  modifiedPageCount: number;
+  perPageDiffCache: Record<
+    number /* pageIndex */,
+    {
+      textDiffSpans: { kind: 'unchanged' | 'inserted' | 'deleted'; text: string }[];
+      visualDiffPng: string | null;
+      visualDiffPixelCount: number | null;
+    }
+  >;
+  summary: {
+    totalPagesWithDiff: number;
+    insertedSpans: number;
+    deletedSpans: number;
+  };
+  lastDiffComputedAt: number | null; // nullable + late-init
+}
+
+interface StampLibraryEntry {
+  id: number;
+  builtinKey: string | null;
+  name: string;
+  kind: 'text' | 'image';
+  textValue: string | null;
+  imagePath: string | null;
+  widthPt: number;
+  heightPt: number;
+  color: string | null;
+  createdAt: number;
+  lastUsedAt: number | null;
+  useCount: number;
+}
+
+interface TtsVoicePref {
+  locale: string;
+  engineName: 'sapi' | 'say' | 'espeak';
+  preferredVoiceId: string | null;
+  rate: number;
+  pitch: number;
+  updatedAt: number;
+}
+
+interface AccessibilityCheckHistoryEntry {
+  id: number;
+  docHash: string;
+  ranAt: number;
+  results: AccessibilityRuleResult[]; // hydrated from results_json
+  passCount: number;
+  warnCount: number;
+  failCount: number;
+  shippedRuleCount: number;
+}
+
+interface AccessibilityEditSession {
+  docHash: string;
+  structTree: StructTreeNode | null;
+  readingOrder: ReadingOrderEntry[];
+  altTextOverrides: Record<string /* structNodeId */, { altText: string; actualText?: string }>;
+  hasExistingTags: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+```
+
+### 13.11 Validation matrix (Phase 7.5)
+
+| Field                                            | Constraint                                                                       |
+| ------------------------------------------------ | -------------------------------------------------------------------------------- |
+| `stamps_library.kind`                            | `'text'` OR `'image'` (CHECK enforced)                                           |
+| `stamps_library.text_value`                      | non-null when `kind='text'`, null otherwise (zod-validated; SQL allows both)     |
+| `stamps_library.image_path`                      | non-null when `kind='image'`; built-in `image_path` may be `BUILTIN:<key>` token |
+| `find_history.case_sensitive` / `whole_word`     | 0 or 1 (boolean stored as integer per Phase 1 convention)                        |
+| `action_wizard_scripts.schema_version`           | ≥ 1                                                                              |
+| `action_wizard_scripts.script_json`              | JSON parses to `ActionScript` shape; renderer rejects banned ops on insert       |
+| `compare_sessions.*_json`                        | parses to expected map shape; size cap enforced before insert/update             |
+| `tts_voice_prefs.rate` / `pitch`                 | 0.5..2.0                                                                         |
+| `tts_voice_prefs.engine_name`                    | one of `'sapi','say','espeak'`                                                   |
+| `accessibility_check_history.shipped_rule_count` | snapshot ≥ 0                                                                     |
+| `accessibility_edit_session.has_existing_tags`   | 0 or 1                                                                           |
+| Every `*_at` timestamp                           | `null` (where allowed) OR `>= 0` ms epoch; NEVER sentinel `0` for "never"        |
+
+### 13.12 No foreign keys
+
+Same posture as Phase 7: no SQL FKs. The renderer owns lifecycle (close session → delete row). This matches the existing `find_history`-style pattern and avoids cascade-delete surprises on doc close.
+
+### 13.13 EditOperation union — NOT extended by this amendment
+
+Phase 7.5 features that mutate documents (B4 watermark/H&F/background, B5 crop, B6 compress, B7 stamp, B10 extract/split/replace, B11 insert-from-file, B12 page-content paste, B13 hyperlinks, B18 font swap, B19 auto-bookmark) DO add new `EditOperation` variants — but those variants live in their respective per-feature designs, which read this file. The discriminated union remains closed; conventions §1.5 exhaustive-switch discipline catches missing branches at compile time. Each variant follows the existing convention: `{ kind: '<verb>'; <minimal-fields>; appliedAt: number }`.
+
+Recordability flag added to the discriminator (B9 recorder filter):
+
+```ts
+type EditOperation =
+  | (PhaseLeadingOp & { recordable?: true }) // default = recordable
+  | (SetPasswordOp & { recordable: false }); // explicit non-recordable
+```
+
+The recorder filters on `recordable !== false`; non-recordable ops are silently skipped (no error — the user gets a script that does everything else).
+
+### 13.14 Phase 7.5 open questions
+
+None new for data-model scope. Open questions for Marcus are in `docs/architecture-phase-7.5.md` §9 and are scope-level (license vets, UX defaults).
+
+End of Phase-7.5 data-models amendment.
