@@ -35,6 +35,9 @@ import type {
   // Wave-30 follow-up (H-30.1, David 2026-06-01): path-only PDF picker.
   DialogPickPdfFilesRequest,
   DialogPickPdfFilesResponse,
+  // Phase 7.5 Wave 3 (David, 2026-06-17): directory picker.
+  DialogPickFolderRequest,
+  DialogPickFolderResponse,
   // David 2026-06-04: shell-launched PDF event (Explorer double-click etc).
   FileOpenFromShellEvent,
   DialogSaveAsRequest,
@@ -76,6 +79,21 @@ import type {
   PdfReplacePagesResponse,
   PdfInsertPagesFromFileRequest,
   PdfInsertPagesFromFileResponse,
+  // Phase 7.5 Wave 3 (David, 2026-06-17) — B4 page-design + B7 Stamps.
+  PdfApplyWatermarkRequest,
+  PdfApplyWatermarkResponse,
+  PdfApplyHeaderFooterRequest,
+  PdfApplyHeaderFooterResponse,
+  PdfApplyBackgroundRequest,
+  PdfApplyBackgroundResponse,
+  PdfApplyStampRequest,
+  PdfApplyStampResponse,
+  StampsListRequest,
+  StampsListResponse,
+  StampsCreateRequest,
+  StampsCreateResponse,
+  StampsDeleteRequest,
+  StampsDeleteResponse,
   PdfReplaceTextRequest,
   PdfReplaceTextResponse,
   RecentsAddRequest,
@@ -224,6 +242,9 @@ const pdfApi: PdfApi = {
     // Wave-30 follow-up (H-30.1, David 2026-06-01): path-only PDF picker.
     pickPdfFiles: (req: DialogPickPdfFilesRequest) =>
       ipcRenderer.invoke(Channels.DialogPickPdfFiles, req) as Promise<DialogPickPdfFilesResponse>,
+    // Phase 7.5 Wave 3 (David, 2026-06-17) — directory picker (60s token).
+    pickFolder: (req: DialogPickFolderRequest) =>
+      ipcRenderer.invoke(Channels.DialogPickFolder, req) as Promise<DialogPickFolderResponse>,
   },
   fs: {
     readPdf: (req: FsReadPdfRequest) =>
@@ -299,6 +320,27 @@ const pdfApi: PdfApi = {
         Channels.PdfInsertPagesFromFile,
         req,
       ) as Promise<PdfInsertPagesFromFileResponse>,
+    // Phase 7.5 Wave 3 (David, 2026-06-17) — B4 page-design + B7 stamp apply.
+    applyWatermark: (req: PdfApplyWatermarkRequest) =>
+      ipcRenderer.invoke(Channels.PdfApplyWatermark, req) as Promise<PdfApplyWatermarkResponse>,
+    applyHeaderFooter: (req: PdfApplyHeaderFooterRequest) =>
+      ipcRenderer.invoke(
+        Channels.PdfApplyHeaderFooter,
+        req,
+      ) as Promise<PdfApplyHeaderFooterResponse>,
+    applyBackground: (req: PdfApplyBackgroundRequest) =>
+      ipcRenderer.invoke(Channels.PdfApplyBackground, req) as Promise<PdfApplyBackgroundResponse>,
+    applyStamp: (req: PdfApplyStampRequest) =>
+      ipcRenderer.invoke(Channels.PdfApplyStamp, req) as Promise<PdfApplyStampResponse>,
+  },
+  // Phase 7.5 Wave 3 (David, 2026-06-17) — stamps_library CRUD.
+  stamps: {
+    list: (req: StampsListRequest) =>
+      ipcRenderer.invoke(Channels.StampsList, req) as Promise<StampsListResponse>,
+    create: (req: StampsCreateRequest) =>
+      ipcRenderer.invoke(Channels.StampsCreate, req) as Promise<StampsCreateResponse>,
+    delete: (req: StampsDeleteRequest) =>
+      ipcRenderer.invoke(Channels.StampsDelete, req) as Promise<StampsDeleteResponse>,
   },
   app: {
     getVersion: () =>

@@ -92,6 +92,9 @@ describe('handlePdfSplitDocument', () => {
     expect(writeFile).toHaveBeenCalledTimes(3);
     expect(v.files[0]!.path).toBe('C:/out/doc-001.pdf');
     expect(v.files[1]!.pageRange).toEqual({ start: 2, end: 3 });
+    // Phase 7.5 Wave 3 carry-over: warnings array is present + empty on a
+    // clean split (no outlines on the test fixture).
+    expect(v.warnings).toEqual([]);
   });
 
   it('surfaces no_bookmarks_for_split when source has no outline', async () => {

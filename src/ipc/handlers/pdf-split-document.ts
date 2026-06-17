@@ -128,7 +128,10 @@ export async function handlePdfSplitDocument(
     });
   }
 
-  const v: PdfSplitDocumentValue = { files };
+  // Phase 7.5 Wave 3 carry-over (David, 2026-06-17): surface engine warnings
+  // at the response top level so Riley's UI renders ONE banner instead of
+  // per-part toasts.
+  const v: PdfSplitDocumentValue = { files, warnings: engineRes.value.warnings };
   return ok(v);
 }
 

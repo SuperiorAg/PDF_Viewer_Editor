@@ -43,6 +43,8 @@ function makeBridgeUnavailableFallback(): PdfApi {
       pickExportOutputPath: unavailable,
       // Wave-30 follow-up (H-30.1): path-only PDF picker for the Combine modal.
       pickPdfFiles: unavailable,
+      // Phase 7.5 Wave 3 (David, 2026-06-17): directory picker.
+      pickFolder: unavailable,
     },
     fs: {
       readPdf: unavailable,
@@ -86,6 +88,11 @@ function makeBridgeUnavailableFallback(): PdfApi {
       splitDocument: unavailable,
       replacePages: unavailable,
       insertPagesFromFile: unavailable,
+      // Phase 7.5 Wave 3 (David, 2026-06-17): B4 page-design + B7 stamp apply.
+      applyWatermark: unavailable,
+      applyHeaderFooter: unavailable,
+      applyBackground: unavailable,
+      applyStamp: unavailable,
     },
     // Phase 3 (api-contracts §13)
     forms: {
@@ -190,6 +197,12 @@ function makeBridgeUnavailableFallback(): PdfApi {
     i18n: {
       setLocale: unavailable,
       getAvailableLocales: unavailable,
+    },
+    // Phase 7.5 Wave 3 (David, 2026-06-17) — stamps_library CRUD fallback.
+    stamps: {
+      list: unavailable,
+      create: unavailable,
+      delete: unavailable,
     },
   };
 }

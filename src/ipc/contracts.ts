@@ -1425,6 +1425,14 @@ export interface PdfSplitDocumentValue {
     bytesWritten: number;
     pageRange: { start: number; end: number };
   }>;
+  /**
+   * Phase 7.5 Wave 3 carry-over (David, 2026-06-17): aggregate engine warnings
+   * surface at the response top level so Riley's UI renders ONE banner instead
+   * of per-part toasts. Empty array when the split was clean. The engine's
+   * canonical warning today is `'bookmarks_not_preserved'` (source had an
+   * outline that didn't survive copyPages).
+   */
+  warnings: string[];
 }
 
 export type PdfSplitDocumentResponse = Result<PdfSplitDocumentValue, PdfSplitDocumentError>;
@@ -1478,6 +1486,292 @@ export type PdfInsertPagesFromFileResponse = Result<
   PdfInsertPagesFromFileValue,
   PdfInsertPagesFromFileError
 >;
+
+// ============================================================================
+// Phase 7.5 Wave 3 (David, 2026-06-17) — B4 page-design (watermark / H&F /
+// background), B7 Stamps (engine + library CRUD), dialog:pickFolder helper.
+//
+// All shapes per docs/api-contracts.md §19.3, §19.10, §19.18. Wave 3 engines
+// are pure pdf-lib; no new dependencies introduced.
+// ============================================================================
+
+// ---- shared page-target shape ----------------------------------------------
+// Three Wave 3 page-design channels (watermark / H&F / background) all take
+// the same scope union. Reused below.
+//
+// The contract calls the field `target`:
+//   - 'all'                    — every page
+//   - { start, end }           — inclusive 0-based page indices
+//   - number[]                 — explicit 0-based page indices
+//
+// On the wire the JSON shape is exactly the union member; the discriminator
+// is structural (not a `kind` tag). The handler-side zod schema uses
+// `z.union([...])`.
+
+export type PdfPageDesignTarget = 'all' | { start: number; end: number } | number[];
+
+// ---- pdf:applyWatermark (B4) -----------------------------------------------
+
+export type PdfWatermarkPosition =
+  | 'center'
+  | 'top-left'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-right';
+
+export type PdfWatermarkSource =
+  | {
+      kind: 'text';
+      text: string;
+      fontSize: number;
+      /** `#RRGGBB`. */
+      fontColor: string;
+      rotationDegrees: number;
+    }
+  | { kind: 'image'; imageBytes: Uint8Array };
+
+export interface PdfApplyWatermarkRequest {
+  handle: DocumentHandle;
+  target: PdfPageDesignTarget;
+  source: PdfWatermarkSource;
+  /** 0..1. */
+  opacity: number;
+  position: PdfWatermarkPosition;
+  /** Default 'overlay'. */
+  layer?: 'overlay' | 'underlay';
+}
+
+export type PdfApplyWatermarkError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'page_out_of_range'
+  | 'image_invalid'
+  | 'engine_failed';
+
+export interface PdfApplyWatermarkValue {
+  pagesAffected: number;
+  warnings: string[];
+}
+
+export type PdfApplyWatermarkResponse = Result<PdfApplyWatermarkValue, PdfApplyWatermarkError>;
+
+// ---- pdf:applyHeaderFooter (B4) --------------------------------------------
+
+export interface PdfHeaderFooterStrip {
+  left: string;
+  center: string;
+  right: string;
+  fontSize: number;
+}
+
+export interface PdfApplyHeaderFooterRequest {
+  handle: DocumentHandle;
+  target: PdfPageDesignTarget;
+  header?: PdfHeaderFooterStrip;
+  footer?: PdfHeaderFooterStrip;
+  /** Points from the top edge. */
+  marginTop: number;
+  /** Points from the bottom edge. */
+  marginBottom: number;
+  /**
+   * Caller's starting page-number value for `{page}` substitution. Page index
+   * N substitutes `startPageNumber + (N - firstTargetPageIndex)`.
+   */
+  startPageNumber: number;
+  /** When true, substitute `{totalPages}` with the source's page count. */
+  totalPageCountToken: boolean;
+  /**
+   * `null` = no `{date}` substitution support. Otherwise an `Intl.DateTimeFormat`
+   * options object's `format` is irrelevant — engine accepts a pre-formatted
+   * string the caller computed (renderer owns locale + format). Engine just
+   * substitutes verbatim.
+   */
+  dateString?: string;
+}
+
+export type PdfApplyHeaderFooterError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'page_out_of_range'
+  | 'engine_failed';
+
+export interface PdfApplyHeaderFooterValue {
+  pagesAffected: number;
+  warnings: string[];
+}
+
+export type PdfApplyHeaderFooterResponse = Result<
+  PdfApplyHeaderFooterValue,
+  PdfApplyHeaderFooterError
+>;
+
+// ---- pdf:applyBackground (B4) ----------------------------------------------
+
+export type PdfBackgroundSource =
+  | { kind: 'color'; color: string /* #RRGGBB */ }
+  | { kind: 'image'; imageBytes: Uint8Array; opacity: number };
+
+export interface PdfApplyBackgroundRequest {
+  handle: DocumentHandle;
+  target: PdfPageDesignTarget;
+  source: PdfBackgroundSource;
+}
+
+export type PdfApplyBackgroundError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'page_out_of_range'
+  | 'image_invalid'
+  | 'engine_failed';
+
+export interface PdfApplyBackgroundValue {
+  pagesAffected: number;
+  warnings: string[];
+}
+
+export type PdfApplyBackgroundResponse = Result<PdfApplyBackgroundValue, PdfApplyBackgroundError>;
+
+// ---- pdf:applyStamp (B7) ---------------------------------------------------
+
+export interface PdfApplyStampRequest {
+  handle: DocumentHandle;
+  /**
+   * Either a `builtin:<key>` token (e.g. `'builtin:approved'`) OR a numeric
+   * `stamps_library` row id serialized as a string. Repo lookup keys by both
+   * shapes (see B7 stamp-engine).
+   */
+  stampId: string;
+  pageIndex: number;
+  position: {
+    xPt: number;
+    yPt: number;
+    rotationDegrees: number;
+    /** 0..1. */
+    opacity: number;
+  };
+}
+
+export type PdfApplyStampError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'stamp_not_found'
+  | 'page_out_of_range'
+  | 'engine_failed';
+
+export interface PdfApplyStampValue {
+  /** Stable identifier for the placed stamp (for undo). v0.8.0 returns the
+   *  stamp's resolved library id + a monotone instance counter joined by `:` —
+   *  e.g. `'1:7'`. The renderer treats this opaque. */
+  annotationId: string;
+}
+
+export type PdfApplyStampResponse = Result<PdfApplyStampValue, PdfApplyStampError>;
+
+// ---- stamps:list / stamps:create / stamps:delete (B7 library CRUD) --------
+//
+// Repo-pattern channels mirroring `bookmarks:*` per docs/api-contracts.md
+// §19.10 ("follows the Phase 1 bookmarks:* shape"). DTO mirrors data-models
+// §13.10 `StampLibraryEntry`.
+
+export interface StampLibraryEntry {
+  id: number;
+  builtinKey: string | null;
+  name: string;
+  kind: 'text' | 'image';
+  textValue: string | null;
+  imagePath: string | null;
+  widthPt: number;
+  heightPt: number;
+  color: string | null;
+  createdAt: number;
+  lastUsedAt: number | null;
+  useCount: number;
+}
+
+export interface StampsListRequest {
+  /** Optional filter. Default 'all'. */
+  filter?: 'all' | 'recent' | 'text' | 'image';
+  /** When `filter === 'recent'`, how many rows to return. Default 12. */
+  limit?: number;
+}
+
+export type StampsListError = 'db_unavailable';
+
+export interface StampsListValue {
+  entries: StampLibraryEntry[];
+}
+
+export type StampsListResponse = Result<StampsListValue, StampsListError>;
+
+export interface StampsCreateRequest {
+  name: string;
+  kind: 'text' | 'image';
+  /** Required when `kind === 'text'`. */
+  textValue?: string | null;
+  /** Required when `kind === 'image'`. Renderer-validated absolute path. */
+  imagePath?: string | null;
+  widthPt: number;
+  heightPt: number;
+  /** `#RRGGBB`; only meaningful for text stamps. */
+  color?: string | null;
+}
+
+export type StampsCreateError = 'invalid_payload' | 'db_unavailable' | 'engine_failed';
+
+export interface StampsCreateValue {
+  id: number;
+}
+
+export type StampsCreateResponse = Result<StampsCreateValue, StampsCreateError>;
+
+export interface StampsDeleteRequest {
+  id: number;
+}
+
+export type StampsDeleteError =
+  | 'invalid_payload'
+  | 'not_found'
+  | 'forbidden_builtin'
+  | 'db_unavailable'
+  | 'engine_failed';
+
+export interface StampsDeleteValue {
+  removed: number;
+}
+
+export type StampsDeleteResponse = Result<StampsDeleteValue, StampsDeleteError>;
+
+// ---- dialog:pickFolder (Wave 3 helper) -------------------------------------
+//
+// Per docs/api-contracts.md §19.2.3 (referenced as "from a new dialog:pickFolder
+// helper") and §19.12.2 (referenced as "from dialog:pickFolder"). Mirrors the
+// `dialog:saveAs` token-issuance pattern: the renderer never sees raw paths;
+// the main process issues an opaque token bound to the chosen directory
+// (60s TTL). Consumers redeem the token via documentStore.
+//
+// Default UI title comes from the renderer; we forward it to showOpenDialog
+// with `properties: ['openDirectory']`.
+
+export interface DialogPickFolderRequest {
+  title?: string;
+  defaultPath?: string;
+  /**
+   * Hint for the engine that will consume the resulting token (so it can
+   * derive a sensible `{base}` for filename patterns). Optional — the engine
+   * receives the chosen directory's leaf name as a fallback.
+   */
+  baseFilename?: string;
+}
+
+export type DialogPickFolderError = 'user_cancelled' | 'invalid_path';
+
+export interface DialogPickFolderValue {
+  directoryToken: string;
+  /** Display name (leaf directory name). Renderer-safe; raw path stays in main. */
+  displayName: string;
+}
+
+export type DialogPickFolderResponse = Result<DialogPickFolderValue, DialogPickFolderError>;
 
 // ---- pdf:applyEditOps -------------------------------------------------------
 // Phase 2 (architecture-phase-2.md §2.5): convenience channel that wraps
@@ -3437,6 +3731,16 @@ export const Channels = {
   PdfSplitDocument: 'pdf:splitDocument',
   PdfReplacePages: 'pdf:replacePages',
   PdfInsertPagesFromFile: 'pdf:insertPagesFromFile',
+  // Phase 7.5 Wave 3 (David, 2026-06-17) — B4 page-design + B7 Stamps + folder
+  // picker. Engines pure pdf-lib; stamps_library CRUD bridges Ravi's repo.
+  PdfApplyWatermark: 'pdf:applyWatermark',
+  PdfApplyHeaderFooter: 'pdf:applyHeaderFooter',
+  PdfApplyBackground: 'pdf:applyBackground',
+  PdfApplyStamp: 'pdf:applyStamp',
+  StampsList: 'stamps:list',
+  StampsCreate: 'stamps:create',
+  StampsDelete: 'stamps:delete',
+  DialogPickFolder: 'dialog:pickFolder',
   // Phase 2 fs (replay-engine entry point)
   FsApplyEditOps: 'fs:applyEditOps',
   // Phase 4.1 (api-contracts.md §15, David)
@@ -3557,6 +3861,10 @@ export interface PdfApi {
     // (single or multi). Returns sanitized absolute paths so the renderer
     // can populate the Combine modal without pre-reading bytes.
     pickPdfFiles: (req: DialogPickPdfFilesRequest) => Promise<DialogPickPdfFilesResponse>;
+    // Phase 7.5 Wave 3 (David, 2026-06-17) — directory picker used by
+    // pdf:splitDocument + pdf:replayActionScript. Returns an opaque token
+    // bound to the chosen directory (60s TTL); raw paths stay in main.
+    pickFolder: (req: DialogPickFolderRequest) => Promise<DialogPickFolderResponse>;
   };
   fs: {
     readPdf: (req: FsReadPdfRequest) => Promise<FsReadPdfResponse>;
@@ -3606,6 +3914,17 @@ export interface PdfApi {
     insertPagesFromFile: (
       req: PdfInsertPagesFromFileRequest,
     ) => Promise<PdfInsertPagesFromFileResponse>;
+    // Phase 7.5 Wave 3 (David, 2026-06-17) — B4 page-design + B7 stamp apply.
+    applyWatermark: (req: PdfApplyWatermarkRequest) => Promise<PdfApplyWatermarkResponse>;
+    applyHeaderFooter: (req: PdfApplyHeaderFooterRequest) => Promise<PdfApplyHeaderFooterResponse>;
+    applyBackground: (req: PdfApplyBackgroundRequest) => Promise<PdfApplyBackgroundResponse>;
+    applyStamp: (req: PdfApplyStampRequest) => Promise<PdfApplyStampResponse>;
+  };
+  // Phase 7.5 Wave 3 (David, 2026-06-17) — stamps_library CRUD.
+  stamps: {
+    list: (req: StampsListRequest) => Promise<StampsListResponse>;
+    create: (req: StampsCreateRequest) => Promise<StampsCreateResponse>;
+    delete: (req: StampsDeleteRequest) => Promise<StampsDeleteResponse>;
   };
   app: {
     getVersion: () => Promise<AppGetVersionResponse>;

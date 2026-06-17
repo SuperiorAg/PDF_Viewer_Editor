@@ -10,6 +10,7 @@
 //
 // Repo interfaces mirror `docs/data-models.md §4` 1:1.
 
+import type { StampsLibraryRow } from '../db/types.js';
 import type {
   BookmarkRow,
   BookmarkNode,
@@ -23,7 +24,14 @@ import type {
   RecentsListItem,
   SettingKey,
   SettingValue,
+  // Phase 7.5 Wave 3 (David, 2026-06-17): stamps_library DTO.
+  StampLibraryEntry,
 } from '../ipc/contracts.js';
+// Phase 7.5 Wave 3 (David, 2026-06-17): re-export the StampsLibraryRepoBridge
+// shape from the handler (so handler-internal and db-bridge consumers share
+// the same interface) and import Ravi's snake_case row type for the adapter.
+import type { StampsLibraryRepoBridge } from '../ipc/handlers/stamps-handlers.js';
+export type { StampsLibraryRepoBridge };
 
 // ============================================================================
 // Repository interfaces (mirrors docs/data-models.md §4)
@@ -265,6 +273,15 @@ export interface DbBridge {
   languagePacks: LanguagePacksRepoBridge | null;
   /** Phase 6 (data-models.md §11). Null until Ravi's Wave 24 repo ships. */
   exportJobs: ExportJobsRepoBridge | null;
+  /**
+   * Phase 7.5 Wave 3 (David, 2026-06-17) — stamps_library bridge for B7.
+   * Memory-backed by default; production wiring is in `src/main/index.ts`
+   * (`adaptStampsLibraryRepo(createStampsLibraryRepo(db))`). Null state never
+   * happens at runtime — the memory bridge always exists — but the slot
+   * stays optional so future "kinds" introspection can mark it 'memory' vs
+   * 'sqlite' the same way Phase 5/6 do.
+   */
+  stampsLibrary: StampsLibraryRepoBridge;
 }
 
 // ============================================================================
@@ -1176,6 +1193,250 @@ export function createMemoryDbBridge(): DbBridge {
     ocrResults: new MemoryOcrResultsRepo(),
     languagePacks: new MemoryLanguagePacksRepo(),
     exportJobs: new MemoryExportJobsRepo(),
+    // Phase 7.5 Wave 3 (David, 2026-06-17): stamps_library memory bridge.
+    stampsLibrary: new MemoryStampsLibraryRepo(),
+  };
+}
+
+// ============================================================================
+// Phase 7.5 Wave 3 (David, 2026-06-17) — memory stamps_library bridge.
+//
+// Used for tests + dev fallback. Production wiring constructs
+// adaptStampsLibraryRepo(createStampsLibraryRepo(db)) in src/main/index.ts.
+// Seeds the same 10 built-in stamps the SQLite migration seeds so the test
+// surface matches production behavior.
+// ============================================================================
+
+interface MemoryStampRow extends StampLibraryEntry {}
+
+const MEMORY_STAMP_BUILTINS: Array<Omit<MemoryStampRow, 'id'>> = [
+  // Match migrations/0009_phase7.5.sql seeds. Color is the rubber-stamp red
+  // except 'paid' and 'final' which are green.
+  builtin('builtin:approved', 'stamps.builtin.approved', 'APPROVED', 144, 36, '#C2272D'),
+  builtin(
+    'builtin:confidential',
+    'stamps.builtin.confidential',
+    'CONFIDENTIAL',
+    180,
+    36,
+    '#C2272D',
+  ),
+  builtin('builtin:draft', 'stamps.builtin.draft', 'DRAFT', 120, 36, '#C2272D'),
+  builtin('builtin:sample', 'stamps.builtin.sample', 'SAMPLE', 120, 36, '#C2272D'),
+  builtin('builtin:reviewed', 'stamps.builtin.reviewed', 'REVIEWED', 144, 36, '#C2272D'),
+  builtin('builtin:received', 'stamps.builtin.received', 'RECEIVED', 144, 36, '#C2272D'),
+  builtin('builtin:paid', 'stamps.builtin.paid', 'PAID', 108, 36, '#1F7A1F'),
+  builtin('builtin:void', 'stamps.builtin.void', 'VOID', 108, 36, '#C2272D'),
+  builtin('builtin:final', 'stamps.builtin.final', 'FINAL', 108, 36, '#1F7A1F'),
+  builtin(
+    'builtin:not-approved',
+    'stamps.builtin.not-approved',
+    'NOT APPROVED',
+    180,
+    36,
+    '#C2272D',
+  ),
+];
+
+function builtin(
+  key: string,
+  name: string,
+  text: string,
+  widthPt: number,
+  heightPt: number,
+  color: string,
+): Omit<MemoryStampRow, 'id'> {
+  return {
+    builtinKey: key,
+    name,
+    kind: 'text',
+    textValue: text,
+    imagePath: null,
+    widthPt,
+    heightPt,
+    color,
+    createdAt: 0,
+    lastUsedAt: null,
+    useCount: 0,
+  };
+}
+
+export class MemoryStampsLibraryRepo implements StampsLibraryRepoBridge {
+  private nextId = 1;
+  private readonly rows = new Map<number, MemoryStampRow>();
+
+  constructor() {
+    for (const seed of MEMORY_STAMP_BUILTINS) {
+      const id = this.nextId++;
+      this.rows.set(id, { ...seed, id });
+    }
+  }
+
+  list(): StampLibraryEntry[] {
+    return Array.from(this.rows.values()).sort(this.byRecentDesc);
+  }
+
+  listRecent(limit: number): StampLibraryEntry[] {
+    return Array.from(this.rows.values())
+      .filter((r) => r.lastUsedAt !== null)
+      .sort(this.byRecentDesc)
+      .slice(0, Math.max(0, limit));
+  }
+
+  listByKind(kind: 'text' | 'image'): StampLibraryEntry[] {
+    return Array.from(this.rows.values())
+      .filter((r) => r.kind === kind)
+      .sort(this.byRecentDesc);
+  }
+
+  getById(id: number): StampLibraryEntry | null {
+    return this.rows.get(id) ?? null;
+  }
+
+  getByBuiltinKey(key: string): StampLibraryEntry | null {
+    for (const r of this.rows.values()) {
+      if (r.builtinKey === key) return r;
+    }
+    return null;
+  }
+
+  insertUserStamp(
+    input: Parameters<StampsLibraryRepoBridge['insertUserStamp']>[0],
+  ): ReturnType<StampsLibraryRepoBridge['insertUserStamp']> {
+    if (typeof input.name !== 'string' || input.name.length === 0) {
+      return { ok: false, error: 'invalid_payload', reason: 'name required' };
+    }
+    if (
+      input.kind === 'text' &&
+      (typeof input.textValue !== 'string' || input.textValue.length === 0)
+    ) {
+      return { ok: false, error: 'invalid_payload', reason: 'text requires textValue' };
+    }
+    if (
+      input.kind === 'image' &&
+      (typeof input.imagePath !== 'string' || input.imagePath.length === 0)
+    ) {
+      return { ok: false, error: 'invalid_payload', reason: 'image requires imagePath' };
+    }
+    const id = this.nextId++;
+    this.rows.set(id, {
+      id,
+      builtinKey: null,
+      name: input.name,
+      kind: input.kind,
+      textValue: input.kind === 'text' ? (input.textValue ?? null) : null,
+      imagePath: input.kind === 'image' ? (input.imagePath ?? null) : null,
+      widthPt: input.widthPt,
+      heightPt: input.heightPt,
+      color: input.kind === 'text' ? (input.color ?? null) : null,
+      createdAt: Date.now(),
+      lastUsedAt: null,
+      useCount: 0,
+    });
+    return { ok: true, id };
+  }
+
+  deleteUserStamp(id: number): ReturnType<StampsLibraryRepoBridge['deleteUserStamp']> {
+    const row = this.rows.get(id);
+    if (!row) return { ok: false, error: 'not_found' };
+    if (row.builtinKey !== null) return { ok: false, error: 'forbidden_builtin' };
+    this.rows.delete(id);
+    return { ok: true, removed: 1 };
+  }
+
+  recordUse(id: number, now: number = Date.now()): number | null {
+    const row = this.rows.get(id);
+    if (!row) return null;
+    row.lastUsedAt = now;
+    row.useCount += 1;
+    return row.useCount;
+  }
+
+  private readonly byRecentDesc = (a: StampLibraryEntry, b: StampLibraryEntry): number => {
+    const aNull = a.lastUsedAt === null;
+    const bNull = b.lastUsedAt === null;
+    if (aNull !== bNull) return aNull ? 1 : -1;
+    if (!aNull && !bNull) {
+      const diff = (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0);
+      if (diff !== 0) return diff;
+    }
+    return b.createdAt - a.createdAt;
+  };
+}
+
+// ============================================================================
+// Phase 7.5 Wave 3 (David, 2026-06-17) — adapter wrapping Ravi's
+// `StampsLibraryRepo` (SQLite, snake_case rows) into the camelCase
+// StampLibraryEntry DTO the IPC contract uses.
+// ============================================================================
+
+export interface RaviStampsLibraryRepo {
+  list(): StampsLibraryRow[];
+  listRecent(limit?: number): StampsLibraryRow[];
+  listByKind(kind: 'text' | 'image'): StampsLibraryRow[];
+  getById(id: number): StampsLibraryRow | null;
+  getByBuiltinKey(key: string): StampsLibraryRow | null;
+  insertUserStamp(input: {
+    name: string;
+    kind: 'text' | 'image';
+    text_value?: string | null;
+    image_path?: string | null;
+    width_pt: number;
+    height_pt: number;
+    color?: string | null;
+    created_at?: number;
+  }): { ok: true; id: number } | { ok: false; error: 'invalid_payload'; reason: string };
+  deleteUserStamp(
+    id: number,
+  ):
+    | { ok: true; removed: number }
+    | { ok: false; error: 'forbidden_builtin' }
+    | { ok: false; error: 'not_found' };
+  recordUse(id: number, now?: number): number | null;
+}
+
+function rowToDto(r: StampsLibraryRow): StampLibraryEntry {
+  return {
+    id: r.id,
+    builtinKey: r.builtin_key,
+    name: r.name,
+    kind: r.kind,
+    textValue: r.text_value,
+    imagePath: r.image_path,
+    widthPt: r.width_pt,
+    heightPt: r.height_pt,
+    color: r.color,
+    createdAt: r.created_at,
+    lastUsedAt: r.last_used_at,
+    useCount: r.use_count,
+  };
+}
+
+export function adaptStampsLibraryRepo(raw: RaviStampsLibraryRepo): StampsLibraryRepoBridge {
+  return {
+    list: () => raw.list().map(rowToDto),
+    listRecent: (limit: number) => raw.listRecent(limit).map(rowToDto),
+    listByKind: (kind: 'text' | 'image') => raw.listByKind(kind).map(rowToDto),
+    getById: (id: number) => {
+      const r = raw.getById(id);
+      return r ? rowToDto(r) : null;
+    },
+    getByBuiltinKey: (key: string) => {
+      const r = raw.getByBuiltinKey(key);
+      return r ? rowToDto(r) : null;
+    },
+    insertUserStamp: (input) =>
+      raw.insertUserStamp({
+        name: input.name,
+        kind: input.kind,
+        text_value: input.textValue ?? null,
+        image_path: input.imagePath ?? null,
+        width_pt: input.widthPt,
+        height_pt: input.heightPt,
+        color: input.color ?? null,
+      }),
+    deleteUserStamp: (id) => raw.deleteUserStamp(id),
+    recordUse: (id, now) => raw.recordUse(id, now),
   };
 }
 

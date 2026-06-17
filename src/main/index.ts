@@ -75,6 +75,8 @@ import { createOcrResultsRepo } from '../db/repositories/ocr-results-repo.js';
 import { createRecentFilesRepo } from '../db/repositories/recent-files-repo.js';
 import { createSettingsRepo } from '../db/repositories/settings-repo.js';
 import { createSignatureAuditRepo } from '../db/repositories/signature-audit-repo.js';
+// Phase 7.5 Wave 3 (David, 2026-06-17): stamps_library production repo.
+import { createStampsLibraryRepo } from '../db/repositories/stamps-library-repo.js';
 import { Channels } from '../ipc/contracts.js';
 import { registerIpcHandlers } from '../ipc/register.js';
 
@@ -109,6 +111,8 @@ import {
   adaptRecentsRepo,
   adaptSettingsRepo,
   adaptSignatureAuditRepo,
+  // Phase 7.5 Wave 3 (David, 2026-06-17): stamps library adapter.
+  adaptStampsLibraryRepo,
   createMemoryDbBridge,
   getDbBridge,
   setDbBridge,
@@ -362,6 +366,22 @@ function bootstrap(): void {
           languagePacks: languagePacks.repo,
           // Phase 6 (Wave 24)
           exportJobs: exportJobs.repo,
+          // Phase 7.5 Wave 3 (David, 2026-06-17) — stamps_library.
+          // tryConstruct used inline here would force a wider kinds-map change;
+          // because the memory bridge already seeds the 10 built-ins and the
+          // SQLite repo factory is a thin wrapper, we wire directly and fall
+          // back to the memory bridge on throw.
+          stampsLibrary: (() => {
+            try {
+              return adaptStampsLibraryRepo(createStampsLibraryRepo(db));
+            } catch (e) {
+              console.error(
+                '[main] stamps_library SQLite repo init failed; falling back to memory:',
+                (e as Error).message,
+              );
+              return memoryBridge.stampsLibrary;
+            }
+          })(),
         },
         kinds,
       );

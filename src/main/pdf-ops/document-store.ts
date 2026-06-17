@@ -43,12 +43,29 @@ export interface SaveDestination {
   createdAt: number;
 }
 
+/**
+ * Phase 7.5 Wave 3 (David, 2026-06-17): directory-token analog of
+ * SaveDestination. Issued by `dialog:pickFolder`; redeemed by
+ * `pdf:splitDocument`, `pdf:replayActionScript`, and any future channel that
+ * needs to write multiple files to a user-chosen directory. Same 60s TTL.
+ * `baseFilename` is the engine-facing hint used to seed `{base}` in
+ * filename patterns; defaults to the directory's leaf name.
+ */
+export interface DirectoryDestination {
+  token: string;
+  directory: string;
+  displayName: string;
+  baseFilename: string;
+  createdAt: number;
+}
+
 const TOKEN_TTL_MS = 60_000;
 
 export class DocumentStore {
   private nextHandle: DocumentHandle = 1;
   private readonly docs = new Map<DocumentHandle, DocumentRecord>();
   private readonly destinations = new Map<string, SaveDestination>();
+  private readonly directoryDestinations = new Map<string, DirectoryDestination>();
 
   /** Register a new document and return its handle. */
   register(rec: Omit<DocumentRecord, 'handle' | 'openedAt'>): DocumentRecord {
@@ -148,11 +165,54 @@ export class DocumentStore {
     }
   }
 
+  // --------------------------------------------------------------------------
+  // Phase 7.5 Wave 3 (David, 2026-06-17): directory destination tokens.
+  //
+  // Issued by dialog:pickFolder; redeemed (consumed) by handlers that write
+  // multiple files. Distinct namespace from the SaveDestination map so a
+  // forgetful caller cannot redeem a save-as token in a folder context (and
+  // vice versa). Same 60s TTL.
+  // --------------------------------------------------------------------------
+
+  issueDirectoryToken(
+    directory: string,
+    displayName: string,
+    baseFilename: string,
+  ): DirectoryDestination {
+    this.gcDirectoryDestinations();
+    const token = randomUUID();
+    const dest: DirectoryDestination = {
+      token,
+      directory,
+      displayName,
+      baseFilename,
+      createdAt: Date.now(),
+    };
+    this.directoryDestinations.set(token, dest);
+    return dest;
+  }
+
+  consumeDirectoryToken(token: string): DirectoryDestination | null {
+    this.gcDirectoryDestinations();
+    const dest = this.directoryDestinations.get(token);
+    if (!dest) return null;
+    this.directoryDestinations.delete(token);
+    return dest;
+  }
+
+  private gcDirectoryDestinations(): void {
+    const now = Date.now();
+    for (const [token, dest] of this.directoryDestinations) {
+      if (now - dest.createdAt > TOKEN_TTL_MS) this.directoryDestinations.delete(token);
+    }
+  }
+
   /** Test-only reset. */
   _resetForTests(): void {
     this.nextHandle = 1;
     this.docs.clear();
     this.destinations.clear();
+    this.directoryDestinations.clear();
   }
 }
 

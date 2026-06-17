@@ -30,6 +30,7 @@ import type {
 import { replay } from '../main/pdf-ops/replay-engine.js';
 import type { ReplayInput } from '../main/pdf-ops/replay-engine.js';
 import type { ScanPage, ScanToPdfError } from '../main/pdf-ops/scan-to-pdf.js';
+import type { StampEntry } from '../main/pdf-ops/stamp-engine.js';
 import type { WiaAddon } from '../main/pdf-ops/wia-scanner.js';
 // Wave 8 (Diego, D-8.2 + D-8.3): real Chromium export + Electron print
 // dispatch adapters, replacing the Phase-2 conservative stubs below.
@@ -72,6 +73,8 @@ import {
 } from './handlers/bookmarks.js';
 import { handleDialogOpenPdf } from './handlers/dialog-open-pdf.js';
 import { handleDialogPickExportOutputPath } from './handlers/dialog-pick-export-output-path.js';
+// Phase 7.5 Wave 3 (David, 2026-06-17) — folder picker for split/replay flows.
+import { handleDialogPickFolder } from './handlers/dialog-pick-folder.js';
 import { handleDialogPickPdfFiles } from './handlers/dialog-pick-pdf-files.js';
 import { handleDialogSaveAs } from './handlers/dialog-save-as.js';
 import { handleExportCancelJob } from './handlers/export-cancel-job.js';
@@ -109,11 +112,16 @@ import { handleOcrListJobs } from './handlers/ocr-list-jobs.js';
 import { handleOcrListResultsByJob } from './handlers/ocr-list-results-by-job.js';
 import { handleOcrRunOnDocument } from './handlers/ocr-run-on-document.js';
 import { handleOcrRunOnPage } from './handlers/ocr-run-on-page.js';
-import { handleFsApplyEditOps } from './handlers/pdf-apply-edit-ops.js';
-import type { FsApplyEditOpsDeps } from './handlers/pdf-apply-edit-ops.js';
-import { handlePdfApplyRedactions } from './handlers/pdf-apply-redactions.js';
-import { handlePdfCombine } from './handlers/pdf-combine.js';
 // Phase 7.5 Wave 2 (David, 2026-06-17) — B5 / B10 / B11 page operations.
+// Phase 7.5 Wave 3 (David, 2026-06-17) — B4 page-design + B7 Stamps.
+import { handlePdfApplyBackground } from './handlers/pdf-apply-background.js';
+import type { FsApplyEditOpsDeps } from './handlers/pdf-apply-edit-ops.js';
+import { handleFsApplyEditOps } from './handlers/pdf-apply-edit-ops.js';
+import { handlePdfApplyHeaderFooter } from './handlers/pdf-apply-header-footer.js';
+import { handlePdfApplyRedactions } from './handlers/pdf-apply-redactions.js';
+import { handlePdfApplyStamp } from './handlers/pdf-apply-stamp.js';
+import { handlePdfApplyWatermark } from './handlers/pdf-apply-watermark.js';
+import { handlePdfCombine } from './handlers/pdf-combine.js';
 import { handlePdfCropPages } from './handlers/pdf-crop-pages.js';
 import { handlePdfEmbedImage } from './handlers/pdf-embed-image.js';
 import { defaultPickEngine, handlePdfExport } from './handlers/pdf-export-pdf.js';
@@ -142,6 +150,11 @@ import { handleSignaturesCertRelease } from './handlers/signatures-cert-release.
 import { handleSignaturesListAudit } from './handlers/signatures-list-audit.js';
 import { handleSignaturesRequestTimestamp } from './handlers/signatures-request-timestamp.js';
 import { handleSignaturesVerify } from './handlers/signatures-verify.js';
+import {
+  handleStampsCreate,
+  handleStampsDelete,
+  handleStampsList,
+} from './handlers/stamps-handlers.js';
 // Phase 5 (Wave 20, David) — OCR + scan handlers + worker pool wiring.
 // Phase 6 (Wave 24, David) — export-to-Office channels.
 // Phase 7 (Wave 28a, David) — auto-update + telemetry + i18n handlers.
@@ -319,6 +332,29 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
       isFocused: () => w.isFocused(),
     };
   };
+
+  // Phase 7.5 Wave 3 (David, 2026-06-17): translate a StampLibraryEntry (DTO)
+  // into the engine-facing StampEntry. v0.8.0 ships text-only stamps so
+  // imageBytes stays null; the engine fails fast with 'image_invalid' if a
+  // caller hands in a kind: 'image' entry without bytes.
+  const entryToStampEntry = (entry: {
+    id: number;
+    builtinKey: string | null;
+    kind: 'text' | 'image';
+    textValue: string | null;
+    widthPt: number;
+    heightPt: number;
+    color: string | null;
+  }): StampEntry => ({
+    id: entry.id,
+    builtinKey: entry.builtinKey,
+    kind: entry.kind,
+    textValue: entry.textValue,
+    imageBytes: null,
+    widthPt: entry.widthPt,
+    heightPt: entry.heightPt,
+    color: entry.color,
+  });
 
   const getMaxFileSizeBytes = (): number => {
     const v = getDbBridge().settings.get('open.maxFileSizeMB');
@@ -718,12 +754,14 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
   ipcMain.handle(Channels.PdfSplitDocument, (_evt, payload) =>
     handlePdfSplitDocument(payload, {
       getBytes: (h) => documentStore.getBytes(h),
-      // OPEN QUESTION (#1, flagged to Marcus): no dialog:pickFolder helper
-      // exists as of Phase 7.5 Wave 2. The resolver returns null until Riley
-      // (or a follow-up wave) lands the folder dialog + a directory-token
-      // store on documentStore. Renderer callers receive `token_expired` —
-      // honest "feature not yet available" rather than a silent no-op.
-      resolveDestinationDirectory: () => null,
+      // Phase 7.5 Wave 3 (David, 2026-06-17): dialog:pickFolder now lives at
+      // ./handlers/dialog-pick-folder.ts and issues directory tokens via
+      // documentStore.issueDirectoryToken (60s TTL). The resolver consumes
+      // the token here.
+      resolveDestinationDirectory: (token) => {
+        const dest = documentStore.consumeDirectoryToken(token);
+        return dest ? { directory: dest.directory, baseFilename: dest.baseFilename } : null;
+      },
       writeFile: async (p, b) => {
         await fsPromises.writeFile(p, b);
       },
@@ -746,6 +784,99 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
       setBytes: (h, b) => documentStore.setBytes(h, b),
       readFile: async (p) => new Uint8Array(await fsPromises.readFile(p)),
       sanitizePath: (raw) => sanitizePath(raw),
+    }),
+  );
+
+  // ============================================================================
+  // Phase 7.5 Wave 3 (David, 2026-06-17) — B4 page-design + B7 Stamps +
+  // dialog:pickFolder helper.
+  //
+  // Engines are pure pdf-lib; handlers wire documentStore for byte get/set.
+  // Stamp library reads from getDbBridge().stampsLibrary (memory or SQLite).
+  // The pickFolder dialog issues a 60s-TTL token via documentStore matching
+  // the SaveDestination pattern used by dialog:saveAs.
+  // ============================================================================
+
+  ipcMain.handle(Channels.PdfApplyWatermark, (_evt, payload) =>
+    handlePdfApplyWatermark(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+    }),
+  );
+
+  ipcMain.handle(Channels.PdfApplyHeaderFooter, (_evt, payload) =>
+    handlePdfApplyHeaderFooter(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+    }),
+  );
+
+  ipcMain.handle(Channels.PdfApplyBackground, (_evt, payload) =>
+    handlePdfApplyBackground(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+    }),
+  );
+
+  // pdf:applyStamp — looks up the stamp from the library bridge then runs the
+  // stamp engine. recordUse is best-effort (does not block the apply).
+  //
+  // Honest note (v0.8.0): for image stamps we'd need to read the user-supplied
+  // imagePath from disk. The engine accepts pre-resolved `imageBytes` and the
+  // lookup is sync, so we punt image stamps to a future wave; today all 10
+  // built-ins are TEXT and the typical user-authored stamp is also text.
+  // Image stamps surface 'engine_failed' / 'image_invalid' until the reader
+  // lands (one-line change in this dep block when it does).
+  ipcMain.handle(Channels.PdfApplyStamp, (_evt, payload) =>
+    handlePdfApplyStamp(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+      lookupBuiltinStamp: (key) => {
+        const repo = getDbBridge().stampsLibrary;
+        const row = repo.getByBuiltinKey(key);
+        return row ? entryToStampEntry(row) : null;
+      },
+      lookupUserStamp: (id) => {
+        const repo = getDbBridge().stampsLibrary;
+        const row = repo.getById(id);
+        return row ? entryToStampEntry(row) : null;
+      },
+      recordUse: (id) => {
+        try {
+          getDbBridge().stampsLibrary.recordUse(id);
+        } catch {
+          /* best-effort */
+        }
+      },
+    }),
+  );
+
+  ipcMain.handle(Channels.StampsList, (_evt, payload) =>
+    handleStampsList(payload ?? {}, { repo: getDbBridge().stampsLibrary }),
+  );
+  ipcMain.handle(Channels.StampsCreate, (_evt, payload) =>
+    handleStampsCreate(payload, { repo: getDbBridge().stampsLibrary }),
+  );
+  ipcMain.handle(Channels.StampsDelete, (_evt, payload) =>
+    handleStampsDelete(payload, { repo: getDbBridge().stampsLibrary }),
+  );
+
+  ipcMain.handle(Channels.DialogPickFolder, (_evt, payload) =>
+    handleDialogPickFolder(payload ?? {}, {
+      showOpenDirectoryDialog: async (opts) => {
+        const win = getMainWindow();
+        const dialogOpts: Electron.OpenDialogOptions = {
+          properties: ['openDirectory'],
+          ...(opts.title !== undefined ? { title: opts.title } : {}),
+          ...(opts.defaultPath !== undefined ? { defaultPath: opts.defaultPath } : {}),
+        };
+        return win ? dialog.showOpenDialog(win, dialogOpts) : dialog.showOpenDialog(dialogOpts);
+      },
+      sanitizePath: (raw) => sanitizeDirectoryPath(raw),
+      issueDirectoryToken: (directory, displayName, baseFilename) => {
+        const dest = documentStore.issueDirectoryToken(directory, displayName, baseFilename);
+        return { token: dest.token, displayName: dest.displayName };
+      },
     }),
   );
 
