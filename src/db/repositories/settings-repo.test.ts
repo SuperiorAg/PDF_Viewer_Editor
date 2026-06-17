@@ -197,4 +197,66 @@ describe('settings-repo', () => {
       expect(repo.get('telemetry.optIn')).toBe(true);
     });
   });
+
+  // ============================================================
+  // Phase 7.5 (0009_phase7.5.sql) — Bucket B parity + Bucket C
+  // accessibility/TTS. 10 settings keys seeded via INSERT OR IGNORE per
+  // data-models §13.9.
+  // ============================================================
+  describe('Phase 7.5 seeded defaults', () => {
+    it('seeds find.maxHistoryPerDoc = 20', () => {
+      expect(repo.get('find.maxHistoryPerDoc')).toBe(20);
+    });
+
+    it('seeds find.maxHistoryTotal = 200', () => {
+      expect(repo.get('find.maxHistoryTotal')).toBe(200);
+    });
+
+    it('seeds compare.sessionMaxBytes = 5 MB', () => {
+      expect(repo.get('compare.sessionMaxBytes')).toBe(5_242_880);
+    });
+
+    it('seeds compare.sessionTtlDays = 7', () => {
+      expect(repo.get('compare.sessionTtlDays')).toBe(7);
+    });
+
+    it('seeds accessibility.editSessionTtlDays = 14', () => {
+      expect(repo.get('accessibility.editSessionTtlDays')).toBe(14);
+    });
+
+    it('seeds accessibility.checkHistoryPerDoc = 10', () => {
+      expect(repo.get('accessibility.checkHistoryPerDoc')).toBe(10);
+    });
+
+    it('seeds tts.defaultRate = 1.0', () => {
+      expect(repo.get('tts.defaultRate')).toBe(1.0);
+    });
+
+    it('seeds tts.defaultPitch = 1.0', () => {
+      expect(repo.get('tts.defaultPitch')).toBe(1.0);
+    });
+
+    it('seeds stamps.recentLimit = 12', () => {
+      expect(repo.get('stamps.recentLimit')).toBe(12);
+    });
+
+    it('seeds actionWizard.maxRecordingOps = 5000', () => {
+      expect(repo.get('actionWizard.maxRecordingOps')).toBe(5000);
+    });
+
+    it('records the schema watermark at version >= 9', () => {
+      const row = db
+        .prepare<[], { v: number }>(`SELECT MAX(version) AS v FROM schema_migrations`)
+        .get();
+      expect(row?.v).toBeGreaterThanOrEqual(9);
+    });
+
+    it('is idempotent — re-applying 0009 does not clobber a user override', () => {
+      repo.set('find.maxHistoryPerDoc', 99);
+      db.exec(
+        `INSERT OR IGNORE INTO app_settings (key, value) VALUES ('find.maxHistoryPerDoc', '20')`,
+      );
+      expect(repo.get('find.maxHistoryPerDoc')).toBe(99);
+    });
+  });
 });

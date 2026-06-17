@@ -435,6 +435,157 @@ export interface LanguagePackRow {
 }
 
 // ============================================================
+// Phase 7.5 — Bucket B parity + Bucket C accessibility/TTS (Ravi Wave 2)
+//
+// Canonical reference: docs/data-models.md §13.2-§13.8 (Riley 2026-06-17).
+// The bridge (`src/main/db-bridge.ts`, David) translates these snake_case rows
+// to camelCase DTOs at the IPC boundary:
+//   * stamps_library                   -> StampLibraryEntry        (§13.10)
+//   * find_history                     -> FindHistoryEntry         (§13.10)
+//   * action_wizard_scripts            -> ActionWizardScriptRow    (§13.10)
+//   * compare_sessions                 -> CompareSession           (§13.10)
+//   * tts_voice_prefs                  -> TtsVoicePref             (§13.10)
+//   * accessibility_check_history      -> AccessibilityCheckHistoryEntry
+//   * accessibility_edit_session       -> AccessibilityEditSession
+//
+// JSON columns are stored verbatim as TEXT; the bridge parses/serializes at
+// the IPC boundary (same convention as form_templates.fields_json Wave 12,
+// signature_audit_log.byte_range_json Wave 16, ocr_results.words_json Wave 20,
+// export_jobs office-stats Wave 24).
+//
+// Anti-sentinel discipline (data-models §13.11): every nullable timestamp
+// (stamps_library.last_used_at, action_wizard_scripts.last_run_at,
+// compare_sessions.last_diff_computed_at) is `number | null`. NULL = "never".
+// NEVER a sentinel `0`.
+// ============================================================
+
+/** stamps_library row mirror. data-models §13.2. */
+export interface StampsLibraryRow {
+  id: number;
+  /** `'builtin:approved'` etc. for built-ins; NULL for user-added stamps. */
+  builtin_key: string | null;
+  /** Display name. i18n key for built-ins (e.g. `stamps.builtin.approved`); raw string for user. */
+  name: string;
+  kind: 'text' | 'image';
+  /** Present when kind='text' (the stamp's rendered text). NULL for image stamps. */
+  text_value: string | null;
+  /**
+   * Absolute path to PNG/JPG when kind='image' (user stamps) OR the
+   * `BUILTIN:<key>` placeholder for built-in stamps. NULL for text stamps.
+   * The bridge / engine resolves BUILTIN:* tokens against
+   * process.resourcesPath at read time.
+   */
+  image_path: string | null;
+  width_pt: number;
+  height_pt: number;
+  /** `#RRGGBB`; only meaningful for kind='text'. NULL otherwise. */
+  color: string | null;
+  created_at: number; // ms epoch
+  /** Nullable + late-init: NULL = never used. NO sentinel 0. */
+  last_used_at: number | null;
+  use_count: number;
+}
+
+/** find_history row mirror. data-models §13.3. */
+export interface FindHistoryRow {
+  id: number;
+  file_hash: string;
+  query: string;
+  /** 0/1 — bridge converts to boolean. */
+  case_sensitive: 0 | 1;
+  whole_word: 0 | 1;
+  last_used_at: number; // ms epoch
+}
+
+/** action_wizard_scripts row mirror. data-models §13.4. */
+export interface ActionWizardScriptRow {
+  id: number;
+  name: string;
+  schema_version: number;
+  /**
+   * JSON-encoded `{schemaVersion, name, createdAt, ops}` (the renderer's
+   * `ActionScript` shape). Repo stores verbatim; bridge parses.
+   */
+  script_json: string;
+  created_at: number; // ms epoch
+  /** Nullable + late-init: NULL = never run. NO sentinel 0. */
+  last_run_at: number | null;
+  run_count: number;
+}
+
+/** compare_sessions row mirror. data-models §13.5. */
+export interface CompareSessionRow {
+  id: number;
+  baseline_file_hash: string;
+  modified_file_hash: string;
+  baseline_path: string;
+  modified_path: string;
+  baseline_page_count: number;
+  modified_page_count: number;
+  /** JSON map `pageIndex -> string`. */
+  per_page_text_baseline_json: string;
+  per_page_text_modified_json: string;
+  /** JSON map `pageIndex -> {textDiffSpans, visualDiffPixelCount?}`. */
+  per_page_diff_json: string;
+  /** JSON map `pageIndex -> base64 PNG` (lazy). */
+  per_page_visual_diff_json: string;
+  total_pages_with_diff: number;
+  inserted_spans: number;
+  deleted_spans: number;
+  /** Nullable + late-init: NULL = no per-page diff yet. NO sentinel 0. */
+  last_diff_computed_at: number | null;
+  created_at: number; // ms epoch
+}
+
+/** TTS engine adapter name. Matches CHECK in 0009. */
+export type TtsEngineName = 'sapi' | 'say' | 'espeak';
+
+/** tts_voice_prefs row mirror. data-models §13.6. Composite PK (locale, engine_name). */
+export interface TtsVoicePrefRow {
+  /** BCP-47 (e.g. `'en-US'`). */
+  locale: string;
+  engine_name: TtsEngineName;
+  /** Nullable + late-init: NULL until user picks. */
+  preferred_voice_id: string | null;
+  /** 0.5..2.0, enforced by zod at IPC. */
+  rate: number;
+  /** 0.5..2.0, enforced by zod at IPC. */
+  pitch: number;
+  updated_at: number; // ms epoch
+}
+
+/** accessibility_check_history row mirror. data-models §13.7. */
+export interface AccessibilityCheckHistoryRow {
+  id: number;
+  doc_hash: string;
+  ran_at: number; // ms epoch
+  /** JSON-encoded `AccessibilityRuleResult[]`. Repo stores verbatim. */
+  results_json: string;
+  pass_count: number;
+  warn_count: number;
+  fail_count: number;
+  /** Snapshot of rules at check time (honest disclosure; data-models §13.7). */
+  shipped_rule_count: number;
+}
+
+/** accessibility_edit_session row mirror. data-models §13.8. */
+export interface AccessibilityEditSessionRow {
+  id: number;
+  /** UNIQUE — one session per open doc. */
+  doc_hash: string;
+  /** JSON-encoded `StructTreeNode` root. */
+  struct_tree_json: string;
+  /** JSON-encoded `ReadingOrderEntry[]`. */
+  reading_order_json: string;
+  /** JSON map `structNodeId -> {altText, actualText}`. */
+  alt_text_overrides_json: string;
+  /** 0/1 — snapshot of doc's tagged-state on session open. */
+  has_existing_tags: 0 | 1;
+  created_at: number; // ms epoch
+  updated_at: number; // ms epoch
+}
+
+// ============================================================
 // Settings registry (mirrors docs/api-contracts.md §5)
 //
 // SettingKey is the union of every legal key; SettingValue<K> is the strongly-typed
@@ -523,7 +674,21 @@ export type SettingKey =
   | 'telemetry.optIn'
   | 'i18n.locale'
   | 'update.channel'
-  | 'update.lastCheckedAt';
+  | 'update.lastCheckedAt'
+  // Phase 7.5 (data-models.md §13.9) — pre-emptive parity with David's
+  // src/ipc/contracts.ts SettingKey union (Wave 7/12/16/20/24/28a/B1
+  // precedent: db-side lands first so SettingsRepo structural typing
+  // converges whichever side merges).
+  | 'find.maxHistoryPerDoc'
+  | 'find.maxHistoryTotal'
+  | 'compare.sessionMaxBytes'
+  | 'compare.sessionTtlDays'
+  | 'accessibility.editSessionTtlDays'
+  | 'accessibility.checkHistoryPerDoc'
+  | 'tts.defaultRate'
+  | 'tts.defaultPitch'
+  | 'stamps.recentLimit'
+  | 'actionWizard.maxRecordingOps';
 
 export type ExportEnginePreference = 'auto' | 'pdf-lib' | 'chromium';
 export type ThemePreference = 'system' | 'light' | 'dark';
@@ -668,7 +833,28 @@ export type SettingValue<K extends SettingKey> = K extends 'recents.maxItems'
                                                                                                                         // data-models §12.2). NEVER 0 for "never".
                                                                                                                         | number
                                                                                                                         | null
-                                                                                                                    : never;
+                                                                                                                    : // Phase 7.5 (data-models.md §13.9) — all 10 keys are numbers.
+                                                                                                                      K extends 'find.maxHistoryPerDoc'
+                                                                                                                      ? number
+                                                                                                                      : K extends 'find.maxHistoryTotal'
+                                                                                                                        ? number
+                                                                                                                        : K extends 'compare.sessionMaxBytes'
+                                                                                                                          ? number
+                                                                                                                          : K extends 'compare.sessionTtlDays'
+                                                                                                                            ? number
+                                                                                                                            : K extends 'accessibility.editSessionTtlDays'
+                                                                                                                              ? number
+                                                                                                                              : K extends 'accessibility.checkHistoryPerDoc'
+                                                                                                                                ? number
+                                                                                                                                : K extends 'tts.defaultRate'
+                                                                                                                                  ? number
+                                                                                                                                  : K extends 'tts.defaultPitch'
+                                                                                                                                    ? number
+                                                                                                                                    : K extends 'stamps.recentLimit'
+                                                                                                                                      ? number
+                                                                                                                                      : K extends 'actionWizard.maxRecordingOps'
+                                                                                                                                        ? number
+                                                                                                                                        : never;
 
 /** Runtime list of valid keys — used by repo to reject unknown keys cheaply. */
 export const KNOWN_SETTING_KEYS: readonly SettingKey[] = [
@@ -736,6 +922,17 @@ export const KNOWN_SETTING_KEYS: readonly SettingKey[] = [
   'i18n.locale',
   'update.channel',
   'update.lastCheckedAt',
+  // Phase 7.5
+  'find.maxHistoryPerDoc',
+  'find.maxHistoryTotal',
+  'compare.sessionMaxBytes',
+  'compare.sessionTtlDays',
+  'accessibility.editSessionTtlDays',
+  'accessibility.checkHistoryPerDoc',
+  'tts.defaultRate',
+  'tts.defaultPitch',
+  'stamps.recentLimit',
+  'actionWizard.maxRecordingOps',
 ] as const;
 
 export function isKnownSettingKey(key: string): key is SettingKey {
