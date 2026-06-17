@@ -3,7 +3,11 @@ import { configureStore } from '@reduxjs/toolkit';
 import { formCommitMiddleware } from './middleware/form-commit-middleware';
 import { historyMiddleware } from './middleware/history-middleware';
 import annotationsReducer from './slices/annotations-slice';
+// Phase 7.5 Wave 5 (Riley) — B19 Auto-bookmark UI modal slice.
+import autoBookmarkReducer from './slices/auto-bookmark-slice';
 import bookmarksReducer from './slices/bookmarks-slice';
+// Phase 7.5 Wave 5 (Riley) — B21 Document Properties dialog (+ B8 Security tab).
+import documentPropertiesReducer from './slices/document-properties-slice';
 import documentReducer from './slices/document-slice';
 import exportReducer from './slices/export-slice';
 import formsReducer from './slices/forms-slice';
@@ -20,6 +24,8 @@ import recentsReducer from './slices/recents-slice';
 import redactionsReducer from './slices/redactions-slice';
 // Phase 7.5 B12 (Riley Wave 3) — region clipboard.
 import regionClipboardReducer from './slices/region-clipboard-slice';
+// Phase 7.5 Wave 5 (Riley) — B20 Sanitize (Remove Hidden Information) modal.
+import sanitizeReducer from './slices/sanitize-slice';
 import scanReducer from './slices/scan-slice';
 import selectionReducer from './slices/selection-slice';
 // Phase 7
@@ -65,6 +71,10 @@ export const store = configureStore({
     // Phase 7.5 B4 / B13 (Riley Wave 4)
     pageDesign: pageDesignReducer,
     links: linksReducer,
+    // Phase 7.5 Wave 5 (Riley) — B19 / B20 / B21+B8.
+    autoBookmark: autoBookmarkReducer,
+    sanitize: sanitizeReducer,
+    documentProperties: documentPropertiesReducer,
     // Phase 7
     update: updateReducer,
     telemetry: telemetryReducer,

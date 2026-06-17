@@ -494,5 +494,123 @@
     "cancel": "Cancelar",
     "removeLink": "Eliminar enlace",
     "engineDeferredNote": "Los hipervínculos se guardan en esta sesión. La persistencia a nivel de documento llegará cuando David despliegue el motor de enlaces (Ola 5)."
+  },
+  "documentProperties": {
+    "title": "Propiedades del documento",
+    "tabs": {
+      "description": "Descripción",
+      "security": "Seguridad",
+      "fonts": "Fuentes",
+      "custom": "Personalizado"
+    },
+    "fields": {
+      "title": "Título",
+      "author": "Autor",
+      "subject": "Asunto",
+      "keywords": "Palabras clave",
+      "creator": "Creador",
+      "producer": "Productor",
+      "created": "Creado",
+      "modified": "Modificado",
+      "pages": "Páginas",
+      "pageSize": "Tamaño de página"
+    },
+    "keywordsHint": "Separadas por comas",
+    "loading": "Cargando propiedades del documento…",
+    "engineUnavailable": "El motor de propiedades del documento no está disponible en esta versión. No se pueden leer ni escribir los campos hasta que se exponga el puente.",
+    "fontsTabPlaceholder": "El inspector de fuentes llegará en una versión posterior.",
+    "customTabPlaceholder": "El editor de metadatos personalizados llegará en una versión posterior.",
+    "noValue": "(ninguno)",
+    "rebuildWarning": "Al guardar los cambios se reconstruirá el documento. Las firmas existentes se invalidarán.",
+    "apply": "Aplicar",
+    "applying": "Aplicando…",
+    "cancel": "Cancelar",
+    "refresh": "Actualizar"
+  },
+  "security": {
+    "currentSecurity": "Seguridad actual",
+    "noSecurity": "Sin seguridad",
+    "openPasswordSet": "Contraseña de apertura establecida",
+    "permissionsPasswordSet": "Contraseña de permisos establecida",
+    "encryptionAlgorithm": "Cifrado: {{algo}}",
+    "requireOpenPassword": "Requerir una contraseña para abrir el documento",
+    "requirePermissionsPassword": "Requerir una contraseña de permisos para editar / imprimir",
+    "password": "Contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "passwordMismatch": "Las contraseñas no coinciden.",
+    "passwordTooShort": "La contraseña es demasiado corta (mínimo 4 caracteres para AES-128, 6 para AES-256).",
+    "encryption": "Fuerza del cifrado",
+    "encryptionAes128": "AES-128",
+    "encryptionAes256": "AES-256",
+    "permissions": "Permisos (cuando la contraseña de permisos está establecida)",
+    "permissionLabels": {
+      "print": "Imprimir",
+      "modify": "Modificar contenido",
+      "copy": "Copiar / extraer texto",
+      "annotate": "Añadir anotaciones",
+      "fillForms": "Rellenar formularios",
+      "extract": "Extraer para accesibilidad",
+      "assemble": "Ensamblar (insertar / borrar páginas)",
+      "printHighRes": "Imprimir en alta resolución"
+    },
+    "rebuildWarning": "Guardar con una contraseña nueva reconstruirá el PDF. Las firmas existentes se invalidarán.",
+    "engineUnavailableHint": "El cifrado se entrega mediante el binario qpdf integrado; si el entorno de ejecución lo indica como no disponible, la versión aún no incluye qpdf.",
+    "applyButton": "Aplicar seguridad",
+    "applying": "Aplicando…",
+    "cancel": "Cancelar",
+    "successToast": "Cifrado aplicado. Vuelva a abrir el documento para ver los bytes protegidos."
+  },
+  "sanitize": {
+    "title": "Eliminar información oculta",
+    "intro": "Seleccione las categorías de información oculta para eliminar de este documento.",
+    "categories": {
+      "metadata": "Metadatos del documento (título, autor, palabras clave)",
+      "attachments": "Archivos adjuntos",
+      "comments": "Comentarios / anotaciones",
+      "form-fields": "Campos de formulario (AcroForm — destruye los formularios)",
+      "bookmarks": "Marcadores",
+      "js": "JavaScript incrustado y acciones de formulario",
+      "hidden-text": "Texto oculto (no imprimible)",
+      "hidden-layers": "Capas ocultas (OCG apagados)",
+      "deleted-content": "Contenido eliminado pero retenido (la reconstrucción siempre lo descarta)"
+    },
+    "selectAll": "Seleccionar todo",
+    "selectNone": "No seleccionar nada",
+    "rebuildWarning": "La sanitización reconstruye el documento. Las firmas existentes se invalidarán.",
+    "padesIntro": "Este documento contiene firmas. Eliminar información oculta invalidará los siguientes campos de firma:",
+    "padesConfirm": "Entiendo — continuar e invalidar las firmas",
+    "sanitize": "Sanear",
+    "applying": "Saneando…",
+    "cancel": "Cancelar",
+    "categorySelectionRequired": "Seleccione al menos una categoría para eliminar.",
+    "noDocument": "Abra un documento primero."
+  },
+  "autoBookmark": {
+    "title": "Generar marcadores automáticamente",
+    "reviewTitle": "Revisar marcadores generados",
+    "heuristic": {
+      "label": "Detectar títulos usando",
+      "fontSizeCluster": "Heurística de agrupación por tamaño de fuente"
+    },
+    "maxDepth": "Profundidad máxima (H1, H2, …)",
+    "detect": "Detectar",
+    "detecting": "Detectando…",
+    "noHeadings": "No se detectaron títulos. Pruebe con otro documento.",
+    "engineUnavailable": "El motor de marcadores automáticos no está disponible en esta versión.",
+    "review": {
+      "intro": "Revise el árbol generado a continuación — los marcadores automáticos son una heurística.",
+      "heuristicNote": "Los marcadores generados son una heurística. Edite los títulos o elimine filas antes de guardar.",
+      "page": "p. {{page}}",
+      "delete": "Eliminar fila",
+      "undoDelete": "Deshacer eliminación",
+      "merge": "Modo de combinación",
+      "replace": "Reemplazar marcadores existentes",
+      "append": "Añadir a los marcadores existentes",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "back": "Atrás",
+      "empty": "Todas las filas están eliminadas — restaure al menos una para guardar."
+    },
+    "cancel": "Cancelar"
   }
 }

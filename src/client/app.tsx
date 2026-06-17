@@ -2,6 +2,9 @@ import { useEffect } from 'react';
 
 import styles from './app.module.css';
 import { AddLinkModal } from './components/add-link-modal';
+// Phase 7.5 Wave 5 (Riley) — B19 / B20 / B21+B8 modals.
+import { AutoBookmarkModal } from './components/auto-bookmark-modal';
+import { DocumentPropertiesModal } from './components/document-properties-modal';
 import { EmptyState } from './components/empty-state';
 import { ErrorBoundary } from './components/error-boundary';
 // Phase 7.5 A7 — Find-a-tool palette (registry-driven, Ctrl+/).
@@ -31,6 +34,7 @@ import { ApplyRedactionsModal } from './components/redaction-tools/apply-redacti
 import { RedactionToolbar } from './components/redaction-tools/redaction-toolbar';
 // Phase 7.5 B12 (Riley Wave 3) — page-content region clipboard overlay.
 import { RegionClipboardOverlay } from './components/region-clipboard';
+import { SanitizeModal } from './components/sanitize-modal';
 // Phase 7.4 A5 — ShapeToolbar mounts as a sibling under the main Toolbar,
 // gated on ui.shapesPanelOpen (mirrors the FormDesignerToolbar pattern).
 import { ShapeDrawOverlay } from './components/shape-tools/shape-draw-overlay';
@@ -99,6 +103,12 @@ export function App(): JSX.Element {
   const addLinkOpen = useAppSelector(
     (s) => s.links.addModal !== null || s.links.editModalLinkId !== null,
   );
+  // Phase 7.5 Wave 5 (Riley) — Document Properties + Sanitize + Auto-bookmark
+  // each own a single `open` flag on their dedicated slice so they compose
+  // freely with other modal pipelines.
+  const docPropertiesOpen = useAppSelector((s) => s.documentProperties.open);
+  const sanitizeOpen = useAppSelector((s) => s.sanitize.open);
+  const autoBookmarkOpen = useAppSelector((s) => s.autoBookmark.open);
 
   useAppShortcuts();
 
@@ -344,6 +354,12 @@ export function App(): JSX.Element {
         <LinksOverlay />
         {pageDesignOpen && <PageDesignModal />}
         {addLinkOpen && <AddLinkModal />}
+        {/* Phase 7.5 Wave 5 (Riley) — Document Properties (B21+B8) + Sanitize
+            (B20) + Auto-bookmark (B19) modals. Each gates on its own slice
+            flag so they compose with other modal pipelines. */}
+        {docPropertiesOpen && <DocumentPropertiesModal />}
+        {sanitizeOpen && <SanitizeModal />}
+        {autoBookmarkOpen && <AutoBookmarkModal />}
         <TextEditOverlay />
       </div>
     </ErrorBoundary>

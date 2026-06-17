@@ -1,0 +1,133 @@
+.intro {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.label {
+  min-width: 160px;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.input,
+.numberInput {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.numberInput {
+  width: 80px;
+}
+
+.reviewTree {
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1);
+  margin-bottom: var(--space-2);
+  background: var(--color-bg);
+}
+
+.reviewRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.reviewRowDeleted {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.reviewTitle {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.reviewPage {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  min-width: 60px;
+  text-align: right;
+}
+
+.actionButton {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-1);
+  font-size: 0.75rem;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.heuristicCallout {
+  font-size: 0.75rem;
+  color: var(--color-warning, #8a6300);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-elevated);
+  margin-bottom: var(--space-2);
+}
+
+.warningsList {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin: var(--space-1) 0;
+  padding-left: var(--space-3);
+}
+
+.error {
+  color: var(--color-danger, #b00020);
+  font-size: 0.875rem;
+  margin-bottom: var(--space-1);
+}
+
+.rowEnd {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  justify-content: flex-end;
+}
+
+.mergeRow {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.checkboxRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.875rem;
+}

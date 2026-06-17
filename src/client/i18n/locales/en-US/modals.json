@@ -884,5 +884,123 @@
     "cancel": "Cancel",
     "removeLink": "Remove link",
     "engineDeferredNote": "Hyperlinks are saved in this session. Document-level persistence ships once David's link engine lands (Wave 5)."
+  },
+  "documentProperties": {
+    "title": "Document Properties",
+    "tabs": {
+      "description": "Description",
+      "security": "Security",
+      "fonts": "Fonts",
+      "custom": "Custom"
+    },
+    "fields": {
+      "title": "Title",
+      "author": "Author",
+      "subject": "Subject",
+      "keywords": "Keywords",
+      "creator": "Creator",
+      "producer": "Producer",
+      "created": "Created",
+      "modified": "Modified",
+      "pages": "Pages",
+      "pageSize": "Page size"
+    },
+    "keywordsHint": "Comma-separated",
+    "loading": "Loading document properties…",
+    "engineUnavailable": "The document-properties engine is not available in this build. Description fields cannot be read or written until the bridge is exposed.",
+    "fontsTabPlaceholder": "Fonts inspector is coming in a later release.",
+    "customTabPlaceholder": "Custom metadata editor is coming in a later release.",
+    "noValue": "(none)",
+    "rebuildWarning": "Saving changes will rebuild the document. Existing signatures will be invalidated.",
+    "apply": "Apply",
+    "applying": "Applying…",
+    "cancel": "Cancel",
+    "refresh": "Refresh"
+  },
+  "security": {
+    "currentSecurity": "Current security",
+    "noSecurity": "No security",
+    "openPasswordSet": "Open password is set",
+    "permissionsPasswordSet": "Permissions password is set",
+    "encryptionAlgorithm": "Encryption: {{algo}}",
+    "requireOpenPassword": "Require a password to open the document",
+    "requirePermissionsPassword": "Require a permissions password for editing / printing",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "passwordMismatch": "Passwords do not match.",
+    "passwordTooShort": "Password is too short (minimum 4 characters for AES-128, 6 for AES-256).",
+    "encryption": "Encryption strength",
+    "encryptionAes128": "AES-128",
+    "encryptionAes256": "AES-256",
+    "permissions": "Permissions (when permissions password is set)",
+    "permissionLabels": {
+      "print": "Print",
+      "modify": "Modify content",
+      "copy": "Copy / extract text",
+      "annotate": "Add annotations",
+      "fillForms": "Fill in form fields",
+      "extract": "Extract for accessibility",
+      "assemble": "Assemble (insert / delete pages)",
+      "printHighRes": "Print at high resolution"
+    },
+    "rebuildWarning": "Saving with a new password will rebuild the PDF. Existing signatures will be invalidated.",
+    "engineUnavailableHint": "Encryption ships via the bundled qpdf binary; if the runtime reports it as unavailable, the build does not yet include qpdf.",
+    "applyButton": "Apply security",
+    "applying": "Applying…",
+    "cancel": "Cancel",
+    "successToast": "Encryption applied. Reopen the document to view the protected bytes."
+  },
+  "sanitize": {
+    "title": "Remove Hidden Information",
+    "intro": "Select categories of hidden information to remove from this document.",
+    "categories": {
+      "metadata": "Document metadata (title, author, keywords)",
+      "attachments": "File attachments",
+      "comments": "Comments / annotations",
+      "form-fields": "Form fields (AcroForm — destroys forms)",
+      "bookmarks": "Bookmarks",
+      "js": "Embedded JavaScript and form actions",
+      "hidden-text": "Hidden text (non-printing)",
+      "hidden-layers": "Hidden layers (off OCGs)",
+      "deleted-content": "Deleted but retained content (rebuild always drops this)"
+    },
+    "selectAll": "Select all",
+    "selectNone": "Select none",
+    "rebuildWarning": "Sanitize rebuilds the document. Existing signatures will be invalidated.",
+    "padesIntro": "This document contains signed signatures. Removing hidden information will invalidate the following signature field(s):",
+    "padesConfirm": "I understand — proceed and invalidate the signatures",
+    "sanitize": "Sanitize",
+    "applying": "Sanitizing…",
+    "cancel": "Cancel",
+    "categorySelectionRequired": "Select at least one category to remove.",
+    "noDocument": "Open a document first."
+  },
+  "autoBookmark": {
+    "title": "Auto-generate Bookmarks",
+    "reviewTitle": "Review Generated Bookmarks",
+    "heuristic": {
+      "label": "Detect headings using",
+      "fontSizeCluster": "Font-size cluster heuristic"
+    },
+    "maxDepth": "Maximum depth (H1, H2, …)",
+    "detect": "Detect",
+    "detecting": "Detecting…",
+    "noHeadings": "No headings were detected. Try a different document.",
+    "engineUnavailable": "Auto-bookmark engine is not available in this build.",
+    "review": {
+      "intro": "Review the generated tree below — auto-generated bookmarks are a heuristic.",
+      "heuristicNote": "Auto-generated bookmarks are a heuristic. Edit titles or delete rows before saving.",
+      "page": "p. {{page}}",
+      "delete": "Delete row",
+      "undoDelete": "Undo delete",
+      "merge": "Merge mode",
+      "replace": "Replace existing bookmarks",
+      "append": "Append to existing bookmarks",
+      "save": "Save",
+      "saving": "Saving…",
+      "back": "Back",
+      "empty": "All rows are deleted — restore at least one to save."
+    },
+    "cancel": "Cancel"
   }
 }

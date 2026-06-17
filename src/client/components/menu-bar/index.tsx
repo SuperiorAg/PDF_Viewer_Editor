@@ -17,6 +17,7 @@ import { redoAction, undoAction } from '../../state/middleware/history-middlewar
 // Phase 7.4 A4 — annotation tool menu mirrors dispatch the same setActiveTool
 // action the toolbar uses. Single dispatcher; no duplicated state machine.
 import { type AnnotationTool, setActiveTool } from '../../state/slices/annotations-slice';
+import { openDocumentProperties } from '../../state/slices/document-properties-slice';
 import { selectCurrentDocument, selectIsDirty } from '../../state/slices/document-selectors';
 import { applyEdit } from '../../state/slices/document-slice';
 import { openExportModal } from '../../state/slices/export-slice';
@@ -33,6 +34,7 @@ import {
 } from '../../state/slices/ocr-slice';
 // Phase 7.4 B1 — Redact menu entries dispatch into the redactions slice +
 // ui-slice flags. Same action shapes the toolbar's RedactionToolbar fires.
+// Phase 7.5 Wave 5 (Riley) — File → Properties + Tools → Remove Hidden Info.
 import { openPageDesign } from '../../state/slices/page-design-slice';
 import {
   clearMarks,
@@ -41,6 +43,7 @@ import {
   setActiveRedactionTool,
   setShowMarks,
 } from '../../state/slices/redactions-slice';
+import { openSanitize } from '../../state/slices/sanitize-slice';
 // Phase 7.4 A1 — Fill & Sign menu entry dispatches the existing signature-capture flow.
 import { openCaptureModal } from '../../state/slices/signatures-slice';
 // Phase 7.5 Wave 4 (Riley) — B4 page-design entries + B13 Add Link tool.
@@ -261,6 +264,15 @@ export function MenuBar(): JSX.Element {
         },
         { label: '', divider: true },
         { label: t('menu:items.combine'), onClick: () => dispatch(openModal('combine')) },
+        // Phase 7.5 B21 (Riley Wave 5) — File → Properties... (Ctrl+D mirrors
+        // Acrobat). Opens the Document Properties dialog on the Description tab.
+        { label: '', divider: true },
+        {
+          label: t('menu:items.properties'),
+          shortcut: 'Ctrl+D',
+          disabled: !doc,
+          onClick: () => dispatch(openDocumentProperties(undefined)),
+        },
       ],
     },
     {
@@ -704,6 +716,14 @@ export function MenuBar(): JSX.Element {
           label: t('menu:items.exportAsImage'),
           disabled: !doc,
           onClick: () => dispatch(openExportModal({ presetFormat: 'png' })),
+        },
+        // Phase 7.5 B20 (Riley Wave 5) — Tools → Remove Hidden Information.
+        // Opens the Sanitize alertdialog with the v0.8.0-supported categories.
+        { label: '', divider: true },
+        {
+          label: t('menu:items.sanitize'),
+          disabled: !doc,
+          onClick: () => dispatch(openSanitize()),
         },
       ],
     },

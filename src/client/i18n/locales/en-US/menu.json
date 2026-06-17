@@ -86,7 +86,10 @@
     "headerFooter": "Header & Footer...",
     "background": "Background...",
     "addLink": "Add Link...",
-    "linkTool": "Add Link Tool"
+    "linkTool": "Add Link Tool",
+    "properties": "Properties...",
+    "sanitize": "Remove Hidden Information...",
+    "autoBookmark": "Auto-generate Bookmarks..."
   },
   "tooltips": {
     "findComing": "Find (Ctrl+F)",

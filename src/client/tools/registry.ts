@@ -20,6 +20,10 @@
 import { type ShortcutId } from '../shortcuts';
 import { redoAction, undoAction } from '../state/middleware/history-middleware';
 import { setActiveTool } from '../state/slices/annotations-slice';
+// Phase 7.5 Wave 5 (Riley) — B19 Auto-bookmark + B20 Sanitize + B21 Document
+// Properties registry entries dispatch into their dedicated slices.
+import { openAutoBookmark } from '../state/slices/auto-bookmark-slice';
+import { openDocumentProperties } from '../state/slices/document-properties-slice';
 import { applyEdit } from '../state/slices/document-slice';
 import { openExportModal } from '../state/slices/export-slice';
 import { toggleDesignerMode } from '../state/slices/forms-slice';
@@ -37,6 +41,8 @@ import {
   selectRegionClipboardCanPaste,
   selectRegionClipboardHasSelection,
 } from '../state/slices/region-clipboard-slice';
+// Phase 7.5 Wave 5 (Riley) — B20 Sanitize modal opener.
+import { openSanitize } from '../state/slices/sanitize-slice';
 // Phase 7.5 Wave 3 (Riley) — area-measure tool arms the shape sub-toolbar.
 import { setActiveShapeTool } from '../state/slices/shapes-slice';
 // Phase 7.5 Wave 4 (Riley) — B4 page-design + B13 Add Link tool dispatchers.
@@ -135,6 +141,13 @@ export type ToolId =
   | 'pages:header-footer'
   | 'pages:background'
   | 'annotation:add-link'
+  // Phase 7.5 Wave 5 (Riley) — B21 Document Properties + B20 Sanitize + B19
+  // Auto-bookmark UI entries. All three are menu / palette only — no toolbar
+  // surface — but they are first-class registry entries so the Find-a-tool
+  // palette discovers them and the L-007 ratchet has zero blind spots.
+  | 'file:properties'
+  | 'tools:sanitize'
+  | 'bookmarks:auto-bookmark'
   // help
   | 'help:help'
   | 'help:about';
@@ -1007,6 +1020,47 @@ export const TOOLS: readonly ToolDef[] = [
     enabledWhen: docOpen,
     dispatch: (d) => d(setLinkTool('add-link')),
     searchKeywords: ['link', 'hyperlink', 'url', 'add link'],
+  },
+
+  // ---- Phase 7.5 Wave 5 (Riley) — B21 Document Properties + B20 Sanitize + B19 Auto-bookmark ----
+  {
+    id: 'file:properties',
+    nameKey: 'toolbar:properties',
+    tooltipKey: 'toolbar:propertiesTooltip',
+    ariaLabelKey: 'toolbar:propertiesAria',
+    icon: null,
+    shortcutId: 'file-properties',
+    menu: { top: 'file' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: docOpen,
+    dispatch: (d) => d(openDocumentProperties(undefined)),
+    searchKeywords: ['properties', 'document', 'metadata', 'security', 'info', 'password'],
+  },
+  {
+    id: 'tools:sanitize',
+    nameKey: 'toolbar:sanitize',
+    tooltipKey: 'toolbar:sanitizeTooltip',
+    ariaLabelKey: 'toolbar:sanitizeAria',
+    icon: null,
+    shortcutId: null,
+    menu: { top: 'tools' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: docOpen,
+    dispatch: (d) => d(openSanitize()),
+    searchKeywords: ['sanitize', 'remove hidden', 'metadata', 'scrub', 'clean', 'privacy'],
+  },
+  {
+    id: 'bookmarks:auto-bookmark',
+    nameKey: 'toolbar:autoBookmark',
+    tooltipKey: 'toolbar:autoBookmarkTooltip',
+    ariaLabelKey: 'toolbar:autoBookmarkAria',
+    icon: null,
+    shortcutId: null,
+    menu: { top: 'view' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: docOpen,
+    dispatch: (d) => d(openAutoBookmark()),
+    searchKeywords: ['bookmark', 'auto', 'heading', 'outline', 'toc', 'generate'],
   },
 
   // ---- help ----

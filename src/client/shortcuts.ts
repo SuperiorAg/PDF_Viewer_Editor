@@ -72,7 +72,11 @@ export type ShortcutId =
   | 'comment-stamps'
   // Phase 7.5 B13 (Riley Wave 4) — arm the Add Link tool. Shift+L because
   // plain L is the existing Line / Arrow shape tool (shape-toolbar.tsx).
-  | 'tool-add-link';
+  | 'tool-add-link'
+  // Phase 7.5 B21 (Riley Wave 5) — open File → Properties dialog.
+  // Acrobat uses Ctrl+D. Free in our app (the existing "delete-page" is bound
+  // to Del/Backspace via ThumbnailStrip + a global clear-selection on Delete).
+  | 'file-properties';
 
 // Phase 7.5 B12 NOTE: page-content region Cut / Copy / Paste are NOT
 // registered as ShortcutIds. They are CONTEXT-SENSITIVE — only active when
@@ -379,6 +383,15 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
     label: 'Add Link tool',
     key: 'L',
     shift: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  // Phase 7.5 B21 (Riley Wave 5) — File → Properties (Acrobat parity Ctrl+D).
+  {
+    id: 'file-properties',
+    label: 'Document properties',
+    key: 'd',
+    ctrl: true,
     enabledInPhase1: false,
     enabledInPhases: [7],
   },

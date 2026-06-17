@@ -86,7 +86,10 @@
     "headerFooter": "Encabezado y pie...",
     "background": "Fondo...",
     "addLink": "Añadir enlace...",
-    "linkTool": "Herramienta añadir enlace"
+    "linkTool": "Herramienta añadir enlace",
+    "properties": "Propiedades...",
+    "sanitize": "Eliminar información oculta...",
+    "autoBookmark": "Generar marcadores automáticamente..."
   },
   "tooltips": {
     "findComing": "Buscar (Ctrl+F)",

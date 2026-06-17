@@ -13,7 +13,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { useT } from '../../i18n/use-t';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
+// Phase 7.5 B19 (Riley Wave 5) — "Auto-generate from headings" link launches the modal.
+import { openAutoBookmark } from '../../state/slices/auto-bookmark-slice';
 import {
   selectBookmarksTree,
   selectPdfOutline,
@@ -63,6 +66,7 @@ function depthIndentStyle(depth: number): React.CSSProperties {
 
 export function BookmarksPanel(): JSX.Element {
   const dispatch = useAppDispatch();
+  const { t } = useT();
   const doc = useAppSelector(selectCurrentDocument);
   const outline = useAppSelector(selectPdfOutline);
   const userBookmarks = useAppSelector(selectUserBookmarks);
@@ -115,6 +119,18 @@ export function BookmarksPanel(): JSX.Element {
             + Add at current page
           </button>
         )}
+        {/* Phase 7.5 B19 (Riley Wave 5) — Auto-generate from headings.
+            Opens the registry-driven AutoBookmarkModal which dispatches
+            David's `pdf:autoBookmarkFromHeadings` engine (Wave 4). */}
+        <button
+          type="button"
+          className={styles.toolbarButton}
+          onClick={() => dispatch(openAutoBookmark())}
+          aria-label={t('modals:autoBookmark.title')}
+          title={t('modals:autoBookmark.title')}
+        >
+          {t('modals:autoBookmark.title')}
+        </button>
       </div>
 
       {outline.length > 0 && (

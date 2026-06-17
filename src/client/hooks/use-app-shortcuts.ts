@@ -9,6 +9,7 @@ import { type ShortcutId } from '../shortcuts';
 import { useAppDispatch, useAppSelector } from '../state/hooks';
 import { redoAction, undoAction } from '../state/middleware/history-middleware';
 import { setActiveTool, selectAnnotation } from '../state/slices/annotations-slice';
+import { openDocumentProperties } from '../state/slices/document-properties-slice';
 import { selectCurrentDocument } from '../state/slices/document-selectors';
 import { applyEdit } from '../state/slices/document-slice';
 import { openExportModal } from '../state/slices/export-slice';
@@ -22,6 +23,7 @@ import { selectAll, clearSelection } from '../state/slices/selection-slice';
 // Phase 7.5 B17 (Riley Wave 3) — area-measure shortcut arms the shape sub-toolbar's area tool.
 import { setActiveShapeTool } from '../state/slices/shapes-slice';
 // Phase 7.5 B13 (Riley Wave 4) — Add Link tool arming.
+// Phase 7.5 B21 (Riley Wave 5) — Ctrl+D opens the Document Properties dialog.
 import {
   selectFindBarOpen,
   selectReadMode,
@@ -399,6 +401,14 @@ export function useAppShortcuts(): void {
           e.preventDefault();
           if (!doc) break;
           dispatch(setLinkTool('add-link'));
+          break;
+        case 'file-properties':
+          // Phase 7.5 B21 (Riley Wave 5) — Ctrl+D opens the Document Properties
+          // dialog on the Description tab. The modal kicks off
+          // `pdf:getDocumentProperties` on mount.
+          e.preventDefault();
+          if (!doc) break;
+          dispatch(openDocumentProperties(undefined));
           break;
         case 'fit-width':
           // Phase 7.5 A6 — Ctrl+1 = Fit width. PdfViewer's ResizeObserver
