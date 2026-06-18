@@ -113,6 +113,15 @@ function makeBridgeUnavailableFallback(): PdfApi {
       // unavailable fallback below keeps the fallback object's runtime
       // shape rectangular when tests rely on the proxy directly.
       runPreflight: unavailable,
+      // Phase 7.5 Wave 5b (David, 2026-06-17) — C3 Tag PDF (structure tree).
+      // David's parallel commit added the canonical type surface to
+      // `PdfApi['pdf']`, so the fallback MUST stub each method or the
+      // renderer typecheck fails. Runtime dispatch still feature-detects
+      // via `services/struct-tree-api.ts` (no `as any`), so the bridge can
+      // land out-of-order without a breakage window.
+      getStructTree: unavailable,
+      setStructTree: unavailable,
+      autoTagPages: unavailable,
     },
     // Phase 3 (api-contracts §13)
     forms: {

@@ -37,6 +37,8 @@ import signatureAuditReducer from './slices/signature-audit-slice';
 import signaturesReducer from './slices/signatures-slice';
 // Phase 7.5 B7 (Riley Wave 3) — Stamps library.
 import stampsReducer from './slices/stamps-slice';
+// Phase 7.5 Wave 5b (Riley) — C3 Tag PDF structure-tree editor.
+import structTreeReducer from './slices/struct-tree-slice';
 // Phase 7.5 B4 / B13 (Riley Wave 4) — Page Design modal + hyperlinks.
 import telemetryReducer from './slices/telemetry-slice';
 // Phase 7.5 Wave 5a (Riley) — C1 Read Aloud floating bar.
@@ -82,6 +84,8 @@ export const store = configureStore({
     // Phase 7.5 Wave 5a (Riley) — C1 Read Aloud + C2 Preflight.
     tts: ttsReducer,
     preflight: preflightReducer,
+    // Phase 7.5 Wave 5b (Riley) — C3 Tag PDF structure-tree editor.
+    structTree: structTreeReducer,
     // Phase 7
     update: updateReducer,
     telemetry: telemetryReducer,

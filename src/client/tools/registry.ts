@@ -156,6 +156,9 @@ export type ToolId =
   // the sidebar if collapsed.
   | 'view:readAloud'
   | 'tools:preflight'
+  // Phase 7.5 Wave 5b (Riley) — C3 Tag PDF tree editor. Tools-menu + palette
+  // surface that switches the sidebar to the Accessibility tab.
+  | 'tools:tag-pdf'
   // help
   | 'help:help'
   | 'help:about';

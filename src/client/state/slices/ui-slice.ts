@@ -9,6 +9,9 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 // sibling of Bookmarks per docs/ui-spec-phase-7.5.md §7.1.
 // Phase 7.5 C2 (Riley Wave 5a): 'preflight' joins as the 7th tab — the
 // Preflight report panel per docs/ui-spec-phase-7.5.md §23.
+// Phase 7.5 C3 (Riley Wave 5b): 'accessibility' joins as the 8th tab — the
+// Tag PDF tree editor per docs/ui-spec-phase-7.5.md §24. The same tab will
+// also host Reading Order + Alt Text + Accessibility Check in Waves 5c/5d.
 export type SidebarTab =
   | 'thumbnails'
   | 'bookmarks'
@@ -16,7 +19,8 @@ export type SidebarTab =
   | 'ocr-results'
   | 'exports'
   | 'stamps'
-  | 'preflight';
+  | 'preflight'
+  | 'accessibility';
 export type ModalKind =
   | 'combine'
   | 'settings'
@@ -172,6 +176,7 @@ export const uiSlice = createSlice({
       // Phase 7.5 B7 (Riley Wave 3): rotate Thumbnails -> Bookmarks -> Forms ->
       // OCR results -> Exports -> Stamps -> Thumbnails. Order matches sidebar
       // tab visual order (ui-spec §15.4 + ui-spec-phase-7.5 §7.1).
+      // Phase 7.5 C3 (Riley Wave 5b): Accessibility joins after Preflight.
       const next: Record<SidebarTab, SidebarTab> = {
         thumbnails: 'bookmarks',
         bookmarks: 'forms',
@@ -179,7 +184,8 @@ export const uiSlice = createSlice({
         'ocr-results': 'exports',
         exports: 'stamps',
         stamps: 'preflight',
-        preflight: 'thumbnails',
+        preflight: 'accessibility',
+        accessibility: 'thumbnails',
       };
       state.sidebarTab = next[state.sidebarTab];
     },

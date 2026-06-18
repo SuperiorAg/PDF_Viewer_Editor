@@ -159,6 +159,9 @@
   "preflight": "Comprobación previa",
   "preflightTooltip": "Abrir el panel Comprobación previa (subconjunto de reglas PDF/X + PDF/A)",
   "preflightAria": "Abrir el panel lateral Comprobación previa",
+  "tagPdf": "Etiquetar PDF…",
+  "tagPdfTooltip": "Abrir el editor del árbol Etiquetar PDF (autoría de estructura)",
+  "tagPdfAria": "Abrir el editor del árbol Etiquetar PDF",
   "linkOverlayUrlPrefix": "Enlace →",
   "linkContextMenu": {
     "edit": "Editar enlace",

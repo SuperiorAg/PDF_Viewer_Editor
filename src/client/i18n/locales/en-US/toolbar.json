@@ -161,6 +161,9 @@
   "preflight": "Preflight",
   "preflightTooltip": "Open Preflight panel (subset of PDF/X + PDF/A rules)",
   "preflightAria": "Open Preflight sidebar panel",
+  "tagPdf": "Tag PDF…",
+  "tagPdfTooltip": "Open the Tag PDF tree editor (structure-tree authoring)",
+  "tagPdfAria": "Open the Tag PDF tree editor",
   "linkOverlayUrlPrefix": "Link →",
   "linkContextMenu": {
     "edit": "Edit link",

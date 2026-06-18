@@ -13,6 +13,8 @@ import { OcrResultsPanel } from '../ocr-results-panel';
 import { PreflightPanel } from '../preflight-panel';
 // Phase 7.5 B7 (Riley Wave 3) — Stamps panel as the 6th sidebar tab.
 import { StampsPanel } from '../stamps-panel';
+// Phase 7.5 C3 (Riley Wave 5b) — Tag PDF tree editor as the 8th sidebar tab.
+import { TagTreeEditor } from '../tag-tree-editor';
 import { ThumbnailStrip } from '../thumbnail-strip';
 
 // Phase 6 — Exports tab as the 5th sidebar tab (ui-spec §15.4).
@@ -44,6 +46,12 @@ const SIDEBAR_TABS: readonly SidebarTabDef[] = [
   { id: 'stamps', labelKey: 'sidebar:tabs.stamps', testId: 'sidebar-tab-stamps' },
   // Phase 7.5 C2 (Riley Wave 5a).
   { id: 'preflight', labelKey: 'sidebar:tabs.preflight', testId: 'sidebar-tab-preflight' },
+  // Phase 7.5 C3 (Riley Wave 5b).
+  {
+    id: 'accessibility',
+    labelKey: 'sidebar:tabs.accessibility',
+    testId: 'sidebar-tab-accessibility',
+  },
 ];
 
 const TAB_IDS: readonly SidebarTab[] = SIDEBAR_TABS.map((t) => t.id);
@@ -79,9 +87,12 @@ export function Sidebar(): JSX.Element | null {
     ) : tab === 'stamps' ? (
       // Phase 7.5 B7 (Riley Wave 3) — Stamps tab.
       <StampsPanel />
-    ) : (
+    ) : tab === 'preflight' ? (
       // Phase 7.5 C2 (Riley Wave 5a) — Preflight tab.
       <PreflightPanel />
+    ) : (
+      // Phase 7.5 C3 (Riley Wave 5b) — Accessibility (Tag PDF editor) tab.
+      <TagTreeEditor />
     );
 
   return (

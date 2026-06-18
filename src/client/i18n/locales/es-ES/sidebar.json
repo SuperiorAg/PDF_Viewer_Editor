@@ -8,7 +8,8 @@
     "ocrResults": "OCR",
     "exports": "Exportaciones",
     "stamps": "Sellos",
-    "preflight": "Comprobación previa"
+    "preflight": "Comprobación previa",
+    "accessibility": "Accesibilidad"
   },
   "pageCount_one": "{{count}} página",
   "pageCount_other": "{{count}} páginas",
