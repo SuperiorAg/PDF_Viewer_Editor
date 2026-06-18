@@ -91,7 +91,8 @@
     "sanitize": "Eliminar información oculta...",
     "autoBookmark": "Generar marcadores automáticamente...",
     "readAloud": "Leer en voz alta",
-    "preflight": "Comprobación previa..."
+    "preflight": "Comprobación previa...",
+    "runAccessibilityCheck": "Comprobación de accesibilidad..."
   },
   "tooltips": {
     "findComing": "Buscar (Ctrl+F)",

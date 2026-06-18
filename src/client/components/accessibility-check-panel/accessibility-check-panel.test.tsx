@@ -306,4 +306,94 @@ describe('AccessibilityCheckPanel — quick-fix routing', () => {
     fireEvent.click(btn);
     expect(store.getState().readingOrder.active).toBe(true);
   });
+
+  // Wave 5d follow-up (Riley) Fix 1 — targetNodeId plumbing.
+  // Each of the three non-tag-editor quick-fix branches now passes
+  // targetNodeId through to its slice's open action.
+
+  it('open-reading-order quick-fix WITH targetNodeId seeds the focused entry', () => {
+    const store = makeStore();
+    store.dispatch(setDocument(DOC));
+    store.dispatch(
+      runSucceeded(
+        fixtureValue({
+          results: [
+            {
+              ruleId: 'a11y.reading.order-defined',
+              severity: 'error',
+              status: 'fail',
+              passed: false,
+              message: 'a11y.readingOrderDefined.unevaluatedNoStructTree',
+              locations: [],
+              quickFix: { kind: 'open-reading-order', targetNodeId: 'struct:99' },
+            },
+          ],
+          summary: { pass: 0, warn: 0, fail: 1, unevaluated: 0 },
+        }),
+      ),
+    );
+    renderPanel(store);
+    fireEvent.click(screen.getByTestId('a11y-quickfix-open-reading-order'));
+    expect(store.getState().readingOrder.active).toBe(true);
+    expect(store.getState().readingOrder.focusedEntryId).toBe('struct:99');
+  });
+
+  it('open-alt-text-inspector quick-fix WITH targetNodeId seeds the figure row', () => {
+    const store = makeStore();
+    store.dispatch(setDocument(DOC));
+    store.dispatch(
+      runSucceeded(
+        fixtureValue({
+          results: [
+            {
+              ruleId: 'a11y.figures.all-have-alt-text',
+              severity: 'error',
+              status: 'fail',
+              passed: false,
+              message: 'a11y.figuresAllHaveAltText.fail',
+              locations: [{ pageIndex: 0 }],
+              quickFix: { kind: 'open-alt-text-inspector', targetNodeId: 'struct:33' },
+            },
+          ],
+          summary: { pass: 0, warn: 0, fail: 1, unevaluated: 0 },
+        }),
+      ),
+    );
+    renderPanel(store);
+    fireEvent.click(screen.getByTestId('a11y-quickfix-open-alt-text-inspector'));
+    expect(store.getState().altText.open).toBe(true);
+    expect(store.getState().altText.seedNodeId).toBe('struct:33');
+  });
+
+  it('open-document-properties accepts targetNodeId for API symmetry — no-op semantics', () => {
+    const store = makeStore();
+    store.dispatch(setDocument(DOC));
+    store.dispatch(
+      runSucceeded(
+        fixtureValue({
+          results: [
+            {
+              ruleId: 'a11y.document.title-present',
+              severity: 'error',
+              status: 'fail',
+              passed: false,
+              message: 'a11y.documentTitlePresent.fail',
+              locations: [],
+              // No targetNodeId field on the response — but the dispatcher
+              // unconditionally passes it (undefined → no-op). Same shape
+              // when David later starts including an id.
+              quickFix: { kind: 'open-document-properties' },
+            },
+          ],
+          summary: { pass: 0, warn: 0, fail: 1, unevaluated: 0 },
+        }),
+      ),
+    );
+    renderPanel(store);
+    fireEvent.click(screen.getByTestId('a11y-quickfix-open-document-properties'));
+    // The dialog opens (description tab default) — and the slice has no
+    // per-struct-node concept, so no seed-equivalent state to inspect.
+    expect(store.getState().documentProperties.open).toBe(true);
+    expect(store.getState().documentProperties.activeTab).toBe('description');
+  });
 });

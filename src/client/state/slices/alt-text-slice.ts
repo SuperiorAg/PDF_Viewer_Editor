@@ -37,6 +37,14 @@ export interface AltTextState {
   loaded: boolean;
   /** Honest engine error surface. */
   lastErrorMessage: string | null;
+  /** Wave 5d follow-up (Riley): when the C6 accessibility checker routes a
+   *  quick-fix `'open-alt-text-inspector'` with a `targetNodeId`, the
+   *  dispatcher records that struct node id here via `openInspector`.
+   *  The inspector's mount-effect scrolls the matching figure row into
+   *  view + applies a focus modifier. Null when the inspector opens via
+   *  the registry / sidebar shortcut (no seed). Cleared by `setOpen(false)`
+   *  and by `resetAltText`. */
+  seedNodeId: string | null;
 }
 
 const initialState: AltTextState = {
@@ -49,6 +57,7 @@ const initialState: AltTextState = {
   loading: false,
   loaded: false,
   lastErrorMessage: null,
+  seedNodeId: null,
 };
 
 export const altTextSlice = createSlice({
@@ -60,7 +69,25 @@ export const altTextSlice = createSlice({
       if (!action.payload) {
         // Closing the modal clears the bulk sub-modal too.
         state.bulkModal = null;
+        // …and clears any quick-fix seed so the next plain Open doesn't
+        // jump to a stale figure.
+        state.seedNodeId = null;
       }
+    },
+    /** Wave 5d follow-up (Riley): C6 accessibility checker quick-fix
+     *  `'open-alt-text-inspector'` carries a `targetNodeId`. This action
+     *  opens the inspector AND seeds the scroll target so the user
+     *  lands directly on the offending figure card. Pass `{}` (no seed)
+     *  for parity with the registry-level `setAltTextOpen(true)` path. */
+    openInspector(state, action: PayloadAction<{ seedNodeId?: string } | undefined>) {
+      state.open = true;
+      state.seedNodeId = action.payload?.seedNodeId ?? null;
+    },
+    /** Wave 5d follow-up (Riley): once the inspector has scrolled the
+     *  seeded row into view, the component clears the seed so a manual
+     *  re-scroll by the user doesn't snap back. */
+    clearSeed(state) {
+      state.seedNodeId = null;
     },
     setLoading(state, action: PayloadAction<boolean>) {
       state.loading = action.payload;
@@ -144,6 +171,8 @@ export const {
   applyingStart: altTextApplyingStart,
   appliedAltText,
   applyFailed: altTextApplyFailed,
+  openInspector: openAltTextInspector,
+  clearSeed: clearAltTextSeed,
   resetAltText,
 } = altTextSlice.actions;
 
@@ -173,4 +202,13 @@ export function selectAltTextBulkModal(state: {
 
 export function selectAltTextState(state: { altText: AltTextState }): AltTextState {
   return state.altText;
+}
+
+/** Wave 5d follow-up (Riley) — the struct node id the C6 accessibility
+ *  checker's quick-fix asked the inspector to focus, or null when the
+ *  inspector opened plain. The inspector's mount-effect scrolls the
+ *  matching figure card into view + applies a focus modifier; once that
+ *  fires it dispatches clearSeed so the seed doesn't linger. */
+export function selectAltTextSeedNodeId(state: { altText: AltTextState }): string | null {
+  return state.altText.seedNodeId;
 }

@@ -30,10 +30,10 @@ import {
   selectA11yStatus,
   toggleGroup,
 } from '../../state/slices/accessibility-check-slice';
-import { setAltTextOpen } from '../../state/slices/alt-text-slice';
+import { openAltTextInspector } from '../../state/slices/alt-text-slice';
 import { openDocumentProperties } from '../../state/slices/document-properties-slice';
 import { selectCurrentDocument } from '../../state/slices/document-selectors';
-import { setReadingOrderActive } from '../../state/slices/reading-order-slice';
+import { focusEntry, setReadingOrderActive } from '../../state/slices/reading-order-slice';
 import { selectNode } from '../../state/slices/struct-tree-slice';
 import { setCurrentPage } from '../../state/slices/viewport-slice';
 import { runAccessibilityCheckThunk } from '../../state/thunks-phase7-5-wave5d';
@@ -78,18 +78,39 @@ export function AccessibilityCheckPanel(): JSX.Element {
         }
         break;
       case 'open-reading-order':
-        // Arm the page-level overlay. The overlay auto-loads on activation;
-        // the targetNodeId is not used by the overlay directly (badges are
-        // keyed by structNodeId already).
+        // Arm the page-level overlay AND seed the focused-entry id so
+        // the matching numbered badge scrolls into view + paints a
+        // focus modifier. The overlay auto-loads on activation; the
+        // entry id format `struct:<objectNumber>` (David's Wave 5c
+        // contract) matches the quick-fix targetNodeId scheme directly.
         dispatch(setReadingOrderActive(true));
+        if (targetNodeId !== undefined) {
+          dispatch(focusEntry(targetNodeId));
+        }
         break;
       case 'open-alt-text-inspector':
-        // Open the Wave 5c modal.
-        dispatch(setAltTextOpen(true));
+        // Open the Wave 5c modal AND seed the row to scroll into view.
+        // The inspector reads `seedNodeId` from the slice on mount and
+        // dispatches `clearAltTextSeed` once the row is scrolled.
+        dispatch(
+          openAltTextInspector(
+            targetNodeId !== undefined ? { seedNodeId: targetNodeId } : undefined,
+          ),
+        );
         break;
       case 'open-document-properties':
         // Default to the 'description' tab (where /Title and /Lang live).
-        dispatch(openDocumentProperties(undefined));
+        // The slice opener accepts a `{ seedNodeId }` payload for API
+        // symmetry with the other three quick-fix kinds; it is
+        // intentionally a no-op here because the dialog is doc-level
+        // (no per-struct-node concept). Passing the id only when defined
+        // keeps the exactOptionalPropertyTypes signature honest — the
+        // slice's contract is "string when present, never undefined-in-shape".
+        dispatch(
+          openDocumentProperties(
+            targetNodeId !== undefined ? { seedNodeId: targetNodeId } : undefined,
+          ),
+        );
         break;
     }
   };

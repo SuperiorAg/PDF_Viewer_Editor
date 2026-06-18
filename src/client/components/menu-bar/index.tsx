@@ -78,6 +78,9 @@ import {
   printThunk,
   saveDocumentThunk,
 } from '../../state/thunks';
+// Phase 7.5 Wave 5d (Riley) — Tools → Accessibility Check menu mirror runs
+// the same thunk the Ctrl+Shift+A shortcut + registry entry dispatch.
+import { runAccessibilityCheckThunk } from '../../state/thunks-phase7-5-wave5d';
 // Phase 3
 // Phase 5
 // Phase 6 — Export-to-Office modal entry.
@@ -724,6 +727,21 @@ export function MenuBar(): JSX.Element {
           label: t('menu:items.sanitize'),
           disabled: !doc,
           onClick: () => dispatch(openSanitize()),
+        },
+        // Phase 7.5 C6 (Riley Wave 5d follow-up) — Tools → Accessibility
+        // Check. Mirrors the registry entry tools:run-accessibility-check
+        // and shares its Ctrl+Shift+A binding (advertised here so keyboard
+        // discoverability matches the palette + menu surfaces). The thunk
+        // opens the Accessibility sidebar tab and fires the engine
+        // immediately, same as the registry path.
+        {
+          label: t('menu:items.runAccessibilityCheck'),
+          shortcut: 'Ctrl+Shift+A',
+          disabled: !doc,
+          onClick: () => {
+            dispatch(setSidebarTab('accessibility'));
+            void dispatch(runAccessibilityCheckThunk());
+          },
         },
       ],
     },

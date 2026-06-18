@@ -25,10 +25,12 @@ import { useT } from '../../i18n/use-t';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { selectCurrentDocument } from '../../state/slices/document-selectors';
 import {
+  focusEntry,
   moveEntry,
   selectReadingOrder,
   selectReadingOrderActive,
   selectReadingOrderDirty,
+  selectReadingOrderFocusedEntry,
   selectReadingOrderRecomputeNoExtractor,
   selectReadingOrderState,
   selectReadingOrderTruncationWarning,
@@ -43,12 +45,23 @@ import {
 import { OrderBadge } from './order-badge';
 import styles from './reading-order-overlay.module.css';
 
+// Wave 5d follow-up: how long the quick-fix focus modifier paints before
+// the overlay drops the focus (the badge stays in its scrolled position).
+// 3s matches the typical accessibility-checker quick-fix UX in Acrobat.
+const FOCUS_TIMEOUT_MS = 3000;
+
 interface BadgePosition {
   fromIndex: number;
   step: number;
   total: number;
   left: number;
   top: number;
+  /** Wave 5d follow-up — true when this badge's entry matches the slice's
+   *  quick-fix `focusedEntryId`. The OrderBadge component handles
+   *  scroll-into-view + outline. */
+  focused: boolean;
+  /** structNodeId — duplicated here for the key + the focus drop effect. */
+  structNodeId: string;
 }
 
 export function ReadingOrderOverlay(): JSX.Element | null {
@@ -64,6 +77,10 @@ export function ReadingOrderOverlay(): JSX.Element | null {
   // warning lives here when the user clicked Auto-detect and the engine
   // couldn't actually recompute. Drives the permanent honesty banner.
   const recomputeNoExtractor = useAppSelector(selectReadingOrderRecomputeNoExtractor);
+  // Wave 5d follow-up (Riley) — the struct node id the C6 accessibility
+  // checker's quick-fix routed the overlay at. Null when no quick-fix
+  // focus is active.
+  const focusedEntryId = useAppSelector(selectReadingOrderFocusedEntry);
 
   // Local drag state — kept in component state because the actual reorder
   // only commits on drop (the slice dispatch). Sliding `dragOverIndex`
@@ -79,6 +96,19 @@ export function ReadingOrderOverlay(): JSX.Element | null {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, doc?.fileHash]);
+
+  // Wave 5d follow-up (Riley): auto-clear the quick-fix focus after a few
+  // seconds so the highlighted badge doesn't stay outlined forever. The
+  // scroll-into-view side-effect lives on the OrderBadge component and
+  // fires whenever `focused` flips true — after this timer the badge
+  // simply paints normally (no scroll back, no animation).
+  useEffect(() => {
+    if (focusedEntryId === null) return;
+    const t = window.setTimeout(() => {
+      dispatch(focusEntry(null));
+    }, FOCUS_TIMEOUT_MS);
+    return () => window.clearTimeout(t);
+  }, [focusedEntryId, dispatch]);
 
   // Tick to re-render the badges whenever the document scrolls/zooms.
   // The scroll happens on the viewer's outer scroller — listen on window
@@ -125,6 +155,8 @@ export function ReadingOrderOverlay(): JSX.Element | null {
         total: order.length,
         left: cssX,
         top: cssY,
+        focused: focusedEntryId !== null && entry.structNodeId === focusedEntryId,
+        structNodeId: entry.structNodeId,
       });
     }
   }
@@ -152,6 +184,7 @@ export function ReadingOrderOverlay(): JSX.Element | null {
           total={p.total}
           left={p.left}
           top={p.top}
+          focused={p.focused}
           dragging={draggingIndex === p.fromIndex}
           dragOver={dragOverIndex === p.fromIndex}
           onDragStart={(idx) => setDraggingIndex(idx)}

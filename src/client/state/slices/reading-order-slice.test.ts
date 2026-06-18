@@ -14,12 +14,14 @@ import {
 import readingOrderReducer, {
   appliedOrder,
   autoDetectedOrder,
+  focusEntry,
   loadedOrder,
   moveEntry,
   resetReadingOrder,
   selectReadingOrder,
   selectReadingOrderActive,
   selectReadingOrderDirty,
+  selectReadingOrderFocusedEntry,
   selectReadingOrderRecomputeNoExtractor,
   selectReadingOrderTruncationWarning,
   setReadingOrderActive,
@@ -166,6 +168,36 @@ describe('reading-order slice — reducer contract', () => {
       loadedOrder({ docHash: 'doc-2', order: sample(), truncationWarning: null }),
     );
     expect(selectReadingOrderRecomputeNoExtractor({ readingOrder: s })).toBeNull();
+  });
+
+  // Wave 5d follow-up (Riley) — quick-fix focus action wiring.
+  // Per Wave 5d follow-up brief Fix 1: the C6 accessibility-checker quick-fix
+  // 'open-reading-order' carries a struct node id which the slice records
+  // here, the overlay surfaces as a scrolled + outlined badge.
+  it('focusEntry records the focused struct node id', () => {
+    const s = readingOrderReducer(INITIAL, focusEntry('struct:42'));
+    expect(selectReadingOrderFocusedEntry({ readingOrder: s })).toBe('struct:42');
+  });
+
+  it('focusEntry(null) clears a prior focus', () => {
+    let s = readingOrderReducer(INITIAL, focusEntry('struct:42'));
+    expect(selectReadingOrderFocusedEntry({ readingOrder: s })).not.toBeNull();
+    s = readingOrderReducer(s, focusEntry(null));
+    expect(selectReadingOrderFocusedEntry({ readingOrder: s })).toBeNull();
+  });
+
+  it('focusEntry is independent of active — focus survives the overlay being inactive', () => {
+    let s = readingOrderReducer(INITIAL, focusEntry('struct:42'));
+    s = readingOrderReducer(s, setReadingOrderActive(true));
+    expect(selectReadingOrderFocusedEntry({ readingOrder: s })).toBe('struct:42');
+    s = readingOrderReducer(s, setReadingOrderActive(false));
+    expect(selectReadingOrderFocusedEntry({ readingOrder: s })).toBe('struct:42');
+  });
+
+  it('resetReadingOrder clears the focused entry id', () => {
+    let s = readingOrderReducer(INITIAL, focusEntry('struct:42'));
+    s = readingOrderReducer(s, resetReadingOrder());
+    expect(selectReadingOrderFocusedEntry({ readingOrder: s })).toBeNull();
   });
 
   it('setReadingOrderLastError clears running flags', () => {

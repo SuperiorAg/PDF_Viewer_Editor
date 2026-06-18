@@ -6,6 +6,13 @@
 // page element's bounding rect). HTML5 drag-and-drop is used because the
 // existing tag-tree-editor already uses it (consistency), and the perf
 // gate is satisfied — only visible badges mount.
+//
+// Wave 5d follow-up (Riley): when `focused === true` the badge auto-scrolls
+// itself into view + paints a `.badgeFocused` outline modifier. The parent
+// overlay drives the focus flag from the slice's `focusedEntryId` field
+// (seeded by the C6 accessibility-checker quick-fix dispatcher).
+
+import { useEffect, useRef } from 'react';
 
 import { useT } from '../../i18n/use-t';
 
@@ -25,6 +32,11 @@ interface OrderBadgeProps {
   dragOver: boolean;
   /** Whether this badge is currently being dragged. */
   dragging: boolean;
+  /** Wave 5d follow-up — quick-fix focus modifier. When true the badge
+   *  auto-scrolls into view on mount + each focus-flip and paints a
+   *  highlight outline so the user can see exactly which block the
+   *  accessibility checker routed them at. */
+  focused: boolean;
   onDragStart: (fromIndex: number) => void;
   onDragEnd: () => void;
   onDragEnter: (overIndex: number) => void;
@@ -34,6 +46,7 @@ interface OrderBadgeProps {
 
 export function OrderBadge(props: OrderBadgeProps): JSX.Element {
   const { t } = useT();
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const ariaLabel = t('modals:accessibility.readingOrder.badgeAria', {
     current: props.step,
     total: props.total,
@@ -42,18 +55,33 @@ export function OrderBadge(props: OrderBadgeProps): JSX.Element {
     styles.badge,
     props.dragging ? styles.badgeDragging : '',
     props.dragOver ? styles.badgeDragOver : '',
+    props.focused ? styles.badgeFocused : '',
   ]
     .filter((c): c is string => typeof c === 'string' && c.length > 0)
     .join(' ');
+
+  // Auto-scroll the focused badge into view. Effect re-runs whenever the
+  // `focused` prop flips OR the badge's CSS-coords change (e.g. after the
+  // user scrolls/zooms and the parent overlay re-renders) so a freshly
+  // mounted badge for the seeded entry lands centered too. `scrollIntoView`
+  // is a no-op when the element is already on screen.
+  useEffect(() => {
+    if (!props.focused) return;
+    const el = buttonRef.current;
+    if (el === null) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+  }, [props.focused, props.left, props.top]);
   return (
     <button
       type="button"
+      ref={buttonRef}
       className={className}
       // eslint-disable-next-line react/forbid-dom-props
       style={{ left: props.left, top: props.top }}
       draggable
       aria-label={ariaLabel}
       title={ariaLabel}
+      data-focused={props.focused ? 'true' : undefined}
       onDragStart={(e) => {
         // Make the drag visible — Firefox needs a data payload, otherwise
         // the drag is suppressed. We use a custom MIME so we never confuse

@@ -104,9 +104,29 @@ export const documentPropertiesSlice = createSlice({
   name: 'documentProperties',
   initialState,
   reducers: {
-    openDocumentProperties(state, action: PayloadAction<DocumentPropertiesTab | undefined>) {
+    openDocumentProperties(
+      state,
+      action: PayloadAction<
+        DocumentPropertiesTab | { tab?: DocumentPropertiesTab; seedNodeId?: string } | undefined
+      >,
+    ) {
+      // Wave 5d follow-up (Riley): the C6 accessibility checker's quick-fix
+      // dispatcher passes `{ seedNodeId }` to every open-action for API
+      // symmetry across the four quick-fix kinds. Document properties is
+      // doc-level — there is no per-struct-node concept here — so the
+      // `seedNodeId` is intentionally a no-op. We accept it in the
+      // signature so the dispatcher doesn't have to special-case this
+      // branch; tooling that surfaces a quick-fix without a target id
+      // (or with one — both work) drops cleanly into this opener.
+      const payload = action.payload;
+      let tab: DocumentPropertiesTab | undefined;
+      if (typeof payload === 'string') {
+        tab = payload;
+      } else if (payload !== undefined) {
+        tab = payload.tab;
+      }
       state.open = true;
-      state.activeTab = action.payload ?? 'description';
+      state.activeTab = tab ?? 'description';
       state.lastErrorMessage = null;
     },
     closeDocumentProperties(state) {

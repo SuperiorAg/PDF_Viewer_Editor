@@ -70,6 +70,21 @@
   margin-left: 12px;
 }
 
+/* Wave 5d follow-up (Riley) — keyboard chord text rendered between the
+ * tool name and the menu-group suffix. Monospace + muted so it reads as
+ * a secondary affordance. */
+.itemShortcut {
+  color: var(--text-secondary, #aaa);
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  margin-left: 12px;
+  padding: 2px 6px;
+  border: 1px solid var(--border, #444);
+  border-radius: 3px;
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
+  white-space: nowrap;
+}
+
 .noResults {
   padding: 16px;
   color: var(--text-secondary, #aaa);

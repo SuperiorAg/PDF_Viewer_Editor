@@ -20,11 +20,13 @@ import { useT } from '../../i18n/use-t';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import {
   altTextApplyingStart,
+  clearAltTextSeed,
   closeAltTextBulkModal,
   openAltTextBulkModal,
   selectAltTextBulkModal,
   selectAltTextFigures,
   selectAltTextOpen,
+  selectAltTextSeedNodeId,
   selectAltTextState,
   setAltTextBulkDraft,
   setAltTextDraft,
@@ -56,6 +58,12 @@ export function AltTextInspector(): JSX.Element | null {
   const figures = useAppSelector(selectAltTextFigures);
   const state = useAppSelector(selectAltTextState);
   const bulkModal = useAppSelector(selectAltTextBulkModal);
+  // Wave 5d follow-up (Riley) — the quick-fix seed (struct node id) from
+  // the C6 accessibility-checker dispatcher. The FigureRow with this id
+  // scrolls into view on mount + paints a focus modifier. Cleared once
+  // the row has been scrolled to so a manual re-scroll by the user
+  // doesn't snap back.
+  const seedNodeId = useAppSelector(selectAltTextSeedNodeId);
 
   // Auto-load when the modal opens and the doc changes.
   useEffect(() => {
@@ -182,17 +190,20 @@ export function AltTextInspector(): JSX.Element | null {
                   {group.members.map((fig) => {
                     const draft = state.drafts[fig.structNodeId] ?? '';
                     const applying = state.applyingIds[fig.structNodeId] === true;
+                    const focused = seedNodeId !== null && seedNodeId === fig.structNodeId;
                     return (
                       <FigureRow
                         key={fig.structNodeId}
                         figure={fig}
                         draft={draft}
                         applying={applying}
+                        focused={focused}
                         onJumpToPage={onJumpToPage}
                         onDraftChange={(value) =>
                           dispatch(setAltTextDraft({ structNodeId: fig.structNodeId, value }))
                         }
                         onApply={() => onApplyOne(fig.structNodeId, draft)}
+                        onFocusedScrolled={() => dispatch(clearAltTextSeed())}
                       />
                     );
                   })}

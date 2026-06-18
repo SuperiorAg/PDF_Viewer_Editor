@@ -430,6 +430,43 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
   },
 ] as const;
 
+/** Phase 7.5 Wave 5d follow-up (Riley) — render-time chord text for the
+ *  palette + menu mirrors. Mirrors the existing helper in
+ *  `tools/registry.contract.test.ts` (now imported from here so the
+ *  contract test + the live UI use exactly the same string).
+ *
+ *  Examples:
+ *    `Ctrl+Shift+S` (Save As)
+ *    `Ctrl+Alt+R` (Read Aloud)
+ *    `Ctrl+Shift+A` (Run Accessibility Check)
+ *    `Shift+F` (Freehand tool — single-letter shifted)
+ *    `F1` (Help — function key, untouched)
+ *    `Ctrl+/` (Find a tool — literal symbol)
+ *
+ *  Single-letter keys are upper-cased so the user sees `Ctrl+Shift+S`
+ *  rather than `Ctrl+Shift+s`. Multi-character keys (`PageUp`, `F3`,
+ *  `ArrowRight`, etc.) are emitted as-is. When the shortcut spec has an
+ *  array of `key` candidates, the first entry wins. */
+export function formatShortcut(s: ShortcutSpec): string {
+  const parts: string[] = [];
+  if (s.ctrl) parts.push('Ctrl');
+  if (s.shift) parts.push('Shift');
+  if (s.alt) parts.push('Alt');
+  const keys = Array.isArray(s.key) ? s.key : [s.key];
+  const first = keys[0] ?? '';
+  parts.push(first.length === 1 ? first.toUpperCase() : first);
+  return parts.join('+');
+}
+
+/** Convenience lookup keyed by ShortcutId — returns null if the id is
+ *  not in the SHORTCUTS table. Used by the find-a-tool palette + the
+ *  menu-bar mirrors to render the chord next to each tool name. */
+export function formatShortcutById(id: ShortcutId): string | null {
+  const sc = SHORTCUTS.find((s) => s.id === id);
+  if (sc === undefined) return null;
+  return formatShortcut(sc);
+}
+
 export function findShortcutForEvent(e: KeyboardEvent): ShortcutId | null {
   for (const s of SHORTCUTS) {
     if (s.ctrl !== undefined && s.ctrl !== (e.ctrlKey || e.metaKey)) continue;

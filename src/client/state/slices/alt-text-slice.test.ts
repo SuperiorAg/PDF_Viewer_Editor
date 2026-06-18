@@ -9,14 +9,17 @@ import altTextReducer, {
   altTextApplyFailed,
   altTextApplyingStart,
   appliedAltText,
+  clearAltTextSeed,
   closeAltTextBulkModal,
   loadedFigures,
   openAltTextBulkModal,
+  openAltTextInspector,
   resetAltText,
   selectAltTextBulkModal,
   selectAltTextDrafts,
   selectAltTextFigures,
   selectAltTextOpen,
+  selectAltTextSeedNodeId,
   setAltTextBulkDraft,
   setAltTextDraft,
   setAltTextLastError,
@@ -118,6 +121,37 @@ describe('alt-text slice — reducer contract', () => {
     s = altTextReducer(s, loadedFigures({ docHash: 'doc-1', figures: [f('a', 0)] }));
     s = altTextReducer(s, resetAltText());
     expect(s).toEqual(INITIAL);
+  });
+
+  // Wave 5d follow-up (Riley) — quick-fix seed wiring.
+  // Per Wave 5d follow-up brief Fix 1: the C6 accessibility-checker quick-fix
+  // 'open-alt-text-inspector' carries a struct node id; openInspector opens
+  // the modal AND seeds the row to scroll into view.
+  it('openAltTextInspector(no payload) opens the modal with no seed', () => {
+    const s = altTextReducer(INITIAL, openAltTextInspector(undefined));
+    expect(selectAltTextOpen({ altText: s })).toBe(true);
+    expect(selectAltTextSeedNodeId({ altText: s })).toBeNull();
+  });
+
+  it('openAltTextInspector({seedNodeId}) opens the modal AND seeds the row', () => {
+    const s = altTextReducer(INITIAL, openAltTextInspector({ seedNodeId: 'struct:7' }));
+    expect(selectAltTextOpen({ altText: s })).toBe(true);
+    expect(selectAltTextSeedNodeId({ altText: s })).toBe('struct:7');
+  });
+
+  it('clearAltTextSeed drops the seed without closing the modal', () => {
+    let s = altTextReducer(INITIAL, openAltTextInspector({ seedNodeId: 'struct:7' }));
+    s = altTextReducer(s, clearAltTextSeed());
+    expect(selectAltTextOpen({ altText: s })).toBe(true);
+    expect(selectAltTextSeedNodeId({ altText: s })).toBeNull();
+  });
+
+  it('setAltTextOpen(false) clears any pending seed (modal-close hygiene)', () => {
+    let s = altTextReducer(INITIAL, openAltTextInspector({ seedNodeId: 'struct:7' }));
+    expect(selectAltTextSeedNodeId({ altText: s })).toBe('struct:7');
+    s = altTextReducer(s, setAltTextOpen(false));
+    expect(selectAltTextOpen({ altText: s })).toBe(false);
+    expect(selectAltTextSeedNodeId({ altText: s })).toBeNull();
   });
 });
 

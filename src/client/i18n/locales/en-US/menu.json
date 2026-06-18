@@ -91,7 +91,8 @@
     "sanitize": "Remove Hidden Information...",
     "autoBookmark": "Auto-generate Bookmarks...",
     "readAloud": "Read Aloud",
-    "preflight": "Preflight..."
+    "preflight": "Preflight...",
+    "runAccessibilityCheck": "Accessibility Check..."
   },
   "tooltips": {
     "findComing": "Find (Ctrl+F)",

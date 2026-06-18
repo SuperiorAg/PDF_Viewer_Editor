@@ -9,24 +9,13 @@
 import { describe, expect, test } from 'vitest';
 
 import { resolveKey, hasBaselineKey } from '../i18n/resolve';
-import { SHORTCUTS, type ShortcutSpec } from '../shortcuts';
+// Wave 5d follow-up (Riley): `formatShortcut` was previously a local
+// helper here; promoted to a named export in `shortcuts.ts` so the
+// palette + menu-bar mirrors render the same string the contract test
+// asserts against.
+import { formatShortcut, formatShortcutById, SHORTCUTS } from '../shortcuts';
 
 import { INTRINSIC_SHORTCUTS, TOOLS } from './registry';
-
-// ---------------------------------------------------------------------------
-// Helper: shortcut-text formatter (en-US convention; "Ctrl+Shift+S" style).
-// ---------------------------------------------------------------------------
-
-function formatShortcut(s: ShortcutSpec): string {
-  const parts: string[] = [];
-  if (s.ctrl) parts.push('Ctrl');
-  if (s.shift) parts.push('Shift');
-  if (s.alt) parts.push('Alt');
-  const keys = Array.isArray(s.key) ? s.key : [s.key];
-  const first = keys[0] ?? '';
-  parts.push(first.length === 1 ? first.toUpperCase() : first);
-  return parts.join('+');
-}
 
 // ---------------------------------------------------------------------------
 // (1) Every tool in registry has all 7 marking dimensions resolvable.
@@ -141,5 +130,39 @@ describe('tool registry — contract tests', () => {
       stale.map((t) => t.id),
       'no tool tooltip may say "Coming in Phase N" for a shipped phase',
     ).toEqual([]);
+  });
+
+  // -------------------------------------------------------------------------
+  // (5) Wave 5d follow-up (Riley) — chord-resolution at render time.
+  //
+  // The palette and the menu mirrors render the keyboard chord text via
+  // `formatShortcutById(tool.shortcutId)`. The contract test fixes the
+  // canonical format for any tool with a shortcut so the chord that
+  // appears in the UI cannot drift from the chord the global handler
+  // actually fires on. Specifically pins `tools:run-accessibility-check`
+  // at `Ctrl+Shift+A` because that exact string is the C6 discoverability
+  // ask — but the test scans every menu-only tool with a shortcut for
+  // symmetry, so adding a new accel-bound menu tool gets the same
+  // protection automatically.
+  // -------------------------------------------------------------------------
+
+  test('formatShortcutById resolves Ctrl+Shift+A for tools:run-accessibility-check', () => {
+    const chord = formatShortcutById('tools-a11y-check');
+    expect(chord).toBe('Ctrl+Shift+A');
+  });
+
+  test('every tool with a shortcutId resolves to a non-empty chord string', () => {
+    for (const tool of TOOLS) {
+      if (tool.shortcutId === null) continue;
+      const chord = formatShortcutById(tool.shortcutId);
+      expect(
+        chord,
+        `${tool.id}: shortcutId ${tool.shortcutId} did not resolve via formatShortcutById`,
+      ).not.toBeNull();
+      expect(
+        chord!.length,
+        `${tool.id}: chord text is empty for shortcutId ${tool.shortcutId}`,
+      ).toBeGreaterThan(0);
+    }
   });
 });

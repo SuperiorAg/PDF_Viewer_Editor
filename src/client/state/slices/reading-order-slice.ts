@@ -46,6 +46,15 @@ export interface ReadingOrderState {
    *  OR the engine returned a real recomputed order. Cleared by
    *  `loadedOrder` (a fresh non-recompute load) and by `resetReadingOrder`. */
   recomputeNoExtractorWarning: string | null;
+  /** Wave 5d follow-up (Riley): when the C6 accessibility checker routes a
+   *  quick-fix `'open-reading-order'` with a `targetNodeId`, the dispatcher
+   *  stores that node id here. The OrderBadge for the matching entry
+   *  scrolls into view + applies a focus modifier. Null when no quick-fix
+   *  focus is active. Cleared by `focusEntry(null)` and by
+   *  `resetReadingOrder`. The badge format is `struct:<objectNumber>`
+   *  per David's Wave 5c contract — direct equality against
+   *  ReadingOrderEntry.structNodeId. */
+  focusedEntryId: string | null;
   /** Honest engine error surface. */
   lastErrorMessage: string | null;
 }
@@ -61,6 +70,7 @@ const initialState: ReadingOrderState = {
   loaded: false,
   truncationWarning: null,
   recomputeNoExtractorWarning: null,
+  focusedEntryId: null,
   lastErrorMessage: null,
 };
 
@@ -157,6 +167,17 @@ export const readingOrderSlice = createSlice({
       state.autoDetectRunning = false;
       state.recomputeNoExtractorWarning = action.payload.noExtractorWarning ?? null;
     },
+    /** Wave 5d follow-up (Riley): C6 accessibility checker quick-fix
+     *  `'open-reading-order'` carries a `targetNodeId` (struct node id).
+     *  The dispatcher records it here so the matching OrderBadge
+     *  scrolls into view + paints a focus modifier. Pass `null` to
+     *  clear (e.g. after the animation expires or the user clicks
+     *  elsewhere). Independent of `active` — the focus survives
+     *  re-renders + scrolling so the user can drag-reorder while still
+     *  knowing which badge the checker pointed them at. */
+    focusEntry(state, action: PayloadAction<string | null>) {
+      state.focusedEntryId = action.payload;
+    },
     /** Reset on document close. Caller dispatches on close. */
     resetReadingOrder() {
       return initialState;
@@ -174,6 +195,7 @@ export const {
   appliedOrder,
   moveEntry,
   autoDetectedOrder,
+  focusEntry,
   resetReadingOrder,
 } = readingOrderSlice.actions;
 
@@ -226,4 +248,14 @@ export function selectReadingOrderRecomputeNoExtractor(state: {
   readingOrder: ReadingOrderState;
 }): string | null {
   return state.readingOrder.recomputeNoExtractorWarning;
+}
+
+/** Wave 5d follow-up (Riley) — the struct node id the C6 accessibility
+ *  checker's quick-fix asked the overlay to focus, or null when no
+ *  quick-fix focus is active. The OrderBadge component reads this and
+ *  scrolls-into-view + adds a focused-class on the matching entry. */
+export function selectReadingOrderFocusedEntry(state: {
+  readingOrder: ReadingOrderState;
+}): string | null {
+  return state.readingOrder.focusedEntryId;
 }

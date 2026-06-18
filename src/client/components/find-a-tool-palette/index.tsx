@@ -13,6 +13,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useT } from '../../i18n/use-t';
+import { formatShortcutById } from '../../shortcuts';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { selectFindAToolOpen } from '../../state/slices/ui-selectors';
 import { setFindAToolOpen } from '../../state/slices/ui-slice';
@@ -144,26 +145,41 @@ export function FindAToolPalette(): JSX.Element | null {
           {matches.length === 0 ? (
             <li className={styles.noResults}>{t('modals:findATool.noResults', { query })}</li>
           ) : (
-            matches.map((tool, i) => (
-              <li
-                key={tool.id}
-                role="option"
-                aria-selected={i === activeIndex}
-                className={`${styles.item} ${i === activeIndex ? styles.itemActive : ''}`}
-              >
-                {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- keyboard nav lives on the listbox container's onKeyDown (Enter selects activeIndex); mouse click on a row is a redundant fast-path. */}
-                <span
-                  className={styles.itemRow}
-                  onMouseEnter={() => setActiveIndex(i)}
-                  onClick={() => runTool(tool)}
+            matches.map((tool, i) => {
+              // Wave 5d follow-up (Riley) — resolve the chord text at render
+              // time from the global shortcut registry. Surfaces the keyboard
+              // chord next to the tool name so palette discoverability covers
+              // accelerators (e.g. Ctrl+Shift+A for Run Accessibility Check).
+              const chord = tool.shortcutId !== null ? formatShortcutById(tool.shortcutId) : null;
+              return (
+                <li
+                  key={tool.id}
+                  role="option"
+                  aria-selected={i === activeIndex}
+                  className={`${styles.item} ${i === activeIndex ? styles.itemActive : ''}`}
                 >
-                  <span className={styles.itemName}>{t(tool.nameKey)}</span>
-                  <span className={styles.itemMenu}>
-                    {t('modals:findATool.menuSuffix', { menu: tool.menu.top })}
+                  {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- keyboard nav lives on the listbox container's onKeyDown (Enter selects activeIndex); mouse click on a row is a redundant fast-path. */}
+                  <span
+                    className={styles.itemRow}
+                    onMouseEnter={() => setActiveIndex(i)}
+                    onClick={() => runTool(tool)}
+                  >
+                    <span className={styles.itemName}>{t(tool.nameKey)}</span>
+                    {chord !== null && (
+                      <span
+                        className={styles.itemShortcut}
+                        data-testid={`palette-shortcut-${tool.id}`}
+                      >
+                        {chord}
+                      </span>
+                    )}
+                    <span className={styles.itemMenu}>
+                      {t('modals:findATool.menuSuffix', { menu: tool.menu.top })}
+                    </span>
                   </span>
-                </span>
-              </li>
-            ))
+                </li>
+              );
+            })
           )}
         </ul>
         <div className={styles.instructions}>{t('modals:findATool.instructions')}</div>

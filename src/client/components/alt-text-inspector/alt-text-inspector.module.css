@@ -124,6 +124,28 @@
   border: 1px solid var(--panel-border-soft, #d8deea);
 }
 
+/* Wave 5d follow-up (Riley) — quick-fix focus modifier. A short outline
+ * pulse so the user can see which figure the C6 accessibility-checker
+ * routed them at. Border-color animation only — does not fight the
+ * input's :focus-visible outline. */
+.rowFocused {
+  animation: rowFocusPulse 2s ease-out 0s 1 forwards;
+  border-color: var(--warning-border, #f59e0b);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+}
+
+@keyframes rowFocusPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+  }
+}
+
 .rowHeader {
   display: flex;
   align-items: center;

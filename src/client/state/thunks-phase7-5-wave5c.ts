@@ -24,6 +24,7 @@
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
 
+import { READING_ORDER_RECOMPUTE_NO_EXTRACTOR_WARNING } from '../constants/reading-order';
 import { callListFiguresWithoutAltText, callSetAltText } from '../services/alt-text-api';
 import { callGetReadingOrder, callSetReadingOrder } from '../services/reading-order-api';
 import { isOrderContiguous } from '../types/reading-order-contract-stub';
@@ -166,12 +167,19 @@ export const autoDetectReadingOrderThunk = createAsyncThunk<
     return;
   }
   // Detect the honesty warning. David's contract carries warnings as a
-  // string[] — substring match on 'no-extractor-wired' so any future
-  // re-wording of the warning still trips the banner.
+  // string[] — Wave 5d follow-up (Riley): switched from substring match
+  // on 'no-extractor-wired' to FULL equality against the constant
+  // READING_ORDER_RECOMPUTE_NO_EXTRACTOR_WARNING (mirrored in
+  // `src/client/constants/reading-order.ts` from David's engine literal at
+  // `src/main/pdf-ops/reading-order-engine.ts`). Full equality means a
+  // future rewording on EITHER side trips both the drift gate in
+  // `src/client/constants/reading-order.test.ts` AND this branch — Riley
+  // updates the mirror, David updates the engine, and the renderer banner
+  // never silently goes dark on a "still-real" gap.
   const warnings = res.value.warnings ?? [];
   let noExtractor: string | null = null;
   for (const w of warnings) {
-    if (w.includes('no-extractor-wired')) {
+    if (w === READING_ORDER_RECOMPUTE_NO_EXTRACTOR_WARNING) {
       noExtractor = w;
       break;
     }
