@@ -418,6 +418,36 @@ export type {
   PdfEditLinksError,
   PdfEditLinksValue,
   PdfEditLinksResponse,
+  // Phase 7.5 Wave 5c — C4 Reading Order + C5 Alt Text (canonical David shape).
+  // Wave 5d carry-over: previously typed locally in
+  // `reading-order-contract-stub.ts` / `alt-text-contract-stub.ts`; now those
+  // files are thin re-export wrappers over these canonical types.
+  ReadingOrderEntry,
+  PdfGetReadingOrderRequest,
+  PdfGetReadingOrderError,
+  PdfGetReadingOrderValue,
+  PdfGetReadingOrderResponse,
+  PdfSetReadingOrderRequest,
+  PdfSetReadingOrderError,
+  PdfSetReadingOrderValue,
+  PdfSetReadingOrderResponse,
+  PdfSetAltTextRequest,
+  PdfSetAltTextError,
+  PdfSetAltTextValue,
+  PdfSetAltTextResponse,
+  FigureWithoutAlt,
+  PdfListFiguresWithoutAltTextRequest,
+  PdfListFiguresWithoutAltTextError,
+  PdfListFiguresWithoutAltTextValue,
+  PdfListFiguresWithoutAltTextResponse,
+  // Phase 7.5 Wave 5d — C6 Accessibility Checker (canonical David shape).
+  AccessibilityRuleSeverity,
+  AccessibilityRuleResult,
+  AccessibilityCheckSummary,
+  PdfRunAccessibilityCheckRequest,
+  PdfRunAccessibilityCheckError,
+  PdfRunAccessibilityCheckValue,
+  PdfRunAccessibilityCheckResponse,
   // §12. PdfApi aggregate
   PdfApi,
   ChannelName,

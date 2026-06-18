@@ -2254,6 +2254,12 @@ export interface PdfGetReadingOrderRequest {
    *  (1064-page test PDF must return quickly when fetching a single
    *  page's blocks). */
   pageIndex?: number;
+  /** When `true`, force the production bbox/text walker to re-run rather
+   *  than returning whatever order the engine derived from the existing
+   *  /K array. Drives Riley's "Auto-detect from layout" button so the
+   *  overlay can fall through to a spatial sort without a contract churn.
+   *  Wave 5d (David) carry-over from Wave 5c. */
+  recompute?: boolean;
 }
 
 export type PdfGetReadingOrderError =
@@ -2335,6 +2341,96 @@ export interface PdfListFiguresWithoutAltTextValue {
 export type PdfListFiguresWithoutAltTextResponse = Result<
   PdfListFiguresWithoutAltTextValue,
   PdfListFiguresWithoutAltTextError
+>;
+
+// ---- pdf:runAccessibilityCheck (C6) ---------------------------------------
+//
+// Phase 7.5 Wave 5d — Accessibility Checker rules engine.
+//
+// Contract: docs/api-contracts.md §19.8.
+// Spec:     docs/accessibility-authoring-spec.md §6.
+// Engine:   src/main/pdf-ops/accessibility-engine.ts +
+//           src/main/pdf-ops/accessibility-rules/<rule-id>.ts.
+//
+// HONESTY CLAUSE (P7.5-L-10 obligation #2): the engine ships a SUBSET of
+// WCAG 2.1 + PDF/UA-1 rules. The response carries both `shippedRuleCount`
+// (count) AND `subsetDisclosure` (a verbatim string Riley's UI surfaces
+// without paraphrasing). Renderer MUST display the disclosure alongside
+// any pass/fail summary so users never see a "fully WCAG-compliant"
+// claim — only what we actually check.
+
+export type AccessibilityRuleSeverity = 'error' | 'warning' | 'info';
+
+export interface AccessibilityRuleResult {
+  /** See docs/accessibility-authoring-spec.md §6.3 (e.g. `a11y.document.title-present`). */
+  ruleId: string;
+  severity: AccessibilityRuleSeverity;
+  /** Three-state outcome:
+   *   - `'pass'`  — rule ran and the doc satisfies it
+   *   - `'warn'`  — rule ran and the doc is not in violation but the
+   *                check is best-effort (color contrast spot-sample,
+   *                placeholder alt-text detection, scope hints)
+   *   - `'fail'`  — rule ran and the doc fails it
+   *   - `'unevaluated'` — rule shipped but cannot be fully assessed by
+   *                pure pdf-lib (color contrast requires a raster; we
+   *                surface this honestly rather than falsely passing) */
+  status: 'pass' | 'warn' | 'fail' | 'unevaluated';
+  /** Boolean mirror for renderers that pre-date the four-state model.
+   *  Defined as `status === 'pass'`. */
+  passed: boolean;
+  /** i18n key — renderer resolves via `t()`. */
+  message: string;
+  /** Where the failure / warning is — drives the panel's per-issue
+   *  navigation. Empty array when the rule fires at the document level. */
+  locations: { pageIndex: number; structNodeId?: string }[];
+  /** Quick-fix routing — drives the panel's "Open X" buttons. Absent
+   *  when no in-app remediation surface applies. */
+  quickFix?: {
+    kind:
+      | 'open-tag-editor'
+      | 'open-reading-order'
+      | 'open-alt-text-inspector'
+      | 'open-document-properties';
+    targetNodeId?: string;
+  };
+}
+
+export interface PdfRunAccessibilityCheckRequest {
+  handle: DocumentHandle;
+}
+
+export type PdfRunAccessibilityCheckError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'engine_failed';
+
+export interface AccessibilityCheckSummary {
+  pass: number;
+  warn: number;
+  fail: number;
+  unevaluated: number;
+}
+
+export interface PdfRunAccessibilityCheckValue {
+  results: AccessibilityRuleResult[];
+  /** Aggregate pass/warn/fail/unevaluated counts. */
+  summary: AccessibilityCheckSummary;
+  /** ms epoch — for the "Last run at ..." display. */
+  ranAt: number;
+  /** Total rules in the SHIPPED rule set. Honest disclosure regression
+   *  test asserts the value matches the rule-registry length. */
+  shippedRuleCount: number;
+  /** Verbatim disclosure string the renderer surfaces without
+   *  paraphrasing. Belt-and-braces for P7.5-L-10: the contract carries
+   *  the words, not a flag. Wave 5d value:
+   *  "Subset of WCAG 2.1 + PDF/UA-1 — see Help for the shipped rule
+   *  set." (12 rules at v0.8.0 cut). */
+  subsetDisclosure: string;
+}
+
+export type PdfRunAccessibilityCheckResponse = Result<
+  PdfRunAccessibilityCheckValue,
+  PdfRunAccessibilityCheckError
 >;
 
 // ---- pdf:applyStamp (B7) ---------------------------------------------------
@@ -4483,6 +4579,11 @@ export const Channels = {
   PdfSetReadingOrder: 'pdf:setReadingOrder',
   PdfSetAltText: 'pdf:setAltText',
   PdfListFiguresWithoutAltText: 'pdf:listFiguresWithoutAltText',
+  // Phase 7.5 Wave 5d (David, 2026-06-17) — C6 Accessibility Checker.
+  // Pure pdf-lib + optional pdf.js text-layer extractor seam (text-layer
+  // count for the searchable-pdf rule); rules engine ships a SUBSET of
+  // WCAG 2.1 + PDF/UA-1 per docs/accessibility-authoring-spec.md §6.
+  PdfRunAccessibilityCheck: 'pdf:runAccessibilityCheck',
   // Phase 2 fs (replay-engine entry point)
   FsApplyEditOps: 'fs:applyEditOps',
   // Phase 4.1 (api-contracts.md §15, David)
@@ -4692,6 +4793,10 @@ export interface PdfApi {
     listFiguresWithoutAltText: (
       req: PdfListFiguresWithoutAltTextRequest,
     ) => Promise<PdfListFiguresWithoutAltTextResponse>;
+    // Phase 7.5 Wave 5d (David, 2026-06-17) — C6 Accessibility Checker.
+    runAccessibilityCheck: (
+      req: PdfRunAccessibilityCheckRequest,
+    ) => Promise<PdfRunAccessibilityCheckResponse>;
   };
   // Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud (TTS).
   tts: {

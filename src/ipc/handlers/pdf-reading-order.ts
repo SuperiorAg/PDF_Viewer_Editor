@@ -36,6 +36,10 @@ import type {
 const getRequestSchema = z.object({
   handle: z.number().int().positive(),
   pageIndex: z.number().int().nonnegative().optional(),
+  // Phase 7.5 Wave 5d (David, 2026-06-17): "Auto-detect from layout"
+  // toggle. When true the engine surfaces the no-extractor-wired
+  // warning so the renderer can show the gap honestly.
+  recompute: z.boolean().optional(),
 });
 
 const readingOrderEntrySchema = z.object({
@@ -91,7 +95,9 @@ export async function handlePdfGetReadingOrder(
   }
   const engine = deps.engineGet ?? getReadingOrder;
   try {
-    const opts = parsed.data.pageIndex !== undefined ? { pageIndex: parsed.data.pageIndex } : {};
+    const opts: { pageIndex?: number; recompute?: boolean } = {};
+    if (parsed.data.pageIndex !== undefined) opts.pageIndex = parsed.data.pageIndex;
+    if (parsed.data.recompute === true) opts.recompute = true;
     const res = await engine(bytes, opts);
     if (!res.ok) {
       return mapGetEngineErr(res.error, res.message);

@@ -132,6 +132,12 @@ function makeBridgeUnavailableFallback(): PdfApi {
       setReadingOrder: unavailable,
       setAltText: unavailable,
       listFiguresWithoutAltText: unavailable,
+      // Phase 7.5 Wave 5d (David, 2026-06-17) — C6 Accessibility Checker.
+      // Same fallback-stub precedent as Wave 5c above: PdfApi['pdf'] adds
+      // `runAccessibilityCheck`, so the fallback must stub it or the
+      // renderer typecheck fails. Real impl is in accessibility-engine.ts
+      // + pdf-accessibility-check.ts (main) and the preload exposure.
+      runAccessibilityCheck: unavailable,
     },
     // Phase 3 (api-contracts §13)
     forms: {

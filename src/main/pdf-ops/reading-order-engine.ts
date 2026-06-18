@@ -98,6 +98,20 @@ export interface GetReadingOrderOptions {
    *  emits a filtered list. Use this on the 1064-page PDF to keep
    *  the renderer payload small. */
   pageIndex?: number;
+  /** Phase 7.5 Wave 5d carry-over (David, 2026-06-17).
+   *
+   *  When `true`, recompute order from a spatial bbox / text walker
+   *  rather than returning the /K-derived order. v0.8.0 ships WITHOUT a
+   *  production bbox extractor wired in this code path, so the honest
+   *  behaviour is: still return /K order, but emit the warning
+   *  `reading-order.recompute.no-extractor-wired` so Riley's "Auto-
+   *  detect from layout" button can show the gap to the user rather
+   *  than silently pretending the layout walker ran.
+   *
+   *  When the future extractor lands, this is the seam — wire a layout
+   *  walker via the handler's deps and the engine emits the recomputed
+   *  order without contract churn. */
+  recompute?: boolean;
 }
 
 export interface SetReadingOrderValue {
@@ -152,6 +166,15 @@ export async function getReadingOrder(
   const kEntry = structRoot.get(PDFName.of('K'));
   if (kEntry === undefined) {
     return ok<GetReadingOrderValue>({ blocks: [], warnings });
+  }
+
+  if (options.recompute === true) {
+    // v0.8.0 has no production bbox/text walker wired into the engine
+    // itself. Surface the gap honestly per the contract JSDoc rather
+    // than silently returning the same /K order without disclosure.
+    // A future wave that wires the layout walker can replace this
+    // warning with the recomputed blocks.
+    warnings.push('reading-order.recompute.no-extractor-wired');
   }
 
   const blocks: ReadingOrderBlock[] = [];

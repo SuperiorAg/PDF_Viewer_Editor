@@ -93,6 +93,30 @@ describe('getReadingOrder', () => {
     if (!res.ok) return;
     expect(res.value.blocks).toEqual([]);
   });
+
+  it('emits the no-extractor-wired warning when recompute=true (Wave 5d honesty)', async () => {
+    const tree = node('Document', [
+      node('H1', [], { actualText: 'A' }),
+      node('P', [], { actualText: 'B' }),
+    ]);
+    const tagged = await makeTaggedPdf(tree);
+    const res = await getReadingOrder(tagged, { recompute: true });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.warnings).toContain('reading-order.recompute.no-extractor-wired');
+    // Order is still the /K-derived sequence — recompute without a wired
+    // walker is a no-op except for the disclosure warning.
+    expect(res.value.blocks.length).toBe(2);
+  });
+
+  it('does NOT emit the recompute warning when recompute is unset', async () => {
+    const tree = node('Document', [node('H1', [], { actualText: 'A' })]);
+    const tagged = await makeTaggedPdf(tree);
+    const res = await getReadingOrder(tagged);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.warnings).not.toContain('reading-order.recompute.no-extractor-wired');
+  });
 });
 
 describe('setReadingOrder', () => {

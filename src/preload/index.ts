@@ -133,6 +133,9 @@ import type {
   PdfSetAltTextResponse,
   PdfListFiguresWithoutAltTextRequest,
   PdfListFiguresWithoutAltTextResponse,
+  // Phase 7.5 Wave 5d (David, 2026-06-17) — C6 Accessibility Checker.
+  PdfRunAccessibilityCheckRequest,
+  PdfRunAccessibilityCheckResponse,
   TtsListVoicesRequest,
   TtsListVoicesResponse,
   TtsSpeakTextRequest,
@@ -428,6 +431,12 @@ const pdfApi: PdfApi = {
         Channels.PdfListFiguresWithoutAltText,
         req,
       ) as Promise<PdfListFiguresWithoutAltTextResponse>,
+    // Phase 7.5 Wave 5d (David, 2026-06-17) — C6 Accessibility Checker.
+    runAccessibilityCheck: (req: PdfRunAccessibilityCheckRequest) =>
+      ipcRenderer.invoke(
+        Channels.PdfRunAccessibilityCheck,
+        req,
+      ) as Promise<PdfRunAccessibilityCheckResponse>,
   },
   // Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud (TTS).
   tts: {

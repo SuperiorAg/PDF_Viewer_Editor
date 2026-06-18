@@ -113,6 +113,8 @@ import { handleOcrListJobs } from './handlers/ocr-list-jobs.js';
 import { handleOcrListResultsByJob } from './handlers/ocr-list-results-by-job.js';
 import { handleOcrRunOnDocument } from './handlers/ocr-run-on-document.js';
 import { handleOcrRunOnPage } from './handlers/ocr-run-on-page.js';
+// Phase 7.5 Wave 5d (David, 2026-06-17) — C6 Accessibility Checker.
+import { handlePdfRunAccessibilityCheck } from './handlers/pdf-accessibility-check.js';
 // Phase 7.5 Wave 2 (David, 2026-06-17) — B5 / B10 / B11 page operations.
 // Phase 7.5 Wave 5c (David, 2026-06-17) — C5 Alt Text.
 import {
@@ -1303,6 +1305,20 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
     handlePdfSetAltText(payload, {
       getBytes: (h) => documentStore.getBytes(h),
       setBytes: (h, b) => documentStore.setBytes(h, b),
+    }),
+  );
+
+  // Phase 7.5 Wave 5d (David, 2026-06-17) — C6 Accessibility Checker.
+  // Pure pdf-lib rules engine. The text-extractor seam is intentionally
+  // NOT wired here in v0.8.0 — extractor-dependent rules emit
+  // `'unevaluated'` honestly per the four-state model (P7.5-L-10).
+  // When a future wave wires a pdf.js text-content walker (same loader
+  // shape as auto-tag), pass it via `extractor: productionExtractor`
+  // and the engine will start producing pass/fail for the two
+  // extractor-gated rules without contract churn.
+  ipcMain.handle(Channels.PdfRunAccessibilityCheck, (_evt, payload) =>
+    handlePdfRunAccessibilityCheck(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
     }),
   );
 

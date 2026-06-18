@@ -89,6 +89,24 @@ describe('handlePdfGetReadingOrder', () => {
     expect(res.value.order[0]!.bbox).toEqual([10, 20, 30, 40]);
   });
 
+  it('forwards recompute=true to the engine (Wave 5d carry-over)', async () => {
+    const engineGet = vi.fn().mockResolvedValue(
+      ok<GetReadingOrderValue>({
+        blocks: [],
+        warnings: ['reading-order.recompute.no-extractor-wired'],
+      }),
+    );
+    const deps: PdfReadingOrderDeps = {
+      getBytes: () => FAKE_BYTES,
+      engineGet,
+    };
+    const res = await handlePdfGetReadingOrder({ handle: 1, recompute: true }, deps);
+    expect(engineGet).toHaveBeenCalledWith(FAKE_BYTES, { recompute: true });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.warnings).toContain('reading-order.recompute.no-extractor-wired');
+  });
+
   it('degrades honestly when bboxLookup throws', async () => {
     const engineGet = vi.fn().mockResolvedValue(
       ok<GetReadingOrderValue>({
