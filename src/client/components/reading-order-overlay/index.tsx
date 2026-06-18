@@ -29,6 +29,7 @@ import {
   selectReadingOrder,
   selectReadingOrderActive,
   selectReadingOrderDirty,
+  selectReadingOrderRecomputeNoExtractor,
   selectReadingOrderState,
   selectReadingOrderTruncationWarning,
   setReadingOrderActive,
@@ -59,6 +60,10 @@ export function ReadingOrderOverlay(): JSX.Element | null {
   const state = useAppSelector(selectReadingOrderState);
   const dirty = useAppSelector(selectReadingOrderDirty);
   const truncationWarning = useAppSelector(selectReadingOrderTruncationWarning);
+  // Wave 5d (Riley) — David's `'reading-order.recompute.no-extractor-wired'`
+  // warning lives here when the user clicked Auto-detect and the engine
+  // couldn't actually recompute. Drives the permanent honesty banner.
+  const recomputeNoExtractor = useAppSelector(selectReadingOrderRecomputeNoExtractor);
 
   // Local drag state — kept in component state because the actual reorder
   // only commits on drop (the slice dispatch). Sliding `dragOverIndex`
@@ -184,6 +189,15 @@ export function ReadingOrderOverlay(): JSX.Element | null {
             {t('modals:accessibility.readingOrder.truncationBanner', {
               message: truncationWarning,
             })}
+          </div>
+        )}
+        {recomputeNoExtractor !== null && (
+          <div
+            className={styles.truncationBanner}
+            role="status"
+            data-testid="reading-order-recompute-banner"
+          >
+            {t('modals:accessibility.readingOrder.recomputeNoExtractor')}
           </div>
         )}
         {doc === null && (

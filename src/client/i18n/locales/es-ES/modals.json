@@ -630,6 +630,40 @@
     "locationCount_one": "{{count}} ubicación · primera en la página {{firstPage}}",
     "locationCount_other": "{{count}} ubicaciones · primera en la página {{firstPage}}"
   },
+  "accessibility": {
+    "readingOrder": {
+      "recomputeNoExtractor": "Auto-detección no disponible — extractor de texto no integrado en esta versión. Mostrando el orden del árbol de etiquetas."
+    },
+    "checker": {
+      "title": "Comprobación de accesibilidad",
+      "run": "Ejecutar comprobación de accesibilidad",
+      "running": "Ejecutando…",
+      "rerun": "Volver a ejecutar",
+      "retry": "Reintentar",
+      "lastRun": "Última ejecución {{when}}",
+      "shippedRules": "{{count}} reglas incluidas",
+      "summaryPass": "Pasa",
+      "summaryWarn": "Advertencia",
+      "summaryFail": "Falla",
+      "summaryUnevaluated": "No evaluado",
+      "groupFail": "Errores ({{count}})",
+      "groupWarn": "Advertencias ({{count}})",
+      "groupUnevaluated": "No evaluadas ({{count}})",
+      "groupPass": "Aprobadas ({{count}})",
+      "locationPage": "Página {{page}}",
+      "noDocument": "Abra un PDF para ejecutar la comprobación.",
+      "clickRunHint": "Pulse Ejecutar comprobación de accesibilidad para empezar.",
+      "engineFailedTitle": "La comprobación de accesibilidad falló",
+      "engineFailedBody": "La comprobación de accesibilidad falló. Vuelva a abrir el documento.",
+      "bridgeUnavailableBody": "El motor de accesibilidad no está disponible en esta versión.",
+      "quickFix": {
+        "openTagEditor": "Abrir editor de etiquetas PDF",
+        "openReadingOrder": "Abrir superposición de orden de lectura",
+        "openAltTextInspector": "Abrir Inspector de texto alternativo",
+        "openDocumentProperties": "Abrir propiedades del documento"
+      }
+    }
+  },
   "autoBookmark": {
     "title": "Generar marcadores automáticamente",
     "reviewTitle": "Revisar marcadores generados",

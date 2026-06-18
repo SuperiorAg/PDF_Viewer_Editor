@@ -170,6 +170,9 @@
   "altTextInspector": "Alt Text Inspector…",
   "altTextInspectorTooltip": "Open the Alt Text Inspector (list figures missing alt text, bulk-set similar figures)",
   "altTextInspectorAria": "Open the Alt Text Inspector",
+  "runAccessibilityCheck": "Accessibility Check…",
+  "runAccessibilityCheckTooltip": "Run the Accessibility Checker (12 shipped rules — subset of WCAG 2.1 + PDF/UA-1)",
+  "runAccessibilityCheckAria": "Open the Accessibility Checker panel and run the check",
   "linkOverlayUrlPrefix": "Link →",
   "linkContextMenu": {
     "edit": "Edit link",

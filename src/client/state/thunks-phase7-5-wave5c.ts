@@ -133,13 +133,13 @@ export const applyReadingOrderThunk = createAsyncThunk<
   );
 });
 
-/** Auto-detect from layout. David exposes this as a re-fetch with a
- *  `recompute: true` hint on `pdf:getReadingOrder`; until his canonical
- *  surface lands the renderer falls through to the same `getReadingOrder`
- *  call (the engine returns whatever order it has; the user re-runs after
- *  David's commit lands the spatial walker). The intermediate UX is honest:
- *  the button label flips to "Auto-detect (engine pending)" when the
- *  bridge is missing — see the overlay component. */
+/** Auto-detect from layout. Wave 5d (Riley) now passes the canonical
+ *  `recompute: true` flag David shipped on `PdfGetReadingOrderRequest`.
+ *  When the production text-extractor isn't wired, David's engine emits
+ *  the warning `'reading-order.recompute.no-extractor-wired'` which the
+ *  overlay surfaces honestly via a banner (see ReadingOrderOverlay) —
+ *  no fake-success. The slice also stores the no-extractor warning so
+ *  the overlay can render it idempotently across re-renders. */
 export const autoDetectReadingOrderThunk = createAsyncThunk<
   void,
   void,
@@ -151,11 +151,13 @@ export const autoDetectReadingOrderThunk = createAsyncThunk<
     return;
   }
   dispatch(setAutoDetectRunning(true));
-  // Same channel; David's parallel commit wires `recompute: true` on a
-  // `PdfGetReadingOrderRequest`. Until then the renderer passes the bare
-  // request and the engine returns the same order — the user sees a
-  // toast that this needs David's parallel commit.
-  const res = await callGetReadingOrder({ handle: doc.handle });
+  // Wave 5d (Riley): pass David's canonical `recompute: true` flag so the
+  // engine attempts the spatial walker. When no text extractor is wired
+  // the engine returns the existing /K order PLUS the
+  // 'reading-order.recompute.no-extractor-wired' warning string — the
+  // overlay banner reads `state.recomputeNoExtractor` to render the
+  // honesty banner.
+  const res = await callGetReadingOrder({ handle: doc.handle, recompute: true });
   if (!res.ok) {
     dispatch(setReadingOrderLastError(res.message));
     if (res.error !== 'bridge_unavailable') {
@@ -163,7 +165,18 @@ export const autoDetectReadingOrderThunk = createAsyncThunk<
     }
     return;
   }
-  dispatch(autoDetectedOrder({ order: res.value.order }));
+  // Detect the honesty warning. David's contract carries warnings as a
+  // string[] — substring match on 'no-extractor-wired' so any future
+  // re-wording of the warning still trips the banner.
+  const warnings = res.value.warnings ?? [];
+  let noExtractor: string | null = null;
+  for (const w of warnings) {
+    if (w.includes('no-extractor-wired')) {
+      noExtractor = w;
+      break;
+    }
+  }
+  dispatch(autoDetectedOrder({ order: res.value.order, noExtractorWarning: noExtractor }));
 });
 
 // ============================================================================

@@ -5,6 +5,9 @@ import { useT } from '../../i18n/use-t';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { selectSidebarCollapsed, selectSidebarTab } from '../../state/slices/ui-selectors';
 import { setSidebarTab, type SidebarTab } from '../../state/slices/ui-slice';
+// Phase 7.5 C6 (Riley Wave 5d) — Accessibility Checker panel mounted above
+// the Wave 5b Tag PDF tree editor inside the Accessibility sidebar tab.
+import { AccessibilityCheckPanel } from '../accessibility-check-panel';
 import { BookmarksPanel } from '../bookmarks-panel';
 import { FormsPanel } from '../forms-panel';
 // Phase 5 — OCR results panel as the 4th sidebar tab.
@@ -91,8 +94,16 @@ export function Sidebar(): JSX.Element | null {
       // Phase 7.5 C2 (Riley Wave 5a) — Preflight tab.
       <PreflightPanel />
     ) : (
-      // Phase 7.5 C3 (Riley Wave 5b) — Accessibility (Tag PDF editor) tab.
-      <TagTreeEditor />
+      // Phase 7.5 C3 (Riley Wave 5b) + C6 (Wave 5d) — Accessibility tab now
+      // hosts the Wave 5d Accessibility Checker (top) above the Wave 5b
+      // Tag PDF tree editor (bottom). Two-pane layout per
+      // docs/ui-spec-phase-7.5.md §27. The checker dispatches its quick-fix
+      // actions into the same slices the tree editor reads, so the
+      // "Open Tag PDF Editor" quick-fix just scrolls to the tree below.
+      <>
+        <AccessibilityCheckPanel />
+        <TagTreeEditor />
+      </>
     );
 
   return (

@@ -75,6 +75,8 @@ import {
   printThunk,
   saveDocumentThunk,
 } from '../state/thunks';
+// Phase 7.5 Wave 5d (Riley) — C6 Accessibility Checker run.
+import { runAccessibilityCheckThunk } from '../state/thunks-phase7-5-wave5d';
 
 // ============================================================================
 // Type surface — `ToolDef` interface per docs/tool-registry-spec.md §1.
@@ -169,6 +171,11 @@ export type ToolId =
   // a modal that lists figures missing alt text + offers bulk-set.
   | 'tools:reading-order'
   | 'tools:alt-text'
+  // Phase 7.5 Wave 5d (Riley) — C6 Accessibility Checker. Tools-menu +
+  // palette + Ctrl+Shift+A. Opens the Accessibility sidebar tab + fires
+  // the Run thunk immediately so the user sees results without an extra
+  // click.
+  | 'tools:run-accessibility-check'
   // help
   | 'help:help'
   | 'help:about';
@@ -1168,6 +1175,38 @@ export const TOOLS: readonly ToolDef[] = [
       'image',
       'screen reader',
       'a11y',
+    ],
+  },
+
+  // ---- Phase 7.5 Wave 5d (Riley) — C6 Accessibility Checker ----
+  // Ctrl+Shift+A — opens the Accessibility sidebar tab + immediately
+  // dispatches the run thunk. Mirrors Wave 5a Preflight's "open tab and
+  // run" UX, except the C6 sidebar tab is multi-pane so the dispatch
+  // doesn't disturb the Wave 5b Tag PDF tree editor beneath it.
+  {
+    id: 'tools:run-accessibility-check',
+    nameKey: 'toolbar:runAccessibilityCheck',
+    tooltipKey: 'toolbar:runAccessibilityCheckTooltip',
+    ariaLabelKey: 'toolbar:runAccessibilityCheckAria',
+    icon: null,
+    shortcutId: 'tools-a11y-check',
+    menu: { top: 'tools' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: docOpen,
+    dispatch: (d, s) => {
+      d(setSidebarTab('accessibility'));
+      if (s.ui.sidebarCollapsed) d(toggleSidebar());
+      void d(runAccessibilityCheckThunk());
+    },
+    searchKeywords: [
+      'accessibility',
+      'check',
+      'checker',
+      'a11y',
+      'wcag',
+      'pdf/ua',
+      'audit',
+      'compliance',
     ],
   },
 

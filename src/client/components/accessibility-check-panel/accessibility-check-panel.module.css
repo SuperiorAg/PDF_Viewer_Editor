@@ -1,0 +1,288 @@
+/* Accessibility Checker panel — Phase 7.5 C6 (Riley Wave 5d).
+ * Per docs/ui-spec-phase-7.5.md §27. Mounted INSIDE the Accessibility
+ * sidebar tab, above the Wave 5b Tag PDF tree editor. */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px 8px;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text, #1c2026);
+  border-bottom: 1px solid var(--panel-border, #c5cdd6);
+  background: var(--panel-bg-subtle, #fafbfc);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.titleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.shippedBadge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--panel-bg-subtle, #e8ecf2);
+  color: var(--text-muted, #4a525d);
+}
+
+/* HONESTY DISCLOSURE — verbatim subsetDisclosure from David's response.
+ * Permanent, italicized, never paraphrased. Per P7.5-L-10 obligation #2. */
+.subsetDisclosure {
+  margin: 0;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--text-muted, #4a525d);
+  line-height: 1.4;
+}
+
+.lastRun {
+  font-size: 11px;
+  color: var(--text-muted, #4a525d);
+}
+
+.runRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.runButton {
+  flex: 1 1 auto;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--accent, #2563eb);
+  border-radius: 4px;
+  background: var(--accent, #2563eb);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.runButton:disabled {
+  background: var(--button-bg, #e8ecf2);
+  color: var(--text-muted, #4a525d);
+  border-color: var(--button-border, #c5cdd6);
+  cursor: not-allowed;
+}
+
+.runButton:hover:not(:disabled) {
+  background: var(--accent-hover, #1d4ed8);
+}
+
+.error {
+  padding: 8px 10px;
+  background: var(--danger-soft, #fee2e2);
+  border: 1px solid var(--danger-border, #ef4444);
+  border-radius: 4px;
+  color: var(--danger-text, #7f1d1d);
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.errorTitle {
+  font-weight: 600;
+}
+
+.retryButton {
+  align-self: flex-start;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--button-border, #c5cdd6);
+  border-radius: 4px;
+  background: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.emptyState {
+  padding: 14px 8px;
+  text-align: center;
+  color: var(--text-muted, #4a525d);
+  font-style: italic;
+}
+
+/* ---- summary pills ---- */
+
+.summaryBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.summaryPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--panel-border, #c5cdd6);
+  background: #ffffff;
+}
+
+.summaryPillFail {
+  border-color: var(--danger-border, #ef4444);
+  color: var(--danger-text, #b91c1c);
+}
+
+.summaryPillWarn {
+  border-color: var(--warning-border, #f59e0b);
+  color: var(--warning-text, #b45309);
+}
+
+.summaryPillPass {
+  border-color: var(--success-border, #16a34a);
+  color: var(--success-text, #166534);
+}
+
+.summaryPillUnevaluated {
+  border-color: var(--panel-border, #c5cdd6);
+  color: var(--text-muted, #4a525d);
+}
+
+/* ---- results list ---- */
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.section {
+  border: 1px solid var(--panel-border, #c5cdd6);
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--panel-border, #c5cdd6);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  color: inherit;
+}
+
+.sectionHeader[aria-expanded='false'] {
+  border-bottom-color: transparent;
+}
+
+.sectionList {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--panel-border-subtle, #eef0f3);
+}
+
+.row:first-child {
+  border-top: 0;
+}
+
+.rowHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.severityFail {
+  color: var(--danger-text, #b91c1c);
+  font-weight: 700;
+}
+
+.severityWarn {
+  color: var(--warning-text, #b45309);
+  font-weight: 700;
+}
+
+.severityUnevaluated {
+  color: var(--text-muted, #4a525d);
+  font-weight: 600;
+}
+
+.severityPass {
+  color: var(--success-text, #166534);
+  font-weight: 600;
+}
+
+.ruleLabel {
+  font-weight: 600;
+}
+
+.message {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.locations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.locationChip {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--panel-bg-subtle, #e8ecf2);
+  color: var(--text-muted, #4a525d);
+  border: 1px solid var(--panel-border, #c5cdd6);
+  cursor: pointer;
+}
+
+.locationChip:hover {
+  background: var(--button-bg-hover, #d8dee7);
+}
+
+.quickFix {
+  align-self: flex-start;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--accent, #2563eb);
+  border-radius: 3px;
+  background: #ffffff;
+  color: var(--accent, #2563eb);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.quickFix:hover {
+  background: var(--accent, #2563eb);
+  color: #ffffff;
+}

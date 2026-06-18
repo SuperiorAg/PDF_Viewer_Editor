@@ -1,14 +1,21 @@
 // Reading-order contract stub — Phase 7.5 C4 (Riley Wave 5c).
 //
-// David's parallel Wave 5c commit lands `pdf:getReadingOrder` and
-// `pdf:setReadingOrder` in `src/ipc/contracts.ts`. Until those types are
-// re-exported through the renderer gatekeeper (`./ipc-contract`), the
-// renderer types the surface LOCALLY here against the EXACT shape in
-// `docs/api-contracts.md §19.7.4`. When David's commit lands and
-// `./ipc-contract` re-exports the canonical types, this file becomes a
-// thin re-export wrapper (same promotion path Wave 5a/5b stubs followed:
-// `tts-contract-stub.ts`, `preflight-contract-stub.ts`,
-// `struct-tree-contract-stub.ts`).
+// David's parallel Wave 5c commit landed `pdf:getReadingOrder` and
+// `pdf:setReadingOrder` in `src/ipc/contracts.ts`. This stub carries a
+// renderer-local widening that adds `'bridge_unavailable'` to the error
+// union so the service wrappers can return a structurally-correct Result
+// when `window.pdfApi.pdf.getReadingOrder` isn't exposed yet (Vitest +
+// pre-bridge dev builds). The renderer types match
+// `docs/api-contracts.md §19.7.4` plus that single widening.
+//
+// Wave 5d (Riley, 2026-06-18): the request now carries the canonical
+// optional `recompute?: boolean` flag (David's contract field, contracts.ts
+// line 2262). Setting `recompute: true` asks the engine to re-walk the
+// layout-text extractor instead of returning the existing /K order — drives
+// the Reading Order overlay's "Auto-detect from layout" button. When the
+// production extractor isn't wired the engine emits the warning
+// `'reading-order.recompute.no-extractor-wired'` which the overlay surfaces
+// honestly via the recompute banner (no fake-success).
 //
 // HONESTY CLAUSE: the renderer applies a Reading-Order edit ONLY via
 // `pdf:setReadingOrder` which writes through David's
@@ -42,6 +49,15 @@ export interface ReadingOrderEntry {
 
 export interface PdfGetReadingOrderRequest {
   handle: DocumentHandle;
+  /** Optional per-page filter (Wave 5d carry-over from David's canonical
+   *  shape — load-bearing for large-PDF perf gate). */
+  pageIndex?: number;
+  /** When `true`, force the production bbox/text walker to re-run rather
+   *  than returning whatever order the engine derived from the existing
+   *  /K array. Drives Riley's "Auto-detect from layout" button so the
+   *  overlay can fall through to a spatial sort without a contract
+   *  churn. Mirrors David's canonical field name (contracts.ts §19.7.4). */
+  recompute?: boolean;
 }
 
 export type PdfGetReadingOrderError =
@@ -53,7 +69,8 @@ export type PdfGetReadingOrderError =
 export interface PdfGetReadingOrderValue {
   /** Sorted by `order` ascending. */
   order: ReadingOrderEntry[];
-  /** Engine warnings (e.g. "10k-node truncation — only first 10000 returned"). */
+  /** Engine warnings (e.g. "10k-node truncation — only first 10000 returned",
+   *  "reading-order.recompute.no-extractor-wired"). */
   warnings?: string[];
 }
 

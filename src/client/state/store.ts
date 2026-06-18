@@ -2,6 +2,8 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { formCommitMiddleware } from './middleware/form-commit-middleware';
 import { historyMiddleware } from './middleware/history-middleware';
+// Phase 7.5 Wave 5d (Riley) — C6 Accessibility Checker panel slice.
+import accessibilityCheckReducer from './slices/accessibility-check-slice';
 // Phase 7.5 Wave 5c (Riley) — C5 Alt Text inspector modal slice.
 import altTextReducer from './slices/alt-text-slice';
 import annotationsReducer from './slices/annotations-slice';
@@ -93,6 +95,8 @@ export const store = configureStore({
     // Phase 7.5 Wave 5c (Riley) — C4 Reading Order overlay + C5 Alt Text inspector.
     readingOrder: readingOrderReducer,
     altText: altTextReducer,
+    // Phase 7.5 Wave 5d (Riley) — C6 Accessibility Checker panel.
+    accessibilityCheck: accessibilityCheckReducer,
     // Phase 7
     update: updateReducer,
     telemetry: telemetryReducer,

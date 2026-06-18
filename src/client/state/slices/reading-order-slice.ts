@@ -38,6 +38,14 @@ export interface ReadingOrderState {
   /** Carries over the 10k-node truncation warning from David's
    *  `pdf:getReadingOrder` (and the struct-tree get when applicable). */
   truncationWarning: string | null;
+  /** Wave 5d honesty surface: when the user clicks Auto-detect and the
+   *  engine returns the `'reading-order.recompute.no-extractor-wired'`
+   *  warning, the slice records the raw warning string here so the
+   *  overlay can render a permanent honesty banner instead of pretending
+   *  the recompute succeeded. Null when no recompute has been attempted
+   *  OR the engine returned a real recomputed order. Cleared by
+   *  `loadedOrder` (a fresh non-recompute load) and by `resetReadingOrder`. */
+  recomputeNoExtractorWarning: string | null;
   /** Honest engine error surface. */
   lastErrorMessage: string | null;
 }
@@ -52,6 +60,7 @@ const initialState: ReadingOrderState = {
   autoDetectRunning: false,
   loaded: false,
   truncationWarning: null,
+  recomputeNoExtractorWarning: null,
   lastErrorMessage: null,
 };
 
@@ -99,6 +108,9 @@ export const readingOrderSlice = createSlice({
       state.loading = false;
       state.loaded = true;
       state.truncationWarning = action.payload.truncationWarning;
+      // Fresh non-recompute load clears any stale no-extractor banner — the
+      // user explicitly re-loaded from the live tree.
+      state.recomputeNoExtractorWarning = null;
       state.lastErrorMessage = null;
     },
     /** setReadingOrder returned ok — clear dirty (originalOrder := order). */
@@ -129,10 +141,21 @@ export const readingOrderSlice = createSlice({
     },
     /** Auto-detect engine returned — promote into the live order. The
      *  user reviews + Applies; the dirty flag flips automatically because
-     *  the engine output differs from originalOrder. */
-    autoDetectedOrder(state, action: PayloadAction<{ order: ReadingOrderEntry[] }>) {
+     *  the engine output differs from originalOrder.
+     *  Wave 5d (Riley): `noExtractorWarning` carries David's verbatim
+     *  `'reading-order.recompute.no-extractor-wired'` string when the
+     *  production extractor isn't wired. The overlay surfaces this as a
+     *  permanent banner so users never see a "fake-success" Auto-detect. */
+    autoDetectedOrder(
+      state,
+      action: PayloadAction<{
+        order: ReadingOrderEntry[];
+        noExtractorWarning?: string | null;
+      }>,
+    ) {
       state.order = action.payload.order.map((e) => ({ ...e }));
       state.autoDetectRunning = false;
+      state.recomputeNoExtractorWarning = action.payload.noExtractorWarning ?? null;
     },
     /** Reset on document close. Caller dispatches on close. */
     resetReadingOrder() {
@@ -195,4 +218,12 @@ export function selectReadingOrderTruncationWarning(state: {
   readingOrder: ReadingOrderState;
 }): string | null {
   return state.readingOrder.truncationWarning;
+}
+
+/** Wave 5d (Riley) — surfaces David's `'no-extractor-wired'` warning
+ *  verbatim. Drives the Auto-detect honesty banner in the overlay. */
+export function selectReadingOrderRecomputeNoExtractor(state: {
+  readingOrder: ReadingOrderState;
+}): string | null {
+  return state.readingOrder.recomputeNoExtractorWarning;
 }

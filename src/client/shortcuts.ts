@@ -82,7 +82,12 @@ export type ShortcutId =
   // `rotate-ccw` (Phase 1). Wave-5a tracks a Marcus follow-up to migrate
   // either chord; for now we ship Read Aloud on `Ctrl+Alt+R` so the bar is
   // reachable via keyboard without breaking existing rotate semantics.
-  | 'read-aloud';
+  | 'read-aloud'
+  // Phase 7.5 C6 (Riley Wave 5d) — Accessibility Checker run.
+  // Ctrl+Shift+A picked after auditing shortcuts.ts: Ctrl+A is
+  // `select-all-pages` (Phase 1), Ctrl+Shift+A is free. The chord opens
+  // the Accessibility sidebar tab + immediately fires the Run thunk.
+  | 'tools-a11y-check';
 
 // Phase 7.5 B12 NOTE: page-content region Cut / Copy / Paste are NOT
 // registered as ShortcutIds. They are CONTEXT-SENSITIVE — only active when
@@ -409,6 +414,17 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
     key: 'r',
     ctrl: true,
     alt: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  // Phase 7.5 C6 (Riley Wave 5d) — Run the Accessibility Checker.
+  // Ctrl+A is `select-all-pages`; Ctrl+Shift+A was free.
+  {
+    id: 'tools-a11y-check',
+    label: 'Run Accessibility Check',
+    key: 'A',
+    ctrl: true,
+    shift: true,
     enabledInPhase1: false,
     enabledInPhases: [7],
   },

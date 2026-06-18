@@ -1081,6 +1081,7 @@
       "dragInstruction": "Drag a badge to a new position to change the reading order.",
       "engineUnavailable": "Reading-order engine not available — David's preload bridge has not landed yet.",
       "truncationBanner": "Reading order truncated by the engine: {{message}}",
+      "recomputeNoExtractor": "Auto-detect unavailable — layout text extractor not wired in this build. Showing tag-tree order.",
       "dirty": "Unsaved reading-order edits",
       "moveBadgeUp": "Move earlier in reading order",
       "moveBadgeDown": "Move later in reading order"
@@ -1116,6 +1117,116 @@
         "apply": "Apply to all",
         "cancel": "Cancel"
       }
+    },
+    "checker": {
+      "title": "Accessibility Check",
+      "panelAria": "Accessibility checker results",
+      "run": "Run Accessibility Check",
+      "running": "Running…",
+      "runAria": "Run the accessibility checker on this document",
+      "rerun": "Re-run check",
+      "retry": "Retry",
+      "lastRun": "Last run {{when}}",
+      "shippedRules": "{{count}} rules shipped",
+      "shippedRulesAria": "This build ships {{count}} accessibility rules",
+      "summaryPass": "Pass",
+      "summaryWarn": "Warn",
+      "summaryFail": "Fail",
+      "summaryUnevaluated": "Not assessed",
+      "summaryAriaLabel": "Summary: {{fail}} fail, {{warn}} warn, {{pass}} pass, {{unevaluated}} not assessed",
+      "groupFail": "Errors ({{count}})",
+      "groupWarn": "Warnings ({{count}})",
+      "groupUnevaluated": "Not assessed ({{count}})",
+      "groupPass": "Passed ({{count}})",
+      "expandGroup": "Expand {{group}}",
+      "collapseGroup": "Collapse {{group}}",
+      "locationPage": "Page {{page}}",
+      "locationPageAria": "Jump to page {{page}}",
+      "noDocument": "Open a PDF to run the check.",
+      "noDocumentTooltip": "Open a PDF to run the check",
+      "clickRunHint": "Click Run Accessibility Check to start.",
+      "engineFailedTitle": "Accessibility check failed",
+      "engineFailedBody": "Accessibility check failed. Please reopen the document.",
+      "bridgeUnavailableBody": "Accessibility engine not available in this build.",
+      "honestyDisclosureAria": "Honesty disclosure",
+      "quickFix": {
+        "openTagEditor": "Open Tag PDF Editor",
+        "openReadingOrder": "Open Reading Order Overlay",
+        "openAltTextInspector": "Open Alt Text Inspector",
+        "openDocumentProperties": "Open Document Properties",
+        "aria": "{{label}} — quick fix"
+      }
+    },
+    "ruleLabels": {
+      "documentTitlePresent": "Document title is set",
+      "documentLanguageSet": "Document language is set",
+      "structureTreePresent": "Structure tree is present",
+      "figuresAllHaveAltText": "Figures have alt text",
+      "altNotPlaceholder": "Alt text is not placeholder",
+      "tablesHeadersIdentified": "Tables have headers",
+      "tablesScopeSet": "Table headers have scope",
+      "readingOrderDefined": "Reading order is defined",
+      "contentNonTextTagged": "Non-text content is tagged",
+      "scannedPagesSearchable": "Scanned pages are searchable",
+      "javascriptNoFormActions": "No JavaScript form actions",
+      "colorContrastSpotSample": "Color contrast (spot sample)",
+      "_unknownRule": "Accessibility rule"
+    },
+    "ruleMessages": {
+      "documentTitlePresent": {
+        "pass": "Document /Title metadata is present.",
+        "fail": "Document is missing a /Title in the metadata. Set it in Document Properties."
+      },
+      "documentLanguageSet": {
+        "pass": "Document /Lang metadata is present.",
+        "fail": "Document is missing a /Lang code (e.g. 'en-US'). Set it in Document Properties."
+      },
+      "structureTreePresent": {
+        "pass": "Document has a /StructTreeRoot.",
+        "fail": "Document has no structure tree. Open Tag PDF and run Auto-tag, or author tags manually."
+      },
+      "figuresAllHaveAltText": {
+        "pass": "Every /Figure has alt text.",
+        "passNoFigures": "Document has no /Figure elements.",
+        "fail": "One or more /Figure elements are missing alt text. Open Alt Text Inspector."
+      },
+      "altNotPlaceholder": {
+        "pass": "Alt text strings look meaningful.",
+        "passNoFigures": "Document has no /Figure elements.",
+        "warn": "Some alt text looks like a placeholder (e.g. 'image', 'figure'). Review in Alt Text Inspector."
+      },
+      "tablesHeadersIdentified": {
+        "pass": "Tables have header rows identified.",
+        "passNoTables": "Document has no /Table elements.",
+        "fail": "Some /Table elements have no /TH children. Open Tag PDF to add table headers."
+      },
+      "tablesScopeSet": {
+        "pass": "Table header cells have /Scope attributes.",
+        "passNoTh": "Document has no /TH elements.",
+        "warn": "Some /TH elements lack a /Scope attribute. Open Tag PDF to set scope."
+      },
+      "readingOrderDefined": {
+        "pass": "Reading order is derivable from the structure tree.",
+        "unevaluatedNoStructTree": "Cannot assess reading order — no structure tree. Tag the document first."
+      },
+      "contentNonTextTagged": {
+        "pass": "Non-text content (images, shapes) appears to be tagged.",
+        "fail": "Some non-text content is untagged. Review in Tag PDF.",
+        "unevaluatedNoExtractor": "Cannot assess non-text tagging — text extractor not wired in this build."
+      },
+      "scannedPagesSearchable": {
+        "pass": "No scanned-image-only pages detected.",
+        "fail": "Scanned-image-only pages are not searchable. Run OCR on the document.",
+        "unevaluatedNoExtractor": "Cannot assess scan searchability — text extractor not wired in this build."
+      },
+      "javascriptNoFormActions": {
+        "pass": "Document has no JavaScript form actions.",
+        "warn": "Document has JavaScript form actions — verify they degrade for assistive tech."
+      },
+      "colorContrastSpotSample": {
+        "unevaluatedPdfLibCannotRasterize": "Color contrast cannot be assessed without rasterizing — this engine is pure pdf-lib and cannot rasterize."
+      },
+      "_unknown": "(no message — see engine output)"
     }
   },
   "autoBookmark": {

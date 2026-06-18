@@ -20,6 +20,7 @@ import readingOrderReducer, {
   selectReadingOrder,
   selectReadingOrderActive,
   selectReadingOrderDirty,
+  selectReadingOrderRecomputeNoExtractor,
   selectReadingOrderTruncationWarning,
   setReadingOrderActive,
   setReadingOrderApplying,
@@ -49,6 +50,7 @@ describe('reading-order slice — reducer contract', () => {
     expect(INITIAL.autoDetectRunning).toBe(false);
     expect(INITIAL.lastErrorMessage).toBeNull();
     expect(INITIAL.truncationWarning).toBeNull();
+    expect(INITIAL.recomputeNoExtractorWarning).toBeNull();
   });
 
   it('setActive toggles the overlay flag', () => {
@@ -121,6 +123,49 @@ describe('reading-order slice — reducer contract', () => {
     s = readingOrderReducer(s, autoDetectedOrder({ order: proposed }));
     expect(selectReadingOrder({ readingOrder: s })[0]?.structNodeId).toBe('d');
     expect(s.autoDetectRunning).toBe(false);
+  });
+
+  // Wave 5d — auto-detect honesty surface for the no-extractor case.
+  it('autoDetectedOrder records the no-extractor-wired warning verbatim', () => {
+    const s = readingOrderReducer(
+      INITIAL,
+      autoDetectedOrder({
+        order: sample(),
+        noExtractorWarning: 'reading-order.recompute.no-extractor-wired',
+      }),
+    );
+    expect(selectReadingOrderRecomputeNoExtractor({ readingOrder: s })).toBe(
+      'reading-order.recompute.no-extractor-wired',
+    );
+  });
+
+  it('autoDetectedOrder clears the no-extractor warning when undefined/null', () => {
+    let s = readingOrderReducer(
+      INITIAL,
+      autoDetectedOrder({
+        order: sample(),
+        noExtractorWarning: 'reading-order.recompute.no-extractor-wired',
+      }),
+    );
+    expect(selectReadingOrderRecomputeNoExtractor({ readingOrder: s })).not.toBeNull();
+    s = readingOrderReducer(s, autoDetectedOrder({ order: sample() }));
+    expect(selectReadingOrderRecomputeNoExtractor({ readingOrder: s })).toBeNull();
+  });
+
+  it('loadedOrder (fresh load) clears any stale no-extractor warning', () => {
+    let s = readingOrderReducer(
+      INITIAL,
+      autoDetectedOrder({
+        order: sample(),
+        noExtractorWarning: 'reading-order.recompute.no-extractor-wired',
+      }),
+    );
+    expect(selectReadingOrderRecomputeNoExtractor({ readingOrder: s })).not.toBeNull();
+    s = readingOrderReducer(
+      s,
+      loadedOrder({ docHash: 'doc-2', order: sample(), truncationWarning: null }),
+    );
+    expect(selectReadingOrderRecomputeNoExtractor({ readingOrder: s })).toBeNull();
   });
 
   it('setReadingOrderLastError clears running flags', () => {
