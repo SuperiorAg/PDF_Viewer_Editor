@@ -122,6 +122,16 @@ function makeBridgeUnavailableFallback(): PdfApi {
       getStructTree: unavailable,
       setStructTree: unavailable,
       autoTagPages: unavailable,
+      // Phase 7.5 Wave 5c (David, 2026-06-17) — C4 Reading Order + C5
+      // Alt Text. Same precedent as Wave 5b above: the canonical PdfApi
+      // surface in contracts.ts adds these fields, so the fallback must
+      // stub each method or the renderer typecheck fails. Real impl is
+      // in pdf-reading-order.ts + pdf-alt-text.ts (main) + the preload
+      // exposure.
+      getReadingOrder: unavailable,
+      setReadingOrder: unavailable,
+      setAltText: unavailable,
+      listFiguresWithoutAltText: unavailable,
     },
     // Phase 3 (api-contracts §13)
     forms: {

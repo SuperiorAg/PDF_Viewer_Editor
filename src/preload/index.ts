@@ -124,6 +124,15 @@ import type {
   PdfSetStructTreeResponse,
   PdfAutoTagPagesRequest,
   PdfAutoTagPagesResponse,
+  // Phase 7.5 Wave 5c (David, 2026-06-17) — C4 Reading Order + C5 Alt Text.
+  PdfGetReadingOrderRequest,
+  PdfGetReadingOrderResponse,
+  PdfSetReadingOrderRequest,
+  PdfSetReadingOrderResponse,
+  PdfSetAltTextRequest,
+  PdfSetAltTextResponse,
+  PdfListFiguresWithoutAltTextRequest,
+  PdfListFiguresWithoutAltTextResponse,
   TtsListVoicesRequest,
   TtsListVoicesResponse,
   TtsSpeakTextRequest,
@@ -407,6 +416,18 @@ const pdfApi: PdfApi = {
       ipcRenderer.invoke(Channels.PdfSetStructTree, req) as Promise<PdfSetStructTreeResponse>,
     autoTagPages: (req: PdfAutoTagPagesRequest) =>
       ipcRenderer.invoke(Channels.PdfAutoTagPages, req) as Promise<PdfAutoTagPagesResponse>,
+    // Phase 7.5 Wave 5c (David, 2026-06-17) — C4 Reading Order + C5 Alt Text.
+    getReadingOrder: (req: PdfGetReadingOrderRequest) =>
+      ipcRenderer.invoke(Channels.PdfGetReadingOrder, req) as Promise<PdfGetReadingOrderResponse>,
+    setReadingOrder: (req: PdfSetReadingOrderRequest) =>
+      ipcRenderer.invoke(Channels.PdfSetReadingOrder, req) as Promise<PdfSetReadingOrderResponse>,
+    setAltText: (req: PdfSetAltTextRequest) =>
+      ipcRenderer.invoke(Channels.PdfSetAltText, req) as Promise<PdfSetAltTextResponse>,
+    listFiguresWithoutAltText: (req: PdfListFiguresWithoutAltTextRequest) =>
+      ipcRenderer.invoke(
+        Channels.PdfListFiguresWithoutAltText,
+        req,
+      ) as Promise<PdfListFiguresWithoutAltTextResponse>,
   },
   // Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud (TTS).
   tts: {

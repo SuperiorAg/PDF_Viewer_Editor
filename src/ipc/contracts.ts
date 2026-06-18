@@ -2227,6 +2227,116 @@ export interface PdfAutoTagPagesValue {
 
 export type PdfAutoTagPagesResponse = Result<PdfAutoTagPagesValue, PdfAutoTagPagesError>;
 
+// ---- Phase 7.5 Wave 5c — C4 Reading Order + C5 Alt Text (api-contracts §19.7.4 / §19.7.5) ----
+//
+// Engines: src/main/pdf-ops/reading-order-engine.ts + alt-text-engine.ts.
+// Both are pure pdf-lib; production wires a pdf.js bbox extractor at the
+// handler boundary for the overlay payload only. The engines never touch
+// pdf.js directly (L-004 / L-005 compliance lives at the wiring point).
+
+export interface ReadingOrderEntry {
+  /** FK into StructTreeNode.id when the renderer pairs this with a
+   *  getStructTree call. Engine emits `struct:<objectNumber>` so the
+   *  identifier is stable across the get → reorder → set round-trip. */
+  structNodeId: string;
+  pageIndex: number;
+  /** 0-based within the doc. */
+  order: number;
+  /** [llx, lly, urx, ury] in user-space points; engine returns
+   *  `[0,0,0,0]` when no hint is recoverable, production extractor
+   *  refines via pdf.js mcid → bbox mapping. */
+  bbox: [number, number, number, number];
+}
+
+export interface PdfGetReadingOrderRequest {
+  handle: DocumentHandle;
+  /** Optional per-page filter — load-bearing for large-PDF perf gate
+   *  (1064-page test PDF must return quickly when fetching a single
+   *  page's blocks). */
+  pageIndex?: number;
+}
+
+export type PdfGetReadingOrderError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'no_struct_tree'
+  | 'engine_failed';
+
+export interface PdfGetReadingOrderValue {
+  order: ReadingOrderEntry[];
+  warnings: string[];
+}
+
+export type PdfGetReadingOrderResponse = Result<PdfGetReadingOrderValue, PdfGetReadingOrderError>;
+
+export interface PdfSetReadingOrderRequest {
+  handle: DocumentHandle;
+  /** Full-doc ordering. The engine rejects partial reorderings (every
+   *  current top-level structure element MUST appear exactly once). */
+  order: ReadingOrderEntry[];
+}
+
+export type PdfSetReadingOrderError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'no_struct_tree'
+  | 'order_inconsistent'
+  | 'engine_failed';
+
+export interface PdfSetReadingOrderValue {
+  applied: true;
+  warnings: string[];
+}
+
+export type PdfSetReadingOrderResponse = Result<PdfSetReadingOrderValue, PdfSetReadingOrderError>;
+
+export interface PdfSetAltTextRequest {
+  handle: DocumentHandle;
+  structNodeId: string;
+  /** Empty string removes /Alt. */
+  altText: string;
+  /** Optional /ActualText override. */
+  actualText?: string;
+}
+
+export type PdfSetAltTextError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'node_not_found'
+  | 'engine_failed';
+
+export interface PdfSetAltTextValue {
+  applied: true;
+  warnings: string[];
+}
+
+export type PdfSetAltTextResponse = Result<PdfSetAltTextValue, PdfSetAltTextError>;
+
+export interface PdfListFiguresWithoutAltTextRequest {
+  handle: DocumentHandle;
+}
+
+export type PdfListFiguresWithoutAltTextError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'engine_failed';
+
+export interface FigureWithoutAlt {
+  structNodeId: string;
+  pageIndex: number;
+  bbox: [number, number, number, number];
+}
+
+export interface PdfListFiguresWithoutAltTextValue {
+  figures: FigureWithoutAlt[];
+  warnings: string[];
+}
+
+export type PdfListFiguresWithoutAltTextResponse = Result<
+  PdfListFiguresWithoutAltTextValue,
+  PdfListFiguresWithoutAltTextError
+>;
+
 // ---- pdf:applyStamp (B7) ---------------------------------------------------
 
 export interface PdfApplyStampRequest {
@@ -4366,6 +4476,13 @@ export const Channels = {
   PdfGetStructTree: 'pdf:getStructTree',
   PdfSetStructTree: 'pdf:setStructTree',
   PdfAutoTagPages: 'pdf:autoTagPages',
+  // Phase 7.5 Wave 5c (David, 2026-06-17) — C4 Reading Order + C5 Alt Text.
+  // Pure pdf-lib engines; production wires a bbox/text extractor at the
+  // handler boundary. See docs/api-contracts.md §19.7.4 / §19.7.5.
+  PdfGetReadingOrder: 'pdf:getReadingOrder',
+  PdfSetReadingOrder: 'pdf:setReadingOrder',
+  PdfSetAltText: 'pdf:setAltText',
+  PdfListFiguresWithoutAltText: 'pdf:listFiguresWithoutAltText',
   // Phase 2 fs (replay-engine entry point)
   FsApplyEditOps: 'fs:applyEditOps',
   // Phase 4.1 (api-contracts.md §15, David)
@@ -4568,6 +4685,13 @@ export interface PdfApi {
     getStructTree: (req: PdfGetStructTreeRequest) => Promise<PdfGetStructTreeResponse>;
     setStructTree: (req: PdfSetStructTreeRequest) => Promise<PdfSetStructTreeResponse>;
     autoTagPages: (req: PdfAutoTagPagesRequest) => Promise<PdfAutoTagPagesResponse>;
+    // Phase 7.5 Wave 5c (David, 2026-06-17) — C4 Reading Order + C5 Alt Text.
+    getReadingOrder: (req: PdfGetReadingOrderRequest) => Promise<PdfGetReadingOrderResponse>;
+    setReadingOrder: (req: PdfSetReadingOrderRequest) => Promise<PdfSetReadingOrderResponse>;
+    setAltText: (req: PdfSetAltTextRequest) => Promise<PdfSetAltTextResponse>;
+    listFiguresWithoutAltText: (
+      req: PdfListFiguresWithoutAltTextRequest,
+    ) => Promise<PdfListFiguresWithoutAltTextResponse>;
   };
   // Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud (TTS).
   tts: {

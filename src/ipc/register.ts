@@ -114,6 +114,11 @@ import { handleOcrListResultsByJob } from './handlers/ocr-list-results-by-job.js
 import { handleOcrRunOnDocument } from './handlers/ocr-run-on-document.js';
 import { handleOcrRunOnPage } from './handlers/ocr-run-on-page.js';
 // Phase 7.5 Wave 2 (David, 2026-06-17) — B5 / B10 / B11 page operations.
+// Phase 7.5 Wave 5c (David, 2026-06-17) — C5 Alt Text.
+import {
+  handlePdfListFiguresWithoutAltText,
+  handlePdfSetAltText,
+} from './handlers/pdf-alt-text.js';
 // Phase 7.5 Wave 3 (David, 2026-06-17) — B4 page-design + B7 Stamps.
 import { handlePdfApplyBackground } from './handlers/pdf-apply-background.js';
 import type { FsApplyEditOpsDeps } from './handlers/pdf-apply-edit-ops.js';
@@ -142,6 +147,11 @@ import { handlePdfGetOutline } from './handlers/pdf-ops.js';
 // Wave-30 follow-up (H-30.1, David 2026-06-01): real combine handler +
 // path-only file picker. Replaces the Phase-1 `not_implemented` stub.
 import { handlePdfPrint } from './handlers/pdf-print.js';
+// Phase 7.5 Wave 5c (David, 2026-06-17) — C4 Reading Order.
+import {
+  handlePdfGetReadingOrder,
+  handlePdfSetReadingOrder,
+} from './handlers/pdf-reading-order.js';
 import { handlePdfRemoveHiddenInfo } from './handlers/pdf-remove-hidden-info.js';
 import { handlePdfReplacePages } from './handlers/pdf-replace-pages.js';
 import { handlePdfReplaceText } from './handlers/pdf-replace-text.js';
@@ -355,11 +365,13 @@ export type _UnusedOcrEngineError = OcrEngineError;
 type AutoBookmarkPdfJsTextItem = {
   str?: string;
   transform?: number[];
+  width?: number;
   height?: number;
 };
 
 type AutoBookmarkPdfJsPage = {
   getTextContent(): Promise<{ items: AutoBookmarkPdfJsTextItem[] }>;
+  getViewport?(opts: { scale: number }): { width: number; height: number };
 };
 
 type AutoBookmarkPdfJsDoc = {
@@ -423,6 +435,126 @@ async function productionExtractPageTextItems(
       items.push({ text, fontSize });
     }
     return items;
+  } finally {
+    try {
+      await doc.destroy?.();
+    } catch {
+      /* best-effort */
+    }
+  }
+}
+
+/**
+ * Production extractor for `pdf:autoTagPages` (Wave 5c carry-over).
+ *
+ * Builds an `AutoTagPageInput[]` from the supplied bytes via the same
+ * canonical pdf.js loader. Text items are extracted via `getTextContent`
+ * (font size from `transform[3]`, bbox from transform + width/height).
+ *
+ * Honest deferral: image items are NOT extracted here. Detecting raster
+ * images requires walking `getOperatorList()` with CTM tracking — the
+ * heavy machinery the export pipeline carries. For Wave 5c the auto-tag
+ * heuristic ships with text-only inputs; the renderer surfaces an
+ * "auto-tag — figures not detected; tag manually" warning via the
+ * engine's per-page diagnostics. Figure / alt-text authoring is handled
+ * by the dedicated alt-text inspector path (C5).
+ *
+ * L-004 / L-005 compliance — same shape as the auto-bookmark extractor:
+ *   - canvas globals installed BEFORE the dynamic pdf.js import resolves
+ *   - bytes copied via `new Uint8Array(...).slice()` so pdf.js's
+ *     fake-worker transport never detaches the caller's view.
+ */
+type AutoTagPageRangeArg = 'all' | { start: number; end: number };
+
+interface AutoTagExtractedPage {
+  pageIndex: number;
+  pageSize: { widthPt: number; heightPt: number };
+  textItems: Array<{
+    text: string;
+    fontSize: number;
+    readingIndex: number;
+    bbox?: [number, number, number, number];
+  }>;
+  imageItems: Array<{
+    readingIndex: number;
+    bbox: [number, number, number, number];
+  }>;
+}
+
+async function productionExtractAutoTagPages(
+  bytes: Uint8Array,
+  range: AutoTagPageRangeArg,
+): Promise<ReadonlyArray<AutoTagExtractedPage>> {
+  const pdfjs = await loadAutoBookmarkPdfJs();
+  const ownedCopy = new Uint8Array(bytes).slice();
+  const doc = await pdfjs.getDocument({ data: ownedCopy }).promise;
+  try {
+    const numPages = doc.numPages;
+    let firstIdx: number;
+    let lastIdx: number;
+    if (range === 'all') {
+      firstIdx = 0;
+      lastIdx = numPages - 1;
+    } else {
+      firstIdx = Math.max(0, Math.floor(range.start));
+      lastIdx = Math.min(numPages - 1, Math.floor(range.end));
+    }
+    if (firstIdx > lastIdx) return [];
+
+    const out: AutoTagExtractedPage[] = [];
+    for (let pi = firstIdx; pi <= lastIdx; pi += 1) {
+      const page = await doc.getPage(pi + 1); // pdf.js is 1-indexed
+      const viewport = page.getViewport
+        ? page.getViewport({ scale: 1 })
+        : { width: 612, height: 792 };
+      const widthPt = Math.max(1, viewport.width);
+      const heightPt = Math.max(1, viewport.height);
+      const content = await page.getTextContent();
+      const textItems: AutoTagExtractedPage['textItems'] = [];
+      let readingIndex = 0;
+      for (const it of content.items) {
+        const text = typeof it.str === 'string' ? it.str : '';
+        if (text.length === 0) continue;
+        const tform = Array.isArray(it.transform) ? it.transform : null;
+        const fromTransform =
+          tform && tform.length >= 6 && Number.isFinite(tform[3]!) ? Math.abs(tform[3]!) : null;
+        const fontSize =
+          fromTransform !== null
+            ? fromTransform
+            : Number.isFinite(it.height ?? NaN)
+              ? (it.height as number)
+              : 0;
+        if (fontSize <= 0) continue;
+        // bbox from transform + width/height: pdf.js places the baseline
+        // at (transform[4], transform[5]); the item spans `width` to the
+        // right and rises `height` upward (PDF coord system).
+        let bbox: [number, number, number, number] | undefined;
+        if (
+          tform &&
+          tform.length >= 6 &&
+          Number.isFinite(tform[4]!) &&
+          Number.isFinite(tform[5]!) &&
+          typeof it.width === 'number' &&
+          typeof it.height === 'number'
+        ) {
+          const x = tform[4]!;
+          const y = tform[5]!;
+          bbox = [x, y, x + it.width, y + it.height];
+        }
+        textItems.push(
+          bbox
+            ? { text, fontSize, readingIndex: readingIndex++, bbox }
+            : { text, fontSize, readingIndex: readingIndex++ },
+        );
+      }
+      out.push({
+        pageIndex: pi,
+        pageSize: { widthPt, heightPt },
+        textItems,
+        imageItems: [], // honest deferral — see fn header comment
+      });
+    }
+    return out;
   } finally {
     try {
       await doc.destroy?.();
@@ -1136,11 +1268,41 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
   ipcMain.handle(Channels.PdfAutoTagPages, (_evt, payload) =>
     handlePdfAutoTagPages(payload, {
       getBytes: (h) => documentStore.getBytes(h),
-      // Wave 5b: production extractor not wired. The handler returns
-      // an honest 'engine_failed' until a pdf.js text-extractor adapter
-      // ships in the follow-up wave (routes through `loadPdfJs` per
-      // L-005). Riley's C3 UI surfaces this as "Run auto-tag — heuristic
-      // unavailable" until then.
+      // Phase 7.5 Wave 5c (David, 2026-06-17): production pdf.js
+      // extractor now wired. Same canonical loader as auto-bookmark
+      // (canvas globals BEFORE the dynamic import; bytes copied per
+      // L-004). Image-item extraction is the honest deferral here —
+      // text-only inputs produce a valid tree minus Figure nodes,
+      // which the alt-text inspector path handles.
+      extractAutoTagPages: productionExtractAutoTagPages,
+    }),
+  );
+
+  // Phase 7.5 Wave 5c (David, 2026-06-17) — C4 Reading Order + C5 Alt Text.
+  // Engines are pure pdf-lib (no new deps). bboxLookup is intentionally
+  // omitted in v1 — the engine returns zero-rects and the renderer falls
+  // back to a "select-to-locate" hover affordance. A pdf.js bbox walker
+  // can be wired in a follow-up wave without touching the engine.
+  ipcMain.handle(Channels.PdfGetReadingOrder, (_evt, payload) =>
+    handlePdfGetReadingOrder(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+    }),
+  );
+  ipcMain.handle(Channels.PdfSetReadingOrder, (_evt, payload) =>
+    handlePdfSetReadingOrder(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+    }),
+  );
+  ipcMain.handle(Channels.PdfListFiguresWithoutAltText, (_evt, payload) =>
+    handlePdfListFiguresWithoutAltText(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+    }),
+  );
+  ipcMain.handle(Channels.PdfSetAltText, (_evt, payload) =>
+    handlePdfSetAltText(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
     }),
   );
 
