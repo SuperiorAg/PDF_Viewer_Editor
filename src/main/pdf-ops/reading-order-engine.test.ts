@@ -10,6 +10,7 @@ import type { StructTreeNode } from '../../ipc/contracts.js';
 import {
   autoDetectReadingOrderFromLayout,
   getReadingOrder,
+  READING_ORDER_RECOMPUTE_NO_EXTRACTOR_WARNING,
   setReadingOrder,
   type LayoutBlock,
 } from './reading-order-engine.js';
@@ -103,7 +104,7 @@ describe('getReadingOrder', () => {
     const res = await getReadingOrder(tagged, { recompute: true });
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect(res.value.warnings).toContain('reading-order.recompute.no-extractor-wired');
+    expect(res.value.warnings).toContain(READING_ORDER_RECOMPUTE_NO_EXTRACTOR_WARNING);
     // Order is still the /K-derived sequence — recompute without a wired
     // walker is a no-op except for the disclosure warning.
     expect(res.value.blocks.length).toBe(2);
@@ -115,7 +116,38 @@ describe('getReadingOrder', () => {
     const res = await getReadingOrder(tagged);
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect(res.value.warnings).not.toContain('reading-order.recompute.no-extractor-wired');
+    expect(res.value.warnings).not.toContain(READING_ORDER_RECOMPUTE_NO_EXTRACTOR_WARNING);
+  });
+
+  // Phase 7.5 Wave 5d follow-up (David, 2026-06-18).
+  //
+  // Riley's reading-order-overlay banner currently detects this gap via a
+  // substring match on 'no-extractor-wired' (see
+  // src/client/components/reading-order-overlay/index.tsx). If this token
+  // ever drifts (e.g. someone rewords it to ".no-walker-wired" or
+  // "...no_extractor"), the banner silently stops appearing — a
+  // fake-success regression. Pin the literal here so any future drift
+  // forces an explicit edit in both places.
+  it('reading-order.recompute warning token is stable (Riley overlay banner pins this)', () => {
+    expect(READING_ORDER_RECOMPUTE_NO_EXTRACTOR_WARNING).toBe(
+      'reading-order.recompute.no-extractor-wired',
+    );
+  });
+
+  // Smoke test: full equality on the warnings array, not just substring.
+  // Pairs with the constant pin above.
+  it('emits exactly the constant token in warnings[] when recompute=true (full equality)', async () => {
+    const tree = node('Document', [node('H1', [], { actualText: 'A' })]);
+    const tagged = await makeTaggedPdf(tree);
+    const res = await getReadingOrder(tagged, { recompute: true });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    // Full-equality assertion: the constant appears verbatim in warnings[].
+    // Not a substring contain — this prevents drift to look-alike tokens.
+    const matches = res.value.warnings.filter(
+      (w) => w === READING_ORDER_RECOMPUTE_NO_EXTRACTOR_WARNING,
+    );
+    expect(matches).toEqual([READING_ORDER_RECOMPUTE_NO_EXTRACTOR_WARNING]);
   });
 });
 

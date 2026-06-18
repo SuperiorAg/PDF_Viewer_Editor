@@ -124,6 +124,17 @@ export interface SetReadingOrderValue {
 // only relevant for pathological docs.
 const MAX_TOP_LEVEL_BLOCKS = 50_000;
 
+/** Named token emitted into `warnings[]` when `getReadingOrder` is called
+ *  with `recompute: true` and no production layout extractor is wired
+ *  into the engine. Exported so callers and renderers can compare for
+ *  full equality (not substring match) — Riley's reading-order-overlay
+ *  banner detects this gap and renders the honesty banner. Reworded
+ *  silently would be a fake-success regression: keep this string stable
+ *  and import from this module rather than copy-pasting the literal.
+ *  Pinned by a regression test in reading-order-engine.test.ts. */
+export const READING_ORDER_RECOMPUTE_NO_EXTRACTOR_WARNING =
+  'reading-order.recompute.no-extractor-wired';
+
 // =====================================================================
 // Read direction
 // =====================================================================
@@ -174,7 +185,7 @@ export async function getReadingOrder(
     // than silently returning the same /K order without disclosure.
     // A future wave that wires the layout walker can replace this
     // warning with the recomputed blocks.
-    warnings.push('reading-order.recompute.no-extractor-wired');
+    warnings.push(READING_ORDER_RECOMPUTE_NO_EXTRACTOR_WARNING);
   }
 
   const blocks: ReadingOrderBlock[] = [];

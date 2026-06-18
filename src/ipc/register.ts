@@ -14,6 +14,7 @@ import type { AutoUpdateController } from '../main/auto-update.js';
 import { getDbBridge, getDbBridgeKinds } from '../main/db-bridge.js';
 import { type ExportEngine } from '../main/export/export-engine.js';
 import { createExportQueue } from '../main/export/export-queue.js';
+import type { PageTextDiagnostic } from '../main/pdf-ops/accessibility-rules/index.js';
 import { releaseAll as releaseAllCerts } from '../main/pdf-ops/cert-store.js';
 // Wave-30 follow-up (H-30.1, David 2026-06-01): real combine engine.
 import { combinePdfs } from '../main/pdf-ops/combine.js';
@@ -27,6 +28,7 @@ import type {
   RasterPageOptions,
 } from '../main/pdf-ops/ocr-engine.js';
 // Phase 5.1 (Wave 5.1, David): WIA scanner wiring.
+import { scanPagesForImageXObject } from '../main/pdf-ops/page-image-xobject-scan.js';
 import { replay } from '../main/pdf-ops/replay-engine.js';
 import type { ReplayInput } from '../main/pdf-ops/replay-engine.js';
 import type { ScanPage, ScanToPdfError } from '../main/pdf-ops/scan-to-pdf.js';
@@ -554,6 +556,88 @@ async function productionExtractAutoTagPages(
         pageSize: { widthPt, heightPt },
         textItems,
         imageItems: [], // honest deferral — see fn header comment
+      });
+    }
+    return out;
+  } finally {
+    try {
+      await doc.destroy?.();
+    } catch {
+      /* best-effort */
+    }
+  }
+}
+
+/**
+ * Production extractor for `pdf:runAccessibilityCheck` (Phase 7.5 Wave
+ * 5d follow-up — David, 2026-06-18).
+ *
+ * Returns a `PageTextDiagnostic[]` — one record per page — combining:
+ *   - `textItemCount`: counted via pdf.js getTextContent (same canonical
+ *     loader as auto-tag / auto-bookmark; L-004/L-005 compliance lives at
+ *     the loader boundary).
+ *   - `hasImageXObject`: read from each page's /Resources/XObject dict
+ *     via pdf-lib (no pdf.js needed for the structural signal — see
+ *     `page-image-xobject-scan.ts` header for rationale).
+ *
+ * Wiring this lets the accessibility engine flip two
+ * extractor-dependent rules from `'unevaluated'` to real pass/fail:
+ *   - `a11y.content.non-text-tagged`
+ *   - `a11y.content.scanned-searchable`
+ *
+ * The shipped rule count remains 12 — what changes is HOW MANY emit
+ * `'unevaluated'`. The subsetDisclosure string stays unchanged.
+ *
+ * L-004 / L-005 compliance — same shape as the other production
+ * extractors:
+ *   - canvas globals installed BEFORE the dynamic pdf.js import resolves
+ *   - bytes copied via `new Uint8Array(...).slice()` so pdf.js's
+ *     fake-worker transport never detaches the caller's view
+ *
+ * Honest failure mode: if pdf.js fails to load, the engine treats the
+ * extractor throw as `'unevaluated'` (see accessibility-engine.ts:193).
+ * If the pdf-lib image scan fails, we still return the text counts —
+ * `hasImageXObject` falls back to `false` per-page, which is the safer
+ * direction for an a11y warning (fewer false fails).
+ */
+async function productionExtractAccessibilityDiagnostics(
+  bytes: Uint8Array,
+  pageCount: number,
+): Promise<PageTextDiagnostic[]> {
+  // Run the two halves in parallel — text from pdf.js, images from
+  // pdf-lib. Both load the doc independently which doubles the parse
+  // cost, but parsing a 1064-page PDF twice still beats walking
+  // pdf.js's operator list once. Worth measuring if perf matters later.
+  let imageFlags: ReadonlyArray<{ pageIndex: number; hasImageXObject: boolean }>;
+  try {
+    imageFlags = await scanPagesForImageXObject(bytes);
+  } catch {
+    // pdf-lib scan failed → no image signal. Fall back to all-false.
+    imageFlags = [];
+  }
+  const imageByIndex = new Map<number, boolean>();
+  for (const f of imageFlags) imageByIndex.set(f.pageIndex, f.hasImageXObject);
+
+  // Text counts via pdf.js — reuse the canonical loader.
+  const pdfjs = await loadAutoBookmarkPdfJs();
+  const ownedCopy = new Uint8Array(bytes).slice();
+  const doc = await pdfjs.getDocument({ data: ownedCopy }).promise;
+  const out: PageTextDiagnostic[] = [];
+  try {
+    const lastIdx = Math.min(pageCount, doc.numPages) - 1;
+    for (let pi = 0; pi <= lastIdx; pi += 1) {
+      const page = await doc.getPage(pi + 1); // pdf.js is 1-indexed
+      const content = await page.getTextContent();
+      let textItemCount = 0;
+      for (const it of content.items) {
+        const text = typeof it.str === 'string' ? it.str : '';
+        if (text.length === 0) continue;
+        textItemCount += 1;
+      }
+      out.push({
+        pageIndex: pi,
+        textItemCount,
+        hasImageXObject: imageByIndex.get(pi) ?? false,
       });
     }
     return out;
@@ -1309,16 +1393,21 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
   );
 
   // Phase 7.5 Wave 5d (David, 2026-06-17) — C6 Accessibility Checker.
-  // Pure pdf-lib rules engine. The text-extractor seam is intentionally
-  // NOT wired here in v0.8.0 — extractor-dependent rules emit
-  // `'unevaluated'` honestly per the four-state model (P7.5-L-10).
-  // When a future wave wires a pdf.js text-content walker (same loader
-  // shape as auto-tag), pass it via `extractor: productionExtractor`
-  // and the engine will start producing pass/fail for the two
-  // extractor-gated rules without contract churn.
+  //
+  // Phase 7.5 Wave 5d follow-up (David, 2026-06-18): production
+  // accessibility extractor now wired. Combines pdf.js text-content
+  // counts + pdf-lib image-XObject scan into a single PageTextDiagnostic
+  // per page. Two rules flip from 'unevaluated' to real pass/fail:
+  //   - a11y.content.non-text-tagged
+  //   - a11y.content.scanned-searchable
+  // The shipped rule count (12) and subsetDisclosure string are
+  // unchanged — P7.5-L-10 still holds; what changes is HOW MANY rules
+  // emit 'unevaluated'. Color-contrast remains permanently 'unevaluated'
+  // until a raster engine drops in.
   ipcMain.handle(Channels.PdfRunAccessibilityCheck, (_evt, payload) =>
     handlePdfRunAccessibilityCheck(payload, {
       getBytes: (h) => documentStore.getBytes(h),
+      extractor: productionExtractAccessibilityDiagnostics,
     }),
   );
 

@@ -113,6 +113,89 @@ describe('runAccessibilityCheck', () => {
     expect(scanned?.status).toBe('pass');
   });
 
+  // Phase 7.5 Wave 5d follow-up (David, 2026-06-18).
+  //
+  // Wired-extractor end-to-end honesty: a scanned fixture (page with an
+  // image XObject and zero text items) MUST flip the scanned-searchable
+  // rule from 'unevaluated' to 'fail'. This is the canonical proof that
+  // the production extractor wiring removes the v0.8.0 honesty gap.
+  it('flips scanned-pages-searchable from unevaluated to fail on a scanned fixture', async () => {
+    const bytes = await makePlainPdf(2);
+    const res = await runAccessibilityCheck(bytes, {
+      extractor: async () => [
+        // Page 0: scanned-only (image, zero text). Expect failure.
+        { pageIndex: 0, textItemCount: 0, hasImageXObject: true },
+        // Page 1: pure text. No image, has text — clean.
+        { pageIndex: 1, textItemCount: 200, hasImageXObject: false },
+      ],
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const scanned = res.value.results.find((r) => r.ruleId === 'a11y.content.scanned-searchable');
+    expect(scanned?.status).toBe('fail');
+    expect(scanned?.locations.some((l) => l.pageIndex === 0)).toBe(true);
+  });
+
+  // Honest pass-path: text-only fixture (no image XObjects, plenty of
+  // text items, doc has no /Figure tags) should pass on BOTH
+  // extractor-dependent rules. Pair with the scanned-fixture test above.
+  it('passes both content rules on a text-only fixture', async () => {
+    const bytes = await makePlainPdf(2);
+    const res = await runAccessibilityCheck(bytes, {
+      extractor: async () => [
+        { pageIndex: 0, textItemCount: 500, hasImageXObject: false },
+        { pageIndex: 1, textItemCount: 800, hasImageXObject: false },
+      ],
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const nonText = res.value.results.find((r) => r.ruleId === 'a11y.content.non-text-tagged');
+    const scanned = res.value.results.find((r) => r.ruleId === 'a11y.content.scanned-searchable');
+    expect(nonText?.status).toBe('pass');
+    expect(scanned?.status).toBe('pass');
+  });
+
+  // P7.5-L-10 honesty: when the extractor is intentionally unwired (the
+  // engine-direct path with no deps), both content rules MUST emit
+  // 'unevaluated'. This pairs with the wired-extractor tests above and
+  // pins the four-state model's "unevaluated" semantic.
+  it('still returns unevaluated for both content rules when extractor is unwired', async () => {
+    const bytes = await makePlainPdf(2);
+    // No extractor passed → ctx.pageDiagnostics === null.
+    const res = await runAccessibilityCheck(bytes);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const nonText = res.value.results.find((r) => r.ruleId === 'a11y.content.non-text-tagged');
+    const scanned = res.value.results.find((r) => r.ruleId === 'a11y.content.scanned-searchable');
+    expect(nonText?.status).toBe('unevaluated');
+    expect(scanned?.status).toBe('unevaluated');
+  });
+
+  // P7.5-L-10 honesty: when the extractor lands, the subsetDisclosure
+  // text MUST remain unchanged AND the shippedRuleCount must still be
+  // 12. What changes is HOW MANY rules emit 'unevaluated'. Pin both
+  // here so a future drift forces an explicit edit.
+  it('keeps shippedRuleCount and subsetDisclosure stable whether extractor wired or not', async () => {
+    const bytes = await makePlainPdf();
+    const unwired = await runAccessibilityCheck(bytes);
+    expect(unwired.ok).toBe(true);
+    if (!unwired.ok) return;
+
+    const wired = await runAccessibilityCheck(bytes, {
+      extractor: async () => [
+        { pageIndex: 0, textItemCount: 200, hasImageXObject: false },
+        { pageIndex: 1, textItemCount: 200, hasImageXObject: false },
+      ],
+    });
+    expect(wired.ok).toBe(true);
+    if (!wired.ok) return;
+
+    expect(wired.value.shippedRuleCount).toBe(unwired.value.shippedRuleCount);
+    expect(wired.value.shippedRuleCount).toBe(ALL_A11Y_RULES.length);
+    expect(wired.value.subsetDisclosure).toBe(unwired.value.subsetDisclosure);
+    expect(wired.value.subsetDisclosure).toBe(SUBSET_DISCLOSURE);
+  });
+
   it('treats extractor throws as honest unevaluated (no engine crash)', async () => {
     const bytes = await makePlainPdf(1);
     const res = await runAccessibilityCheck(bytes, {
