@@ -149,6 +149,12 @@ import { handlePdfReplaceText } from './handlers/pdf-replace-text.js';
 import { handlePdfRunPreflight } from './handlers/pdf-run-preflight.js';
 import { handlePdfSetPasswordProtection } from './handlers/pdf-set-password-protection.js';
 import { handlePdfSplitDocument } from './handlers/pdf-split-document.js';
+// Phase 7.5 Wave 5b (David, 2026-06-17) — C3 Tag PDF (structure tree).
+import {
+  handlePdfAutoTagPages,
+  handlePdfGetStructTree,
+  handlePdfSetStructTree,
+} from './handlers/pdf-struct-tree.js';
 import { handlePdfSwapEmbeddedFont } from './handlers/pdf-swap-embedded-font.js';
 import { handleRecentsAdd } from './handlers/recents-add.js';
 import { handleRecentsClear } from './handlers/recents-clear.js';
@@ -1105,6 +1111,36 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
   ipcMain.handle(Channels.PdfRunPreflight, (_evt, payload) =>
     handlePdfRunPreflight(payload, {
       getBytes: (h) => documentStore.getBytes(h),
+    }),
+  );
+
+  // Phase 7.5 Wave 5b (David, 2026-06-17) — C3 Tag PDF (structure tree).
+  //
+  // Pure pdf-lib, no new deps. Read + write paths route through the
+  // engine; auto-tag requires a per-page text-extractor injection.
+  // Wave 5b does NOT wire a production pdf.js extractor — the renderer
+  // discovers `engine_failed` honestly until the follow-up wave lands
+  // the canonical `loadPdfJs` text-extractor adapter (L-004/L-005
+  // compliance lives at that boundary).
+  ipcMain.handle(Channels.PdfGetStructTree, (_evt, payload) =>
+    handlePdfGetStructTree(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+    }),
+  );
+  ipcMain.handle(Channels.PdfSetStructTree, (_evt, payload) =>
+    handlePdfSetStructTree(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      setBytes: (h, b) => documentStore.setBytes(h, b),
+    }),
+  );
+  ipcMain.handle(Channels.PdfAutoTagPages, (_evt, payload) =>
+    handlePdfAutoTagPages(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
+      // Wave 5b: production extractor not wired. The handler returns
+      // an honest 'engine_failed' until a pdf.js text-extractor adapter
+      // ships in the follow-up wave (routes through `loadPdfJs` per
+      // L-005). Riley's C3 UI surfaces this as "Run auto-tag — heuristic
+      // unavailable" until then.
     }),
   );
 

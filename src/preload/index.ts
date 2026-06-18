@@ -117,6 +117,13 @@ import type {
   // Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud + C2 Preflight.
   PdfRunPreflightRequest,
   PdfRunPreflightResponse,
+  // Phase 7.5 Wave 5b (David, 2026-06-17) — C3 Tag PDF (structure tree).
+  PdfGetStructTreeRequest,
+  PdfGetStructTreeResponse,
+  PdfSetStructTreeRequest,
+  PdfSetStructTreeResponse,
+  PdfAutoTagPagesRequest,
+  PdfAutoTagPagesResponse,
   TtsListVoicesRequest,
   TtsListVoicesResponse,
   TtsSpeakTextRequest,
@@ -393,6 +400,13 @@ const pdfApi: PdfApi = {
     // Phase 7.5 Wave 5a (David, 2026-06-17) — C2 Preflight.
     runPreflight: (req: PdfRunPreflightRequest) =>
       ipcRenderer.invoke(Channels.PdfRunPreflight, req) as Promise<PdfRunPreflightResponse>,
+    // Phase 7.5 Wave 5b (David, 2026-06-17) — C3 Tag PDF (structure tree).
+    getStructTree: (req: PdfGetStructTreeRequest) =>
+      ipcRenderer.invoke(Channels.PdfGetStructTree, req) as Promise<PdfGetStructTreeResponse>,
+    setStructTree: (req: PdfSetStructTreeRequest) =>
+      ipcRenderer.invoke(Channels.PdfSetStructTree, req) as Promise<PdfSetStructTreeResponse>,
+    autoTagPages: (req: PdfAutoTagPagesRequest) =>
+      ipcRenderer.invoke(Channels.PdfAutoTagPages, req) as Promise<PdfAutoTagPagesResponse>,
   },
   // Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud (TTS).
   tts: {

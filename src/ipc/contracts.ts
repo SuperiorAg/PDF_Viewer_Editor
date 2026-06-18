@@ -2072,6 +2072,161 @@ export interface PdfRunPreflightValue {
 
 export type PdfRunPreflightResponse = Result<PdfRunPreflightValue, PdfRunPreflightError>;
 
+// ---- pdf:getStructTree / setStructTree / autoTagPages (C3) ----------------
+//
+// Phase 7.5 Wave 5b — Tag PDF (structure tree authoring).
+//
+// Contract: docs/api-contracts.md §19.7.1–§19.7.3.
+// Engines:  src/main/pdf-ops/struct-tree-engine.ts,
+//           src/main/pdf-ops/auto-tag-heuristic.ts.
+//
+// In-memory shape per docs/accessibility-authoring-spec.md §1.1. The
+// renderer assigns stable client-side ids (uuid v4) on first load and
+// re-uses them across edits, so the materializer side-table merge stays
+// deterministic. `sourceObjectNumber` is informational only — the
+// materializer allocates fresh PDF object numbers on write per the
+// rebuild-from-scratch discipline (Phase 7.4 B1, P7.5-L-12).
+//
+// Wave 5b implements the IPC SHAPE end-to-end (engine + handler + preload)
+// but the side-table persistence + Save-time materializer round-trip live
+// in the Ravi side-table migration + a later wave. For Wave 5b the engine
+// supports the round-trip via direct read/write to the in-PDF
+// `/StructTreeRoot`; the side-table merge is the renderer's responsibility
+// once the migration lands.
+
+export type StructTreeType =
+  | 'Document'
+  | 'Part'
+  | 'Art'
+  | 'Sect'
+  | 'Div'
+  | 'BlockQuote'
+  | 'Caption'
+  | 'TOC'
+  | 'TOCI'
+  | 'Index'
+  | 'P'
+  | 'H1'
+  | 'H2'
+  | 'H3'
+  | 'H4'
+  | 'H5'
+  | 'H6'
+  | 'L'
+  | 'LI'
+  | 'Lbl'
+  | 'LBody'
+  | 'Figure'
+  | 'Formula'
+  | 'Form'
+  | 'Table'
+  | 'TR'
+  | 'TD'
+  | 'TH'
+  | 'THead'
+  | 'TBody'
+  | 'TFoot'
+  | 'Link'
+  | 'Annot'
+  | 'Span'
+  | 'Quote'
+  | 'Note'
+  | 'Reference'
+  | 'BibEntry'
+  | 'Code'
+  /** Forward-compat with PDF-spec extensions; renderer treats unknown types as 'Span'. */
+  | string;
+
+export type MarkedContentRef =
+  | { kind: 'mcid'; pageIndex: number; mcid: number }
+  | { kind: 'object'; pageIndex: number; sourceObjectNumber: number };
+
+export interface StructTreeNode {
+  /** Stable client-side id (uuid v4). NOT the PDF object number. */
+  id: string;
+  type: StructTreeType;
+  altText?: string;
+  actualText?: string;
+  /** BCP-47. */
+  language?: string;
+  contentRefs: MarkedContentRef[];
+  children: StructTreeNode[];
+  /** Source PDF object number, if known. -1 / undefined for new nodes. */
+  sourceObjectNumber?: number;
+}
+
+export interface PdfGetStructTreeRequest {
+  handle: DocumentHandle;
+  /** true = merge with the uncommitted edits in the SQLite side-table
+   *  (Wave 5b ships the in-PDF read; the side-table merge lands when
+   *  the migration ships in a follow-up wave). */
+  mergeWithEditSession: boolean;
+}
+
+export type PdfGetStructTreeError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'side_table_corrupt'
+  | 'engine_failed';
+
+export interface PdfGetStructTreeValue {
+  /** null when the doc has no /StructTreeRoot. */
+  root: StructTreeNode | null;
+  /** Load-bearing for save-as-copy-by-default (P7.5-L-5). True iff the
+   *  IN-PDF tree existed before any session edits. */
+  hasExistingTags: boolean;
+  /** Best-effort warnings (e.g. "tree truncated at 10000 nodes"). */
+  warnings: string[];
+}
+
+export type PdfGetStructTreeResponse = Result<PdfGetStructTreeValue, PdfGetStructTreeError>;
+
+export interface PdfSetStructTreeRequest {
+  handle: DocumentHandle;
+  /** Full-tree replacement; CRDT-style ops left for v2. */
+  root: StructTreeNode;
+}
+
+export type PdfSetStructTreeError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'side_table_corrupt'
+  | 'overwrites_existing_tree' // surfaced as a warning, not blocking (renderer handles save-as-copy)
+  | 'engine_failed';
+
+export interface PdfSetStructTreeValue {
+  /** Echoes back the doc handle as a "session id" sentinel for the
+   *  Wave 5b shape. Once the side-table migration lands the real session
+   *  row id replaces this value. */
+  sessionId: number;
+  /** Surfaced when the input doc had a pre-existing /StructTreeRoot the
+   *  write would overwrite. Riley's UI uses this to surface the
+   *  save-as-copy-by-default default per P7.5-L-5 / R12 mitigation. */
+  warnings: string[];
+}
+
+export type PdfSetStructTreeResponse = Result<PdfSetStructTreeValue, PdfSetStructTreeError>;
+
+export type AutoTagPageRange = 'all' | { start: number; end: number };
+
+export interface PdfAutoTagPagesRequest {
+  handle: DocumentHandle;
+  pages: AutoTagPageRange;
+  /** v1 ships exactly one variant; reserved for forward-compat. */
+  heuristic: 'font-size-cluster';
+}
+
+export type PdfAutoTagPagesError = 'invalid_payload' | 'handle_not_found' | 'engine_failed';
+
+export interface PdfAutoTagPagesValue {
+  /** User reviews before calling pdf:setStructTree. */
+  proposedRoot: StructTreeNode;
+  /** e.g. "Page 14: single font size — no headings detected". */
+  warnings: string[];
+}
+
+export type PdfAutoTagPagesResponse = Result<PdfAutoTagPagesValue, PdfAutoTagPagesError>;
+
 // ---- pdf:applyStamp (B7) ---------------------------------------------------
 
 export interface PdfApplyStampRequest {
@@ -4206,6 +4361,11 @@ export const Channels = {
   TtsStop: 'tts:stop',
   TtsBoundary: 'tts:boundary',
   PdfRunPreflight: 'pdf:runPreflight',
+  // Phase 7.5 Wave 5b (David, 2026-06-17) — C3 Tag PDF (structure tree).
+  // Pure pdf-lib; no new deps. See docs/api-contracts.md §19.7.
+  PdfGetStructTree: 'pdf:getStructTree',
+  PdfSetStructTree: 'pdf:setStructTree',
+  PdfAutoTagPages: 'pdf:autoTagPages',
   // Phase 2 fs (replay-engine entry point)
   FsApplyEditOps: 'fs:applyEditOps',
   // Phase 4.1 (api-contracts.md §15, David)
@@ -4404,6 +4564,10 @@ export interface PdfApi {
     swapEmbeddedFont: (req: PdfSwapEmbeddedFontRequest) => Promise<PdfSwapEmbeddedFontResponse>;
     // Phase 7.5 Wave 5a (David, 2026-06-17) — C2 Preflight (pure pdf-lib).
     runPreflight: (req: PdfRunPreflightRequest) => Promise<PdfRunPreflightResponse>;
+    // Phase 7.5 Wave 5b (David, 2026-06-17) — C3 Tag PDF (structure tree).
+    getStructTree: (req: PdfGetStructTreeRequest) => Promise<PdfGetStructTreeResponse>;
+    setStructTree: (req: PdfSetStructTreeRequest) => Promise<PdfSetStructTreeResponse>;
+    autoTagPages: (req: PdfAutoTagPagesRequest) => Promise<PdfAutoTagPagesResponse>;
   };
   // Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud (TTS).
   tts: {
