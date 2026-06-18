@@ -151,6 +151,15 @@ describe('tool registry — contract tests', () => {
     expect(chord).toBe('Ctrl+Shift+A');
   });
 
+  test('formatShortcutById resolves Ctrl+Alt+E for tools:export-accessibility-report', () => {
+    // Wave 5e §27.3 — Ctrl+Shift+E is taken by `open-export-office` (Phase 6
+    // Export to Office). Audit chose Ctrl+Alt+E as the fall-back per the
+    // brief; pinned here so a future shortcut-table edit cannot silently
+    // unbind the chord without breaking this assertion.
+    const chord = formatShortcutById('tools-a11y-export-report');
+    expect(chord).toBe('Ctrl+Alt+E');
+  });
+
   test('every tool with a shortcutId resolves to a non-empty chord string', () => {
     for (const tool of TOOLS) {
       if (tool.shortcutId === null) continue;

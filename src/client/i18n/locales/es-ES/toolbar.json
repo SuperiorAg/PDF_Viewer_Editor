@@ -162,6 +162,9 @@
   "tagPdf": "Etiquetar PDF…",
   "tagPdfTooltip": "Abrir el editor del árbol Etiquetar PDF (autoría de estructura)",
   "tagPdfAria": "Abrir el editor del árbol Etiquetar PDF",
+  "exportAccessibilityReport": "Exportar informe de accesibilidad…",
+  "exportAccessibilityReportTooltip": "Exportar el último resultado de la comprobación de accesibilidad como HTML o JSON (Ctrl+Alt+E)",
+  "exportAccessibilityReportAria": "Abrir el cuadro de diálogo Exportar informe de accesibilidad",
   "linkOverlayUrlPrefix": "Enlace →",
   "linkContextMenu": {
     "edit": "Editar enlace",

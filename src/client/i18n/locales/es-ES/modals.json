@@ -661,6 +661,39 @@
         "openReadingOrder": "Abrir superposición de orden de lectura",
         "openAltTextInspector": "Abrir Inspector de texto alternativo",
         "openDocumentProperties": "Abrir propiedades del documento"
+      },
+      "export": {
+        "button": {
+          "label": "Exportar informe",
+          "tooltip": {
+            "disabled": "Ejecute la comprobación primero para habilitar la exportación."
+          }
+        },
+        "dialog": {
+          "title": "Exportar informe de accesibilidad",
+          "format": {
+            "label": "Formato",
+            "options": {
+              "html": "HTML autónomo",
+              "json": "JSON"
+            }
+          },
+          "options": {
+            "legend": "Incluir",
+            "includePassed": "Incluir reglas aprobadas",
+            "includeUnevaluated": "Incluir reglas no evaluadas"
+          },
+          "filename": {
+            "label": "Nombre del archivo"
+          },
+          "subsetDisclosure": {
+            "lockedLabel": "Aviso de subconjunto (bloqueado — siempre incluido)"
+          },
+          "buttons": {
+            "cancel": "Cancelar",
+            "export": "Exportar"
+          }
+        }
       }
     }
   },

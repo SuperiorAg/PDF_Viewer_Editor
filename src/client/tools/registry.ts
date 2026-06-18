@@ -19,6 +19,8 @@
 
 import { type ShortcutId } from '../shortcuts';
 import { redoAction, undoAction } from '../state/middleware/history-middleware';
+// Phase 7.5 Wave 5e (Riley) — C6 §27.3 Export Report dialog opener.
+import { exportDialogOpened } from '../state/slices/accessibility-check-slice';
 // Phase 7.5 Wave 5c (Riley) — C5 Alt Text inspector opener.
 import { setAltTextOpen } from '../state/slices/alt-text-slice';
 import { setActiveTool } from '../state/slices/annotations-slice';
@@ -176,6 +178,11 @@ export type ToolId =
   // the Run thunk immediately so the user sees results without an extra
   // click.
   | 'tools:run-accessibility-check'
+  // Phase 7.5 Wave 5e (Riley) — C6 §27.3 Export Accessibility Report.
+  // Tools-menu + palette + Ctrl+Alt+E. Opens the export dialog (HTML +
+  // JSON formats). Gated on `lastResult !== null && status === 'ready'`
+  // so the dialog never opens against an empty / mid-run state.
+  | 'tools:export-accessibility-report'
   // help
   | 'help:help'
   | 'help:about';
@@ -1205,6 +1212,42 @@ export const TOOLS: readonly ToolDef[] = [
       'a11y',
       'wcag',
       'pdf/ua',
+      'audit',
+      'compliance',
+    ],
+  },
+
+  // ---- Phase 7.5 Wave 5e (Riley) — C6 §27.3 Export Accessibility Report ----
+  // Ctrl+Alt+E — opens the export dialog. Disabled until a successful
+  // check has settled; the registry surface (Tools menu + palette) is
+  // therefore inert when the panel is in `idle` / `running` / `error`.
+  // The dialog itself owns the format / filter / filename state; the
+  // slice only carries `exportDialogOpen`.
+  {
+    id: 'tools:export-accessibility-report',
+    nameKey: 'toolbar:exportAccessibilityReport',
+    tooltipKey: 'toolbar:exportAccessibilityReportTooltip',
+    ariaLabelKey: 'toolbar:exportAccessibilityReportAria',
+    icon: null,
+    shortcutId: 'tools-a11y-export-report',
+    menu: { top: 'tools' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: (s) =>
+      s.document.current !== null &&
+      s.accessibilityCheck.status === 'ready' &&
+      s.accessibilityCheck.lastResult !== null,
+    dispatch: (d, s) => {
+      d(setSidebarTab('accessibility'));
+      if (s.ui.sidebarCollapsed) d(toggleSidebar());
+      d(exportDialogOpened());
+    },
+    searchKeywords: [
+      'accessibility',
+      'export',
+      'report',
+      'html',
+      'json',
+      'a11y',
       'audit',
       'compliance',
     ],

@@ -173,6 +173,9 @@
   "runAccessibilityCheck": "Accessibility Check…",
   "runAccessibilityCheckTooltip": "Run the Accessibility Checker (12 shipped rules — subset of WCAG 2.1 + PDF/UA-1)",
   "runAccessibilityCheckAria": "Open the Accessibility Checker panel and run the check",
+  "exportAccessibilityReport": "Export Accessibility Report…",
+  "exportAccessibilityReportTooltip": "Export the last Accessibility Check result as HTML or JSON (Ctrl+Alt+E)",
+  "exportAccessibilityReportAria": "Open the Export Accessibility Report dialog",
   "linkOverlayUrlPrefix": "Link →",
   "linkContextMenu": {
     "edit": "Edit link",

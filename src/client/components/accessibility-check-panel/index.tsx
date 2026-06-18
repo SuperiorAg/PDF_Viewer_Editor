@@ -24,7 +24,9 @@
 import { useT } from '../../i18n/use-t';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import {
+  exportDialogOpened,
   selectA11yExpandedGroups,
+  selectA11yExportDialogOpen,
   selectA11yLastErrorMessage,
   selectA11yResults,
   selectA11yStatus,
@@ -41,6 +43,7 @@ import type { AccessibilityRuleResult } from '../../types/accessibility-check-co
 
 import styles from './accessibility-check-panel.module.css';
 import { DisclosureBanner } from './disclosure-banner';
+import { ExportReportDialog } from './export-report-dialog';
 import { ResultsList } from './results-list';
 import { SummaryBar } from './summary-bar';
 
@@ -54,11 +57,23 @@ export function AccessibilityCheckPanel(): JSX.Element {
   const lastResult = useAppSelector(selectA11yResults);
   const lastErrorMessage = useAppSelector(selectA11yLastErrorMessage);
   const expandedGroups = useAppSelector(selectA11yExpandedGroups);
+  const exportDialogOpen = useAppSelector(selectA11yExportDialogOpen);
 
   const canRun = doc !== null && status !== 'running';
+  // Wave 5e §27.3 — Export Report button gating. Disabled unless the
+  // engine has a successful run on record AND the panel is in `'ready'`
+  // (the run-failed branch sets status='error' and leaves lastResult
+  // possibly populated from a prior pass; the gate requires BOTH a
+  // settled `ready` status AND a non-null result so exports never
+  // capture a stale-mid-rerun snapshot).
+  const canExport = status === 'ready' && lastResult !== null;
 
   const onRun = (): void => {
     void dispatch(runAccessibilityCheckThunk());
+  };
+
+  const onOpenExportDialog = (): void => {
+    dispatch(exportDialogOpened());
   };
 
   const onJumpToPage = (pageIndex: number): void => {
@@ -169,6 +184,23 @@ export function AccessibilityCheckPanel(): JSX.Element {
               ? t('modals:accessibility.checker.rerun')
               : t('modals:accessibility.checker.run')}
         </button>
+        {/* Wave 5e §27.3 — Export Report dialog trigger. Disabled until
+            a run has settled with a non-null result; tooltip explains why. */}
+        <button
+          type="button"
+          className={styles.exportButton}
+          onClick={onOpenExportDialog}
+          disabled={!canExport}
+          aria-label={t('modals:accessibility.checker.export.button.aria')}
+          title={
+            !canExport
+              ? t('modals:accessibility.checker.export.button.tooltip.disabled')
+              : t('modals:accessibility.checker.export.button.tooltip.enabled')
+          }
+          data-testid="a11y-export-button"
+        >
+          ⤓ {t('modals:accessibility.checker.export.button.label')}
+        </button>
       </div>
 
       {status === 'error' && (
@@ -208,6 +240,11 @@ export function AccessibilityCheckPanel(): JSX.Element {
           />
         </>
       )}
+
+      {/* Wave 5e §27.3 — Export Report dialog. Mounted only when the
+          user opens it AND a successful result exists (defensive gate
+          for the dialog body's `lastResult` non-null contract). */}
+      {exportDialogOpen && lastResult !== null && <ExportReportDialog lastResult={lastResult} />}
     </section>
   );
 }

@@ -13,10 +13,13 @@ import type { PdfRunAccessibilityCheckValue } from '../../types/accessibility-ch
 
 import accessibilityCheckReducer, {
   cleared,
+  exportDialogClosed,
+  exportDialogOpened,
   runFailed,
   runStarted,
   runSucceeded,
   selectA11yExpandedGroups,
+  selectA11yExportDialogOpen,
   selectA11yLastErrorMessage,
   selectA11yResults,
   selectA11yStatus,
@@ -170,6 +173,37 @@ describe('accessibility-check slice — cleared (document close)', () => {
   });
 });
 
+describe('accessibility-check slice — export dialog (Wave 5e §27.3)', () => {
+  it('starts with the export dialog closed', () => {
+    expect(INITIAL.exportDialogOpen).toBe(false);
+  });
+
+  it('exportDialogOpened flips the boolean true', () => {
+    const after = accessibilityCheckReducer(INITIAL, exportDialogOpened());
+    expect(after.exportDialogOpen).toBe(true);
+  });
+
+  it('exportDialogClosed flips the boolean false', () => {
+    const open = accessibilityCheckReducer(INITIAL, exportDialogOpened());
+    const closed = accessibilityCheckReducer(open, exportDialogClosed());
+    expect(closed.exportDialogOpen).toBe(false);
+  });
+
+  it('opening the dialog does NOT disturb the results or status', () => {
+    const ran = accessibilityCheckReducer(INITIAL, runSucceeded(makeValue()));
+    const opened = accessibilityCheckReducer(ran, exportDialogOpened());
+    expect(opened.status).toBe('ready');
+    expect(opened.lastResult).not.toBeNull();
+    expect(opened.exportDialogOpen).toBe(true);
+  });
+
+  it('cleared() resets the dialog flag (document close path)', () => {
+    let state = accessibilityCheckReducer(INITIAL, exportDialogOpened());
+    state = accessibilityCheckReducer(state, cleared());
+    expect(state.exportDialogOpen).toBe(false);
+  });
+});
+
 describe('accessibility-check slice — selectors', () => {
   const ran = {
     accessibilityCheck: accessibilityCheckReducer(INITIAL, runSucceeded(makeValue())),
@@ -214,5 +248,11 @@ describe('accessibility-check slice — selectors', () => {
   it('selectA11yLastErrorMessage returns the message or null', () => {
     expect(selectA11yLastErrorMessage({ accessibilityCheck: INITIAL })).toBeNull();
     expect(selectA11yLastErrorMessage(erroring)).toBe('engine crashed');
+  });
+
+  it('selectA11yExportDialogOpen mirrors the dialog flag', () => {
+    expect(selectA11yExportDialogOpen({ accessibilityCheck: INITIAL })).toBe(false);
+    const opened = accessibilityCheckReducer(INITIAL, exportDialogOpened());
+    expect(selectA11yExportDialogOpen({ accessibilityCheck: opened })).toBe(true);
   });
 });

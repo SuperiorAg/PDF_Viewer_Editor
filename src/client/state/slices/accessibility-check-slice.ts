@@ -38,6 +38,12 @@ export interface AccessibilityCheckState {
   lastError: PdfRunAccessibilityCheckErrorRenderer | null;
   lastErrorMessage: string | null;
   expandedGroups: Record<AccessibilityCheckGroup, boolean>;
+  /** Phase 7.5 Wave 5e — §27.3 Export Report dialog. The dialog body
+   *  itself owns the format / filter / filename state locally; the
+   *  slice only carries the open/closed boolean so registry-driven
+   *  surfaces (Tools menu, palette, Ctrl+Alt+E) can open the dialog
+   *  without colluding with the dialog component. */
+  exportDialogOpen: boolean;
 }
 
 const initialState: AccessibilityCheckState = {
@@ -53,6 +59,7 @@ const initialState: AccessibilityCheckState = {
     unevaluated: true,
     pass: false,
   },
+  exportDialogOpen: false,
 };
 
 export const accessibilityCheckSlice = createSlice({
@@ -89,6 +96,15 @@ export const accessibilityCheckSlice = createSlice({
       const g = action.payload;
       state.expandedGroups[g] = !state.expandedGroups[g];
     },
+    /** Phase 7.5 Wave 5e — open the §27.3 Export Report dialog. The
+     *  panel header button + tool registry both dispatch this. */
+    exportDialogOpened(state) {
+      state.exportDialogOpen = true;
+    },
+    /** Phase 7.5 Wave 5e — close the dialog (Cancel / Esc / post-export). */
+    exportDialogClosed(state) {
+      state.exportDialogOpen = false;
+    },
     /** Called on document close — wipes results so the next doc starts
      *  with a clean idle state. Mirrors the preflight slice's reset. */
     cleared() {
@@ -97,8 +113,15 @@ export const accessibilityCheckSlice = createSlice({
   },
 });
 
-export const { runStarted, runSucceeded, runFailed, toggleGroup, cleared } =
-  accessibilityCheckSlice.actions;
+export const {
+  runStarted,
+  runSucceeded,
+  runFailed,
+  toggleGroup,
+  exportDialogOpened,
+  exportDialogClosed,
+  cleared,
+} = accessibilityCheckSlice.actions;
 
 export default accessibilityCheckSlice.reducer;
 
@@ -140,4 +163,11 @@ export function selectA11yLastErrorMessage(state: {
   accessibilityCheck: AccessibilityCheckState;
 }): string | null {
   return state.accessibilityCheck.lastErrorMessage;
+}
+
+/** Phase 7.5 Wave 5e — drives the §27.3 Export Report dialog modal. */
+export function selectA11yExportDialogOpen(state: {
+  accessibilityCheck: AccessibilityCheckState;
+}): boolean {
+  return state.accessibilityCheck.exportDialogOpen;
 }

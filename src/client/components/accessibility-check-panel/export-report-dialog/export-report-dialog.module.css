@@ -1,0 +1,104 @@
+/* Export Report dialog — Phase 7.5 C6 §27.3 (Riley Wave 5e). */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 360px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.fieldLegend {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text, #1c2026);
+  padding: 0;
+}
+
+.radioRow {
+  display: flex;
+  gap: 16px;
+}
+
+.radioLabel,
+.checkboxLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.lockedDisclosure {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--panel-bg-subtle, #f5f7fa);
+  border-left: 3px solid var(--text-muted, #4a525d);
+  font-style: italic;
+  color: var(--text, #1c2026);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.filenameInput {
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  font-size: 13px;
+  border: 1px solid var(--input-border, #c5cdd6);
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.filenameInput:focus {
+  outline: 2px solid var(--accent, #2563eb);
+  outline-offset: 1px;
+}
+
+.filenameInputInvalid {
+  border-color: var(--danger-border, #ef4444);
+}
+
+.filenameError {
+  margin: 0;
+  font-size: 11px;
+  color: var(--danger-text, #b91c1c);
+}
+
+.primary {
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--accent, #2563eb);
+  border-radius: 4px;
+  background: var(--accent, #2563eb);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  background: var(--button-bg, #e8ecf2);
+  color: var(--text-muted, #4a525d);
+  border-color: var(--button-border, #c5cdd6);
+  cursor: not-allowed;
+}
+
+.secondary {
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--button-border, #c5cdd6);
+  border-radius: 4px;
+  background: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+  margin-right: 8px;
+}

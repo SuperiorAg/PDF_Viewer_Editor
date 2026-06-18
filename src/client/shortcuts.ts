@@ -87,7 +87,13 @@ export type ShortcutId =
   // Ctrl+Shift+A picked after auditing shortcuts.ts: Ctrl+A is
   // `select-all-pages` (Phase 1), Ctrl+Shift+A is free. The chord opens
   // the Accessibility sidebar tab + immediately fires the Run thunk.
-  | 'tools-a11y-check';
+  | 'tools-a11y-check'
+  // Phase 7.5 C6 §27.3 (Riley Wave 5e) — Export Accessibility Report
+  // dialog. Ctrl+Shift+E collides with `open-export-office` (Phase 6);
+  // Ctrl+Alt+E was free after auditing the table. Opens the dialog only
+  // when there is a successful result on record — the registry entry's
+  // `enabledWhen` enforces the precondition.
+  | 'tools-a11y-export-report';
 
 // Phase 7.5 B12 NOTE: page-content region Cut / Copy / Paste are NOT
 // registered as ShortcutIds. They are CONTEXT-SENSITIVE — only active when
@@ -425,6 +431,17 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
     key: 'A',
     ctrl: true,
     shift: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  // Phase 7.5 C6 §27.3 (Riley Wave 5e) — Export Accessibility Report.
+  // Ctrl+Alt+E (Ctrl+Shift+E is taken by open-export-office).
+  {
+    id: 'tools-a11y-export-report',
+    label: 'Export Accessibility Report',
+    key: 'e',
+    ctrl: true,
+    alt: true,
     enabledInPhase1: false,
     enabledInPhases: [7],
   },

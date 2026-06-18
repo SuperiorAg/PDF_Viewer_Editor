@@ -76,6 +76,30 @@
   cursor: pointer;
 }
 
+/* Wave 5e §27.3 — Export Report button (secondary, sits next to Run). */
+.exportButton {
+  flex: 0 0 auto;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--button-border, #c5cdd6);
+  border-radius: 4px;
+  background: #ffffff;
+  color: var(--text, #1c2026);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.exportButton:disabled {
+  background: var(--button-bg, #e8ecf2);
+  color: var(--text-muted, #4a525d);
+  border-color: var(--button-border, #c5cdd6);
+  cursor: not-allowed;
+}
+
+.exportButton:hover:not(:disabled) {
+  background: var(--panel-bg-subtle, #f5f7fa);
+}
+
 .runButton:disabled {
   background: var(--button-bg, #e8ecf2);
   color: var(--text-muted, #4a525d);

@@ -15,6 +15,7 @@ import { Provider } from 'react-redux';
 import { describe, expect, it } from 'vitest';
 
 import accessibilityCheckReducer, {
+  exportDialogOpened,
   runFailed,
   runSucceeded,
 } from '../../state/slices/accessibility-check-slice';
@@ -365,6 +366,7 @@ describe('AccessibilityCheckPanel — quick-fix routing', () => {
     expect(store.getState().altText.seedNodeId).toBe('struct:33');
   });
 
+  // (continues below — kept as a marker so the diff lands cleanly)
   it('open-document-properties accepts targetNodeId for API symmetry — no-op semantics', () => {
     const store = makeStore();
     store.dispatch(setDocument(DOC));
@@ -395,5 +397,65 @@ describe('AccessibilityCheckPanel — quick-fix routing', () => {
     // per-struct-node concept, so no seed-equivalent state to inspect.
     expect(store.getState().documentProperties.open).toBe(true);
     expect(store.getState().documentProperties.activeTab).toBe('description');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Wave 5e §27.3 — Export Report panel header surface.
+// Dialog body has its own dedicated test file at
+// `export-report-dialog/export-report-dialog.test.tsx` — this block covers
+// the PANEL-side button + gating + mount.
+// ---------------------------------------------------------------------------
+
+describe('AccessibilityCheckPanel — Export Report button (Wave 5e §27.3)', () => {
+  it('disables the Export button when no result is on record', () => {
+    const store = makeStore();
+    store.dispatch(setDocument(DOC));
+    renderPanel(store);
+    const button = screen.getByTestId('a11y-export-button');
+    expect(button).toBeDisabled();
+  });
+
+  it('enables the Export button after a successful check', () => {
+    const store = makeStore();
+    store.dispatch(setDocument(DOC));
+    store.dispatch(runSucceeded(fixtureValue()));
+    renderPanel(store);
+    const button = screen.getByTestId('a11y-export-button');
+    expect(button).not.toBeDisabled();
+  });
+
+  it('keeps the Export button disabled while the engine is in error state', () => {
+    const store = makeStore();
+    store.dispatch(setDocument(DOC));
+    // Engine errors leave lastResult possibly populated from a prior pass —
+    // canExport guards on STATUS === 'ready' so an errored panel can't
+    // export a stale snapshot.
+    store.dispatch(runSucceeded(fixtureValue()));
+    store.dispatch(runFailed({ error: 'engine_failed', message: 'boom' }));
+    renderPanel(store);
+    expect(screen.getByTestId('a11y-export-button')).toBeDisabled();
+  });
+
+  it('clicking Export opens the dialog (mounts the dialog body)', () => {
+    const store = makeStore();
+    store.dispatch(setDocument(DOC));
+    store.dispatch(runSucceeded(fixtureValue()));
+    renderPanel(store);
+    fireEvent.click(screen.getByTestId('a11y-export-button'));
+    expect(store.getState().accessibilityCheck.exportDialogOpen).toBe(true);
+    // Dialog body mounts when the flag is true.
+    expect(screen.getByTestId('export-report-dialog')).toBeTruthy();
+  });
+
+  it('does NOT mount the dialog when the slice flag is true but result is null', () => {
+    // Defensive: opening the dialog through a registry-driven dispatch when
+    // there's no result on file would crash the dialog body. The panel
+    // guards the mount on lastResult !== null AS WELL AS exportDialogOpen.
+    const store = makeStore();
+    store.dispatch(setDocument(DOC));
+    store.dispatch(exportDialogOpened());
+    renderPanel(store);
+    expect(screen.queryByTestId('export-report-dialog')).toBeNull();
   });
 });

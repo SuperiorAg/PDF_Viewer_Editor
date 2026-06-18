@@ -1155,6 +1155,67 @@
         "openAltTextInspector": "Open Alt Text Inspector",
         "openDocumentProperties": "Open Document Properties",
         "aria": "{{label}} — quick fix"
+      },
+      "export": {
+        "button": {
+          "label": "Export report",
+          "aria": "Export the last Accessibility Check result",
+          "tooltip": {
+            "enabled": "Export the last Accessibility Check result (Ctrl+Alt+E)",
+            "disabled": "Run the check first to enable export."
+          }
+        },
+        "dialog": {
+          "title": "Export Accessibility Report",
+          "format": {
+            "label": "Format",
+            "options": {
+              "html": "HTML standalone",
+              "json": "JSON"
+            }
+          },
+          "options": {
+            "legend": "Include",
+            "includePassed": "Include passed rules",
+            "includeUnevaluated": "Include unevaluated rules"
+          },
+          "filename": {
+            "label": "Filename",
+            "invalid": "Filename is empty or contains illegal characters (\\ / : * ? \" < > |)."
+          },
+          "subsetDisclosure": {
+            "lockedLabel": "Subset disclosure (locked — always included)"
+          },
+          "buttons": {
+            "cancel": "Cancel",
+            "export": "Export"
+          }
+        },
+        "html": {
+          "title": "Accessibility Report",
+          "appName": "PDF Viewer Editor",
+          "documentLabel": "Document",
+          "ranAtLabel": "Check ran at",
+          "generatedAtLabel": "Report generated at",
+          "shippedRulesLabel": "{count} rules shipped",
+          "summaryHeading": "Summary",
+          "omittedLabel": "(omitted from export)",
+          "failHeading": "Errors",
+          "warnHeading": "Warnings",
+          "unevaluatedHeading": "Not assessed",
+          "passHeading": "Passed",
+          "ruleColumn": "Rule",
+          "severityColumn": "Severity",
+          "statusColumn": "Status",
+          "messageColumn": "Message",
+          "locationsColumn": "Locations",
+          "pageLabel": "Page {page}",
+          "footerReminder": "Subset of WCAG 2.1 + PDF/UA-1 — see Help for the shipped rule set."
+        },
+        "toast": {
+          "success": "Report saved to {{path}}",
+          "failure": "Export failed: {{error}}"
+        }
       }
     },
     "ruleLabels": {
