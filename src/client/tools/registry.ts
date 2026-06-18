@@ -19,6 +19,8 @@
 
 import { type ShortcutId } from '../shortcuts';
 import { redoAction, undoAction } from '../state/middleware/history-middleware';
+// Phase 7.5 Wave 5c (Riley) — C5 Alt Text inspector opener.
+import { setAltTextOpen } from '../state/slices/alt-text-slice';
 import { setActiveTool } from '../state/slices/annotations-slice';
 // Phase 7.5 Wave 5 (Riley) — B19 Auto-bookmark + B20 Sanitize + B21 Document
 // Properties registry entries dispatch into their dedicated slices.
@@ -31,6 +33,8 @@ import { setLinkTool } from '../state/slices/links-slice';
 import { openWizard as openMailMergeWizard } from '../state/slices/mail-merge-slice';
 import { openRunModal as openOcrRunModal } from '../state/slices/ocr-slice';
 import { openPageDesign } from '../state/slices/page-design-slice';
+// Phase 7.5 Wave 5c (Riley) — C4 Reading Order overlay arming.
+import { setReadingOrderActive } from '../state/slices/reading-order-slice';
 import { setActiveRedactionTool } from '../state/slices/redactions-slice';
 // Phase 7.5 Wave 3 (Riley) — region clipboard cut/copy/paste delegate to the
 // region-clipboard service shared with the menu mirrors.
@@ -159,6 +163,12 @@ export type ToolId =
   // Phase 7.5 Wave 5b (Riley) — C3 Tag PDF tree editor. Tools-menu + palette
   // surface that switches the sidebar to the Accessibility tab.
   | 'tools:tag-pdf'
+  // Phase 7.5 Wave 5c (Riley) — C4 Reading Order overlay + C5 Alt Text inspector.
+  // Both are menu / palette surfaces; the Reading Order overlay arms the
+  // pages-level overlay (visible badges), and the Alt Text inspector opens
+  // a modal that lists figures missing alt text + offers bulk-set.
+  | 'tools:reading-order'
+  | 'tools:alt-text'
   // help
   | 'help:help'
   | 'help:about';
@@ -1106,6 +1116,59 @@ export const TOOLS: readonly ToolDef[] = [
       if (s.ui.sidebarCollapsed) d(toggleSidebar());
     },
     searchKeywords: ['preflight', 'pdfx', 'pdfa', 'compliance', 'validation', 'subset', 'print'],
+  },
+
+  // ---- Phase 7.5 Wave 5c (Riley) — C4 Reading Order + C5 Alt Text inspector ----
+  // Reading Order: toggles the page-level overlay (numbered badges). Honors the
+  // Wave 5c brief — `Ctrl+Shift+O` is already bound to `outline-toggle` so the
+  // entry is menu / palette only (no shortcut). The dispatch flips the overlay
+  // active flag; the overlay component auto-loads on activation.
+  {
+    id: 'tools:reading-order',
+    nameKey: 'toolbar:readingOrder',
+    tooltipKey: 'toolbar:readingOrderTooltip',
+    ariaLabelKey: 'toolbar:readingOrderAria',
+    icon: null,
+    shortcutId: null,
+    menu: { top: 'tools' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: docOpen,
+    dispatch: (d, s) => {
+      const currentlyActive = s.readingOrder.active;
+      d(setReadingOrderActive(!currentlyActive));
+    },
+    searchKeywords: [
+      'reading order',
+      'accessibility',
+      'overlay',
+      'badges',
+      'sequence',
+      'tag',
+      'a11y',
+    ],
+  },
+  // Alt Text Inspector: opens the modal that lists every /Figure without
+  // /Alt and offers per-figure + bulk-set workflows.
+  {
+    id: 'tools:alt-text',
+    nameKey: 'toolbar:altTextInspector',
+    tooltipKey: 'toolbar:altTextInspectorTooltip',
+    ariaLabelKey: 'toolbar:altTextInspectorAria',
+    icon: null,
+    shortcutId: null,
+    menu: { top: 'tools' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: docOpen,
+    dispatch: (d) => d(setAltTextOpen(true)),
+    searchKeywords: [
+      'alt text',
+      'alt',
+      'accessibility',
+      'figure',
+      'image',
+      'screen reader',
+      'a11y',
+    ],
   },
 
   // ---- help ----

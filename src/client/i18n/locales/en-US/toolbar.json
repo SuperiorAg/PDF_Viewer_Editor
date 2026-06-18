@@ -164,6 +164,12 @@
   "tagPdf": "Tag PDF…",
   "tagPdfTooltip": "Open the Tag PDF tree editor (structure-tree authoring)",
   "tagPdfAria": "Open the Tag PDF tree editor",
+  "readingOrder": "Reading Order…",
+  "readingOrderTooltip": "Toggle the Reading Order overlay (drag numbered badges to reorder)",
+  "readingOrderAria": "Toggle the Reading Order overlay",
+  "altTextInspector": "Alt Text Inspector…",
+  "altTextInspectorTooltip": "Open the Alt Text Inspector (list figures missing alt text, bulk-set similar figures)",
+  "altTextInspectorAria": "Open the Alt Text Inspector",
   "linkOverlayUrlPrefix": "Link →",
   "linkContextMenu": {
     "edit": "Edit link",

@@ -2,6 +2,8 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { formCommitMiddleware } from './middleware/form-commit-middleware';
 import { historyMiddleware } from './middleware/history-middleware';
+// Phase 7.5 Wave 5c (Riley) — C5 Alt Text inspector modal slice.
+import altTextReducer from './slices/alt-text-slice';
 import annotationsReducer from './slices/annotations-slice';
 // Phase 7.5 Wave 5 (Riley) — B19 Auto-bookmark UI modal slice.
 import autoBookmarkReducer from './slices/auto-bookmark-slice';
@@ -21,6 +23,8 @@ import ocrReducer from './slices/ocr-slice';
 import pageDesignReducer from './slices/page-design-slice';
 // Phase 7.5 Wave 5a (Riley) — C2 Preflight panel.
 import preflightReducer from './slices/preflight-slice';
+// Phase 7.5 Wave 5c (Riley) — C4 Reading Order overlay slice.
+import readingOrderReducer from './slices/reading-order-slice';
 import recentsReducer from './slices/recents-slice';
 // Phase 7.4 B1
 import redactionsReducer from './slices/redactions-slice';
@@ -86,6 +90,9 @@ export const store = configureStore({
     preflight: preflightReducer,
     // Phase 7.5 Wave 5b (Riley) — C3 Tag PDF structure-tree editor.
     structTree: structTreeReducer,
+    // Phase 7.5 Wave 5c (Riley) — C4 Reading Order overlay + C5 Alt Text inspector.
+    readingOrder: readingOrderReducer,
+    altText: altTextReducer,
     // Phase 7
     update: updateReducer,
     telemetry: telemetryReducer,

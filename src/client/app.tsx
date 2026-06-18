@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 
 import styles from './app.module.css';
 import { AddLinkModal } from './components/add-link-modal';
+// Phase 7.5 Wave 5c (Riley) — C5 Alt Text Inspector modal.
+import { AltTextInspector } from './components/alt-text-inspector';
 // Phase 7.5 Wave 5 (Riley) — B19 / B20 / B21+B8 modals.
 import { AutoBookmarkModal } from './components/auto-bookmark-modal';
 import { DocumentPropertiesModal } from './components/document-properties-modal';
@@ -30,6 +32,8 @@ import { PageDesignModal } from './components/page-design-modal';
 import { PdfViewer } from './components/pdf-viewer';
 // Phase 7.5 C1 (Riley Wave 5a) — Read Aloud floating bar.
 import { ReadAloudBar } from './components/read-aloud-bar';
+// Phase 7.5 C4 (Riley Wave 5c) — Reading Order overlay (numbered badges).
+import { ReadingOrderOverlay } from './components/reading-order-overlay';
 // Phase 7.4 B1 — Redaction sub-toolbar + Apply confirm modal (same mount
 // pattern as ShapeToolbar above, gated on ui.redactionPanelOpen / Modal flag).
 import { ApplyRedactionsModal } from './components/redaction-tools/apply-redactions-modal';
@@ -366,6 +370,13 @@ export function App(): JSX.Element {
             null when closed; renders fixed-position over the viewer when
             open so it stays visible across sidebar/inspector toggles. */}
         <ReadAloudBar />
+        {/* Phase 7.5 C4 (Riley Wave 5c) — Reading Order overlay. Always
+            mounted so badges can render over visible pages; returns null
+            when `readingOrder.active === false`. */}
+        <ReadingOrderOverlay />
+        {/* Phase 7.5 C5 (Riley Wave 5c) — Alt Text Inspector modal. Returns
+            null when `altText.open === false`. */}
+        <AltTextInspector />
         <TextEditOverlay />
       </div>
     </ErrorBoundary>
