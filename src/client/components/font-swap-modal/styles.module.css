@@ -1,0 +1,112 @@
+/* Font swap modal styles — Phase 7.5 Wave 6 (Riley). */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 480px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.field select {
+  padding: 6px;
+  border: 1px solid var(--color-border, #ccc);
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.scopeRow {
+  display: flex;
+  gap: 16px;
+}
+
+.scopeRow label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: normal;
+}
+
+.honestyBanner {
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: var(--color-warning-bg, #fff8d4);
+  border: 1px solid var(--color-warning-border, #e9d273);
+  color: var(--color-warning-fg, #694f00);
+  font-size: 0.85rem;
+}
+
+.honestyHeader {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.honestyList {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.successBanner {
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: var(--color-success-bg, #e6f7ec);
+  color: var(--color-success-fg, #1c5b32);
+  font-size: 0.9rem;
+}
+
+.errorBanner {
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: var(--color-error-bg, #fee);
+  border: 1px solid var(--color-error-border, #f6a8a8);
+  color: var(--color-error-fg, #7a2222);
+  font-size: 0.9rem;
+}
+
+.note {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #555);
+  font-style: italic;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.controls button {
+  padding: 6px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border, #ccc);
+  background: var(--color-surface, #fff);
+  cursor: pointer;
+}
+
+.controls button.primary {
+  background: var(--color-primary, #1f6feb);
+  border-color: var(--color-primary, #1f6feb);
+  color: #fff;
+}
+
+.controls button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.emptyFonts {
+  padding: 12px;
+  text-align: center;
+  color: var(--color-text-secondary, #555);
+  font-style: italic;
+}

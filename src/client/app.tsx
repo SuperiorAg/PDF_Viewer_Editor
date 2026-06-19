@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 import styles from './app.module.css';
+import { ActionWizard } from './components/action-wizard';
 import { AddLinkModal } from './components/add-link-modal';
 // Phase 7.5 Wave 5c (Riley) — C5 Alt Text Inspector modal.
 import { AltTextInspector } from './components/alt-text-inspector';
@@ -11,6 +12,7 @@ import { EmptyState } from './components/empty-state';
 import { ErrorBoundary } from './components/error-boundary';
 // Phase 7.5 A7 — Find-a-tool palette (registry-driven, Ctrl+/).
 import { FindAToolPalette } from './components/find-a-tool-palette';
+import { FontSwapModal } from './components/font-swap-modal';
 import { FormDesignerToolbar } from './components/form-designer';
 import { Inspector } from './components/inspector';
 import { LinksOverlay } from './components/links-overlay';
@@ -32,8 +34,8 @@ import { PageDesignModal } from './components/page-design-modal';
 import { PdfViewer } from './components/pdf-viewer';
 // Phase 7.5 C1 (Riley Wave 5a) — Read Aloud floating bar.
 import { ReadAloudBar } from './components/read-aloud-bar';
-// Phase 7.5 C4 (Riley Wave 5c) — Reading Order overlay (numbered badges).
 import { ReadingOrderOverlay } from './components/reading-order-overlay';
+// Phase 7.5 C4 (Riley Wave 5c) — Reading Order overlay (numbered badges).
 // Phase 7.4 B1 — Redaction sub-toolbar + Apply confirm modal (same mount
 // pattern as ShapeToolbar above, gated on ui.redactionPanelOpen / Modal flag).
 import { ApplyRedactionsModal } from './components/redaction-tools/apply-redactions-modal';
@@ -48,6 +50,7 @@ import { ShapeToolbar } from './components/shape-tools/shape-toolbar';
 // Phase 7.5 Wave 4 (Riley) — shape pointer wiring (closes Wave-3 open
 // question #3) + hyperlink overlay + Page Design + Add Link modals.
 import { Sidebar } from './components/sidebar';
+import { SpellCheck } from './components/spell-check';
 // Phase 7.5 B7 (Riley Wave 3) — Stamps Add modal + placement overlay mount
 // at the app level so they compose with other modals and the placement
 // banner stays visible across sidebar tab switches.
@@ -377,6 +380,12 @@ export function App(): JSX.Element {
         {/* Phase 7.5 C5 (Riley Wave 5c) — Alt Text Inspector modal. Returns
             null when `altText.open === false`. */}
         <AltTextInspector />
+        {/* Phase 7.5 Wave 6 (Riley) — B9 Action Wizard + B14 Spell-check +
+            B18 Font swap. Each component handles its own modal-open gating
+            from its slice; mount here is unconditional. */}
+        <ActionWizard />
+        <SpellCheck />
+        <FontSwapModal />
         <TextEditOverlay />
       </div>
     </ErrorBoundary>

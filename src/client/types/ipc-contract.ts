@@ -508,6 +508,13 @@ export type {
   PdfListEmbeddedFontsError,
   PdfListEmbeddedFontsValue,
   PdfListEmbeddedFontsResponse,
+  // Phase 7.5 Wave 5 — B18 font swap engine (re-exported here so Wave 6 UI
+  // can name the canonical request/response shapes through the gatekeeper).
+  StandardPdfFontName,
+  PdfSwapEmbeddedFontRequest,
+  PdfSwapEmbeddedFontError,
+  PdfSwapEmbeddedFontValue,
+  PdfSwapEmbeddedFontResponse,
   // §12. PdfApi aggregate
   PdfApi,
   ChannelName,

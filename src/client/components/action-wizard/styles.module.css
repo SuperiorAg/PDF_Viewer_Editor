@@ -1,0 +1,239 @@
+/* Action Wizard component styles — Phase 7.5 Wave 6 (Riley).
+   Hosts the record dialog, saved-actions list, and runner panel. */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.field input[type='text'] {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, #ccc);
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.statusLine {
+  font-size: 0.95rem;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: var(--color-surface-2, #f3f5f7);
+}
+
+.statusLine.active {
+  background: var(--color-status-active-bg, #fde8e8);
+  color: var(--color-status-active-fg, #7a2222);
+  border: 1px solid var(--color-status-active-border, #f0a0a0);
+}
+
+.statusLine.paused {
+  background: var(--color-status-paused-bg, #fff7e0);
+  color: var(--color-status-paused-fg, #6b4f00);
+  border: 1px solid var(--color-status-paused-border, #e6cf73);
+}
+
+.counter {
+  display: flex;
+  gap: 16px;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary, #555);
+}
+
+.counter > span {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.banner {
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: var(--color-warning-bg, #fff8d4);
+  border: 1px solid var(--color-warning-border, #e9d273);
+  color: var(--color-warning-fg, #694f00);
+  font-size: 0.9rem;
+}
+
+.errorBanner {
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: var(--color-error-bg, #fee);
+  border: 1px solid var(--color-error-border, #f6a8a8);
+  color: var(--color-error-fg, #7a2222);
+  font-size: 0.9rem;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+}
+
+.controls button {
+  padding: 6px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border, #ccc);
+  background: var(--color-surface, #fff);
+  cursor: pointer;
+}
+
+.controls button.primary {
+  background: var(--color-primary, #1f6feb);
+  border-color: var(--color-primary, #1f6feb);
+  color: #fff;
+}
+
+.controls button.danger {
+  background: var(--color-danger, #c93535);
+  border-color: var(--color-danger, #c93535);
+  color: #fff;
+}
+
+.controls button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border, #ccc);
+  border-radius: 4px;
+  background: var(--color-surface, #fff);
+}
+
+.rowMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rowName {
+  font-weight: 600;
+}
+
+.rowDetails {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary, #555);
+}
+
+.rowActions {
+  display: flex;
+  gap: 4px;
+}
+
+.rowActions button {
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  border: 1px solid var(--color-border, #ccc);
+  border-radius: 3px;
+  background: var(--color-surface, #fff);
+  cursor: pointer;
+}
+
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--color-text-secondary, #555);
+  font-style: italic;
+}
+
+.targetList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.targetRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 3px;
+  font-size: 0.9rem;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.resultRow {
+  padding: 6px 8px;
+  border-radius: 3px;
+  font-size: 0.9rem;
+}
+
+.resultRow.success {
+  background: var(--color-success-bg, #e6f7ec);
+  color: var(--color-success-fg, #1c5b32);
+}
+
+.resultRow.failure {
+  background: var(--color-error-bg, #fee);
+  color: var(--color-error-fg, #7a2222);
+}
+
+.progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-surface-2, #eee);
+  position: relative;
+  overflow: hidden;
+}
+
+.progressIndeterminate::before {
+  content: '';
+  position: absolute;
+  left: -40%;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: var(--color-primary, #1f6feb);
+  animation: pa-progress 1.2s ease-in-out infinite;
+}
+
+@keyframes pa-progress {
+  0% {
+    left: -40%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.help {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #555);
+}
+
+.openQuestion {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #555);
+  font-style: italic;
+}

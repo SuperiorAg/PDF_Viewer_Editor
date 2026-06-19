@@ -1,9 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit';
 
+import { actionRecorderMiddleware } from './middleware/action-recorder-middleware';
 import { formCommitMiddleware } from './middleware/form-commit-middleware';
 import { historyMiddleware } from './middleware/history-middleware';
 // Phase 7.5 Wave 5d (Riley) — C6 Accessibility Checker panel slice.
 import accessibilityCheckReducer from './slices/accessibility-check-slice';
+// Phase 7.5 Wave 6 (Riley) — B9 Action Wizard recorder + saved-actions list + runner.
+import actionWizardReducer from './slices/action-wizard-slice';
 // Phase 7.5 Wave 5c (Riley) — C5 Alt Text inspector modal slice.
 import altTextReducer from './slices/alt-text-slice';
 import annotationsReducer from './slices/annotations-slice';
@@ -14,6 +17,7 @@ import bookmarksReducer from './slices/bookmarks-slice';
 import documentPropertiesReducer from './slices/document-properties-slice';
 import documentReducer from './slices/document-slice';
 import exportReducer from './slices/export-slice';
+import fontSwapReducer from './slices/font-swap-slice';
 import formsReducer from './slices/forms-slice';
 import formsTemplatesReducer from './slices/forms-templates-slice';
 import historyReducer from './slices/history-slice';
@@ -41,6 +45,9 @@ import selectionReducer from './slices/selection-slice';
 import shapesReducer from './slices/shapes-slice';
 import signatureAuditReducer from './slices/signature-audit-slice';
 import signaturesReducer from './slices/signatures-slice';
+// Phase 7.5 Wave 6 (Riley) — B14 Spell-check engine UI.
+import spellCheckReducer from './slices/spell-check-slice';
+// Phase 7.5 Wave 6 (Riley) — B18 Font-swap modal.
 // Phase 7.5 B7 (Riley Wave 3) — Stamps library.
 import stampsReducer from './slices/stamps-slice';
 // Phase 7.5 Wave 5b (Riley) — C3 Tag PDF structure-tree editor.
@@ -97,6 +104,10 @@ export const store = configureStore({
     altText: altTextReducer,
     // Phase 7.5 Wave 5d (Riley) — C6 Accessibility Checker panel.
     accessibilityCheck: accessibilityCheckReducer,
+    // Phase 7.5 Wave 6 (Riley) — B9 Action Wizard + B14 Spell-check + B18 Font swap.
+    actionWizard: actionWizardReducer,
+    spellCheck: spellCheckReducer,
+    fontSwap: fontSwapReducer,
     // Phase 7
     update: updateReducer,
     telemetry: telemetryReducer,
@@ -137,7 +148,7 @@ export const store = configureStore({
           'pageDesign.background.imageBytes',
         ],
       },
-    }).concat(historyMiddleware, formCommitMiddleware),
+    }).concat(historyMiddleware, formCommitMiddleware, actionRecorderMiddleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

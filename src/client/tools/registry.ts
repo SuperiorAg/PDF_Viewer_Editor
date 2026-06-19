@@ -21,6 +21,10 @@ import { type ShortcutId } from '../shortcuts';
 import { redoAction, undoAction } from '../state/middleware/history-middleware';
 // Phase 7.5 Wave 5e (Riley) — C6 §27.3 Export Report dialog opener.
 import { exportDialogOpened } from '../state/slices/accessibility-check-slice';
+// Phase 7.5 Wave 6 (Riley) — B9 Action Wizard list opener.
+import { openActionWizardList } from '../state/slices/action-wizard-slice';
+// Phase 7.5 Wave 6 (Riley) — B18 Font swap modal opener.
+// Phase 7.5 Wave 6 (Riley) — B14 Spell-check settings dialog opener.
 // Phase 7.5 Wave 5c (Riley) — C5 Alt Text inspector opener.
 import { setAltTextOpen } from '../state/slices/alt-text-slice';
 import { setActiveTool } from '../state/slices/annotations-slice';
@@ -30,6 +34,7 @@ import { openAutoBookmark } from '../state/slices/auto-bookmark-slice';
 import { openDocumentProperties } from '../state/slices/document-properties-slice';
 import { applyEdit } from '../state/slices/document-slice';
 import { openExportModal } from '../state/slices/export-slice';
+import { openFontSwap } from '../state/slices/font-swap-slice';
 import { toggleDesignerMode } from '../state/slices/forms-slice';
 import { setLinkTool } from '../state/slices/links-slice';
 import { openWizard as openMailMergeWizard } from '../state/slices/mail-merge-slice';
@@ -51,6 +56,7 @@ import {
 import { openSanitize } from '../state/slices/sanitize-slice';
 // Phase 7.5 Wave 3 (Riley) — area-measure tool arms the shape sub-toolbar.
 import { setActiveShapeTool } from '../state/slices/shapes-slice';
+import { setSpellCheckSettingsOpen } from '../state/slices/spell-check-slice';
 // Phase 7.5 Wave 5a (Riley) — C1 Read Aloud registry dispatcher.
 import { openReadAloud } from '../state/slices/tts-slice';
 // Phase 7.5 Wave 4 (Riley) — B4 page-design + B13 Add Link tool dispatchers.
@@ -183,6 +189,13 @@ export type ToolId =
   // JSON formats). Gated on `lastResult !== null && status === 'ready'`
   // so the dialog never opens against an empty / mid-run state.
   | 'tools:export-accessibility-report'
+  // Phase 7.5 Wave 6 (Riley) — B9 Action Wizard + B14 Spell-check + B18 Font
+  // swap. Three Tools-menu + palette entries (font-swap also wires into the
+  // Inspector Font tab; that's a renderer-only call site, not a registry
+  // entry).
+  | 'tools:action-wizard'
+  | 'tools:spell-check-settings'
+  | 'tools:font-swap'
   // help
   | 'help:help'
   | 'help:about';
@@ -1250,6 +1263,82 @@ export const TOOLS: readonly ToolDef[] = [
       'a11y',
       'audit',
       'compliance',
+    ],
+  },
+
+  // ---- Phase 7.5 Wave 6 (Riley) — B9 Action Wizard + B14 Spell-check + B18 Font swap ----
+  // Action Wizard: opens the saved-actions list (the launcher). From there the
+  // user can Record New, Import, Run, or Delete saved scripts. Ctrl+Shift+W
+  // chord verified in the contract test (registry.contract.test.ts).
+  {
+    id: 'tools:action-wizard',
+    nameKey: 'toolbar:actionWizard',
+    tooltipKey: 'toolbar:actionWizardTooltip',
+    ariaLabelKey: 'toolbar:actionWizardAria',
+    icon: null,
+    shortcutId: 'tools-action-wizard-open',
+    menu: { top: 'tools' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: always,
+    dispatch: (d) => d(openActionWizardList()),
+    searchKeywords: [
+      'action',
+      'wizard',
+      'batch',
+      'macro',
+      'record',
+      'replay',
+      'script',
+      'automation',
+    ],
+  },
+  // Spell-check settings: opens the modal that lets the user pick locale,
+  // toggle the subsystem, and manage the user dictionary.
+  {
+    id: 'tools:spell-check-settings',
+    nameKey: 'toolbar:spellCheckSettings',
+    tooltipKey: 'toolbar:spellCheckSettingsTooltip',
+    ariaLabelKey: 'toolbar:spellCheckSettingsAria',
+    icon: null,
+    shortcutId: null,
+    menu: { top: 'tools' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: always,
+    dispatch: (d) => d(setSpellCheckSettingsOpen(true)),
+    searchKeywords: [
+      'spell',
+      'check',
+      'spellcheck',
+      'dictionary',
+      'language',
+      'locale',
+      'misspelling',
+      'spelling',
+    ],
+  },
+  // Font swap modal: lets the user replace an embedded font with a standard
+  // PDF font. Disabled when no document is open.
+  {
+    id: 'tools:font-swap',
+    nameKey: 'toolbar:fontSwap',
+    tooltipKey: 'toolbar:fontSwapTooltip',
+    ariaLabelKey: 'toolbar:fontSwapAria',
+    icon: null,
+    shortcutId: null,
+    menu: { top: 'tools' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: docOpen,
+    dispatch: (d) => d(openFontSwap(undefined)),
+    searchKeywords: [
+      'font',
+      'replace',
+      'swap',
+      'embed',
+      'embedded',
+      'typeface',
+      'helvetica',
+      'times',
+      'courier',
     ],
   },
 
