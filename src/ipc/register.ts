@@ -130,6 +130,7 @@ import { handleOcrRunOnDocument } from './handlers/ocr-run-on-document.js';
 import { handleOcrRunOnPage } from './handlers/ocr-run-on-page.js';
 // Phase 7.5 Wave 5d (David, 2026-06-17) — C6 Accessibility Checker.
 import { handlePdfRunAccessibilityCheck } from './handlers/pdf-accessibility-check.js';
+// Phase 7.5 Wave 7 (David, 2026-06-18) — B2 Compare Files.
 // Phase 7.5 Wave 6 (David, 2026-06-18) — B9 Action Wizard + B14 Spell + B18 listing.
 // Phase 7.5 Wave 2 (David, 2026-06-17) — B5 / B10 / B11 page operations.
 // Phase 7.5 Wave 5c (David, 2026-06-17) — C5 Alt Text.
@@ -148,6 +149,10 @@ import { handlePdfApplyWatermark } from './handlers/pdf-apply-watermark.js';
 // Phase 7.5 Wave 4 (David, 2026-06-17) — B6 / B13 / B19.
 import { handlePdfAutoBookmarkFromHeadings } from './handlers/pdf-auto-bookmark-from-headings.js';
 import { handlePdfCombine } from './handlers/pdf-combine.js';
+import { handlePdfCloseCompareSession } from './handlers/pdf-compare-close.js';
+import { handlePdfOpenComparePair } from './handlers/pdf-compare-open.js';
+import { handlePdfCompareTextOnPage } from './handlers/pdf-compare-text.js';
+import { handlePdfCompareVisualOnPage } from './handlers/pdf-compare-visual.js';
 import { handlePdfCompressDocument } from './handlers/pdf-compress-document.js';
 import { handlePdfCropPages } from './handlers/pdf-crop-pages.js';
 // Phase 7.5 Wave 5 (David, 2026-06-17) — B8 / B18 / B20 / B21.
@@ -670,6 +675,136 @@ async function productionExtractAccessibilityDiagnostics(
       });
     }
     return out;
+  } finally {
+    try {
+      await doc.destroy?.();
+    } catch {
+      /* best-effort */
+    }
+  }
+}
+
+/**
+ * Phase 7.5 Wave 7 — production text extractor for `pdf:compareTextOnPage`.
+ *
+ * Returns the concatenated text content for a single page from the
+ * document-store bytes for `handle`. Uses the canonical loader so
+ * L-004 (buffer-copy-before-pdf.js) + L-005 (polyfills-before-import)
+ * are honoured at the boundary. Joins items with spaces — the diff is
+ * over reading-order glyph runs, which is a reasonable approximation
+ * for the "what changed" view; per-line / per-word reflow is honestly
+ * deferred (no PDF text stream guarantees line breaks the way humans
+ * read).
+ *
+ * Honest deferral: the joiner is a single space. Pages with multi-
+ * column layouts may produce out-of-reading-order diff segments
+ * because pdf.js emits items in PDF content-stream order which is not
+ * necessarily reading order. Riley's panel surfaces the diff as-is;
+ * Wave 5c reading-order overlay is the upgrade path.
+ *
+ * Failure mode: throws on pdf.js load failure or missing handle. The
+ * handler maps to `extraction_failed` with safeMessage.
+ */
+async function productionExtractCompareTextOnPage(
+  bytes: Uint8Array,
+  pageIndex: number,
+): Promise<string> {
+  const pdfjs = await loadAutoBookmarkPdfJs();
+  const ownedCopy = new Uint8Array(bytes).slice();
+  const doc = await pdfjs.getDocument({ data: ownedCopy }).promise;
+  try {
+    if (pageIndex >= doc.numPages) {
+      throw new Error(`pageIndex ${pageIndex} >= numPages ${doc.numPages}`);
+    }
+    const page = await doc.getPage(pageIndex + 1); // pdf.js is 1-indexed
+    const content = await page.getTextContent();
+    const parts: string[] = [];
+    for (const it of content.items) {
+      const text = typeof it.str === 'string' ? it.str : '';
+      if (text.length === 0) continue;
+      parts.push(text);
+    }
+    return parts.join(' ');
+  } finally {
+    try {
+      await doc.destroy?.();
+    } catch {
+      /* best-effort */
+    }
+  }
+}
+
+/**
+ * Phase 7.5 Wave 7 — production rasterizer for `pdf:compareVisualOnPage`.
+ *
+ * Renders a page to PNG bytes at the target `renderWidth` (CSS pixels).
+ * The height is derived from the page's aspect ratio. Uses the same
+ * pdf.js + canvas adapter the OCR rasterizer uses (see
+ * `ocr-bootstrap.ts:rasterizePageProd` for the reference implementation).
+ *
+ * L-004 (buffer-copy) and L-005 (polyfills-before-import) are both
+ * honoured: bytes are copied via `new Uint8Array(...).slice()` and the
+ * canvas adapter is installed via `tryLoadCanvas()` BEFORE the dynamic
+ * pdf.js import runs (loadAutoBookmarkPdfJs does this).
+ *
+ * Failure mode: throws on canvas-adapter miss / pdf.js load failure /
+ * page render failure. The handler maps to `rasterize_failed`.
+ */
+async function productionRasterizeCompareVisual(
+  bytes: Uint8Array,
+  pageIndex: number,
+  renderWidth: number,
+): Promise<{ pngBytes: Uint8Array; width: number; height: number }> {
+  const pdfjs = await loadAutoBookmarkPdfJs();
+  const ownedCopy = new Uint8Array(bytes).slice();
+  const doc = await pdfjs.getDocument({ data: ownedCopy }).promise;
+  try {
+    if (pageIndex >= doc.numPages) {
+      throw new Error(`pageIndex ${pageIndex} >= numPages ${doc.numPages}`);
+    }
+    const page = await doc.getPage(pageIndex + 1); // pdf.js is 1-indexed
+    const baseViewport = page.getViewport
+      ? page.getViewport({ scale: 1 })
+      : { width: 612, height: 792 };
+    const scale = renderWidth / Math.max(1, baseViewport.width);
+    const viewport = page.getViewport
+      ? page.getViewport({ scale })
+      : { width: renderWidth, height: 792 * scale };
+    const ocrBootstrap = await import('../main/pdf-ops/ocr-bootstrap.js');
+    const loaded = ocrBootstrap.tryLoadCanvas();
+    if (!loaded.ok) {
+      throw new Error(
+        `canvas adapter not installed (compare visual rasterize): ${loaded.errorMessage}`,
+      );
+    }
+    const createCanvasFn = loaded.createCanvas;
+    const canvasWidth = Math.ceil(viewport.width);
+    const canvasHeight = Math.ceil(viewport.height);
+    const canvas = createCanvasFn(canvasWidth, canvasHeight);
+    const ctx = canvas.getContext('2d');
+    // Force pdf.js to resolve every font on the page before render —
+    // same fix the OCR + export rasterizers apply (otherwise non-
+    // embedded base-14 glyphs paint blank).
+    const pageWithOps = page as typeof page & {
+      getOperatorList?: () => Promise<unknown>;
+    };
+    if (typeof pageWithOps.getOperatorList === 'function') {
+      try {
+        await pageWithOps.getOperatorList();
+      } catch {
+        /* best-effort prewarm */
+      }
+    }
+    // pdf.js's `page.render(...)` exists at runtime even though the
+    // narrow AutoBookmarkPdfJsPage type doesn't declare it. Cast
+    // through `unknown` so the typecheck stays honest.
+    const renderable = page as unknown as {
+      render: (opts: { canvasContext: unknown; viewport: unknown }) => { promise: Promise<void> };
+    };
+    await renderable.render({ canvasContext: ctx, viewport }).promise;
+    const png = canvas.toBuffer('image/png');
+    const pngBytes = new Uint8Array(png.buffer, png.byteOffset, png.byteLength);
+    return { pngBytes, width: canvasWidth, height: canvasHeight };
   } finally {
     try {
       await doc.destroy?.();
@@ -1451,6 +1586,43 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
       getBytes: (h) => documentStore.getBytes(h),
       extractor: productionExtractAccessibilityDiagnostics,
     }),
+  );
+
+  // Phase 7.5 Wave 7 (David, 2026-06-18) — B2 Compare Files. The four
+  // channels share the process-wide `compareSessionStore` singleton via
+  // the handler default. openComparePair does NOT call pdf.js — it just
+  // validates handles + records the session. First text/visual request
+  // triggers per-side pdf.js parse via the canonical loader (L-005
+  // compliance at the wiring boundary). closeCompareSession frees the
+  // cached pdf.js docs + per-page text + per-page PNG renders.
+  ipcMain.handle(Channels.PdfOpenComparePair, (_evt, payload) =>
+    handlePdfOpenComparePair(payload, {
+      getPageCount: (h) => {
+        const rec = documentStore.get(h);
+        return rec ? rec.pageCount : null;
+      },
+    }),
+  );
+  ipcMain.handle(Channels.PdfCompareTextOnPage, (_evt, payload) =>
+    handlePdfCompareTextOnPage(payload, {
+      extractor: async (handle, pageIndex) => {
+        const bytes = documentStore.getBytes(handle);
+        if (!bytes) throw new Error(`handle ${handle} is not registered`);
+        return await productionExtractCompareTextOnPage(bytes, pageIndex);
+      },
+    }),
+  );
+  ipcMain.handle(Channels.PdfCompareVisualOnPage, (_evt, payload) =>
+    handlePdfCompareVisualOnPage(payload, {
+      rasterizer: async (handle, pageIndex, renderWidth) => {
+        const bytes = documentStore.getBytes(handle);
+        if (!bytes) throw new Error(`handle ${handle} is not registered`);
+        return await productionRasterizeCompareVisual(bytes, pageIndex, renderWidth);
+      },
+    }),
+  );
+  ipcMain.handle(Channels.PdfCloseCompareSession, (_evt, payload) =>
+    handlePdfCloseCompareSession(payload),
   );
 
   // Phase 7.5 Wave 6 (David, 2026-06-18) — B9 Action Wizard runner.

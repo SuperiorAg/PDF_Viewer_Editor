@@ -143,6 +143,15 @@ function makeBridgeUnavailableFallback(): PdfApi {
       // `listEmbeddedFonts`, so the fallback must stub it. Real impl is
       // in font-list.ts (main) + pdf-list-embedded-fonts.ts handler.
       listEmbeddedFonts: unavailable,
+      // Phase 7.5 Wave 7 (David, 2026-06-18) — B2 Compare Files. Same
+      // fallback-stub precedent as the C-bucket additions above: PdfApi
+      // ['pdf'] carries four new methods, so the fallback must stub each
+      // or the renderer typecheck fails. Real impl is in the four
+      // pdf-compare-*.ts handlers + the preload exposure.
+      openComparePair: unavailable,
+      compareTextOnPage: unavailable,
+      compareVisualOnPage: unavailable,
+      closeCompareSession: unavailable,
     },
     // Phase 3 (api-contracts §13)
     forms: {

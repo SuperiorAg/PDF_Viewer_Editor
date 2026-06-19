@@ -2433,6 +2433,175 @@ export type PdfRunAccessibilityCheckResponse = Result<
   PdfRunAccessibilityCheckError
 >;
 
+// ---- pdf:openComparePair / pdf:compareTextOnPage / pdf:compareVisualOnPage /
+//      pdf:closeCompareSession (B2 Compare Files, Wave 7) ----------------------
+//
+// Phase 7.5 Wave 7 — B2 Compare Files engine.
+//
+// Engine:   src/main/compare/{text,visual}-compare-engine.ts + page-pairing.ts
+//           + compare-session-store.ts.
+// Wiring:   src/ipc/handlers/pdf-compare-*.ts (pdf.js loader + canvas-based
+//           rasterizer live here, per L-005).
+// Renderer: src/client/components/compare-panel/* (Riley, parallel wave).
+//
+// Honest contract:
+//   - openComparePair PINS the two document handles + returns a sequential
+//     page-pair list (left N <-> right N; trailing pages get null on the
+//     missing side as orphans). v0.8.0 is sequential-only — see the
+//     pagePairs JSDoc for the v0.9.0 content-hash-pairing upgrade path.
+//   - First text or visual request triggers per-side pdf.js parse (lazy).
+//     The session anchors the cache; closeCompareSession frees it.
+//   - Memory: base64 PNG payloads can be large. Renderer should request
+//     modest `renderWidth` (default 800px). Engine clamps to the range
+//     [64, 1600] documented in visual-compare-engine.ts.
+//   - Diff threshold: 0.1 (pixelmatch default). Exported as a named
+//     constant for a future renderer-visible tuning slider.
+
+/** Diff segment kind. Mirrors diff-match-patch's three op codes. */
+export interface CompareTextDiffSegment {
+  kind: 'equal' | 'insert' | 'delete';
+  text: string;
+}
+
+/** Per-page summary used for the renderer's badge. */
+export interface CompareTextDiffSummary {
+  equalChars: number;
+  insertChars: number;
+  deleteChars: number;
+  /** True when at least one insert OR delete segment is present. */
+  changed: boolean;
+}
+
+/** One page-pair record. */
+export interface ComparePagePair {
+  /** 0-based index into the LEFT (baseline) document, or `null` for
+   *  modified-only orphan pages. */
+  leftPageIndex: number | null;
+  /** 0-based index into the RIGHT (modified) document, or `null` for
+   *  baseline-only orphan pages. */
+  rightPageIndex: number | null;
+}
+
+// ---- pdf:openComparePair --------------------------------------------------
+
+export interface PdfOpenComparePairRequest {
+  leftHandle: DocumentHandle;
+  rightHandle: DocumentHandle;
+}
+
+export type PdfOpenComparePairError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'compare_engine_unavailable';
+
+export interface PdfOpenComparePairValue {
+  /** Opaque session id; pass to every subsequent compare* channel. */
+  compareSessionId: string;
+  pageCountLeft: number;
+  pageCountRight: number;
+  /** Sequential page-pair list. v0.8.0 is sequential-only — left N
+   *  pairs with right N. When one side is shorter the trailing entries
+   *  carry null on the missing side. v0.9.0 may upgrade to content-hash
+   *  pairing without changing the array shape. */
+  pagePairs: ReadonlyArray<ComparePagePair>;
+}
+
+export type PdfOpenComparePairResponse = Result<PdfOpenComparePairValue, PdfOpenComparePairError>;
+
+// ---- pdf:compareTextOnPage ------------------------------------------------
+
+export interface PdfCompareTextOnPageRequest {
+  compareSessionId: string;
+  /** 0-based — `null` for an orphan (modified-only) page. */
+  leftPageIndex: number | null;
+  /** 0-based — `null` for an orphan (baseline-only) page. */
+  rightPageIndex: number | null;
+}
+
+export type PdfCompareTextOnPageError =
+  | 'invalid_payload'
+  | 'session_not_found'
+  | 'page_out_of_range'
+  | 'extraction_failed';
+
+export interface PdfCompareTextOnPageValue {
+  /** 1-based UI label. Equals (leftPageIndex ?? rightPageIndex) + 1. */
+  pageNumber: number;
+  leftPageIndex: number | null;
+  rightPageIndex: number | null;
+  diffs: ReadonlyArray<CompareTextDiffSegment>;
+  summary: CompareTextDiffSummary;
+}
+
+export type PdfCompareTextOnPageResponse = Result<
+  PdfCompareTextOnPageValue,
+  PdfCompareTextOnPageError
+>;
+
+// ---- pdf:compareVisualOnPage ----------------------------------------------
+
+export interface PdfCompareVisualOnPageRequest {
+  compareSessionId: string;
+  leftPageIndex: number | null;
+  rightPageIndex: number | null;
+  /** Rendered canvas width in CSS pixels. Engine clamps to
+   *  [MIN_RENDER_WIDTH_PX, MAX_RENDER_WIDTH_PX] documented in
+   *  visual-compare-engine.ts (64..1600 at the v0.8.0 cut). Default
+   *  800px when omitted. */
+  renderWidth?: number;
+}
+
+export type PdfCompareVisualOnPageError =
+  | 'invalid_payload'
+  | 'session_not_found'
+  | 'page_out_of_range'
+  | 'rasterize_failed';
+
+export interface PdfCompareVisualOnPageValue {
+  pageNumber: number;
+  leftPageIndex: number | null;
+  rightPageIndex: number | null;
+  /** Rendered canvas width, post-clamp. */
+  width: number;
+  /** Taller of the two side heights (orphan: the present side). */
+  height: number;
+  diffPixelCount: number;
+  totalPixelCount: number;
+  /** 0..100, rounded to 2 decimal places. */
+  diffPercent: number;
+  /** base64-encoded PNG bytes — diff mask, transparent except where
+   *  pixels differ. Renderer overlays on top of `rightPagePng`. */
+  diffMaskPng: string;
+  /** base64-encoded PNG of the left/baseline page render. `null` on
+   *  orphan pages (left side absent). */
+  leftPagePng: string | null;
+  /** base64-encoded PNG of the right/modified page render. `null` on
+   *  orphan pages (right side absent). */
+  rightPagePng: string | null;
+}
+
+export type PdfCompareVisualOnPageResponse = Result<
+  PdfCompareVisualOnPageValue,
+  PdfCompareVisualOnPageError
+>;
+
+// ---- pdf:closeCompareSession ----------------------------------------------
+
+export interface PdfCloseCompareSessionRequest {
+  compareSessionId: string;
+}
+
+export type PdfCloseCompareSessionError = 'invalid_payload' | 'session_not_found';
+
+export interface PdfCloseCompareSessionValue {
+  closed: boolean;
+}
+
+export type PdfCloseCompareSessionResponse = Result<
+  PdfCloseCompareSessionValue,
+  PdfCloseCompareSessionError
+>;
+
 // ---- pdf:applyStamp (B7) ---------------------------------------------------
 
 export interface PdfApplyStampRequest {
@@ -4905,6 +5074,16 @@ export const Channels = {
   // count for the searchable-pdf rule); rules engine ships a SUBSET of
   // WCAG 2.1 + PDF/UA-1 per docs/accessibility-authoring-spec.md §6.
   PdfRunAccessibilityCheck: 'pdf:runAccessibilityCheck',
+  // Phase 7.5 Wave 7 (David, 2026-06-18) — B2 Compare Files.
+  // diff-match-patch (Apache-2.0) + pixelmatch (ISC) + pngjs (MIT) at the
+  // engine layer; pdf.js (legacy build) at the wiring boundary for text
+  // extraction + rasterization. Session-store lazy-loads pdf.js per side
+  // on first text/visual request. See docs/api-contracts.md §19.9 +
+  // docs/ui-spec-phase-7.5.md §2.
+  PdfOpenComparePair: 'pdf:openComparePair',
+  PdfCompareTextOnPage: 'pdf:compareTextOnPage',
+  PdfCompareVisualOnPage: 'pdf:compareVisualOnPage',
+  PdfCloseCompareSession: 'pdf:closeCompareSession',
   // Phase 7.5 Wave 6 (David, 2026-06-18) — B9 Action Wizard runner +
   // B14 Spell-check engine + B18 font listing helper.
   // Action scripts persist to JSON under <userData>/actions/; replay flows
@@ -5142,6 +5321,18 @@ export interface PdfApi {
     // Phase 7.5 Wave 6 (David, 2026-06-18) — B18 font listing helper. Pure
     // pdf-lib walk of /Resources/Font per page; used by Riley's font picker.
     listEmbeddedFonts: (req: PdfListEmbeddedFontsRequest) => Promise<PdfListEmbeddedFontsResponse>;
+    // Phase 7.5 Wave 7 (David, 2026-06-18) — B2 Compare Files. Lazy
+    // per-page on viewport — opening a session does NOT eagerly parse
+    // either document; the first text/visual request triggers per-side
+    // pdf.js parse. See docs/api-contracts.md §19.9 / docs/ui-spec-phase-7.5.md §2.
+    openComparePair: (req: PdfOpenComparePairRequest) => Promise<PdfOpenComparePairResponse>;
+    compareTextOnPage: (req: PdfCompareTextOnPageRequest) => Promise<PdfCompareTextOnPageResponse>;
+    compareVisualOnPage: (
+      req: PdfCompareVisualOnPageRequest,
+    ) => Promise<PdfCompareVisualOnPageResponse>;
+    closeCompareSession: (
+      req: PdfCloseCompareSessionRequest,
+    ) => Promise<PdfCloseCompareSessionResponse>;
   };
   // Phase 7.5 Wave 6 (David, 2026-06-18) — B9 Action Wizard runner.
   // Scripts persist to <userData>/actions/<id>.json; replay flows through

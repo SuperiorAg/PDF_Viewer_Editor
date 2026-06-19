@@ -136,6 +136,15 @@ import type {
   // Phase 7.5 Wave 5d (David, 2026-06-17) — C6 Accessibility Checker.
   PdfRunAccessibilityCheckRequest,
   PdfRunAccessibilityCheckResponse,
+  // Phase 7.5 Wave 7 (David, 2026-06-18) — B2 Compare Files.
+  PdfOpenComparePairRequest,
+  PdfOpenComparePairResponse,
+  PdfCompareTextOnPageRequest,
+  PdfCompareTextOnPageResponse,
+  PdfCompareVisualOnPageRequest,
+  PdfCompareVisualOnPageResponse,
+  PdfCloseCompareSessionRequest,
+  PdfCloseCompareSessionResponse,
   // Phase 7.5 Wave 6 (David, 2026-06-18) — B9 Action Wizard + B14 Spell + B18 list.
   ActionsSaveScriptRequest,
   ActionsSaveScriptResponse,
@@ -470,6 +479,24 @@ const pdfApi: PdfApi = {
         Channels.PdfListEmbeddedFonts,
         req,
       ) as Promise<PdfListEmbeddedFontsResponse>,
+    // Phase 7.5 Wave 7 (David, 2026-06-18) — B2 Compare Files.
+    openComparePair: (req: PdfOpenComparePairRequest) =>
+      ipcRenderer.invoke(Channels.PdfOpenComparePair, req) as Promise<PdfOpenComparePairResponse>,
+    compareTextOnPage: (req: PdfCompareTextOnPageRequest) =>
+      ipcRenderer.invoke(
+        Channels.PdfCompareTextOnPage,
+        req,
+      ) as Promise<PdfCompareTextOnPageResponse>,
+    compareVisualOnPage: (req: PdfCompareVisualOnPageRequest) =>
+      ipcRenderer.invoke(
+        Channels.PdfCompareVisualOnPage,
+        req,
+      ) as Promise<PdfCompareVisualOnPageResponse>,
+    closeCompareSession: (req: PdfCloseCompareSessionRequest) =>
+      ipcRenderer.invoke(
+        Channels.PdfCloseCompareSession,
+        req,
+      ) as Promise<PdfCloseCompareSessionResponse>,
   },
   // Phase 7.5 Wave 6 (David, 2026-06-18) — B9 Action Wizard runner.
   actions: {
