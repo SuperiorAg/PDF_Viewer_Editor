@@ -4485,6 +4485,327 @@ export type I18nGetAvailableLocalesResponse = Result<
 >;
 
 // ============================================================================
+// Phase 7.5 Wave 6 (David, 2026-06-18) — B9 Action Wizard + B14 Spell-check
+// + B18 font listing.
+//
+// B9 Action Wizard. An "Action Script" is a recorded sequence of EditOperation
+// values that the existing replay-engine consumes. The wizard records (renderer
+// dispatches edit ops through normal flow and snapshots them) -> saves to a
+// JSON file under <userData>/actions/<id>.json -> replays via replay-engine
+// against batch target documents.
+//
+// Schema versioning + banned-op allowlist live in
+// src/main/persistence/actions-store.ts. R5 mitigation per project-plan §4 row
+// R5: ACTION_SCRIPT_SCHEMA_VERSION=1 + a banned-op gate that rejects ops that
+// don't survive cross-document replay (e.g. signature ops, password ops, and
+// document-handle-bound ops like text-replace that reference a specific
+// objectId).
+//
+// B14 Spell-check. nspell (MIT) + Hunspell .aff/.dic via dictionary-en (MIT).
+// es-ES dictionary is GPL-3/LGPL-3/MPL-1.1 per the npm registry vet on
+// 2026-06-18 — we ship en-US only and surface es-ES as 'available: false'
+// with a specific reason string per P7.5-L-10 honesty.
+//
+// B18 font listing. Wave 5 shipped the font-SWAP engine. This wave adds a
+// thin LIST helper used by Riley's font-picker UI.
+// ============================================================================
+
+// ---- actions:saveScript ----------------------------------------------------
+
+export interface ActionScriptSummary {
+  id: string;
+  name: string;
+  savedAt: number;
+  usageCount: number;
+  opCount: number;
+  schemaVersion: number;
+}
+
+export interface ActionsSaveScriptRequest {
+  name: string;
+  ops: EditOperationSerialized[];
+  schemaVersion: number;
+}
+export type ActionsSaveScriptError =
+  | 'invalid_payload'
+  | 'banned_op_in_script'
+  | 'schema_version_unsupported'
+  | 'persistence_failed';
+export interface ActionsSaveScriptValue {
+  id: string;
+  savedAt: number;
+}
+export type ActionsSaveScriptResponse = Result<ActionsSaveScriptValue, ActionsSaveScriptError>;
+
+// ---- actions:listScripts ---------------------------------------------------
+
+export interface ActionsListScriptsRequest {
+  /* no args */
+}
+export type ActionsListScriptsError = 'persistence_failed';
+export interface ActionsListScriptsValue {
+  scripts: ActionScriptSummary[];
+}
+export type ActionsListScriptsResponse = Result<ActionsListScriptsValue, ActionsListScriptsError>;
+
+// ---- actions:getScript -----------------------------------------------------
+
+export interface ActionsGetScriptRequest {
+  id: string;
+}
+export type ActionsGetScriptError =
+  | 'invalid_payload'
+  | 'script_not_found'
+  | 'schema_version_unsupported'
+  | 'persistence_failed';
+export interface ActionsGetScriptValue {
+  id: string;
+  name: string;
+  savedAt: number;
+  usageCount: number;
+  schemaVersion: number;
+  ops: EditOperationSerialized[];
+}
+export type ActionsGetScriptResponse = Result<ActionsGetScriptValue, ActionsGetScriptError>;
+
+// ---- actions:deleteScript --------------------------------------------------
+
+export interface ActionsDeleteScriptRequest {
+  id: string;
+}
+export type ActionsDeleteScriptError =
+  | 'invalid_payload'
+  | 'script_not_found'
+  | 'persistence_failed';
+export interface ActionsDeleteScriptValue {
+  deleted: true;
+}
+export type ActionsDeleteScriptResponse = Result<
+  ActionsDeleteScriptValue,
+  ActionsDeleteScriptError
+>;
+
+// ---- actions:runScript -----------------------------------------------------
+
+/**
+ * Per-target outcome for `actions:runScript`. `outputPath` is set when the
+ * replay+save succeeded; `error` carries a renderer-displayable message when
+ * the target failed. We never abort the whole batch on a single failure —
+ * the renderer surfaces the per-target results.
+ */
+export interface ActionRunResult {
+  handleIndex: number;
+  success: boolean;
+  outputPath?: string;
+  error?: string;
+}
+
+export interface ActionsRunScriptRequest {
+  scriptId: string;
+  targetHandles: DocumentHandle[];
+  /**
+   * Destination folder. When omitted, each output is written next to its
+   * source (handle's original path, if known). Folder path is sanitized via
+   * sanitizeDirectoryPath at the handler boundary (L-001 compliance).
+   */
+  destinationFolder?: string;
+  /**
+   * Filename pattern with `{name}` token. Default `'{name}-acted.pdf'`.
+   * The {name} token is replaced with the source basename (no extension).
+   * The pattern's resolved path is sanitized via sanitizePath; reject if the
+   * pattern would produce a non-.pdf extension.
+   */
+  filenamePattern?: string;
+}
+export type ActionsRunScriptError =
+  | 'invalid_payload'
+  | 'script_not_found'
+  | 'schema_version_unsupported'
+  | 'banned_op_in_script'
+  | 'destination_invalid'
+  | 'replay_engine_unavailable'
+  | 'persistence_failed';
+export interface ActionsRunScriptValue {
+  results: ActionRunResult[];
+  ranAt: number;
+}
+export type ActionsRunScriptResponse = Result<ActionsRunScriptValue, ActionsRunScriptError>;
+
+// ---- actions:exportScript --------------------------------------------------
+
+export interface ActionsExportScriptRequest {
+  id: string;
+}
+export type ActionsExportScriptError =
+  | 'invalid_payload'
+  | 'script_not_found'
+  | 'persistence_failed';
+export interface ActionsExportScriptValue {
+  /** The serialized JSON envelope. Renderer writes the file. */
+  json: string;
+  schemaVersion: number;
+}
+export type ActionsExportScriptResponse = Result<
+  ActionsExportScriptValue,
+  ActionsExportScriptError
+>;
+
+// ---- actions:importScript --------------------------------------------------
+
+export interface ActionsImportScriptRequest {
+  json: string;
+}
+export type ActionsImportScriptError =
+  | 'invalid_payload'
+  | 'invalid_json'
+  | 'banned_op_in_script'
+  | 'schema_version_unsupported'
+  | 'persistence_failed';
+export interface ActionsImportScriptValue {
+  id: string;
+  name: string;
+  schemaVersion: number;
+}
+export type ActionsImportScriptResponse = Result<
+  ActionsImportScriptValue,
+  ActionsImportScriptError
+>;
+
+// ---- spell:listLocales -----------------------------------------------------
+
+export interface SpellLocaleDescriptor {
+  id: string; // 'en-US' | 'es-ES' (future-extensible — plain string)
+  available: boolean;
+  /**
+   * P7.5-L-10 honesty: when available=false, a specific human-readable reason
+   * (e.g. "Hunspell dictionary license not permissive"). Renderer is REQUIRED
+   * to surface this so users understand why a locale isn't pickable.
+   */
+  reason?: string;
+}
+
+export interface SpellListLocalesRequest {
+  /* no args */
+}
+export type SpellListLocalesError = 'engine_failed';
+export interface SpellListLocalesValue {
+  locales: SpellLocaleDescriptor[];
+}
+export type SpellListLocalesResponse = Result<SpellListLocalesValue, SpellListLocalesError>;
+
+// ---- spell:checkText -------------------------------------------------------
+
+export interface SpellMisspelling {
+  /** Offset (UTF-16 code units) into the input text where the word starts. */
+  offset: number;
+  /** Length in UTF-16 code units of the misspelled word. */
+  length: number;
+  /** The misspelled word as it appeared in the input. */
+  word: string;
+  /** Up to 5 suggestions (engine may return more; trimmed at the boundary). */
+  suggestions: string[];
+}
+
+export interface SpellCheckTextRequest {
+  locale: string;
+  text: string;
+}
+export type SpellCheckTextError = 'invalid_payload' | 'locale_not_available' | 'engine_failed';
+export interface SpellCheckTextValue {
+  misspellings: SpellMisspelling[];
+}
+export type SpellCheckTextResponse = Result<SpellCheckTextValue, SpellCheckTextError>;
+
+// ---- spell:addWordToDictionary ---------------------------------------------
+
+export interface SpellAddWordToDictionaryRequest {
+  locale: string;
+  word: string;
+}
+export type SpellAddWordToDictionaryError =
+  | 'invalid_payload'
+  | 'locale_not_available'
+  | 'persistence_failed';
+export interface SpellAddWordToDictionaryValue {
+  added: boolean; // false when the word was already present (idempotent)
+}
+export type SpellAddWordToDictionaryResponse = Result<
+  SpellAddWordToDictionaryValue,
+  SpellAddWordToDictionaryError
+>;
+
+// ---- spell:removeWordFromDictionary ----------------------------------------
+
+export interface SpellRemoveWordFromDictionaryRequest {
+  locale: string;
+  word: string;
+}
+export type SpellRemoveWordFromDictionaryError =
+  | 'invalid_payload'
+  | 'locale_not_available'
+  | 'persistence_failed';
+export interface SpellRemoveWordFromDictionaryValue {
+  removed: boolean; // false when the word was not present (idempotent)
+}
+export type SpellRemoveWordFromDictionaryResponse = Result<
+  SpellRemoveWordFromDictionaryValue,
+  SpellRemoveWordFromDictionaryError
+>;
+
+// ---- spell:listUserDictionary ----------------------------------------------
+
+export interface SpellListUserDictionaryRequest {
+  locale: string;
+}
+export type SpellListUserDictionaryError =
+  | 'invalid_payload'
+  | 'locale_not_available'
+  | 'persistence_failed';
+export interface SpellListUserDictionaryValue {
+  words: string[];
+}
+export type SpellListUserDictionaryResponse = Result<
+  SpellListUserDictionaryValue,
+  SpellListUserDictionaryError
+>;
+
+// ---- pdf:listEmbeddedFonts (B18 helper) ------------------------------------
+//
+// Wave-5 shipped the font-SWAP engine (pdf:swapEmbeddedFont). This wave adds
+// the LIST helper Riley's font-picker UI needs. Pure pdf-lib: walks each
+// page's /Resources/Font dict and reports the unique fonts referenced.
+
+export interface EmbeddedFontInfo {
+  /** PostScript name (e.g. 'Helvetica' or 'XPDFLZ+Arial-Bold'). */
+  name: string;
+  /** True when the font dict carries /FontFile|/FontFile2|/FontFile3 in its FontDescriptor. */
+  isEmbedded: boolean;
+  /**
+   * True when the font name begins with the standard PDF subset prefix
+   * (six uppercase letters + '+'). Best-effort heuristic.
+   */
+  isSubset: boolean;
+  /** 0-based page indices that reference this font. Deduped + sorted. */
+  pageRefs: number[];
+}
+
+export interface PdfListEmbeddedFontsRequest {
+  handle: DocumentHandle;
+}
+export type PdfListEmbeddedFontsError =
+  | 'invalid_payload'
+  | 'handle_not_found'
+  | 'pdf_load_failed'
+  | 'engine_failed';
+export interface PdfListEmbeddedFontsValue {
+  fonts: EmbeddedFontInfo[];
+}
+export type PdfListEmbeddedFontsResponse = Result<
+  PdfListEmbeddedFontsValue,
+  PdfListEmbeddedFontsError
+>;
+
+// ============================================================================
 // 11. Channel-name registry
 // ============================================================================
 
@@ -4584,6 +4905,27 @@ export const Channels = {
   // count for the searchable-pdf rule); rules engine ships a SUBSET of
   // WCAG 2.1 + PDF/UA-1 per docs/accessibility-authoring-spec.md §6.
   PdfRunAccessibilityCheck: 'pdf:runAccessibilityCheck',
+  // Phase 7.5 Wave 6 (David, 2026-06-18) — B9 Action Wizard runner +
+  // B14 Spell-check engine + B18 font listing helper.
+  // Action scripts persist to JSON under <userData>/actions/; replay flows
+  // through the existing src/main/pdf-ops/replay-engine.ts (R5 mitigation
+  // schema version + banned-op allowlist live in actions-store.ts).
+  // Spell uses nspell (MIT) + dictionary-en (MIT); es-ES dictionary failed
+  // the per-source license vet (GPL-3/LGPL-3/MPL-1.1) so spell:listLocales
+  // honestly surfaces es-ES as unavailable (P7.5-L-10).
+  ActionsSaveScript: 'actions:saveScript',
+  ActionsListScripts: 'actions:listScripts',
+  ActionsGetScript: 'actions:getScript',
+  ActionsDeleteScript: 'actions:deleteScript',
+  ActionsRunScript: 'actions:runScript',
+  ActionsExportScript: 'actions:exportScript',
+  ActionsImportScript: 'actions:importScript',
+  SpellListLocales: 'spell:listLocales',
+  SpellCheckText: 'spell:checkText',
+  SpellAddWordToDictionary: 'spell:addWordToDictionary',
+  SpellRemoveWordFromDictionary: 'spell:removeWordFromDictionary',
+  SpellListUserDictionary: 'spell:listUserDictionary',
+  PdfListEmbeddedFonts: 'pdf:listEmbeddedFonts',
   // Phase 2 fs (replay-engine entry point)
   FsApplyEditOps: 'fs:applyEditOps',
   // Phase 4.1 (api-contracts.md §15, David)
@@ -4797,6 +5139,38 @@ export interface PdfApi {
     runAccessibilityCheck: (
       req: PdfRunAccessibilityCheckRequest,
     ) => Promise<PdfRunAccessibilityCheckResponse>;
+    // Phase 7.5 Wave 6 (David, 2026-06-18) — B18 font listing helper. Pure
+    // pdf-lib walk of /Resources/Font per page; used by Riley's font picker.
+    listEmbeddedFonts: (req: PdfListEmbeddedFontsRequest) => Promise<PdfListEmbeddedFontsResponse>;
+  };
+  // Phase 7.5 Wave 6 (David, 2026-06-18) — B9 Action Wizard runner.
+  // Scripts persist to <userData>/actions/<id>.json; replay flows through
+  // the existing replay-engine. Schema-version + banned-op allowlist
+  // documented in src/main/persistence/actions-store.ts.
+  actions: {
+    saveScript: (req: ActionsSaveScriptRequest) => Promise<ActionsSaveScriptResponse>;
+    listScripts: (req: ActionsListScriptsRequest) => Promise<ActionsListScriptsResponse>;
+    getScript: (req: ActionsGetScriptRequest) => Promise<ActionsGetScriptResponse>;
+    deleteScript: (req: ActionsDeleteScriptRequest) => Promise<ActionsDeleteScriptResponse>;
+    runScript: (req: ActionsRunScriptRequest) => Promise<ActionsRunScriptResponse>;
+    exportScript: (req: ActionsExportScriptRequest) => Promise<ActionsExportScriptResponse>;
+    importScript: (req: ActionsImportScriptRequest) => Promise<ActionsImportScriptResponse>;
+  };
+  // Phase 7.5 Wave 6 (David, 2026-06-18) — B14 Spell-check engine. en-US
+  // ships from dictionary-en (MIT); es-ES is honestly surfaced as
+  // unavailable (P7.5-L-10) because dictionary-es is GPL-3/LGPL/MPL.
+  spell: {
+    listLocales: (req: SpellListLocalesRequest) => Promise<SpellListLocalesResponse>;
+    checkText: (req: SpellCheckTextRequest) => Promise<SpellCheckTextResponse>;
+    addWordToDictionary: (
+      req: SpellAddWordToDictionaryRequest,
+    ) => Promise<SpellAddWordToDictionaryResponse>;
+    removeWordFromDictionary: (
+      req: SpellRemoveWordFromDictionaryRequest,
+    ) => Promise<SpellRemoveWordFromDictionaryResponse>;
+    listUserDictionary: (
+      req: SpellListUserDictionaryRequest,
+    ) => Promise<SpellListUserDictionaryResponse>;
   };
   // Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud (TTS).
   tts: {

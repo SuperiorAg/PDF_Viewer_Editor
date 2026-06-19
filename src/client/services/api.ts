@@ -138,6 +138,11 @@ function makeBridgeUnavailableFallback(): PdfApi {
       // renderer typecheck fails. Real impl is in accessibility-engine.ts
       // + pdf-accessibility-check.ts (main) and the preload exposure.
       runAccessibilityCheck: unavailable,
+      // Phase 7.5 Wave 6 (David, 2026-06-18) — B18 font listing helper.
+      // Same fallback-stub precedent: PdfApi['pdf'] now carries
+      // `listEmbeddedFonts`, so the fallback must stub it. Real impl is
+      // in font-list.ts (main) + pdf-list-embedded-fonts.ts handler.
+      listEmbeddedFonts: unavailable,
     },
     // Phase 3 (api-contracts §13)
     forms: {
@@ -260,6 +265,29 @@ function makeBridgeUnavailableFallback(): PdfApi {
       resume: unavailable,
       stop: unavailable,
       onBoundary: () => () => undefined,
+    },
+    // Phase 7.5 Wave 6 (David, 2026-06-18) — B9 Action Wizard runner.
+    // Renderer typecheck stays green via the fallback the moment David's
+    // contract lands, even before Riley's wave-6 thunk file is in.
+    actions: {
+      saveScript: unavailable,
+      listScripts: unavailable,
+      getScript: unavailable,
+      deleteScript: unavailable,
+      runScript: unavailable,
+      exportScript: unavailable,
+      importScript: unavailable,
+    },
+    // Phase 7.5 Wave 6 (David, 2026-06-18) — B14 Spell-check engine.
+    // listLocales falls back honestly here too: the renderer treats
+    // bridge_unavailable as "can't enumerate" rather than fabricating a
+    // locale list (P7.5-L-10 honesty preserved at the fallback layer).
+    spell: {
+      listLocales: unavailable,
+      checkText: unavailable,
+      addWordToDictionary: unavailable,
+      removeWordFromDictionary: unavailable,
+      listUserDictionary: unavailable,
     },
   };
 }

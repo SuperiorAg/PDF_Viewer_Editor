@@ -136,6 +136,33 @@ import type {
   // Phase 7.5 Wave 5d (David, 2026-06-17) — C6 Accessibility Checker.
   PdfRunAccessibilityCheckRequest,
   PdfRunAccessibilityCheckResponse,
+  // Phase 7.5 Wave 6 (David, 2026-06-18) — B9 Action Wizard + B14 Spell + B18 list.
+  ActionsSaveScriptRequest,
+  ActionsSaveScriptResponse,
+  ActionsListScriptsRequest,
+  ActionsListScriptsResponse,
+  ActionsGetScriptRequest,
+  ActionsGetScriptResponse,
+  ActionsDeleteScriptRequest,
+  ActionsDeleteScriptResponse,
+  ActionsRunScriptRequest,
+  ActionsRunScriptResponse,
+  ActionsExportScriptRequest,
+  ActionsExportScriptResponse,
+  ActionsImportScriptRequest,
+  ActionsImportScriptResponse,
+  SpellListLocalesRequest,
+  SpellListLocalesResponse,
+  SpellCheckTextRequest,
+  SpellCheckTextResponse,
+  SpellAddWordToDictionaryRequest,
+  SpellAddWordToDictionaryResponse,
+  SpellRemoveWordFromDictionaryRequest,
+  SpellRemoveWordFromDictionaryResponse,
+  SpellListUserDictionaryRequest,
+  SpellListUserDictionaryResponse,
+  PdfListEmbeddedFontsRequest,
+  PdfListEmbeddedFontsResponse,
   TtsListVoicesRequest,
   TtsListVoicesResponse,
   TtsSpeakTextRequest,
@@ -437,6 +464,51 @@ const pdfApi: PdfApi = {
         Channels.PdfRunAccessibilityCheck,
         req,
       ) as Promise<PdfRunAccessibilityCheckResponse>,
+    // Phase 7.5 Wave 6 (David, 2026-06-18) — B18 font listing helper.
+    listEmbeddedFonts: (req: PdfListEmbeddedFontsRequest) =>
+      ipcRenderer.invoke(
+        Channels.PdfListEmbeddedFonts,
+        req,
+      ) as Promise<PdfListEmbeddedFontsResponse>,
+  },
+  // Phase 7.5 Wave 6 (David, 2026-06-18) — B9 Action Wizard runner.
+  actions: {
+    saveScript: (req: ActionsSaveScriptRequest) =>
+      ipcRenderer.invoke(Channels.ActionsSaveScript, req) as Promise<ActionsSaveScriptResponse>,
+    listScripts: (req: ActionsListScriptsRequest) =>
+      ipcRenderer.invoke(Channels.ActionsListScripts, req) as Promise<ActionsListScriptsResponse>,
+    getScript: (req: ActionsGetScriptRequest) =>
+      ipcRenderer.invoke(Channels.ActionsGetScript, req) as Promise<ActionsGetScriptResponse>,
+    deleteScript: (req: ActionsDeleteScriptRequest) =>
+      ipcRenderer.invoke(Channels.ActionsDeleteScript, req) as Promise<ActionsDeleteScriptResponse>,
+    runScript: (req: ActionsRunScriptRequest) =>
+      ipcRenderer.invoke(Channels.ActionsRunScript, req) as Promise<ActionsRunScriptResponse>,
+    exportScript: (req: ActionsExportScriptRequest) =>
+      ipcRenderer.invoke(Channels.ActionsExportScript, req) as Promise<ActionsExportScriptResponse>,
+    importScript: (req: ActionsImportScriptRequest) =>
+      ipcRenderer.invoke(Channels.ActionsImportScript, req) as Promise<ActionsImportScriptResponse>,
+  },
+  // Phase 7.5 Wave 6 (David, 2026-06-18) — B14 Spell-check engine.
+  spell: {
+    listLocales: (req: SpellListLocalesRequest) =>
+      ipcRenderer.invoke(Channels.SpellListLocales, req) as Promise<SpellListLocalesResponse>,
+    checkText: (req: SpellCheckTextRequest) =>
+      ipcRenderer.invoke(Channels.SpellCheckText, req) as Promise<SpellCheckTextResponse>,
+    addWordToDictionary: (req: SpellAddWordToDictionaryRequest) =>
+      ipcRenderer.invoke(
+        Channels.SpellAddWordToDictionary,
+        req,
+      ) as Promise<SpellAddWordToDictionaryResponse>,
+    removeWordFromDictionary: (req: SpellRemoveWordFromDictionaryRequest) =>
+      ipcRenderer.invoke(
+        Channels.SpellRemoveWordFromDictionary,
+        req,
+      ) as Promise<SpellRemoveWordFromDictionaryResponse>,
+    listUserDictionary: (req: SpellListUserDictionaryRequest) =>
+      ipcRenderer.invoke(
+        Channels.SpellListUserDictionary,
+        req,
+      ) as Promise<SpellListUserDictionaryResponse>,
   },
   // Phase 7.5 Wave 5a (David, 2026-06-17) — C1 Read Aloud (TTS).
   tts: {

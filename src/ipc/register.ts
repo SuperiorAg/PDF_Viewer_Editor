@@ -36,8 +36,12 @@ import type { StampEntry } from '../main/pdf-ops/stamp-engine.js';
 import type { WiaAddon } from '../main/pdf-ops/wia-scanner.js';
 // Wave 8 (Diego, D-8.2 + D-8.3): real Chromium export + Electron print
 // dispatch adapters, replacing the Phase-2 conservative stubs below.
+import { ActionsStore } from '../main/persistence/actions-store.js';
+// Phase 7.5 Wave 6 (David, 2026-06-18) — B9 + B14 persistence + engine wiring.
+import { SpellUserDictStore } from '../main/persistence/spell-user-dict.js';
 import { dispatchPrintViaElectron, exportViaChromium } from '../main/print-window.js';
 import { sanitizeDirectoryPath, sanitizePath } from '../main/security/path-sanitizer.js';
+import { SpellLocaleLoader, availableSpellLocaleIds } from '../main/spell/locale-loader.js';
 import type { TelemetryService } from '../main/telemetry.js';
 import { TtsEngine } from '../main/tts/tts-engine.js';
 import type { Result } from '../shared/result.js';
@@ -51,6 +55,15 @@ import type {
   OcrProgressEvent,
   OcrLanguagePackDownloadProgressEvent,
 } from './contracts.js';
+import {
+  handleActionsDeleteScript,
+  handleActionsExportScript,
+  handleActionsGetScript,
+  handleActionsImportScript,
+  handleActionsListScripts,
+  handleActionsRunScript,
+  handleActionsSaveScript,
+} from './handlers/actions-handlers.js';
 import { handleAnnotationsAddShape } from './handlers/annotations-add-shape.js';
 import {
   handleAnnotationsGetMeasureCalibration,
@@ -117,6 +130,7 @@ import { handleOcrRunOnDocument } from './handlers/ocr-run-on-document.js';
 import { handleOcrRunOnPage } from './handlers/ocr-run-on-page.js';
 // Phase 7.5 Wave 5d (David, 2026-06-17) — C6 Accessibility Checker.
 import { handlePdfRunAccessibilityCheck } from './handlers/pdf-accessibility-check.js';
+// Phase 7.5 Wave 6 (David, 2026-06-18) — B9 Action Wizard + B14 Spell + B18 listing.
 // Phase 7.5 Wave 2 (David, 2026-06-17) — B5 / B10 / B11 page operations.
 // Phase 7.5 Wave 5c (David, 2026-06-17) — C5 Alt Text.
 import {
@@ -147,6 +161,7 @@ import { defaultPickEngine, handlePdfExport } from './handlers/pdf-export-pdf.js
 import { handlePdfExtractPages } from './handlers/pdf-extract-pages.js';
 import { handlePdfIdentifyTextSpan } from './handlers/pdf-identify-text-span.js';
 import { handlePdfInsertPagesFromFile } from './handlers/pdf-insert-pages-from-file.js';
+import { handlePdfListEmbeddedFonts } from './handlers/pdf-list-embedded-fonts.js';
 import { handlePdfGetOutline } from './handlers/pdf-ops.js';
 // Wave-30 follow-up (H-30.1, David 2026-06-01): real combine handler +
 // path-only file picker. Replaces the Phase-1 `not_implemented` stub.
@@ -185,6 +200,13 @@ import { handleSignaturesCertRelease } from './handlers/signatures-cert-release.
 import { handleSignaturesListAudit } from './handlers/signatures-list-audit.js';
 import { handleSignaturesRequestTimestamp } from './handlers/signatures-request-timestamp.js';
 import { handleSignaturesVerify } from './handlers/signatures-verify.js';
+import {
+  handleSpellAddWordToDictionary,
+  handleSpellCheckText,
+  handleSpellListLocales,
+  handleSpellListUserDictionary,
+  handleSpellRemoveWordFromDictionary,
+} from './handlers/spell-handlers.js';
 import {
   handleStampsCreate,
   handleStampsDelete,
@@ -343,6 +365,13 @@ export interface RegisterIpcOptions {
    * `bootstrapScan()` in `scan-bootstrap.ts`; tests inject a synthetic addon.
    */
   scan: RegisterScanOptions;
+  /**
+   * Phase 7.5 Wave 6 (David, 2026-06-18): absolute path to the writable
+   * user-data directory (Electron `app.getPath('userData')` in production).
+   * The action-script JSON files + spell user dictionary files live here.
+   * Tests inject a tmpdir / in-memory FS stub via the underlying stores.
+   */
+  userDataDir: string;
 }
 
 // Reference unused imports to keep them from being tree-shaken in type-only
@@ -660,7 +689,20 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
     autoUpdate,
     telemetry,
     scan,
+    userDataDir,
   } = opts;
+
+  // Phase 7.5 Wave 6 (David, 2026-06-18) — B9 + B14 stores + engines.
+  // Stores own absolute paths under `userDataDir`; both are lazy on first
+  // access (mkdir is recursive, file IO is exception-safe).
+  const actionsStore = new ActionsStore({
+    baseDir: joinPath(userDataDir, 'actions'),
+  });
+  const spellLoader = new SpellLocaleLoader();
+  const spellUserDict = new SpellUserDictStore({
+    baseDir: userDataDir,
+    availableLocales: availableSpellLocaleIds(),
+  });
 
   // -------- helpers ------------------------------------------------------
   const browserWindowToWindowLike = (w: BrowserWindow | null): WindowLike | null => {
@@ -1408,6 +1450,79 @@ export function registerIpcHandlers(opts: RegisterIpcOptions): void {
     handlePdfRunAccessibilityCheck(payload, {
       getBytes: (h) => documentStore.getBytes(h),
       extractor: productionExtractAccessibilityDiagnostics,
+    }),
+  );
+
+  // Phase 7.5 Wave 6 (David, 2026-06-18) — B9 Action Wizard runner.
+  // Scripts persist under <userData>/actions/<id>.json (ActionsStore handles
+  // mkdir lazily). The runner reuses the existing replay-engine for each
+  // target document — L-001 path-sanitizer compliance is enforced at the
+  // handler boundary (sanitizePath + sanitizeDirectoryPath are the SAME
+  // helpers the production replay-engine save path uses).
+  const actionsHandlerDeps = {
+    store: actionsStore,
+    getBytes: (h: number) => documentStore.getBytes(h),
+    getDisplayName: (h: number) => documentStore.get(h)?.displayName ?? null,
+    getSourceDirectory: (h: number) => {
+      const rec = documentStore.get(h);
+      if (!rec || !rec.path) return null;
+      return joinPath(rec.path, '..');
+    },
+    sanitizePath: (raw: string) => sanitizePath(raw),
+    sanitizeDirectoryPath: (raw: string) => sanitizeDirectoryPath(raw),
+    writeFile: async (path: string, bytes: Uint8Array) => {
+      await fsPromises.writeFile(path, bytes);
+    },
+    replay: async (input: ReplayInput) => replay(input),
+  };
+  ipcMain.handle(Channels.ActionsSaveScript, (_evt, payload) =>
+    handleActionsSaveScript(payload, actionsHandlerDeps),
+  );
+  ipcMain.handle(Channels.ActionsListScripts, (_evt, payload) =>
+    handleActionsListScripts(payload, actionsHandlerDeps),
+  );
+  ipcMain.handle(Channels.ActionsGetScript, (_evt, payload) =>
+    handleActionsGetScript(payload, actionsHandlerDeps),
+  );
+  ipcMain.handle(Channels.ActionsDeleteScript, (_evt, payload) =>
+    handleActionsDeleteScript(payload, actionsHandlerDeps),
+  );
+  ipcMain.handle(Channels.ActionsRunScript, (_evt, payload) =>
+    handleActionsRunScript(payload, actionsHandlerDeps),
+  );
+  ipcMain.handle(Channels.ActionsExportScript, (_evt, payload) =>
+    handleActionsExportScript(payload, actionsHandlerDeps),
+  );
+  ipcMain.handle(Channels.ActionsImportScript, (_evt, payload) =>
+    handleActionsImportScript(payload, actionsHandlerDeps),
+  );
+
+  // Phase 7.5 Wave 6 (David, 2026-06-18) — B14 Spell-check engine.
+  // listLocales is sync (static table); checkText/addWord/removeWord/list
+  // hit the user-dict store + lazy loader. es-ES is honestly surfaced as
+  // unavailable per P7.5-L-10 (Hunspell dictionary failed Wave-6 license vet:
+  // GPL-3/LGPL-3/MPL-1.1).
+  const spellDeps = { loader: spellLoader, userDict: spellUserDict };
+  ipcMain.handle(Channels.SpellListLocales, (_evt, payload) => handleSpellListLocales(payload));
+  ipcMain.handle(Channels.SpellCheckText, (_evt, payload) =>
+    handleSpellCheckText(payload, spellDeps),
+  );
+  ipcMain.handle(Channels.SpellAddWordToDictionary, (_evt, payload) =>
+    handleSpellAddWordToDictionary(payload, spellDeps),
+  );
+  ipcMain.handle(Channels.SpellRemoveWordFromDictionary, (_evt, payload) =>
+    handleSpellRemoveWordFromDictionary(payload, spellDeps),
+  );
+  ipcMain.handle(Channels.SpellListUserDictionary, (_evt, payload) =>
+    handleSpellListUserDictionary(payload, spellDeps),
+  );
+
+  // Phase 7.5 Wave 6 (David, 2026-06-18) — B18 font listing helper. Pure
+  // pdf-lib walk of /Resources/Font per page (font-list.ts). Wave-5 shipped
+  // the font-SWAP engine; this completes the font picker UI surface.
+  ipcMain.handle(Channels.PdfListEmbeddedFonts, (_evt, payload) =>
+    handlePdfListEmbeddedFonts(payload, {
+      getBytes: (h) => documentStore.getBytes(h),
     }),
   );
 

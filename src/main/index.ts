@@ -501,6 +501,9 @@ function bootstrap(): void {
       autoUpdate: autoUpdateController,
       telemetry: telemetryService,
       scan: scanWiring,
+      // Phase 7.5 Wave 6 (David, 2026-06-18) — B9 action scripts +
+      // B14 spell user dict persist under this directory.
+      userDataDir: app.getPath('userData'),
     });
 
     // Step 5 — main window
