@@ -20,6 +20,7 @@
     "exportJpeg": "Export to JPEG image...",
     "exportTiff": "Export to TIFF image...",
     "combine": "Combine PDFs...",
+    "compareFiles": "Compare Files...",
     "undo": "Undo",
     "redo": "Redo",
     "replaceText": "Replace text...",

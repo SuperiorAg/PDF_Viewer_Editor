@@ -160,6 +160,16 @@ describe('tool registry — contract tests', () => {
     expect(chord).toBe('Ctrl+Alt+E');
   });
 
+  test('formatShortcutById resolves Ctrl+Shift+C for tools:compare-files', () => {
+    // Wave 7 B2 — Ctrl+Shift+C is the chosen chord (Ctrl+C is OS copy; Alt+C
+    // is `combine-open`). Pinned here so a future shortcut-table edit cannot
+    // silently unbind the Compare Files chord. If both Ctrl+Shift+C and
+    // Ctrl+Alt+C become taken by another tool the brief allowed dropping the
+    // chord — see registry entry for fall-back guidance.
+    const chord = formatShortcutById('tools-compare-files');
+    expect(chord).toBe('Ctrl+Shift+C');
+  });
+
   test('every tool with a shortcutId resolves to a non-empty chord string', () => {
     for (const tool of TOOLS) {
       if (tool.shortcutId === null) continue;

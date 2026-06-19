@@ -13,6 +13,8 @@ import annotationsReducer from './slices/annotations-slice';
 // Phase 7.5 Wave 5 (Riley) — B19 Auto-bookmark UI modal slice.
 import autoBookmarkReducer from './slices/auto-bookmark-slice';
 import bookmarksReducer from './slices/bookmarks-slice';
+// Phase 7.5 Wave 7 (Riley) — B2 Compare Files workspace slice.
+import compareReducer from './slices/compare-slice';
 // Phase 7.5 Wave 5 (Riley) — B21 Document Properties dialog (+ B8 Security tab).
 import documentPropertiesReducer from './slices/document-properties-slice';
 import documentReducer from './slices/document-slice';
@@ -108,6 +110,8 @@ export const store = configureStore({
     actionWizard: actionWizardReducer,
     spellCheck: spellCheckReducer,
     fontSwap: fontSwapReducer,
+    // Phase 7.5 Wave 7 (Riley) — B2 Compare Files workspace.
+    compare: compareReducer,
     // Phase 7
     update: updateReducer,
     telemetry: telemetryReducer,

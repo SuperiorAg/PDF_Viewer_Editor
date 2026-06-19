@@ -17,6 +17,8 @@ import { redoAction, undoAction } from '../../state/middleware/history-middlewar
 // Phase 7.4 A4 — annotation tool menu mirrors dispatch the same setActiveTool
 // action the toolbar uses. Single dispatcher; no duplicated state machine.
 import { type AnnotationTool, setActiveTool } from '../../state/slices/annotations-slice';
+// Phase 7.5 Wave 7 (Riley) — File → Compare Files… opens the setup dialog.
+import { setupOpened as openCompareSetup } from '../../state/slices/compare-slice';
 import { openDocumentProperties } from '../../state/slices/document-properties-slice';
 import { selectCurrentDocument, selectIsDirty } from '../../state/slices/document-selectors';
 import { applyEdit } from '../../state/slices/document-slice';
@@ -267,6 +269,13 @@ export function MenuBar(): JSX.Element {
         },
         { label: '', divider: true },
         { label: t('menu:items.combine'), onClick: () => dispatch(openModal('combine')) },
+        // Phase 7.5 Wave 7 (Riley) — Compare Files… (Ctrl+Shift+C). No doc
+        // required — the setup dialog itself lets the user pick from disk.
+        {
+          label: t('menu:items.compareFiles'),
+          shortcut: 'Ctrl+Shift+C',
+          onClick: () => dispatch(openCompareSetup()),
+        },
         // Phase 7.5 B21 (Riley Wave 5) — File → Properties... (Ctrl+D mirrors
         // Acrobat). Opens the Document Properties dialog on the Description tab.
         { label: '', divider: true },

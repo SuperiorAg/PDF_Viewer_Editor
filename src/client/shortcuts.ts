@@ -94,6 +94,8 @@ export type ShortcutId =
   // when there is a successful result on record — the registry entry's
   // `enabledWhen` enforces the precondition.
   | 'tools-a11y-export-report'
+  // Phase 7.5 B2 (Riley Wave 7) — Compare Files setup dialog opener.
+  | 'tools-compare-files'
   // Phase 7.5 B9 (Riley Wave 6) — Action Wizard saved-actions list.
   // Ctrl+Shift+W was free after auditing the table; Ctrl+W is
   // `close-document` (no overlap). Opens the launcher dialog (saved
@@ -456,6 +458,18 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
     id: 'tools-action-wizard-open',
     label: 'Open Action Wizard',
     key: 'W',
+    ctrl: true,
+    shift: true,
+    enabledInPhase1: false,
+    enabledInPhases: [7],
+  },
+  // Phase 7.5 B2 (Riley Wave 7) — Compare Files setup dialog.
+  // Ctrl+Shift+C — Ctrl+C is OS copy; Alt+C is `combine-open`. Ctrl+Shift+C
+  // is free (verified against the full shortcuts table at Wave 7 time).
+  {
+    id: 'tools-compare-files',
+    label: 'Compare Files',
+    key: 'C',
     ctrl: true,
     shift: true,
     enabledInPhase1: false,

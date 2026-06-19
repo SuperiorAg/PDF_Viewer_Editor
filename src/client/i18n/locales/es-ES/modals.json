@@ -826,5 +826,18 @@
     "warningsHeader": "Advertencias del motor:",
     "scopeNote": "v0.8.0 reemplaza por NOMBRE de fuente en todo el documento. El control Alcance se mantiene como vista previa de UX; el alcance por línea llegará en v0.9.0.",
     "v08Note": "v0.8.0 reemplaza con las 14 fuentes PDF estándar. La incrustación de fuentes personalizadas llegará en v0.9.0."
+  },
+  "compare": {
+    "setupTitle": "Comparar archivos",
+    "leftLabel": "Línea base (izquierda)",
+    "rightLabel": "Modificado (derecha)",
+    "browse": "Examinar…",
+    "compareButton": "Comparar",
+    "cancel": "Cancelar",
+    "workspaceExit": "Salir de Comparar",
+    "viewModeLabel": "Vista",
+    "viewModeText": "Texto",
+    "viewModeVisual": "Visual",
+    "viewModeSideBySide": "Lado a lado"
   }
 }

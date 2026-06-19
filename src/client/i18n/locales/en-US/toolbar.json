@@ -191,6 +191,9 @@
   "fontSwap": "Replace Font…",
   "fontSwapTooltip": "Replace one font with a standard PDF font",
   "fontSwapAria": "Open Replace Font dialog",
+  "compareFiles": "Compare Files…",
+  "compareFilesTooltip": "Compare two PDFs side-by-side (Ctrl+Shift+C)",
+  "compareFilesAria": "Open the Compare Files setup dialog",
   "linkOverlayUrlPrefix": "Link →",
   "linkContextMenu": {
     "edit": "Edit link",

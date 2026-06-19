@@ -31,6 +31,8 @@ import { setActiveTool } from '../state/slices/annotations-slice';
 // Phase 7.5 Wave 5 (Riley) — B19 Auto-bookmark + B20 Sanitize + B21 Document
 // Properties registry entries dispatch into their dedicated slices.
 import { openAutoBookmark } from '../state/slices/auto-bookmark-slice';
+// Phase 7.5 Wave 7 (Riley) — B2 Compare Files setup dialog opener.
+import { setupOpened as openCompareSetup } from '../state/slices/compare-slice';
 import { openDocumentProperties } from '../state/slices/document-properties-slice';
 import { applyEdit } from '../state/slices/document-slice';
 import { openExportModal } from '../state/slices/export-slice';
@@ -196,6 +198,11 @@ export type ToolId =
   | 'tools:action-wizard'
   | 'tools:spell-check-settings'
   | 'tools:font-swap'
+  // Phase 7.5 Wave 7 (Riley) — B2 Compare Files. File menu + Tools menu +
+  // palette + Ctrl+Shift+C. Opens the setup dialog where the user picks two
+  // PDFs (open documents or files from disk); on confirm the workspace
+  // replaces the main viewer until the user exits.
+  | 'tools:compare-files'
   // help
   | 'help:help'
   | 'help:about';
@@ -1339,6 +1346,33 @@ export const TOOLS: readonly ToolDef[] = [
       'helvetica',
       'times',
       'courier',
+    ],
+  },
+
+  // ---- Phase 7.5 Wave 7 (Riley) — B2 Compare Files ----
+  // Opens the Compare Files setup dialog. Available regardless of whether a
+  // document is currently open — the dialog lets the user pick TWO PDFs from
+  // disk OR from currently-open documents.
+  {
+    id: 'tools:compare-files',
+    nameKey: 'toolbar:compareFiles',
+    tooltipKey: 'toolbar:compareFilesTooltip',
+    ariaLabelKey: 'toolbar:compareFilesAria',
+    icon: null,
+    shortcutId: 'tools-compare-files',
+    menu: { top: 'tools' },
+    surfaces: { menu: true, palette: true },
+    enabledWhen: always,
+    dispatch: (d) => d(openCompareSetup()),
+    searchKeywords: [
+      'compare',
+      'compare files',
+      'diff',
+      'difference',
+      'changes',
+      'revisions',
+      'side by side',
+      'side-by-side',
     ],
   },
 

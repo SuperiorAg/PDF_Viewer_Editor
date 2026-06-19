@@ -7,6 +7,9 @@ import { AddLinkModal } from './components/add-link-modal';
 import { AltTextInspector } from './components/alt-text-inspector';
 // Phase 7.5 Wave 5 (Riley) — B19 / B20 / B21+B8 modals.
 import { AutoBookmarkModal } from './components/auto-bookmark-modal';
+// Phase 7.5 Wave 7 (Riley) — B2 Compare Files setup dialog + workspace.
+import { CompareFilesSetupDialog } from './components/compare-files-setup-dialog';
+import { CompareFilesWorkspace } from './components/compare-files-workspace';
 import { DocumentPropertiesModal } from './components/document-properties-modal';
 import { EmptyState } from './components/empty-state';
 import { ErrorBoundary } from './components/error-boundary';
@@ -118,6 +121,10 @@ export function App(): JSX.Element {
   const docPropertiesOpen = useAppSelector((s) => s.documentProperties.open);
   const sanitizeOpen = useAppSelector((s) => s.sanitize.open);
   const autoBookmarkOpen = useAppSelector((s) => s.autoBookmark.open);
+  // Phase 7.5 Wave 7 (Riley) — B2 Compare Files. setup.open gates the setup
+  // modal; session !== null swaps the main viewer for the workspace.
+  const compareSetupOpen = useAppSelector((s) => s.compare.setup.open);
+  const compareActive = useAppSelector((s) => s.compare.session !== null);
 
   useAppShortcuts();
 
@@ -302,7 +309,12 @@ export function App(): JSX.Element {
             is false. The Apply modal mounts below with the other modals. */}
         {!readMode && <RedactionToolbar />}
         <main className={styles.main}>
-          {doc ? (
+          {compareActive ? (
+            // Phase 7.5 Wave 7 (Riley) — B2 Compare Files workspace replaces the
+            // viewer + sidebar + inspector while a compare session is open.
+            // Exit returns control to whichever doc/empty-state was in view.
+            <CompareFilesWorkspace />
+          ) : doc ? (
             <>
               {!readMode && <Sidebar />}
               <PdfViewer />
@@ -369,6 +381,10 @@ export function App(): JSX.Element {
         {docPropertiesOpen && <DocumentPropertiesModal />}
         {sanitizeOpen && <SanitizeModal />}
         {autoBookmarkOpen && <AutoBookmarkModal />}
+        {/* Phase 7.5 Wave 7 (Riley) — Compare Files setup dialog. Mounts only
+            when setup.open === true. The workspace itself lives inside <main>
+            (above) and is gated on compare.session !== null. */}
+        {compareSetupOpen && <CompareFilesSetupDialog />}
         {/* Phase 7.5 C1 (Riley Wave 5a) — Read Aloud floating bar. Returns
             null when closed; renders fixed-position over the viewer when
             open so it stays visible across sidebar/inspector toggles. */}

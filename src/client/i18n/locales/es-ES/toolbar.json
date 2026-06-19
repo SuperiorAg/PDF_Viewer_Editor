@@ -180,6 +180,9 @@
   "fontSwap": "Reemplazar fuente…",
   "fontSwapTooltip": "Reemplazar una fuente por una fuente PDF estándar",
   "fontSwapAria": "Abrir el cuadro de diálogo Reemplazar fuente",
+  "compareFiles": "Comparar archivos…",
+  "compareFilesTooltip": "Comparar dos PDF lado a lado (Ctrl+Shift+C)",
+  "compareFilesAria": "Abrir el cuadro de diálogo Comparar archivos",
   "linkOverlayUrlPrefix": "Enlace →",
   "linkContextMenu": {
     "edit": "Editar enlace",
