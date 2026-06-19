@@ -172,9 +172,12 @@ export type ToolId =
   // the sidebar if collapsed.
   | 'view:readAloud'
   | 'tools:preflight'
-  // Phase 7.5 Wave 5b (Riley) — C3 Tag PDF tree editor. Tools-menu + palette
-  // surface that switches the sidebar to the Accessibility tab.
-  | 'tools:tag-pdf'
+  // Phase 7.5 Wave 5b (Riley) — C3 Tag PDF tree editor. Surfaced in-app via the
+  // Accessibility sidebar tab (two-pane layout, sits below the Accessibility
+  // Checker per ui-spec-phase-7.5 §27). NO separate ToolDef — discoverability
+  // is via the sidebar tab + the C6 quick-fix "Open Tag PDF Editor" that
+  // scrolls to the tree pane. Diego's Wave 11 L-007 ratchet allowlists the
+  // Accessibility sidebar tab as a pure-display surface.
   // Phase 7.5 Wave 5c (Riley) — C4 Reading Order overlay + C5 Alt Text inspector.
   // Both are menu / palette surfaces; the Reading Order overlay arms the
   // pages-level overlay (visible badges), and the Alt Text inspector opens

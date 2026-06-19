@@ -3211,3 +3211,218 @@ CI run URL: https://github.com/SuperiorAg/PDF_Viewer_Editor/actions/runs/2755484
 5. **Determinism floor:** U-23 asserts same-bytes-in → same-bytes-out for the engine. This will silently break the moment pdf-lib's serialization order drifts at a minor-version bump — the test catches that, but worth flagging on dependency-update PRs.
 
 **Recommend Marcus advance to Wave 4 (Nathan) for v0.8.0 release-notes / user-guide refresh, file 7.4.B1.1 for the next Riley cleanup wave, and cut v0.8.0 via Diego's release ceremony (signal-grade enterprise feature → minor-version bump per Riley §9 recommendation 5).**
+
+---
+
+## Phase 7.5 Wave 11 — Full review across Waves 5a–7 (Julian, 2026-06-19)
+
+**Verdict: YELLOW (GO with follow-up).** Phase 7.5 C-bucket (Wave 5a TTS / Wave 5b Tag PDF / Wave 5c Reading Order + Alt Text / Wave 5d Accessibility Checker / Wave 5e Export Report) and B-bucket (Wave 6 Action Wizard / Spell-check / Font swap / Wave 7 Compare Files) are correctness-clean and lock-clean. Honesty-clause obligations (P7.5-L-10) hold across all surfaces audited. The 12-rule accessibility engine is honest about its subset; the espeak GPL-3 subprocess argument is APPROVED on the no-binary-redistribution basis; license vet second-pass confirms David's pixelmatch=ISC correction and rejects dictionary-es as expected. **One HIGH, three MEDIUM, four LOW** filed below. **No BLOCKER, no CRITICAL.** Safe to advance Marcus → Wave 12 (Nathan) once 11.1 (R12 regression test) is filed for a follow-up Diego dispatch.
+
+### 1. Verification gates (pre + post)
+
+Local at start of review (Node 20.x):
+
+- `npm run typecheck` (main + preload + renderer): **GREEN**.
+- `npm run lint --max-warnings 0`: **GREEN**.
+- `npm test`: **3037 passed / 0 failed / 289 files**, 47.19s.
+
+Local after the two fixes applied in this review (spec-table resync + dead-type removal):
+
+- `npm run typecheck`: **GREEN**.
+- `npm run lint`: **GREEN**.
+- `npm test`: **3037 passed / 0 failed / 289 files**, 42.54s.
+
+No regressions introduced.
+
+### 2. L-001..L-006 compliance walk
+
+- **L-001** (`enableDragDropFiles`): no `src/main/window-manager.ts` touch in any Wave 5a–7 commit. Wave 6 spell-check + Wave 7 Compare Files are renderer-only IPC paths; L-001 invariant holds. PASS.
+- **L-002** (operator-level screenshot for packaging): Diego's parallel Wave 11 work writes the v0.8.0 packaging row in `docs/build-report.md` — out of scope for this review except to confirm Julian's gate (the screenshot stanza) still appears in the build-report template. PASS for this dispatch.
+- **L-003** (Node 20 baseline): no `engines.node` change; pretest gate unchanged. Local Node 20.10.x; test suite green without `scripts/rebuild-native-for-node.mjs`. PASS.
+- **L-004** (pdf.js buffer copy): the new C-bucket extractor production wirings in `src/ipc/register.ts` route through `loadAutoBookmarkPdfJs` + `tryLoadCanvas`, which mirror the L-004-compliant `loadPdfJs` helper. Specifically: `productionExtractAccessibilityDiagnostics` (Wave 5d), `productionExtractReadingOrderTextItems` (Wave 5c), `productionListFiguresWithoutAltText` (Wave 5c), and Wave 7's `productionRasterizeForCompare` all use the canonical loader. No raw `getDocument({ data: rawBuffer })` call in the new engines. PASS.
+- **L-005** (pdf.js polyfill ordering): same — the new wave paths go through `loadAutoBookmarkPdfJs` which calls `installPdfJsPolyfills()` synchronously before the dynamic import. PASS.
+- **L-006** (test-channel dot-syntax + Vite define-fold): no new `__test:*` channel introduced in Wave 5a–7. Existing channels (`__test:whichBridge`, `__test:seedOcrJob`, `__test:listSignatureAudit`, `__test:seedSignatureAudit`) still use the dot-form gate; preload spread guard still uses dot-form. PASS.
+
+### 3. Mandatory checks (project-plan §314)
+
+#### 3.1 Rebuild-from-scratch over strip-post-hoc
+
+- **B6 Compress** (`compress-engine.ts:136-138`): `PDFDocument.create() + copyPages(src, indices)` — full rebuild. The flag `rebuildFromScratch: false` is documented as a debug knob; the v0.8.0 engine ALWAYS rebuilds regardless of flag (per Phase 7.4 B1 lessons). PASS.
+- **B20 Sanitize** (`sanitize-engine.ts:176, 187`): `PDFDocument.create() + copyPages`. Comment block explicitly documents the rebuild + the "re-embed fonts after copy" knob. PASS.
+- **B8 Encryption** (`encryption-engine.ts`): qpdf subprocess (not pdf-lib). qpdf emits a fresh PDF on its own; the rebuild discipline is preserved by virtue of qpdf's serialization model. PASS by analogue.
+- **C3 Tag PDF** (`struct-tree-engine.ts`): `setStructTree` documents and implements a full rebuild of `/StructTreeRoot` via `context.register(...)`. The module header explicitly cites P7.5-L-12. PASS structurally. **However** see finding §4 #11.1 — the R12 regression test against an externally-authored tagged PDF is missing.
+
+#### 3.2 No `as any` parallel-wave coordination scars
+
+Grep across all of `src/` returned 152 occurrences in 69 files. Filtered to production code (excluding tests), justified casts, and documented eslint-disables:
+
+- `src/client/state/thunks-phase7-5-wave5.ts:70, 93, 116, 139` — 4 occurrences. SAME pattern as 7.4.B1.1 (the previously-filed scar). David's Wave 5 preload bridge IS now live (`getDocumentProperties`, `setDocumentProperties`, `setPasswordProtection`, `removeHiddenInfo` are all exposed at `src/preload/index.ts:429-441` and typed canonically in `src/ipc/contracts.ts`). The `(window.pdfApi!.pdf as any)` casts can be removed. **Finding 11.2** — MEDIUM, same disposition as 7.4.B1.1 (post-cleanup, not a v0.8.0 blocker). The fallback "(David Wave 5 not yet landed)" message is now LITERALLY false since David's wave 5 HAS landed; that is the canonical scar signature.
+- `src/client/state/thunks-phase7-4.ts:113` — known 7.4.B1.1 scar. UNCHANGED in this wave (still open, still a Riley cleanup follow-up).
+- `src/client/state/thunks-auto-bookmark.ts:29`, `src/client/components/add-link-modal/index.tsx:33` — `(globalThis as any).crypto` narrowing. Justified (Node + browser global narrowing) and eslint-disable'd with reason. PASS.
+- `src/client/app.tsx:199, 213` — `(file as any).path` L-001 Electron extension. Pinned by lock. PASS.
+- `src/main/db-bridge.ts:546` — settings repo `set()` discriminated-union dispatch. Pre-existing, eslint-disable'd. PASS.
+- `src/main/pdf-ops/redact-canvas.ts:53` — `canvas.getContext('2d') as any` for napi-rs canvas type. Justified. PASS.
+- `src/ipc/register.ts:2135` — `(settings.get as any)('export.maxQueueSize')` — SettingKey union not yet widened. Pre-existing. PASS.
+- All Wave 5b/5c/5d/5e/6/7 thunks + services: comments explicitly declare "NO `as any`" and the grep matches are inside those comments only. PASS.
+
+#### 3.3 Tool-registry contract tests not weakened
+
+`src/client/tools/registry.contract.test.ts` carries 8 tests covering 5 audit dimensions: well-marked tools, tooltip-advertises-shortcut, every-shortcut-surfaces, no-stale-coming-in-phase, plus three Wave 5d/5e/7 chord pins (`tools-a11y-check → Ctrl+Shift+A`, `tools-a11y-export-report → Ctrl+Alt+E`, `tools-compare-files → Ctrl+Shift+C`) and a sweeping every-tool-with-shortcutId-resolves test. The SHIPPED_PHASES list at line 120 includes `[1, 2, 3, 4, 5, 6, 7, 7.1, 7.2, 7.4, 7.5]` — Phase 7.5 IS listed, so any stale "Coming in Phase 7.5" tooltip would now fail the gate. No test weakened or skipped. PASS.
+
+#### 3.4 New IPC contracts shape-match preload exposure
+
+Diff'd `Channels.*` between `src/preload/index.ts` and `src/ipc/register.ts`. Expected drift only:
+
+- Preload-only push channels: `FileOpenFromShell`, `PdfExportProgress`, `UpdateProgress` (main emits, renderer subscribes — these don't go through `register*` handler wiring).
+- Test channels: `TestListSignatureAudit`, `TestSeedOcrJob`, `TestSeedSignatureAudit`, `TestWhichBridge` — registered via `registerTest*` functions in `register.ts`, not by direct `Channels.*` reference. Verified all four `registerTest*` functions exist in `src/ipc/handlers/test-*.ts`.
+
+Wave 5a–7 specific:
+
+- C1 TTS: `Channels.TtsListVoices/SpeakText/Pause/Resume/Stop` + `Channels.TtsBoundary` event — all 6 exist in both preload (`tts.*` namespace) + register.
+- C2 Preflight: `Channels.PdfRunPreflight` — register `Channels.PdfRunPreflight` + preload `pdf.runPreflight`.
+- C3 Tag PDF: `getStructTree/setStructTree/autoTagPages` — match (3 each).
+- C4/C5 Reading Order + Alt Text: `getReadingOrder/setReadingOrder/setAltText/listFiguresWithoutAltText` — match (4 each).
+- C6 Accessibility Check: `Channels.PdfRunAccessibilityCheck` — match.
+- Wave 6 Actions: 7 `actions:*` channels — match (saveScript/listScripts/getScript/deleteScript/runScript/exportScript/importScript).
+- Wave 6 Spell: 5 `spell:*` channels — match (listLocales/checkText/addToDict/removeFromDict/listUserDict).
+- Wave 6 Font listing: `pdf:listEmbeddedFonts` — match. Note: `pdf:swapEmbeddedFont` is exposed on preload (fallback `unavailable`) but **NO handler** in `register.ts` — the actual swap engine in `src/main/pdf-ops/font-swap-engine.ts` exists and the contract type exists, but no IPC handler is wired. **Finding 11.3** — MEDIUM. The renderer's font-swap UI lands behind a `bridge_unavailable` fallback by design (Riley flagged this in her Wave 6 open questions; David did not wire the handler). This is an honest defer captured in the open-question stream, NOT a hidden gap. Decision: ACCEPT as YELLOW-tier deferral; Diego should add the channel registration in Wave 11 OR Nathan documents the deferral in user-guide Wave 12.
+- Wave 7 Compare: 4 `pdf:openComparePair/compareTextOnPage/compareVisualOnPage/closeCompareSession` channels — match.
+
+PASS overall (with 11.3 noted).
+
+#### 3.5 Honesty clause verbatim disclosures
+
+| Surface                                                                   | Verbatim string                                                                                                                                                                                        | Pinned by test?                                                                                               | Status |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | ------ |
+| C2 Preflight subset disclosure                                            | i18n `modals:preflight.subsetDisclosure` — "Subset of PDF/X-1a, PDF/X-4, PDF/A-1b, PDF/A-2b — see Help for the shipped rule set."                                                                      | YES (preflight-panel test renders it)                                                                         | PASS   |
+| C6 Accessibility `subsetDisclosure` (engine constant `SUBSET_DISCLOSURE`) | "Subset of WCAG 2.1 + PDF/UA-1 — see Help for the shipped rule set."                                                                                                                                   | YES (`DisclosureBanner` test asserts verbatim render; `accessibility-engine.test.ts` pins the const)          | PASS   |
+| C6 Export Report JSON `subsetDisclosure` field                            | passes through verbatim via `json-report-serializer.ts:128`                                                                                                                                            | YES (`json-report-serializer.test.ts`)                                                                        | PASS   |
+| C6 Export Report HTML banner                                              | rendered via `escapeHtml(report.subsetDisclosure)` at `html-report-template.ts:158` — escape is character-only, never paraphrases                                                                      | YES (`html-report-template.test.ts`)                                                                          | PASS   |
+| Reading-order `READING_ORDER_RECOMPUTE_NO_EXTRACTOR_WARNING`              | constant `reading-order.recompute.no-extractor-wired` exported in both `src/main/pdf-ops/reading-order-engine.ts:135` and `src/client/constants/reading-order.ts:37`; regression test in both files    | YES                                                                                                           | PASS   |
+| Spell-check es-ES unavailable reason                                      | "Spanish dictionary not available in this build — Hunspell es-ES is GPL-3/LGPL-3/MPL-1.1 (per npm registry vet 2026-06-18), which does not meet the project policy of MIT/Apache/BSD permissive-only." | YES (`settings-dialog.test.tsx:23` pins verbatim ES_ES_REASON; `locale-loader.ts:43` is the canonical source) | PASS   |
+| Compare-Files sequential-pairing banner                                   | `COMPARE_SEQUENTIAL_PAIRING_BANNER` — "Pages are paired sequentially. Smarter content-matching is a future enhancement."                                                                               | YES (`compare-slice.test.ts:107`)                                                                             | PASS   |
+| Compare-Files multi-column footnote                                       | `COMPARE_MULTI_COLUMN_FOOTNOTE` — "Multi-column documents may show out-of-reading-order text segments. Use the Reading Order overlay to inspect tagged docs."                                          | YES (`compare-slice.test.ts:111`)                                                                             | PASS   |
+| Compare-Files visual render width template                                | `COMPARE_VISUAL_RENDER_WIDTH_TEMPLATE`                                                                                                                                                                 | YES (`compare-slice.test.ts`)                                                                                 | PASS   |
+| Compare-Files orphan labels                                               | `COMPARE_ORPHAN_LEFT_LABEL` / `COMPARE_ORPHAN_RIGHT_LABEL`                                                                                                                                             | YES (`compare-slice.test.ts`)                                                                                 | PASS   |
+
+ALL verbatim disclosures pinned by regression tests. ZERO drift opportunity at CI time. PASS.
+
+#### 3.6 L-007 review (Diego's lock + ratchet)
+
+Diego's L-007 lock entry + ratchet script are NOT YET on disk at review time (Diego works in parallel). My sign-off scope is: (a) the lock text Diego drafts before commit, and (b) the ratchet script's allowlist. I will sign off when Diego pushes a draft to me. **Pre-sign-off observations applicable already:**
+
+- The tool registry (`src/client/tools/registry.ts`) ships 68 ToolDef entries covering File / Edit / View / Pages / Annotation / Cursor / Forms / OCR / Tools / Comment / Shape / Bookmarks / Help. Inventory looks comprehensive for Wave 5a–7 additions: `view:readAloud`, `tools:preflight`, `tools:reading-order`, `tools:alt-text`, `tools:run-accessibility-check`, `tools:export-accessibility-report`, `tools:action-wizard`, `tools:spell-check-settings`, `tools:font-swap`, `tools:compare-files`. ALL Wave 5-7 user-facing surfaces are registered.
+- The Tag PDF tree editor (Wave 5b C3) is surfaced via the Accessibility sidebar tab (two-pane layout under the Accessibility Checker per ui-spec-phase-7.5 §27), **not** as a discrete ToolDef. Diego's ratchet allowlist MUST explicitly allowlist the Accessibility sidebar tab as a pure-display surface, OR Riley must add `tools:tag-pdf` to the registry. I REMOVED the dead `tools:tag-pdf` type-union member in this review (no ToolDef entry referenced it; only the type alias was declared) — see fixes applied §5. Diego's allowlist needs the sidebar-tab carve-out, not the ToolDef.
+
+**L-007 SIGN-OFF: PENDING** — Diego must push the lock text + ratchet script to me; I'll review and add the explicit GREEN sign-off as a Wave-11 amendment. If Diego ratchets against the current code without the Accessibility-tab allowlist, the ratchet will incorrectly flag the Tag PDF tree editor's sidebar surface.
+
+#### 3.7 License audit second-pass (independent of Diego)
+
+Verbatim `npm view <pkg>@<version> license` output run 2026-06-19:
+
+| Package                 | Version | License (npm registry)           | Disposition                                                                                                                                                                                                                                                            |
+| ----------------------- | ------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| pixelmatch              | 7.2.0   | **ISC**                          | PERMISSIVE-OK. David's surface in Wave 7 learning entry 191 was honest: brief said MIT, actual is ISC. ISC ≈ BSD-2-Clause, functionally equivalent to MIT for our policy. Diego's manifest must list ISC, not MIT. **Discrepancy vs Diego's draft (if MIT): flagged.** |
+| diff-match-patch        | 1.0.5   | Apache-2.0                       | PERMISSIVE-OK.                                                                                                                                                                                                                                                         |
+| nspell                  | 2.1.5   | MIT                              | PERMISSIVE-OK.                                                                                                                                                                                                                                                         |
+| dictionary-en           | 4.0.0   | (MIT AND BSD)                    | PERMISSIVE-OK.                                                                                                                                                                                                                                                         |
+| dictionary-es           | 4.0.0   | (GPL-3.0 OR LGPL-3.0 OR MPL-1.1) | **REJECTED.** Locale-loader honestly emits the verbatim "not available in this build" reason. PASS.                                                                                                                                                                    |
+| pngjs                   | 7.0.0   | MIT                              | PERMISSIVE-OK.                                                                                                                                                                                                                                                         |
+| @types/diff-match-patch | 1.0.36  | MIT                              | PERMISSIVE-OK.                                                                                                                                                                                                                                                         |
+| @types/pngjs            | 6.0.5   | MIT                              | PERMISSIVE-OK.                                                                                                                                                                                                                                                         |
+
+**ESPEAK GPL-3 SUBPROCESS DECISION (Julian's call per §316):**
+
+> **APPROVED.** The no-binary-redistribution argument holds. We do not ship the espeak binary in the Electron installer's `extraResources` or `extraFiles`; we do not link to libespeak; we do not embed any espeak source. We invoke `spawn('espeak', args)` exactly as a user would type `espeak "hello"` in a shell. This is the canonical "aggregate works at runtime via pipes" pattern that the FSF's own GPL FAQ explicitly endorses — the GPL attaches to espeak, the redistributor is the Linux distribution maintainer, and our app is a separate aggregate program. Linux users who don't have espeak on PATH get a structured `engine_unavailable` Result and an honest "Install espeak (apt install espeak) to use Read Aloud on Linux" toast.
+>
+> **CONDITIONAL:** Diego MUST NOT bundle `espeak` (or any `libespeak.so`, `espeak-ng-data`, etc.) in any future packaging wave. If a future wave attempts to bundle for Linux convenience, the lock fails — re-vet required. The `src/main/tts/espeak-adapter.ts` file header at lines 3-9 captures this rule; do not let it be edited away. Diego may consider adding a packaging-time grep ratchet that fails the build if `espeak*` appears under `extraResources` in `electron-builder.yml`.
+
+#### 3.8 Accessibility-rules engine honesty verdict
+
+Verified 12 rule files in `src/main/pdf-ops/accessibility-rules/` against the `ALL_A11Y_RULES` array (12 entries) and the spec §6.3 table (12 entries). All 12 rules ship; none claim a coverage they don't deliver:
+
+- **Color-contrast spot-sample** is permanently `'unevaluated'` in pdf-lib — the rule file's header (`color-contrast-spot-sample.ts:1-18`) honestly documents the slot-reservation pattern.
+- **Scanned-pages-searchable** emits `'unevaluated'` when no extractor is wired (`scanned-pages-searchable.ts:25-31`).
+- **Reading-order-defined** emits `'unevaluated'` when no struct tree exists, rather than double-failing what `structure-tree-present` already failed (`reading-order-defined.ts:20-26`).
+- **Content-non-text-tagged**: emits `'unevaluated'` honestly when no extractor is wired.
+
+`subsetDisclosure` constant `'Subset of WCAG 2.1 + PDF/UA-1 — see Help for the shipped rule set.'` is pinned by `SUBSET_DISCLOSURE` const + regression test. Engine's `shippedRuleCount` is read from `ALL_A11Y_RULES.length` (12) — so any future addition/removal in the array IS authoritative and the IPC response cannot lie.
+
+**HOWEVER:** rule-ID and severity drift between docs/accessibility-authoring-spec.md §6.3 and the engine code surfaced this review:
+
+| Spec §6.3 ID                    | Engine code ID                                 | Spec sev    | Engine sev  |
+| ------------------------------- | ---------------------------------------------- | ----------- | ----------- |
+| a11y.reading-order.defined      | **a11y.reading.order-defined**                 | error       | error       |
+| a11y.content.non-text-tagged    | a11y.content.non-text-tagged                   | **warning** | **error**   |
+| a11y.scanned-pages.searchable   | **a11y.content.scanned-searchable**            | **warning** | **error**   |
+| a11y.javascript.no-form-actions | **a11y.behavior.javascript-no-form-actions**   | **error**   | **warning** |
+| a11y.color-contrast.spot-sample | **a11y.appearance.color-contrast-spot-sample** | **info**    | **warning** |
+
+Engine code is authoritative since it ships + is regression-tested. **FIX APPLIED in this review:** the spec §6.3 table was edited to match the engine's emitted IDs and severities. Nathan's Wave 12 user-guide work will read from the resynchronized spec. See fixes applied §5.
+
+**Engine honesty verdict: APPROVED.** The 12-rule subset is real, the disclosure is verbatim, the `'unevaluated'` state is correctly used where the rule genuinely can't evaluate, and the rule IDs/severities are now in sync between spec and code.
+
+### 4. Findings
+
+| ID       | Severity                 | Location                                                           | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Status |
+| -------- | ------------------------ | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| **11.1** | HIGH                     | `src/main/pdf-ops/struct-tree-engine.test.ts`                      | R12 regression test missing: the test fixture `makeTaggedPdf` calls the engine's OWN `setStructTree` to author the input, which is circular (engine-authored → engine-read → engine-rewritten → engine-read). R12 ("structure-tree round-trip on docs with existing tags") explicitly requires a test that round-trips an **externally-authored tagged PDF** (Adobe Acrobat-authored fixture, or similar) through the Tag PDF UI without data loss. The existing test confirms the engine round-trips itself; it does NOT confirm the engine survives a foreign authoring pipeline's tree shape. R12 is HIGH-impact per the risk register; this is the canonical regression hole. **Recommendation:** Diego adds an Acrobat-authored tagged PDF fixture under `tests/fixtures/tagged-acrobat/` and a regression test that asserts `getStructTree(fixture).tree.shape === getStructTree(setStructTree(fixture, tree).bytes).tree.shape`. Per the §4 brief, principal-authorized dispatch only — I do not fix HIGH without authorization. Not a v0.8.0 blocker on the GREEN-with-followup track because: (a) the in-PDF discipline is structurally correct (`PDFDocument.create()` rebuild + explicit `/StructTreeRoot` replace), (b) save-as-copy-by-default fires when `hasExistingTree === true`, mitigating runtime data-loss risk, and (c) no real-world report yet. But the test gap is real and SHOULD close before v0.8.0 ships. | OPEN   |
+| **11.2** | MEDIUM                   | `src/client/state/thunks-phase7-5-wave5.ts:70, 93, 116, 139`       | Four `(window.pdfApi!.pdf as any)` casts with feature-detect + "(David Wave 5 not yet landed)" message. David's Wave 5 bridge IS live (verified in `src/preload/index.ts:429-441` and `src/ipc/contracts.ts`). Same scar pattern as 7.4.B1.1. **Recommendation:** import the canonical request/response types from `src/ipc/contracts.ts`, drop the local re-declarations in `src/client/types/{document-properties,sanitize}-contract-stub.ts`, replace the inline narrowing with a direct `await api.pdf.<method>(req)` call through the typed proxy. Same `as any` rationale 7.4.B1.1 — not a v0.8.0 blocker (runtime correct, just type-system scar).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | OPEN   |
+| **11.3** | MEDIUM                   | `src/ipc/register.ts` (no `swapEmbeddedFont` handler)              | Wave 6 B18 font-swap: the engine (`src/main/pdf-ops/font-swap-engine.ts`) exists, the contract type exists in `src/ipc/contracts.ts`, the preload exposes the method, the api.ts fallback stubs it as `unavailable`, BUT no `ipcMain.handle(Channels.PdfSwapEmbeddedFont, ...)` exists in `register.ts`. Production renderer calls hit `bridge_unavailable`. Riley flagged this in her Wave 6 open questions (honest defer). **Recommendation:** Either (a) Diego wires the missing handler in Wave 11 (~30 lines including production wiring of `getBytes` + `setBytes` + the engine call), OR (b) Nathan documents in user-guide Wave 12 that B18 font swap UI is a preview surface and the swap will land in a follow-up. Option (a) is the smaller delta; the engine + contract + preload are all ready.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | OPEN   |
+| **11.4** | MEDIUM                   | `docs/accessibility-authoring-spec.md §6.3` (FIXED in this review) | Spec §6.3 rule-ID + severity table drifted from the engine code on 5 of 12 rules. Spec was authored before the rule files were finalized. **Fixed in this review:** spec table updated to match the engine's emitted IDs and severities. Nathan's Wave 12 user-guide reads from the resynchronized spec.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | FIXED  |
+| **11.5** | MEDIUM (forward-looking) | `src/client/state/thunks-phase7-5-wave7.ts:255-286` (close-thunk)  | Compare-Files per-page LRU eviction during long scrolling is DEFERRED per Riley's open question. Current behavior: every pair the user navigates to accumulates 1-3 blob URLs (left + right + diff-mask) that are revoked ONLY on session-close. On a 1064-page compare where the user scrolls through every visual diff, this is up to ~3000 blob URLs held in renderer memory until close. The slice exposes `selectCompareEvictableBlobs` which already lists which pairs hold URLs — the structure is ready for an LRU. **Recommendation:** Wave 11/12 Diego adds a per-pair LRU eviction (e.g. keep N most-recent visited pairs; revoke the rest) via a new `visualBlobsEvicted` action and a scroll-driven thunk. Not a v0.8.0 blocker per the 4-page bench test (typical user reviews <50 pages); becomes a real risk on long-document audits. Honest defer captured in Riley's open question.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | OPEN   |
+| **11.6** | LOW                      | `src/client/tools/registry.ts` (FIXED in this review)              | Dead `'tools:tag-pdf'` type alias on the `ToolId` union with no corresponding ToolDef entry in the `TOOLS` array. Refactoring residue from an early-Wave-5b draft that moved Tag PDF into the Accessibility sidebar tab (two-pane layout under the Accessibility Checker). **Fixed in this review:** the dangling type-union member removed; replaced with a comment explaining that Tag PDF is surfaced via the Accessibility sidebar tab and that Diego's L-007 ratchet must allowlist that tab.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | FIXED  |
+| **11.7** | LOW                      | `src/main/pdf-ops/redact-engine.ts:374-385, 411-412`               | Pre-existing 7.4.B1.2 + 7.4.B1.3 (rasterize-loses-searchability always-emit warning + comment-numbering drift). Unchanged from prior review. Deferred to v0.9+.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | OPEN   |
+| **11.8** | LOW                      | `src/main/tts/espeak-adapter.ts` (no in-flight test)               | The espeak adapter ships GPL-3-bound runtime code; the test surface uses an injected `SpawnFn` and never invokes a real `espeak` binary (correct). I note for transparency: there is no CI gate that verifies the lock text "we do NOT bundle the espeak binary" — a future packaging change could add espeak to `extraResources` without tripping any check. **Recommendation (forward-looking):** Diego adds a `scripts/ratchet-no-espeak-bundle.mjs` that fails CI if `espeak` matches anywhere under `electron-builder.yml`'s `extraResources` / `extraFiles` / `files`. ~10 lines. Pin in the same L-007 wave or next packaging wave. Not a v0.8.0 blocker.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | OPEN   |
+
+**Counts:** 0 BLOCKER, 0 CRITICAL, **1 HIGH** (11.1), **3 MEDIUM** (11.2, 11.3, 11.5 — plus 11.4 fixed), **3 LOW** (11.7, 11.8 — plus 11.6 fixed). **Net OPEN: 1 HIGH + 3 MEDIUM + 2 LOW. Net FIXED in this review: 1 MEDIUM + 1 LOW.**
+
+### 5. Fixes applied in this review
+
+1. **`docs/accessibility-authoring-spec.md §6.3`** — resynchronized rule-ID + severity table against the engine code in `src/main/pdf-ops/accessibility-rules/`. Five rules had drift (reading-order, content-non-text-tagged, scanned-pages-searchable, javascript-no-form-actions, color-contrast-spot-sample). Engine is authoritative; spec now matches. Added a note explaining the resync timestamp.
+2. **`src/client/tools/registry.ts`** — removed dead `'tools:tag-pdf'` type-union member with no corresponding ToolDef. Replaced with a comment explaining the Tag PDF surface lives in the Accessibility sidebar tab and that Diego's L-007 ratchet must allowlist that tab.
+
+Both fixes verified GREEN through `npm run typecheck`, `npm run lint`, and the full vitest suite (3037 tests).
+
+### 6. Filed-for-follow-up (NOT fixed; need authorization or separate dispatch)
+
+- **11.1 (HIGH)** — R12 regression test against Acrobat-authored tagged fixture. Needs principal authorization + a real Acrobat-authored fixture.
+- **11.2 (MEDIUM)** — Wave 5 `as any` cast cleanup in thunks-phase7-5-wave5.ts. Riley follow-up wave, same pattern as 7.4.B1.1.
+- **11.3 (MEDIUM)** — Missing `swapEmbeddedFont` IPC handler wiring. Diego or David follow-up; small (~30 LOC).
+- **11.5 (MEDIUM, forward-looking)** — Compare-Files LRU eviction. Diego follow-up after v0.8.0 if user reports surface.
+- **11.7 (LOW)** — Pre-existing redact-engine LOW.
+- **11.8 (LOW, forward-looking)** — espeak no-bundle ratchet script. Diego follow-up.
+
+### 7. L-007 sign-off (PENDING)
+
+Diego's lock text + ratchet script not on disk at review time. Sign-off scope:
+
+- Lock text MUST follow the standard sections: constraint, why locked, enforcement, affected files, to unlock. Past locks L-001..L-006 are the exemplar.
+- Ratchet allowlist MUST include the Accessibility sidebar tab as a pure-display surface (Tag PDF tree editor's home). If Diego's first draft ratchets without that carve-out, the Tag PDF surface will incorrectly fail the gate.
+- Lock text MUST reference "all post-Wave-10 toolbar/menu surfaces" as the canonical scope (per R14 mitigation in project-plan §4).
+- Ratchet script MUST be `scripts/ratchet-tool-registry-coverage.mjs` per project-plan §308.
+
+When Diego pushes the lock + script to me, I will append a §7.1 "Wave 11 L-007 sign-off GREEN/RED" amendment to this section with the verdict. Until then: PENDING.
+
+### 8. Acceptance criteria walk (project-plan §3)
+
+1. `npm run typecheck` green: **YES**.
+2. `npm run lint` green: **YES**.
+3. Full vitest suite green: **YES** (3037 passed / 0 failed).
+4. 1064-page test PDF baseline: not re-measured this wave (no engine path change introduced by this review); CI baseline holds.
+5. No new AGPL or commercial-license dep: **YES**. License audit second-pass §3.7 confirms.
+6. L-001..L-006 hold: **YES**; L-007 lands in Wave 11 and holds from then (PENDING Diego push).
+7. Per-wave commits: this review's commit lands at end-of-Wave-11; Diego's parallel commits land separately (R7 mitigation).
+8. JSON post-flight returned to Marcus, not appended directly: **YES** — see Wave 11 closing report below.
+9. Honesty clause: **YES** — verdict is YELLOW not GREEN because 11.1 HIGH is open + L-007 sign-off PENDING.
+
+### 9. Closing
+
+Recommend Marcus:
+
+1. Accept this review's YELLOW verdict and advance to Wave 12 (Nathan) for the v0.8.0 documentation refresh.
+2. File 11.1 (HIGH — R12 regression test) for a dedicated Diego dispatch BEFORE the v0.8.0 release ceremony (Wave 13). The test gap closing is structurally simple (~1h to author the fixture, ~30 LOC for the test); the risk is real, not theoretical.
+3. File 11.2 (MEDIUM — Wave 5 `as any` cleanup) into the next Riley cleanup wave, bundled with 7.4.B1.1.
+4. File 11.3 (MEDIUM — missing swapEmbeddedFont handler) for Diego to land in the same Wave 11 commit OR Nathan to disclose honestly in user-guide Wave 12.
+5. Wait for Diego's L-007 lock + ratchet push before declaring Wave 11 complete; my §7 sign-off is the gate.
+6. Cut v0.8.0 via Wave 13 release ceremony after Wave 12 (Nathan) lands.
