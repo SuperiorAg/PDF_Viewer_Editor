@@ -1705,3 +1705,429 @@ A few patterns to know:
 - **Telemetry framework + structural PII guard** (the `.strict()` schema as the exemplar privacy pattern): [`developer-guide.md` → Telemetry framework](developer-guide.md#telemetry-framework-phase-7)
 - **Runtime `require()` of in-tree modules anti-pattern** (Phase 6 Diego Wave 25 RCA; the vite tree-shake + Electron 30 ESM rejection packaging gap; second instance): [`developer-guide.md` → Common pitfalls](developer-guide.md#runtime-require-of-in-tree-modules--vite-tree-shake--electron-30-esm-rejection)
 - **Release-engineering responsibility — language-pack catalog SHA-256** (B-21.1 — real hashes landed in 0.7.1; the re-fetch/re-hash automation script is the durable follow-up): [`developer-guide.md` → Release-engineering responsibility](developer-guide.md#release-engineering-responsibility--language-pack-catalog-sha-256-b-211)
+
+---
+
+## Phase 7.5 channels — v0.8.0 (parity close)
+
+Phase 7.5 adds **41 new IPC channels** across Waves 2–7 and 5a–5e, the Acrobat parity close. Every channel below is **LIVE** in v0.8.0 except where explicitly noted. Full request / response types are at [`src/ipc/contracts.ts`](../src/ipc/contracts.ts); the Channels enum is at the bottom of that file.
+
+The honesty contract for Phase 7.5 IPC: every response that surfaces a subset claim, an unavailable locale, or an engine-failed surface carries the verbatim disclosure string as a contract field — never paraphrased by the renderer. Regression tests pin every verbatim string.
+
+### Page operations — `pdf:cropPages` / `pdf:extractPages` / `pdf:splitDocument` / `pdf:replacePages` / `pdf:insertPagesFromFile` (Wave 2)
+
+#### `pdf:cropPages` — **Live**
+
+Apply a crop box (`/CropBox`) to a range of pages.
+
+| Field    | Value                                                                                     |
+| -------- | ----------------------------------------------------------------------------------------- |
+| Request  | `PdfCropPagesRequest = { handle, range, cropBox }`                                        |
+| Response | `PdfCropPagesResponse = Result<PdfCropPagesValue, PdfCropPagesError>`                     |
+| Value    | `{ op, warnings }`                                                                        |
+| Errors   | `'invalid_payload'`, `'handle_not_found'`, `'page_range_out_of_range'`, `'engine_failed'` |
+
+#### `pdf:extractPages` — **Live**
+
+Extract a page range into a new PDF (source is untouched).
+
+| Field    | Value                                                                                                                 |
+| -------- | --------------------------------------------------------------------------------------------------------------------- |
+| Request  | `PdfExtractPagesRequest = { handle, range, outputPath, destinationToken? }`                                           |
+| Response | `PdfExtractPagesResponse = Result<PdfExtractPagesValue, PdfExtractPagesError>`                                        |
+| Value    | `{ outputPath, pageCount, warnings }`                                                                                 |
+| Errors   | `'invalid_payload'`, `'handle_not_found'`, `'page_range_out_of_range'`, `'output_path_unwritable'`, `'engine_failed'` |
+
+#### `pdf:splitDocument` — **Live**
+
+Split a document into multiple output PDFs by every-N-pages, by bookmark depth, or by an explicit page-range list.
+
+| Field    | Value                                                                                                          |
+| -------- | -------------------------------------------------------------------------------------------------------------- |
+| Request  | `PdfSplitDocumentRequest = { handle, strategy, outputFolder, destinationToken? }`                              |
+| Response | `PdfSplitDocumentResponse = Result<PdfSplitDocumentValue, PdfSplitDocumentError>`                              |
+| Value    | `{ outputs: { path, pageCount }[], warnings }`                                                                 |
+| Errors   | `'invalid_payload'`, `'handle_not_found'`, `'invalid_strategy'`, `'output_path_unwritable'`, `'engine_failed'` |
+
+`PdfSplitStrategy`:
+
+```ts
+type PdfSplitStrategy =
+  | { kind: 'every-n-pages'; n: number }
+  | { kind: 'by-bookmark-depth'; depth: number }
+  | { kind: 'explicit'; ranges: { start: number; end: number }[] };
+```
+
+#### `pdf:replacePages` — **Live**
+
+Replace a target range in the open document with pages from a source PDF.
+
+| Field    | Value                                                                                                                                     |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Request  | `PdfReplacePagesRequest = { handle, replaceRange, sourcePath, sourceRange }`                                                              |
+| Response | `PdfReplacePagesResponse = Result<PdfReplacePagesValue, PdfReplacePagesError>`                                                            |
+| Value    | `{ op, warnings }`                                                                                                                        |
+| Errors   | `'invalid_payload'`, `'handle_not_found'`, `'page_range_out_of_range'`, `'source_invalid_pdf'`, `'source_read_failed'`, `'engine_failed'` |
+
+#### `pdf:insertPagesFromFile` — **Live**
+
+Insert pages from another PDF at a chosen index.
+
+| Field    | Value                                                                                                                           |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Request  | `PdfInsertPagesFromFileRequest = { handle, sourcePath, sourceRange, insertAtIndex }`                                            |
+| Response | `PdfInsertPagesFromFileResponse = Result<PdfInsertPagesFromFileValue, PdfInsertPagesFromFileError>`                             |
+| Value    | `{ op, insertedCount, warnings }`                                                                                               |
+| Errors   | `'invalid_payload'`, `'handle_not_found'`, `'invalid_index'`, `'source_invalid_pdf'`, `'source_read_failed'`, `'engine_failed'` |
+
+### Page design — `pdf:applyWatermark` / `pdf:applyHeaderFooter` / `pdf:applyBackground` / `pdf:applyStamp` + `stamps:*` (Waves 3–4)
+
+#### `pdf:applyWatermark` — **Live**
+
+Apply a watermark to a page range. `PdfPageDesignTarget = 'all' | { start; end } | number[]`.
+
+| Field   | Value                                                                                     |
+| ------- | ----------------------------------------------------------------------------------------- |
+| Request | `PdfApplyWatermarkRequest = { handle, target, source, position, opacity, rotation }`      |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'page_range_out_of_range'`, `'engine_failed'` |
+
+#### `pdf:applyHeaderFooter` — **Live**
+
+Up to six strips with token expansion (`{pageNum}`, `{totalPages}`, `{fileName}`, `{date}`).
+
+| Field   | Value                                                                                     |
+| ------- | ----------------------------------------------------------------------------------------- |
+| Request | `PdfApplyHeaderFooterRequest = { handle, target, strips: PdfHeaderFooterStrip[] }`        |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'page_range_out_of_range'`, `'engine_failed'` |
+
+#### `pdf:applyBackground` — **Live**
+
+Solid color, gradient, or image background.
+
+| Field   | Value                                                                                     |
+| ------- | ----------------------------------------------------------------------------------------- |
+| Request | `PdfApplyBackgroundRequest = { handle, target, source: PdfBackgroundSource }`             |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'page_range_out_of_range'`, `'engine_failed'` |
+
+#### `pdf:applyStamp` — **Live**
+
+Place a stamp on a page. `PdfApplyStampRequest = { handle, pageIndex, stampSpec, placement }`.
+
+#### `stamps:list` / `stamps:create` / `stamps:delete` — **Live**
+
+SQLite-backed user stamp library.
+
+| Channel         | Request                                             | Errors                                                                 |
+| --------------- | --------------------------------------------------- | ---------------------------------------------------------------------- |
+| `stamps:list`   | `{ filterByKind? }`                                 | `'db_unavailable'`                                                     |
+| `stamps:create` | `{ name, kind, spec, asset?: { bytes; mimeType } }` | `'invalid_payload'`, `'db_unavailable'`, `'engine_failed'`             |
+| `stamps:delete` | `{ id }`                                            | `'invalid_payload'`, `'db_unavailable'`, `'not_found'`, `'is_builtin'` |
+
+### Compress / Hyperlinks / Auto-bookmarks (Wave 4)
+
+#### `pdf:compressDocument` — **Live**
+
+| Field   | Value                                                          |
+| ------- | -------------------------------------------------------------- |
+| Request | `PdfCompressDocumentRequest = { handle, outputPath, options }` |
+| Value   | `{ outputPath, beforeBytes, afterBytes, warnings }`            |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'engine_failed'`   |
+
+#### `pdf:editLinks` — **Live**
+
+| Field   | Value                                                                                 |
+| ------- | ------------------------------------------------------------------------------------- |
+| Request | `PdfEditLinksRequest = { handle, edits: { op: 'add' \| 'edit' \| 'remove'; ... }[] }` |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'engine_failed'`                          |
+
+#### `pdf:autoBookmarkFromHeadings` — **Live**
+
+Proposes a bookmark tree from heading-cluster heuristics; the renderer commits via the existing `bookmarks:upsert` flow.
+
+| Field   | Value                                                        |
+| ------- | ------------------------------------------------------------ |
+| Request | `PdfAutoBookmarkFromHeadingsRequest = { handle, range }`     |
+| Value   | `{ proposedBookmarks: ProposedBookmark[], warnings }`        |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'engine_failed'` |
+
+### Encryption / Sanitize / Properties / Font (Wave 5)
+
+#### `pdf:setPasswordProtection` — **Live**
+
+Spawns the bundled qpdf binary (Apache-2.0). Per-OS:
+
+- Windows: bundled at `resources/qpdf/bin/qpdf.exe` (verified).
+- macOS: NOT bundled (upstream gap); falls back to system PATH (`brew install qpdf`); returns `'engine_unavailable'` when neither is present.
+- Linux: bundled config-only / unverified per P7-L-1; system PATH fallback (`apt install qpdf` etc.).
+
+| Field   | Value                                                                                                                                                           |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Request | `PdfSetPasswordProtectionRequest = { handle, algorithm: 'aes-128' \| 'aes-256', ownerPassword, userPassword?, permissions: EncryptionPermissions, outputPath }` |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'engine_unavailable'`, `'engine_failed'`, `'output_path_unwritable'`                                                |
+
+`EncryptionPermissions` covers: print / print-high-res / copy / modify / annotate / fill-forms / accessibility-extract / page-extract / assemble.
+
+#### `pdf:removeHiddenInfo` — **Live**
+
+Rebuild-from-scratch over strip-post-hoc (P7.5-L-12). `SanitizeCategory` covers metadata, document-level JavaScript, embedded files, outline, AcroForm, layers, structure tree, threads, catalog Additional Actions, PieceInfo / SpiderInfo, per-page annotations.
+
+| Field   | Value                                                                     |
+| ------- | ------------------------------------------------------------------------- |
+| Request | `PdfRemoveHiddenInfoRequest = { handle, categories: SanitizeCategory[] }` |
+| Value   | `{ op, removedCategories, warnings }`                                     |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'engine_failed'`              |
+
+#### `pdf:getDocumentProperties` / `pdf:setDocumentProperties` — **Live**
+
+`DocumentProperties` covers title / author / subject / keywords / creator / producer / creationDate / modDate / customProperties + read-only fields (isEncrypted, pdfVersion, fileSizeBytes, embeddedFonts list).
+
+#### `pdf:swapEmbeddedFont` — **Live**
+
+`StandardPdfFontName` enumerates the 14 PDF base fonts. **v0.8.0 swaps by font name across the whole document; finer-grained scope is forward-looking.**
+
+| Field   | Value                                                                                   |
+| ------- | --------------------------------------------------------------------------------------- |
+| Request | `PdfSwapEmbeddedFontRequest = { handle, sourceFontName, targetStandardFont, scope }`    |
+| Value   | `{ op, replacementCount, warnings }`                                                    |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'source_font_not_found'`, `'engine_failed'` |
+
+#### `pdf:listEmbeddedFonts` — **Live**
+
+Pure pdf-lib walk of `/Resources/Font` per page.
+
+| Field   | Value                                                        |
+| ------- | ------------------------------------------------------------ |
+| Request | `{ handle }`                                                 |
+| Value   | `{ fonts: EmbeddedFontInfo[] }`                              |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'engine_failed'` |
+
+### Wave 5a — Read Aloud / TTS (`tts:*`)
+
+#### `tts:listVoices` — **Live**
+
+Per OS: SAPI 5.4 (Windows; OS-bundled), `say` (macOS; OS-bundled), `espeak` (Linux; user-installed). Linux without espeak returns `'engine_unavailable'`; the bar surfaces the honest fallback "On Linux, install espeak (e.g. `sudo apt install espeak`) and reopen."
+
+| Field   | Value                                        |
+| ------- | -------------------------------------------- |
+| Request | `TtsListVoicesRequest = { locale?: string }` |
+| Value   | `{ voices: TtsVoice[] }`                     |
+| Errors  | `'engine_unavailable'`                       |
+
+#### `tts:speakText` — **Live**
+
+| Field   | Value                                                                               |
+| ------- | ----------------------------------------------------------------------------------- |
+| Request | `TtsSpeakTextRequest = { text, voiceId?, rate?, pitch?, returnBoundaries? }`        |
+| Value   | `{ jobId }`                                                                         |
+| Errors  | `'invalid_payload'`, `'engine_unavailable'`, `'voice_not_found'`, `'engine_failed'` |
+
+#### `tts:pause` / `tts:resume` / `tts:stop` — **Live**
+
+All three accept `TtsControlRequest = { jobId }` → `Result<{}, TtsControlError>` with errors `'invalid_payload'`, `'job_not_found'`, `'engine_failed'`.
+
+#### `tts:boundary` — **Live (event)**
+
+Streams `TtsBoundaryEvent = { jobId, sentenceIndex, charOffset, charLength }` so the renderer can highlight the active sentence in the text layer.
+
+### Wave 5a — Preflight (`pdf:runPreflight`)
+
+#### `pdf:runPreflight` — **Live**
+
+PDF/X-1a + PDF/X-4 + PDF/A-1b + PDF/A-2b subset (~30 rules). Each rule emits `PreflightRuleResult { ruleId, profile, severity, passed, message, locations }`.
+
+| Field   | Value                                                                    |
+| ------- | ------------------------------------------------------------------------ |
+| Request | `PdfRunPreflightRequest = { handle, profiles: PreflightProfile[] }`      |
+| Value   | `{ results: PreflightRuleResult[], shippedRuleCount, subsetDisclosure }` |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'engine_failed'`             |
+
+`subsetDisclosure` is the verbatim string the renderer surfaces without paraphrasing.
+
+### Wave 5b — Tag PDF (`pdf:getStructTree` / `pdf:setStructTree` / `pdf:autoTagPages`)
+
+#### `pdf:getStructTree` — **Live**
+
+Reads `/StructTreeRoot` via pdf-lib's low-level dictionary API. Returns the materialized `StructTreeNode` tree plus `hasExistingTags: boolean` (drives the Save-As-copy default).
+
+| Field   | Value                                                        |
+| ------- | ------------------------------------------------------------ |
+| Request | `{ handle }`                                                 |
+| Value   | `{ tree: StructTreeNode[], hasExistingTags }`                |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'engine_failed'` |
+
+#### `pdf:setStructTree` — **Live**
+
+Rebuild-from-scratch materializer: load source → allocate new struct-element objects → write `/Alt` / `/ActualText` / `/Lang` → write the new `/StructTreeRoot` → set `/MarkInfo/Marked = true` → strip doc-level JS → serialize.
+
+| Field   | Value                                                        |
+| ------- | ------------------------------------------------------------ |
+| Request | `PdfSetStructTreeRequest = { handle, tree }`                 |
+| Value   | `{ op, warnings }`                                           |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'engine_failed'` |
+
+#### `pdf:autoTagPages` — **Live**
+
+Honest heuristic — font-size cluster + position-on-page → P / H1 / H2 / Figure / Table.
+
+| Field   | Value                                                          |
+| ------- | -------------------------------------------------------------- |
+| Request | `PdfAutoTagPagesRequest = { handle, range: AutoTagPageRange }` |
+| Value   | `{ proposedTree, warnings }`                                   |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'engine_failed'`   |
+
+### Wave 5c — Reading Order + Alt Text
+
+#### `pdf:getReadingOrder` — **Live**
+
+| Field   | Value                                                         |
+| ------- | ------------------------------------------------------------- |
+| Request | `PdfGetReadingOrderRequest = { handle, recompute?: boolean }` |
+| Value   | `{ entries: ReadingOrderEntry[], warnings }`                  |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'engine_failed'`  |
+
+**Honest fallback (v0.8.0):** when `recompute: true` and the layout text extractor is not wired, the engine returns the tag-tree order plus a `warnings` entry containing `'reading-order.recompute.no-extractor-wired'`. The renderer surfaces the verbatim banner "Auto-detect unavailable — layout text extractor not wired in this build. Showing tag-tree order." No silent fake-success.
+
+#### `pdf:setReadingOrder` — **Live**
+
+| Field   | Value                                                        |
+| ------- | ------------------------------------------------------------ |
+| Request | `{ handle, entries: ReadingOrderEntry[] }`                   |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'engine_failed'` |
+
+#### `pdf:setAltText` — **Live**
+
+| Field   | Value                                                                                   |
+| ------- | --------------------------------------------------------------------------------------- |
+| Request | `{ handle, structNodeId, altText: string }`                                             |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'struct_node_not_found'`, `'engine_failed'` |
+
+#### `pdf:listFiguresWithoutAltText` — **Live**
+
+| Field   | Value                                                        |
+| ------- | ------------------------------------------------------------ |
+| Request | `{ handle }`                                                 |
+| Value   | `{ figures: FigureWithoutAlt[] }`                            |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'engine_failed'` |
+
+### Wave 5d — Accessibility Checker (`pdf:runAccessibilityCheck`)
+
+#### `pdf:runAccessibilityCheck` — **Live**
+
+12-rule subset of WCAG 2.1 + PDF/UA-1. Verbatim `subsetDisclosure` field. Four-state outcome model: each rule emits `pass | warn | fail | unevaluated`.
+
+| Field   | Value                                                                                                                   |
+| ------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Request | `PdfRunAccessibilityCheckRequest = { handle }`                                                                          |
+| Value   | `{ results: AccessibilityRuleResult[], summary: AccessibilityCheckSummary, ranAt, shippedRuleCount, subsetDisclosure }` |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'engine_failed'`                                                            |
+
+`AccessibilityCheckSummary = { pass, warn, fail, unevaluated }` — four DISTINCT buckets; never folded.
+
+The 12 rule IDs (authoritative — resynced 2026-06-19 against `src/main/pdf-ops/accessibility-rules/`):
+
+- `a11y.document.title-present` (error)
+- `a11y.document.language-set` (error)
+- `a11y.structure-tree-present` (error)
+- `a11y.figures.all-have-alt-text` (error)
+- `a11y.figures.alt-not-placeholder` (warning)
+- `a11y.tables.headers-identified` (error)
+- `a11y.tables.scope-set` (warning)
+- `a11y.reading.order-defined` (error)
+- `a11y.content.non-text-tagged` (error — `unevaluated` if the layout extractor isn't wired)
+- `a11y.content.scanned-searchable` (error — `unevaluated` if the layout extractor isn't wired)
+- `a11y.behavior.javascript-no-form-actions` (warning)
+- `a11y.appearance.color-contrast-spot-sample` (warning — **permanently `unevaluated`** under pdf-lib; a future raster engine fills the slot)
+
+### Wave 6 — Action Wizard (`actions:*`)
+
+7 channels for save / list / get / delete / run / export / import. **`ACTION_SCRIPT_SCHEMA_VERSION = 1`**; banned-op allowlist (9 replayable kinds) enforced at save AND runtime.
+
+| Channel                | Request                                     | Errors                                                                                       |
+| ---------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `actions:saveScript`   | `{ name, ops, schemaVersion }`              | `'invalid_payload'`, `'banned_op'`, `'persistence_failed'`                                   |
+| `actions:listScripts`  | `{}`                                        | `'persistence_failed'`                                                                       |
+| `actions:getScript`    | `{ id }`                                    | `'invalid_payload'`, `'not_found'`, `'persistence_failed'`                                   |
+| `actions:deleteScript` | `{ id }`                                    | `'invalid_payload'`, `'not_found'`, `'persistence_failed'`                                   |
+| `actions:runScript`    | `{ id, targetHandles, destinationFolder? }` | `'invalid_payload'`, `'not_found'`, `'banned_op'`, `'replay_failed'`, `'persistence_failed'` |
+| `actions:exportScript` | `{ id, outputPath, destinationToken? }`     | `'invalid_payload'`, `'not_found'`, `'output_path_unwritable'`, `'persistence_failed'`       |
+| `actions:importScript` | `{ sourcePath, name? }`                     | `'invalid_payload'`, `'invalid_envelope'`, `'banned_op'`, `'persistence_failed'`             |
+
+**Honest deferral:** `destinationFolder` is `string` in the contract; `dialog:pickFolder` returns a `directoryToken`, not a raw path. v0.8.0 ships with `destinationFolder` UNSET (engine writes next to source). The Runner UI surfaces the verbatim deferral note. v0.9.0 candidates: (a) David adds a `destinationFolderToken` field that the handler redeems via the directoryStore; (b) David adds a `dialog:pickPlainDirectoryPath` channel that returns a sanitized path string.
+
+### Wave 6 — Spell Check (`spell:*`)
+
+5 channels. en-US ships; es-ES surfaces `available: false` + verbatim `reason`.
+
+| Channel                          | Request            | Errors                                                                |
+| -------------------------------- | ------------------ | --------------------------------------------------------------------- |
+| `spell:listLocales`              | `{}`               | `'engine_failed'`                                                     |
+| `spell:checkText`                | `{ text, locale }` | `'invalid_payload'`, `'locale_not_available'`, `'engine_failed'`      |
+| `spell:addWordToDictionary`      | `{ word, locale }` | `'invalid_payload'`, `'locale_not_available'`, `'persistence_failed'` |
+| `spell:removeWordFromDictionary` | `{ word, locale }` | `'invalid_payload'`, `'locale_not_available'`, `'persistence_failed'` |
+| `spell:listUserDictionary`       | `{ locale }`       | `'invalid_payload'`, `'locale_not_available'`, `'persistence_failed'` |
+
+The es-ES descriptor surfaces the verbatim disclosure:
+
+```ts
+{
+  id: 'es-ES',
+  displayName: 'Spanish (Spain)',
+  available: false,
+  reason:
+    'Spanish dictionary not available in this build — Hunspell es-ES is GPL-3/LGPL-3/MPL-1.1 (per npm registry vet 2026-06-18), which does not meet the project policy of MIT/Apache/BSD permissive-only.',
+}
+```
+
+### Wave 7 — Compare Files (`pdf:openComparePair` / `pdf:compareTextOnPage` / `pdf:compareVisualOnPage` / `pdf:closeCompareSession`)
+
+#### `pdf:openComparePair` — **Live**
+
+Pin two document handles; return sequential page-pair list (left N ↔ right N). Orphan pages on the longer side carry `null` on the opposite side.
+
+| Field   | Value                                                                        |
+| ------- | ---------------------------------------------------------------------------- |
+| Request | `{ leftHandle, rightHandle }`                                                |
+| Value   | `{ sessionId, pagePairs: ComparePagePair[], leftPageCount, rightPageCount }` |
+| Errors  | `'invalid_payload'`, `'handle_not_found'`, `'engine_failed'`                 |
+
+#### `pdf:compareTextOnPage` — **Live**
+
+Lazy per-page diff via `diff-match-patch` + `cleanupSemantic`.
+
+| Field   | Value                                                                                |
+| ------- | ------------------------------------------------------------------------------------ |
+| Request | `{ sessionId, pairIndex }`                                                           |
+| Value   | `{ segments: CompareTextDiffSegment[], summary: CompareTextDiffSummary }`            |
+| Errors  | `'invalid_payload'`, `'session_not_found'`, `'pair_out_of_range'`, `'engine_failed'` |
+
+#### `pdf:compareVisualOnPage` — **Live**
+
+Lazy per-page rasterize + pixelmatch diff. `MAX_RENDER_WIDTH_PX = 1600`; `DEFAULT_PIXELMATCH_THRESHOLD = 0.1`.
+
+| Field   | Value                                                                                                                               |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Request | `{ sessionId, pairIndex, threshold? }`                                                                                              |
+| Value   | `{ diffMaskPng: Uint8Array, diffPixelCount, leftRenderPng, rightRenderPng }`                                                        |
+| Errors  | `'invalid_payload'`, `'session_not_found'`, `'pair_out_of_range'`, `'left_pngjs_failed'`, `'right_pngjs_failed'`, `'engine_failed'` |
+
+#### `pdf:closeCompareSession` — **Live**
+
+Revoke session caches; frees both document handles' compare-side memory.
+
+| Field   | Value                                      |
+| ------- | ------------------------------------------ |
+| Request | `{ sessionId }`                            |
+| Value   | `{ closed: boolean }`                      |
+| Errors  | `'invalid_payload'`, `'session_not_found'` |
+
+### Phase 7.5 settings keys
+
+Phase 7.5 adds settings keys via the existing `SettingKey` union and `settings:get` / `settings:set` channels. Notable additions (full list in [`src/ipc/contracts.ts`](../src/ipc/contracts.ts) `SettingKey`):
+
+- `tts.preferredVoiceId.<locale>` — persisted per-locale voice preference.
+- `tts.rate` — default 1.0; range 0.5–2.0.
+- `compare.lastSessionMode` — `'text' | 'visual' | 'combined'`.
+- `spell.userDictionaryPath.<locale>` — derived from `<userData>/spell/`; documented for completeness.
+- (...several more — see contracts.ts.)
+
+Phase 7.5 does NOT add a new database table; all new persistence lives in the existing `settings` table (key/value), the `stamps_library` table (new in v0.8.0), and per-feature JSON files under `<userData>` (Action Wizard scripts, Spell Check user dictionaries).

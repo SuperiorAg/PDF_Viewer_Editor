@@ -2,7 +2,7 @@
 
 Phased delivery for PDF_Viewer_Editor.
 
-**Status as of 2026-06-15 (v0.7.20):** Phases 1–7 shipped end-to-end on Windows. Phase 7.1 + 7.2 hardening waves (real-PDF e2e OCR integration test, Ubuntu CI unblock, dev-mode SQLite repo bundling, PAdES indirect-`/V` detector fix, signed-PDF audit-row e2e) all closed. macOS / Linux configs land but verification on those hosts is deferred until cert procurement + non-Windows hosts are available.
+**Status as of 2026-06-19 (v0.8.0):** **Phase 7.5 Acrobat parity close has SHIPPED.** Phases 1–7 continue to ship; 7.1 + 7.2 + 7.3 + 7.4 B1 (Redaction) all closed. Phase 7.5 adds 35+ feature surfaces across 13 waves (Bucket A polish + Bucket B "ship now" + Bucket C accessibility / read-aloud / preflight) on top of the prior roadmap. The L-007 tool-registry lock is enforced. The bundled qpdf binary (Apache-2.0) ships for Windows; macOS falls back to system PATH (upstream gap); Linux is config-only / unverified. macOS / Linux **runtime** verification continues to wait on cert procurement + non-Windows hosts.
 
 ## Phase 1 — Walking Skeleton ✅ SHIPPED
 
@@ -105,6 +105,80 @@ Plan: `docs/phase-7.1-plan.md`. Test design: `docs/phase-7.1-test-design.md`. Cl
 ## Phase 7.2 — CI Coverage Restoration + dev-mode SQLite bundling ✅ SHIPPED (v0.7.20)
 
 Plan: `docs/phase-7.2-plan.md`. Test design: `docs/phase-7.2-test-design.md`. Both-OS CI green on first attempt; first CI run of the Phase 7.1 spec; six-adapter audit + PAdES indirect-`/V` fix + signed-PDF e2e + L-006 (Vite define-fold) lock.
+
+## Phase 7.4 B1 — Redaction (R1 rasterize-redact) ✅ SHIPPED (v0.7.x interim)
+
+Plan: `docs/phase-7.4-b1-redaction-design.md`. Acrobat-parity destructive redaction tool. Mark rectangle → Apply → redacted pages become rasterized images with marked content burned out + 17 categories of hidden information stripped via rebuild-from-scratch. PAdES signatures invalidated; signature audit log records invalidation. R2 content-stream walker variant + Mark Text (selection-based) deferred to a future phase.
+
+## Phase 7.5 — Acrobat parity close ✅ SHIPPED (v0.8.0 — June 2026)
+
+Plan: `docs/project-plan.md`. 13 waves; ~152 engineering hours across the swarm. Closes the parity gap surfaced in `docs/acrobat-parity-audit.md` and the principal-facing `docs/acrobat-comparison.html`. Includes the L-007 tool-registry lock + ratchet.
+
+### Bucket A — polish (Wave 2)
+
+- [x] A1 Stale tooltip cleanup + dishonest `phase3()` toast removal + Insert menu wiring + Shapes button → sub-toolbar
+- [x] A2 i18n-wrapped shape sub-toolbar (en-US complete; es-ES partial)
+- [x] A3 Shortcut suffix hygiene + Alt+B / Alt+O / Alt+C chords
+- [x] A4 Menu mirrors for 9 toolbar-only items
+- [x] A5 Cursor / Hand-tool button (V)
+- [x] A6 Ctrl+1 (Fit width) / Ctrl+2 (Fit page) wired to real handlers
+- [x] A7 "Find a tool…" palette (Ctrl+/) — surfaces every ToolDef
+
+### Bucket B — ship now (Waves 2–7)
+
+- [x] B2 Compare Files (text + visual diff) — sequential pairing (content-hash matching deferred to v0.9.0); fixed 1600 px visual render width; per-page LRU eviction deferred
+- [x] B3 Find / Search (Ctrl+F, F3 / Shift+F3, match counter, case + whole-word)
+- [x] B4 Watermark / Header & Footer / Background
+- [x] B5 Crop Pages
+- [x] B6 Compress / Optimize PDF
+- [x] B7 Stamps + Stamp library (SQLite-backed)
+- [x] B8 Password encryption + permission flags — bundled qpdf 11.9.1 (Apache-2.0)
+- [x] B9 Action Wizard — record / replay / save / import / export. **Edit on saved actions is rename-only**; **custom destination folder deferred to v0.9.0** (runner writes next to source)
+- [x] B10 Extract / Split / Replace pages
+- [x] B11 Insert pages from another PDF
+- [x] B12 Page-content Cut/Copy/Paste
+- [x] B13 Hyperlinks (add / edit / remove)
+- [x] B14 Spell check (`nspell` + Hunspell en-US). **es-ES NOT shipped** — Hunspell dictionary licensed GPL-3 / LGPL-3 / MPL-1.1, non-permissive; future locales tracked
+- [x] B15 Page Display modes (single / two-up / scroll / facing)
+- [x] B16 View-only rotation + chromeless Read Mode (F11)
+- [x] B17 Area measure tool (8th shape)
+- [x] B18 Edit text & images — font swap. **Whole-document scope only in v0.8.0**; finer-grained scope (this run / this page / whole document) tracked
+- [x] B19 Auto-bookmarks from headings
+- [x] B20 Remove hidden information / sanitize (rebuild-from-scratch per P7.5-L-12)
+- [x] B21 Document Properties dialog (Description / Fonts / Custom / Security)
+
+### Bucket C — accessibility / read-aloud / preflight (Waves 5a–5e)
+
+- [x] C1 Read Aloud / TTS — SAPI on Windows; `say` on macOS; `espeak` on Linux (GPL-3 subprocess-only — user-installed via system package manager; we shell out, we don't link, we don't bundle)
+- [x] C2 Preflight (PDF/X-1a + PDF/X-4 + PDF/A-1b + PDF/A-2b — **compliant subset, ~30 rules**; Acrobat ships hundreds)
+- [x] C3 Tag PDF tree editor — sidebar Accessibility tab; auto-tag heuristic
+- [x] C4 Reading Order overlay — drag-to-reorder. **Auto-detect from layout falls back to tag-tree order with a permanent honest banner** until the layout extractor is wired (same wiring as the C6 extractor-dependent rules)
+- [x] C5 Alt Text inspector — pHash-based bulk-set for similar figures
+- [x] C6 Accessibility Checker — **12-rule SUBSET of WCAG 2.1 + PDF/UA-1**; four-state outcome model (pass / warn / fail / unevaluated); color-contrast spot-sample permanently `unevaluated` under pdf-lib; Export Report dialog (HTML default + JSON)
+
+### Marking foundation (Wave 2 + Wave 11)
+
+- [x] R1 `src/client/tools/registry.ts` declarative ToolDef registry
+- [x] R2 Four contract tests in `src/client/tools/registry.contract.test.ts`
+- [x] R3 `docs/conventions.md` §X "Well-marked tools" definition
+- [x] **L-007 lock + ratchet** (`scripts/ratchet-tool-registry-coverage.mjs`) — pre-commit + CI; every user-facing tool surface MUST appear in the registry or be allowlisted with a justifying reason
+
+## Phase 7.5 deferred — tracked follow-ups (filed; not v0.8.0)
+
+These items are tracked honestly and will land in subsequent waves / phases:
+
+- **es-ES Hunspell dictionary licensing** — Hunspell Spanish is GPL-3 / LGPL-3 / MPL-1.1 (non-permissive). Future locales tracked; will ship when a permissive es-ES dictionary surfaces upstream.
+- **Compare Files per-page LRU eviction** (v0.9.0 candidate).
+- **Compare Files content-hash page matching** (v0.9.0 candidate).
+- **Action Wizard custom destination folder** (v0.9.0 candidate — open questions: `destinationFolderToken` field on `actions:runScript`, OR a new `dialog:pickPlainDirectoryPath` channel returning a sanitized path string).
+- **Action Wizard full op editor** (currently rename-only).
+- **Font swap finer-grained scope** (this run / this page / whole document — engine extension).
+- **Color-contrast Accessibility Checker rule** — needs a raster engine. Future enhancement; Vault decision note tracked.
+- **Color-contrast / non-text-tagged extractor wiring** — Diego's R12 follow-up; same extractor shape as the C4 Reading Order auto-detect path.
+- **R12 regression test against an externally-authored tagged PDF** — Julian's Wave 11 HIGH finding; ensures structure-tree round-trip preserves an Acrobat-authored tagged document end-to-end.
+- **macOS qpdf bundling** — upstream qpdf 11.9.1 publishes no macOS binary (verified 2026-06-18). Phase 7.6 candidate when a permissive macOS binary source surfaces.
+- **Linux qpdf bundling verification** — config-only / unverified per P7-L-1 until a real Linux host is available.
+- **TWAIN direct scanner integration** — per audit §6.9 defer. Workflow remains: scan in your OS first, then File → Open / drag-and-drop into PDF Viewer Editor.
 
 ## Phase 7.3 candidates (filed; not yet a wave)
 

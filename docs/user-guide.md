@@ -1,6 +1,67 @@
+# User guide — PDF_Viewer_Editor v0.8.0 (Phase 7.5 — Acrobat parity close)
+
+Welcome. This guide walks you through everything PDF_Viewer_Editor v0.8.0 can do, and is explicit about the parts that are still narrowly scoped. **v0.8.0 closes the Acrobat parity gap surfaced in the [parity audit](acrobat-parity-audit.md).** Read the new [What changed in v0.8.0](#what-changed-in-v080) section below if you upgraded from 0.7.6. The full honest-disclosure list for v0.8.0 lives in [What we don't do (yet) — v0.8.0 honesty disclosures](#what-we-dont-do-yet--v080-honesty-disclosures) at the foot of this guide.
+
+---
+
+## What changed in v0.8.0
+
+v0.8.0 is the **Acrobat parity close** release. It adds 30+ feature surfaces across Bucket A polish, Bucket B "ship now", and Bucket C accessibility / read-aloud / preflight. Every feature carries a [user-guide section](#table-of-feature-sections) below; every IPC channel carries a [developer-guide reference card entry](developer-guide.md#phase-75-ipc-reference-card); every honest deferral is enumerated.
+
+### New top-level features
+
+| Feature                                       | Section                                                                        | How you invoke it                                              |
+| --------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| Find / Search (B3)                            | [Find / Search](#find--search)                                                 | **Ctrl+F**; F3 / Shift+F3 next/prev                            |
+| Compare Files (B2)                            | [Compare Files](#compare-files)                                                | **Ctrl+Shift+C**; File menu → Compare Files…                   |
+| Watermark / Header & Footer / Background (B4) | [Watermark, Header & Footer, Background](#watermark-header--footer-background) | Tools menu → Pages → Watermark… (or H&F… / Background…)        |
+| Crop Pages (B5)                               | [Crop Pages](#crop-pages)                                                      | Tools menu → Pages → Crop                                      |
+| Compress / Optimize (B6)                      | [Compress / Optimize](#compress--optimize)                                     | File menu → Compress…                                          |
+| Stamps + library (B7)                         | [Stamps](#stamps)                                                              | Annotations toolbar → Stamps; Tools → Stamps → Manage Library… |
+| Action Wizard (B9)                            | [Action Wizard](#action-wizard)                                                | Tools menu → Action Wizard…                                    |
+| Extract / Split / Replace (B10)               | [Extract / Split / Replace pages](#extract--split--replace-pages)              | Tools → Pages → Extract… / Split… / Replace…                   |
+| Insert pages from another PDF (B11)           | [Insert pages from a file](#insert-pages-from-a-file)                          | Insert menu → Pages from File…                                 |
+| Page-content Cut/Copy/Paste (B12)             | [Cut / Copy / Paste page regions](#cut--copy--paste-page-regions)              | Region select → Ctrl+X / Ctrl+C / Ctrl+V                       |
+| Hyperlinks (B13)                              | [Hyperlinks](#hyperlinks)                                                      | Tools → Add Link…; Inspector for selected link                 |
+| Spell Check (B14)                             | [Spell Check](#spell-check)                                                    | Tools → Spell Check…; live underlines in editable text fields  |
+| Page Display modes (B15)                      | [Page display modes](#page-display-modes)                                      | View → Page Display                                            |
+| Read Mode (B16)                               | [Read Mode](#read-mode)                                                        | **F11** (or View → Read Mode)                                  |
+| Area Measure (B17)                            | [Area measure](#area-measure)                                                  | Annotations toolbar → 8th shape tool (Measure Area)            |
+| Font Swap (B18)                               | [Font Swap](#font-swap)                                                        | Tools → Edit Text & Images → Swap Embedded Font…               |
+| Auto-bookmarks from headings (B19)            | [Auto-bookmarks](#auto-bookmarks)                                              | Tools → Auto-Bookmark Headings…                                |
+| Sanitize / Remove hidden info (B20)           | [Sanitize](#sanitize-remove-hidden-information)                                | Tools → Sanitize / Remove Hidden Information…                  |
+| Document Properties (B21)                     | [Document Properties dialog](#document-properties-dialog)                      | File menu → Properties… (or Ctrl+D)                            |
+| Password Encryption (B8)                      | [Password protection](#password-protection-encryption)                         | File → Properties → Security tab                               |
+| Read Aloud / TTS (C1)                         | [Read Aloud](#read-aloud)                                                      | **Shift+Ctrl+R** (or View → Read Aloud)                        |
+| Preflight (C2)                                | [Preflight](#preflight)                                                        | Tools → Preflight…                                             |
+| Tag PDF tree editor (C3)                      | [Tag PDF tree editor](#tag-pdf-tree-editor)                                    | Sidebar Accessibility tab → Tag PDF                            |
+| Reading Order overlay (C4)                    | [Reading Order overlay](#reading-order-overlay)                                | Sidebar Accessibility tab → Reading Order                      |
+| Alt Text inspector (C5)                       | [Alt Text inspector](#alt-text-inspector)                                      | Sidebar Accessibility tab → Alt Text                           |
+| Accessibility Checker (C6)                    | [Accessibility Check](#accessibility-check)                                    | **Ctrl+Shift+A** (or Tools → Accessibility → Run Check)        |
+| Find-a-tool palette (A7)                      | [Find a tool](#find-a-tool)                                                    | **Ctrl+/**                                                     |
+
+### Honesty banner — read this before relying on any subset claim
+
+Five v0.8.0 features ship in an **honest, partial, or subset** state. The app surfaces a verbatim disclosure at the point of action; this guide mirrors each one in its dedicated section. The five:
+
+1. **Accessibility Checker is a SUBSET of WCAG 2.1 + PDF/UA-1.** The panel's permanent header subtitle reads "Subset of WCAG 2.1 + PDF/UA-1 — see Help for the shipped rule set." v0.8.0 ships **12 rules** out of hundreds; the color-contrast spot-sample rule is permanently `unevaluated` under pdf-lib. See [Accessibility Check](#accessibility-check) for the full rule list.
+2. **Preflight is a compliant SUBSET of PDF/X + PDF/A**, not the full rulebook. The header subtitle reads "Subset of PDF/X-1a, PDF/X-4, PDF/A-1b, PDF/A-2b — see Help for the shipped rule set." v0.8.0 ships ~30 rules across four profiles; Acrobat ships hundreds. See [Preflight](#preflight).
+3. **Spell Check ships en-US only.** The Spanish Hunspell dictionary is GPL-3 / LGPL-3 / MPL-1.1 and does not meet the project's permissive-OSS-only policy. The locale picker surfaces the verbatim reason via `spell:listLocales`. Future locales tracked. See [Spell Check](#spell-check).
+4. **Compare Files pairs pages sequentially** in v0.8.0. Content-hash matching is deferred to v0.9.0; multi-column docs may show out-of-reading-order segments (use the Reading Order overlay to inspect tagged docs); visual mode renders at fixed 1600 px width; for very long-doc compares, close the session before reopening to free memory (per-page LRU eviction queued for v0.9.0). See [Compare Files](#compare-files).
+5. **Read Aloud on Linux requires user-installed `espeak`** (GPL-3 subprocess-only — we shell out, we don't link, we don't bundle). If absent, the bar renders an honest "engine_unavailable" fallback with an `apt install espeak` hint. SAPI on Windows + `say` on macOS are OS-bundled and need no extra install. See [Read Aloud](#read-aloud).
+
+Other v0.8.0 deferrals (full list under [What we don't do (yet)](#what-we-dont-do-yet--v080-honesty-disclosures)):
+
+- **Action Wizard:** Edit on saved actions is rename-only in v0.8.0; custom destination folder for the runner is deferred to v0.9.0 (writes next to source).
+- **Font swap (B18):** swaps by font name across the whole document; finer-grained scope (this run / this page / whole document radio) is forward-looking.
+- **TWAIN direct scanner integration:** deferred. Workflow: scan in your OS, then File → Open / drag-and-drop.
+- **macOS qpdf bundling:** falls back to `brew install qpdf` (upstream gap; tracked).
+
+---
+
 # User guide — PDF_Viewer_Editor 0.7.6 (Phase 7)
 
-Welcome. This guide walks you through everything PDF_Viewer_Editor 0.7.6 can do, and is explicit about the parts that are still narrowly scoped. **0.7.0 closed the 7-phase roadmap; six point releases (0.7.1 through 0.7.6) followed.** Phase 7 is the polish phase — it adds no new document-editing capability, but it adds an interface-language picker, an opt-in telemetry framework, an auto-update client (now wired to a real GitHub release feed), keyboard + screen-reader accessibility, macOS + Linux build configuration, and (as of 0.7.6) a **comprehensive 13-section in-app Help modal** (F1) plus **cursor-anchored Ctrl+wheel zoom** (the point under the cursor stays put across the gesture). The Phase 6 export surface (Word / Excel / PowerPoint / image — all six formats now produce valid output, including standard-font text in image exports), Phase 5 OCR + searchable PDFs (now with multi-language download), the **Phase 5.1 native WIA scanner on Windows**, Phase 4 signing (visual + PAdES + audit log), Phase 3 forms (designer + mail merge), and Phase 2 page editing all carry through unchanged. **Five visible polish items shipped after 0.7.0:** crisp HiDPI text + fluid centered Ctrl+scroll zoom + a synced zoom dropdown (0.7.4); a new app icon (0.7.5); cursor-anchored zoom + the 13-section in-app Help modal + a functional **Combine PDFs** flow end-to-end (H-30.1 closure, the Phase-1 `not_implemented` stub is gone) (0.7.6). For installation and the honest platform-support matrix, see the [README](../README.md#install). For the resolved-vs-deferred close-out, see [README → Roadmap status](../README.md#roadmap-status). For the upgrade story from 0.6.x, see [`build-report.md`](build-report.md) Phase 7 sections and the 0.7.1–0.7.6 backlog-fix entries.
+> The text below was the v0.7.6 user-guide; every section continues to apply unchanged in v0.8.0 unless explicitly superseded by a Phase 7.5 section above. Welcome — this guide walks you through everything PDF_Viewer_Editor v0.8.0 can do, and is explicit about the parts that are still narrowly scoped. **0.7.0 closed the 7-phase roadmap; six point releases (0.7.1 through 0.7.6) followed.** Phase 7 is the polish phase — it adds no new document-editing capability, but it adds an interface-language picker, an opt-in telemetry framework, an auto-update client (now wired to a real GitHub release feed), keyboard + screen-reader accessibility, macOS + Linux build configuration, and (as of 0.7.6) a **comprehensive 13-section in-app Help modal** (F1) plus **cursor-anchored Ctrl+wheel zoom** (the point under the cursor stays put across the gesture). The Phase 6 export surface (Word / Excel / PowerPoint / image — all six formats now produce valid output, including standard-font text in image exports), Phase 5 OCR + searchable PDFs (now with multi-language download), the **Phase 5.1 native WIA scanner on Windows**, Phase 4 signing (visual + PAdES + audit log), Phase 3 forms (designer + mail merge), and Phase 2 page editing all carry through unchanged. **Five visible polish items shipped after 0.7.0:** crisp HiDPI text + fluid centered Ctrl+scroll zoom + a synced zoom dropdown (0.7.4); a new app icon (0.7.5); cursor-anchored zoom + the 13-section in-app Help modal + a functional **Combine PDFs** flow end-to-end (H-30.1 closure, the Phase-1 `not_implemented` stub is gone) (0.7.6). For installation and the honest platform-support matrix, see the [README](../README.md#install). For the resolved-vs-deferred close-out, see [README → Roadmap status](../README.md#roadmap-status). For the upgrade story from 0.6.x, see [`build-report.md`](build-report.md) Phase 7 sections and the 0.7.1–0.7.6 backlog-fix entries.
 
 > **Phase 7 honesty banner — read this before relying on telemetry, auto-update, the Spanish locale, or a non-Windows build.** Four things in 0.7.6 ship in an honest, partial, or unverified state, and the app is built to tell you so at the point of action. The full enumeration is in [Phase 7 trust floor](#phase-7-trust-floor--what-the-app-does-and-doesnt-promise):
 >
@@ -2301,3 +2362,604 @@ Please include:
 **Do NOT include** your PFX file, your cert password, or any private key material in an issue. Phase 4's discipline (cert + password never persisted) extends to the user-feedback workflow — we cannot debug a signing failure that requires your cert, and you should not share it. If a signing failure correlates with a specific cert, supply only the cert's Subject CN + Issuer CN + a description of which step of the PAdES wizard failed.
 
 Logs live at `%APPDATA%/PDF Viewer & Editor/logs/main.log` (main process) and the renderer DevTools console (open with **Ctrl+Shift+I** in a development build; production builds disable DevTools).
+
+---
+
+# Phase 7.5 — feature sections (v0.8.0)
+
+The sections below cover every Phase 7.5 feature. Each section follows the same template: what it does, how to invoke it, a short walkthrough, and any honest deferral or limitation.
+
+## Find / Search
+
+**What:** Find a string in the open document. Match counter, case + whole-word toggles, F3 / Shift+F3 jump to next / previous, cross-page.
+
+**Invoke:** Press **Ctrl+F**, or Edit menu → Find…. The Find bar appears at the top of the viewport.
+
+**Walkthrough:**
+
+1. Press **Ctrl+F**.
+2. Type the search term. The match counter ("3 of 14") updates live.
+3. Press **F3** for next, **Shift+F3** for previous.
+4. Toggle Aa for case-sensitive, "ab" for whole-word.
+5. Press **Esc** to close the bar.
+
+The find runs against the pdf.js text layer for the current document. Pages that have not yet been rendered by virtualization are still searched; jumping to a match scrolls the viewport to bring it on screen.
+
+## Find a tool
+
+**What:** Search the [tool registry](#the-tool-registry-developer-guide) by name or keyword. Surfaces every registered tool — including menu items you have not yet discovered.
+
+**Invoke:** Press **Ctrl+/**. The palette appears center-screen.
+
+**Walkthrough:**
+
+1. Press **Ctrl+/**.
+2. Type any keyword (e.g. "compress", "watermark", "preflight"). The palette filters live against each tool's i18n label, tooltip, ARIA name, and `searchKeywords`.
+3. Press ↓ / ↑ to navigate; **Enter** to dispatch.
+4. **Esc** closes the palette without dispatching.
+
+The palette renders the tooltip text (with the chord suffix when one is bound) so you discover the keyboard shortcut at the same time. New ToolDefs added in future waves automatically appear here — no per-feature wiring needed.
+
+## Compare Files
+
+**What:** Open two PDFs side-by-side and see per-page text + visual differences. **B2.**
+
+**Invoke:** Press **Ctrl+Shift+C**, or File menu → Compare Files….
+
+**Walkthrough:**
+
+1. Press **Ctrl+Shift+C**. The Compare Files setup dialog appears.
+2. Pick the left PDF and the right PDF (drag-and-drop into the two slots, or click Browse).
+3. Click **Open compare workspace**.
+4. The workspace shows a per-page-pair list down the left, a viewer pane on the right.
+5. Toggle **Text** / **Visual** / **Combined** view modes at the top.
+   - **Text** — `diff-match-patch` segments; insertions in green, deletions in red, equal text in default color.
+   - **Visual** — `pixelmatch` diff mask overlay; pixels that differ between the two pages are tinted.
+   - **Combined** — both panes side-by-side.
+6. Click any pair in the list to jump to it. The first time a pair is opened, its text + visual diffs are computed lazily and cached.
+7. **Exit** the workspace via the close button (top right) — this revokes all visual diff blob URLs and frees the document handles.
+
+**Honest deferrals (v0.8.0):**
+
+- **Sequential page pairing only.** Left page N is paired with right page N. If the documents have different page counts, the trailing pages on the longer side are surfaced as **orphan pages** in the list. Content-hash matching is **deferred to v0.9.0**.
+- **Multi-column documents may show out-of-reading-order segments.** The text diff uses pdf.js's textContent stream, which traverses the page in /MCID order, not visual reading order. For tagged documents, use the [Reading Order overlay](#reading-order-overlay) to inspect.
+- **Visual mode renders at a fixed 1600 px width** (`MAX_RENDER_WIDTH_PX = 1600`) for memory predictability. Very high-DPI documents are downscaled; very small documents are upscaled to that width.
+- **No per-page LRU eviction in v0.8.0.** Each opened pair caches its text + render buffers for the session lifetime. For very long-doc compares (300+ pages), close the session before reopening another to free memory.
+- **Sequential pairing banner** ("Pages are paired sequentially in v0.8.0 — see user guide for the matching policy") is the verbatim P7.5-L-10 string. The workspace surfaces this banner above the pair list.
+
+## Watermark, Header & Footer, Background
+
+**What:** Apply a watermark, header/footer (six strips), or background to a page range. **B4.**
+
+**Invoke:** Tools menu → Pages → Watermark… (or → Header & Footer… / → Background…).
+
+**Walkthrough (watermark example):**
+
+1. Tools → Pages → Watermark…. The page-design modal appears with three tabs: **Watermark**, **Header & Footer**, **Background**.
+2. On the Watermark tab:
+   - Source: text or image (image picker reads PNG / JPEG).
+   - Position: one of nine grid points (top-left ... bottom-right).
+   - Opacity, rotation, scale.
+3. **Apply to:** All pages, a range (Start / End), or a specific page list.
+4. Click **Apply**. The modal closes and a new `pageDesign` EditOperation is recorded; Save (Ctrl+S) commits the bytes.
+
+Header & Footer supports up to **six strips** (top-left, top-center, top-right, bottom-left, bottom-center, bottom-right) with token expansion: `{pageNum}`, `{totalPages}`, `{fileName}`, `{date}`. Background supports a single solid-color, gradient, or image source.
+
+## Crop Pages
+
+**What:** Define a crop box on the active page and apply it to a range. **B5.**
+
+**Invoke:** Tools menu → Pages → Crop. The crop overlay appears on the active page.
+
+**Walkthrough:**
+
+1. Tools → Pages → Crop. The page receives a draggable crop rectangle (initialized to the current page's `/CropBox`, or `/MediaBox` if none).
+2. Drag the handles to resize.
+3. **Apply to:** This page, a range, or all pages.
+4. Click **Apply**. The crop op is recorded; Save commits the new `/CropBox` per page.
+
+## Compress / Optimize
+
+**What:** Re-encode the document for smaller file size. Reports before/after byte counts. **B6.**
+
+**Invoke:** File menu → Compress…
+
+**Walkthrough:**
+
+1. File → Compress….
+2. Confirm the action in the modal (the original file is untouched — the result lands at a path you pick).
+3. The engine runs a bytes-only pass (no content-stream re-walk in v0.8.0) and writes the optimized PDF.
+4. The modal reports the size delta.
+
+## Stamps
+
+**What:** Place a stamp on a page. Built-in catalog (Draft / Reviewed / Confidential / Approved / Void / Sample / Final / For Review Only / Draft v2) plus a user library. **B7.**
+
+**Invoke:** Annotations toolbar → Stamps (or Tools → Stamps → Manage Library…).
+
+**Walkthrough:**
+
+1. Annotations toolbar → **Stamps** button. The stamps panel opens.
+2. Pick a built-in stamp, or click **+** to author a new one (text + color + size + opacity).
+3. Click the page where you want to place it; drag to position and resize.
+4. Saved stamps survive across sessions in the local SQLite store (`stamps_library` table).
+
+User-authored stamps are listed in `stamps:list`; create via `stamps:create`; delete via `stamps:delete`. See [api-reference.md](api-reference.md) for the IPC contract.
+
+## Action Wizard
+
+**What:** Record a sequence of page operations / annotations / form fills as a reusable Action Script, then replay it against any document. **B9.**
+
+**Invoke:** Tools menu → Action Wizard…
+
+**Walkthrough:**
+
+1. Tools → Action Wizard…. The Action Wizard panel opens.
+2. **New action:**
+   - Click **Record**.
+   - Perform the operations you want to capture (e.g. insert a watermark, flatten forms, save).
+   - Click **Stop**.
+   - Name the action and click **Save**.
+3. **Replay an action:**
+   - Pick an action from the list.
+   - Pick one or more target PDFs (drag-and-drop into the runner pane).
+   - Click **Run**. The runner opens each PDF, replays the action, and writes the result.
+
+**Honest deferrals (v0.8.0):**
+
+- **Edit is rename-only.** You can rename a saved action; a full per-op editor is tracked for a future enhancement.
+- **Custom destination folder is deferred to v0.9.0.** The runner currently writes each output next to its source. The Runner UI surfaces a verbatim note: "Custom destination folder is deferred to v0.9.0 (open question for Marcus — pickFolder returns a token, not a raw path)."
+- **Allowed ops:** the runner's allowlist permits 9 replayable kinds (text-edit / image-embed / page-design / watermark / form-fill / form-flatten / page-reorder / page-insert-blank / page-rotate). Banned kinds (anything mutating the structure tree, anything cryptographic, anything destructive without confirmation) are rejected at save AND at runtime — `ACTION_SCRIPT_SCHEMA_VERSION = 1`; future schema bumps will trigger a migration test.
+- **Action storage is JSON files** under `<userData>/actions/<uuid>.json` (not SQLite). Import / Export use the same JSON envelope.
+
+## Extract / Split / Replace pages
+
+**What:** Three page-tree operations. **B10.**
+
+**Invoke:** Tools menu → Pages → Extract… / Split… / Replace….
+
+**Extract:** Pull a page range out into a new PDF. The source is untouched (extract is read-only on the source).
+
+**Split:** Break the document into multiple output PDFs by one of three strategies: every N pages, by bookmark depth, or by an explicit page-range list.
+
+**Replace:** Replace a target range in the open document with pages from a different PDF.
+
+Each modal shows a per-output preview before commit; cancel is always available.
+
+## Insert pages from a file
+
+**What:** Insert pages from another PDF at a chosen index. **B11.**
+
+**Invoke:** Insert menu → Pages from File….
+
+**Walkthrough:**
+
+1. Insert → Pages from File….
+2. Pick the source PDF.
+3. Select the range to insert (default: all).
+4. Pick the insertion index (after page N, or at the beginning).
+5. Click **Insert**. A `pageInsertFromFile` EditOperation is recorded.
+
+## Cut / Copy / Paste page regions
+
+**What:** Region-rectangle clipboard for page content. **B12.**
+
+**Invoke:**
+
+1. Hold **Alt** and drag a region rectangle on the page.
+2. **Ctrl+C** to copy; **Ctrl+X** to cut; **Ctrl+V** to paste at the cursor on any page.
+
+The clipboard stores the content stream excerpt + the resource references. Cross-page paste is supported; cross-document paste is NOT (the clipboard lives in the open document's session).
+
+## Hyperlinks
+
+**What:** Add, edit, and remove `/Link` annotations. **B13.**
+
+**Invoke:** Tools menu → Add Link…, or click an existing link to edit it via the Inspector.
+
+**Walkthrough:**
+
+1. Tools → Add Link…. The cursor becomes a region-rectangle tool.
+2. Drag a rectangle over the area that should be clickable.
+3. The Link Edit modal opens. Choose a target:
+   - **Page goto** — pick a page in this document.
+   - **Named destination** — pick from the bookmarks tree.
+   - **URL** — type or paste.
+4. Click **Save**. The `/Link` annotation lands in the page's `/Annots` array.
+
+Clicking an existing link with the Edit Link tool opens the same modal for editing or removal.
+
+## Spell Check
+
+**What:** Underline misspellings in editable text fields with suggested corrections. **B14.**
+
+**Invoke:**
+
+- **Live:** Anytime you type in an editable text region (text-edit, form fill, etc.), `nspell` flags misspellings inline with a wavy red underline.
+- **Manual:** Tools menu → Spell Check… opens a panel listing every misspelling across the current document with per-row Suggestions / Add to Dictionary / Ignore actions.
+
+**Walkthrough (manual):**
+
+1. Tools → Spell Check…. The panel opens.
+2. Pick a locale (en-US is the default and currently the only available locale — see Honest disclosure below).
+3. The panel lists each misspelling with a suggestion list.
+4. Click a suggestion to accept it; click **Add to Dictionary** to whitelist; click **Ignore** to skip just this occurrence.
+
+**User dictionary:** Words added via "Add to Dictionary" persist per-locale in `<userData>/spell/user-dict-<locale>.txt`. List / add / remove via `spell:listUserDictionary` / `spell:addWordToDictionary` / `spell:removeWordFromDictionary`.
+
+**Honest disclosure — es-ES not shipped:**
+
+The Hunspell Spanish dictionary is **GPL-3 / LGPL-3 / MPL-1.1** (per the npm registry vet on 2026-06-18) and does not meet the project's MIT / Apache / BSD permissive-only policy. The locale picker surfaces the verbatim reason via `spell:listLocales`:
+
+> "Spanish dictionary not available in this build — Hunspell es-ES is GPL-3/LGPL-3/MPL-1.1 (per npm registry vet 2026-06-18), which does not meet the project policy of MIT/Apache/BSD permissive-only."
+
+Future locales are tracked. If a permissive es-ES Hunspell dictionary surfaces upstream, it ships in a follow-up wave.
+
+## Page display modes
+
+**What:** Switch the viewer between single-page, two-up, scroll, and facing-pages layouts. **B15.**
+
+**Invoke:** View menu → Page Display, or the toolbar's Page Display button (cycles through modes).
+
+The four modes are:
+
+- **Single page** — one page at a time; arrows / Page Down advance.
+- **Two-up** — two pages side-by-side; both advance together.
+- **Scroll** — continuous vertical scroll across all pages (default for long docs).
+- **Facing** — two-up with the first page on the right (book layout).
+
+The page-display preference persists per-document in the local SQLite store.
+
+## Read Mode
+
+**What:** Chromeless full-screen reader. **B16.**
+
+**Invoke:** Press **F11** (or View → Read Mode).
+
+In Read Mode, the menu bar, toolbar, sidebar, and status bar are hidden; only the page content + minimal navigation chrome remain. Press **F11** or **Esc** to exit.
+
+View-only rotation (rotating just for display without altering the saved file) is available via View → Rotate View 90° CW / 90° CCW (`Ctrl+Shift+Plus` / `Ctrl+Shift+Minus`). The rotation is presentational only — the saved PDF is unchanged.
+
+## Area measure
+
+**What:** Eighth shape tool in the annotations toolbar. Measures the area of a polygon you draw on the page. **B17.**
+
+**Invoke:** Annotations toolbar → 8th shape (Measure Area). Or Insert menu → Annotations → Measure Area.
+
+**Walkthrough:**
+
+1. Pick the Measure Area tool.
+2. Click to add polygon vertices.
+3. Double-click to close the polygon.
+4. The annotation reports the polygon area in the chosen unit (inch / cm / mm / pt / px / custom).
+5. **Calibrate scale:** Insert menu → Annotations → Calibrate Measure Scale lets you draw a known-length line on the page (e.g. a 12-inch ruler) and assign its real-world length. Subsequent measurements use the calibrated scale.
+
+## Font Swap
+
+**What:** Replace an embedded font reference across the whole document with a different standard font. **B18.**
+
+**Invoke:** Tools menu → Edit Text & Images → Swap Embedded Font….
+
+**Walkthrough:**
+
+1. Tools → Edit Text & Images → Swap Embedded Font….
+2. The modal lists every embedded font in the document (via `pdf:listEmbeddedFonts`).
+3. Pick a source font (e.g. `AAAAAA+TimesNewRoman`).
+4. Pick a destination standard font (Helvetica / Times-Roman / Courier / Symbol / ZapfDingbats — bold / italic variants where applicable).
+5. Click **Swap**. The font reference is replaced across every page that uses it.
+
+**Honest scope (v0.8.0):**
+
+- **Whole-document swap only.** v0.8.0 swaps by font name across the whole document. The forward-looking UI radio (this run / this page / whole document) is not yet wired to a per-page or per-run engine — selecting anything other than "whole document" returns to the whole-document path. Finer-grained scope is tracked.
+- **Standard-font destinations only.** The 14 PDF standard fonts plus their bold / italic variants are the destination set. Embedding a fresh OTF/TTF as a swap target is forward-looking.
+
+## Auto-bookmarks
+
+**What:** Propose a bookmark tree by clustering text by font-size / position-on-page (H1 / H2 / H3 heuristic). **B19.**
+
+**Invoke:** Tools menu → Auto-Bookmark Headings….
+
+**Walkthrough:**
+
+1. Tools → Auto-Bookmark Headings…. The engine clusters fonts and proposes a bookmark tree.
+2. Review the proposed tree in the modal (each row shows the candidate heading text, the page index, and the inferred level).
+3. Uncheck rows you don't want, or edit titles.
+4. Click **Commit**. The bookmarks land in the document's outline tree.
+
+The heuristic is honest — it is a font-size + position cluster, not a tagged-document walk. For tagged PDFs, the [Tag PDF tree editor](#tag-pdf-tree-editor) is the authoritative source.
+
+## Sanitize (remove hidden information)
+
+**What:** Strip categories of hidden / metadata content from the document. **B20.**
+
+**Invoke:** Tools menu → Sanitize / Remove Hidden Information….
+
+**Walkthrough:**
+
+1. Tools → Sanitize / Remove Hidden Information….
+2. Pick categories to remove (checkboxes; defaults are conservative):
+   - Metadata (`/Info` dictionary, XMP stream)
+   - Document-level JavaScript
+   - Embedded files
+   - Document outline (bookmarks)
+   - AcroForm objects
+   - Layers
+   - Structure tree
+   - Page-level threads / Additional Actions (`/AA`)
+   - PieceInfo / SpiderInfo
+   - Per-page annotations
+3. Click **Apply**. The engine rebuilds the document from scratch (per the P7.5-L-12 rebuild-from-scratch discipline carried from B1 Redaction) and writes the sanitized output.
+
+Sanitize is **destructive** for the chosen categories — once applied + saved, the removed data is gone from the file. Use Save As before sanitizing if you want to keep the original.
+
+## Document Properties dialog
+
+**What:** View and edit document metadata (title / author / subject / keywords / custom properties), see embedded font list + security state, and control encryption. **B21.**
+
+**Invoke:** File menu → Properties… (or **Ctrl+D**).
+
+The dialog has four tabs:
+
+- **Description** — title, author, subject, keywords; PDF version; producer.
+- **Fonts** — list of every embedded font (name, subset prefix, embedded-as).
+- **Custom** — name/value pairs from `/Info` (add / edit / remove).
+- **Security** — see [Password protection](#password-protection-encryption) below.
+
+## Password protection (encryption)
+
+**What:** Apply a user password + owner password + permission flags to the open document. **B8.**
+
+**Invoke:** File → Properties → **Security** tab.
+
+**Walkthrough:**
+
+1. File → Properties → Security tab.
+2. Pick an algorithm: **AES-128** or **AES-256**.
+3. Set the **owner password** (required to remove the encryption). Set the **user password** (optional — required to open the document).
+4. Set the **permission flags** — what the user with only the user password can do:
+   - Print (high resolution)
+   - Print (low resolution)
+   - Copy text + graphics
+   - Modify
+   - Annotate
+   - Fill forms
+   - Accessibility extract (Acrobat-specific carve-out)
+   - Page extract / assemble
+5. Click **Apply**. The engine spawns the bundled qpdf binary (Apache-2.0; ships under `resources/qpdf/bin/qpdf.exe` on Windows) and writes the encrypted PDF.
+
+**Per-OS engine state:**
+
+- **Windows** — bundled qpdf ships in the installer (~7.5 MB). No extra install needed.
+- **macOS** — upstream qpdf 11.9.1 publishes no macOS binary (verified 2026-06-18). The engine falls back to system PATH; install via `brew install qpdf`. If neither bundled nor system qpdf is found, the channel returns `engine_unavailable` with the install hint.
+- **Linux** — config-only / **unverified** per the Phase 7 P7-L-1 convention. Same PATH-fallback semantics; install via your distribution package manager (`apt install qpdf` / `dnf install qpdf` / `pacman -S qpdf`).
+
+## Read Aloud
+
+**What:** Speak the selected text (or the visible page) via the OS TTS engine. Sentence highlighting in the text layer as TTS advances. **C1.**
+
+**Invoke:** Press **Shift+Ctrl+R**, or View → Read Aloud.
+
+**Walkthrough:**
+
+1. Press **Shift+Ctrl+R**. The Read Aloud floating bar appears at the bottom of the viewer.
+2. (Optional) Select a range of text. If nothing is selected, the visible page is spoken from the top.
+3. Click **▶ Play**. TTS begins; the active sentence is highlighted in cyan.
+4. **⏸ Pause** / **▶ Resume** / **⏹ Stop** control playback.
+5. Pick a **Voice** from the picker (populated via `tts:listVoices`).
+6. Drag the **Rate** slider (0.5× to 2.0×).
+7. Press **Esc** to close the bar.
+
+**Per-OS engine:**
+
+- **Windows** — SAPI 5.4 via PowerShell `System.Speech.Synthesis` subprocess. OS-bundled; no install needed.
+- **macOS** — `say` subprocess. OS-bundled.
+- **Linux** — `espeak` subprocess. **GPL-3 — subprocess-only call (we shell out, we don't link, we don't bundle).** Install via your distribution package manager (`sudo apt install espeak` / `sudo dnf install espeak` / `sudo pacman -S espeak-ng`).
+
+**Honest fallback (Linux without espeak):**
+
+When `tts:listVoices` returns `engine_unavailable`, the Read Aloud bar renders:
+
+> "⚠ No TTS engine available. On Linux, install espeak (e.g. `sudo apt install espeak`) and reopen. See Help for details."
+
+No silent failure, no fake "playing…" state.
+
+## Preflight
+
+**What:** Run a subset of PDF/X-1a / PDF/X-4 / PDF/A-1b / PDF/A-2b validation rules and report pass/warn/fail per rule. **C2.**
+
+**Invoke:** Tools menu → Preflight….
+
+**Walkthrough:**
+
+1. Tools → Preflight…. The Preflight panel opens (right rail).
+2. Pick one or more **profiles** (PDF/X-1a, PDF/X-4, PDF/A-1b, PDF/A-2b).
+3. Click **Run**. The engine evaluates each shipped rule against the document.
+4. Results are grouped by severity (Errors / Warnings / Info). Clicking a rule row with locations jumps the viewer to the first failing page.
+5. Click **Export report** to write a JSON report.
+
+**Honest disclosure — subset:**
+
+The panel's permanent header subtitle reads:
+
+> "Subset of PDF/X-1a, PDF/X-4, PDF/A-1b, PDF/A-2b — see Help for the shipped rule set."
+
+v0.8.0 ships **~30 rules** across four profiles. Acrobat's Preflight ships hundreds. The shipped rule subset is enumerated in [`docs/preflight-spec.md`](preflight-spec.md) §3 — categories: fonts (all-embedded, subset-not-system), encryption (none), JavaScript (none), multimedia (none), embedded files (per-profile), XMP metadata (present), color (CMYK or grayscale only for X-1a; ICC output intent for X-1a + X-4), transparency (forbidden on X-1a), and box geometry (TrimBox / BleedBox consistency).
+
+Rules explicitly NOT shipped (transparency for the user): PDF/X-3 / X-5 / X-6, PDF/A-1a / A-2a / A-3 / A-4 (A-1a / A-2a overlap with C3 Tag PDF), PDF/VT, PDF/E. Tracked for future expansion.
+
+## Tag PDF tree editor
+
+**What:** View and edit the document's structure tree (`/StructTreeRoot`). Add / rename / delete tags; drag-and-drop reparenting; auto-tag-from-content heuristic. **C3.**
+
+**Invoke:** Sidebar **Accessibility tab** → Tag PDF panel. (Or Tools → Accessibility → Tag PDF….)
+
+**Walkthrough:**
+
+1. Open the sidebar Accessibility tab.
+2. The Tag PDF tree renders the document's existing `/StructTreeRoot`. Each node shows its structure type (Document / H1 / H2 / P / Figure / Table / TR / TD / TH / List / etc.) and its content snippet.
+3. **Add a child tag** to the selected node with **+**.
+4. **Rename** by double-clicking a node.
+5. **Move / reparent** by dragging a node onto another.
+6. **Delete** with the Delete button.
+7. **Auto-tag** runs the font-size + position-on-page heuristic on every page (or a range).
+8. On Save, the merged tree is written back to `/StructTreeRoot`.
+
+**Save-as-copy default for already-tagged docs:**
+
+If the open document already has a `/StructTreeRoot` (`hasExistingTags === true`), the editor defaults to **Save As** rather than Save — a one-time toast surfaces:
+
+> "This document has existing accessibility tags. Saving as a copy by default to protect the original."
+
+This is the P7.5-L-5 / R12 mitigation: we never silently overwrite an author's existing structure tree.
+
+**Honest scope:** Auto-tag is a **heuristic** — it clusters fonts by size, classifies by position-on-page, and emits a tentative P / H1 / H2 / Figure / Table tree. It is not a substitute for an authoring tool that knows the document's semantic structure. The auto-tag confirm modal surfaces a verbatim disclosure: "Auto-tagging is approximate; review the result before saving."
+
+## Reading Order overlay
+
+**What:** Numbered badges on each content block on the page, in render order. Drag to reorder. **C4.**
+
+**Invoke:** Sidebar Accessibility tab → Reading Order button. (Or Tools → Accessibility → Reading Order Overlay.)
+
+**Walkthrough:**
+
+1. Open the sidebar Accessibility tab and click **Reading Order**.
+2. The active page shows numbered badges on each content block.
+3. **Drag a badge** to another position to reorder.
+4. Use the keyboard: Tab to a badge → ↑↓ to move → Enter to commit.
+5. Click **Auto-detect from layout** to run the layout heuristic.
+
+**Honest fallback — "Auto-detect unavailable":**
+
+v0.8.0 does not wire a layout-text-extractor into the engine's `recompute` path. When you click **Auto-detect from layout**, the engine returns the current tag-tree order plus a permanent banner:
+
+> "Auto-detect unavailable — layout text extractor not wired in this build. Showing tag-tree order."
+
+This is honest UX — no fake-success spinner. The same extractor wiring is shared with the C6 Accessibility Checker (see below); both surfaces gain the auto-detect / content-rule capability when a future wave wires the extractor.
+
+## Alt Text inspector
+
+**What:** List figures without alt text; per-figure input + bulk-set for repeated figures (e.g. logos). **C5.**
+
+**Invoke:** Sidebar Accessibility tab → Alt Text button. (Or Tools → Accessibility → Alt Text Inspector.)
+
+**Walkthrough:**
+
+1. Open the sidebar Accessibility tab and click **Alt Text**.
+2. The inspector lists every `/Figure` in the structure tree, ordered by page.
+3. For each figure with no alt text, type into the **Alt** input.
+4. **Set bulk alt text for similar figures** — uses pHash to find visually-identical figures (a corporate logo repeated on every page) and surfaces a bulk modal: type one alt text → apply to all matched.
+5. On Save, every `/Alt` string is written back to the structure tree.
+
+## Accessibility Check
+
+**What:** Run a subset of WCAG 2.1 + PDF/UA-1 rules and report pass / warn / fail / unevaluated per rule. Export a JSON or HTML report. **C6.**
+
+**Invoke:** Press **Ctrl+Shift+A**, or Tools → Accessibility → Run Check, or sidebar Accessibility tab → Run Check button.
+
+**Walkthrough:**
+
+1. Press **Ctrl+Shift+A**. The Accessibility Check panel opens (sidebar Accessibility tab, above the Tag PDF tree editor).
+2. The panel runs the check immediately and renders results grouped by severity: Errors (open) / Warnings (open) / Pass (collapsed) / Unevaluated (collapsed).
+3. Click any failure row to navigate to the offending element. The **Quick Fix** button routes you to the right tool:
+   - Document title missing → Document Properties dialog.
+   - Figures missing alt text → Alt Text Inspector.
+   - Structure tree missing → Tag PDF Editor.
+   - Reading order issues → Reading Order Overlay.
+4. Click **Export report** (Wave 5e Export Report dialog) to write a JSON (for tool integration) or HTML (standalone, default) report to a path you pick.
+
+**Honest disclosure — subset (verbatim):**
+
+The panel's permanent header subtitle is regression-tested to match the engine's `subsetDisclosure` field verbatim:
+
+> "Subset of WCAG 2.1 + PDF/UA-1 — see Help for the shipped rule set."
+
+The `shippedRuleCount` value carried in the response is **12** at v0.8.0 cut, asserted by a regression test in `accessibility-engine.test.ts` against `ALL_A11Y_RULES.length`.
+
+### The 12 shipped rules
+
+Authoritative table — Wave 11 resynced this against `src/main/pdf-ops/accessibility-rules/`:
+
+| Rule ID                                      | Severity | Standard                          | What it checks                                                                                                      |
+| -------------------------------------------- | -------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `a11y.document.title-present`                | error    | PDF/UA-1 §7.1; WCAG 2.4.2         | `/Info`/`Title` is non-empty                                                                                        |
+| `a11y.document.language-set`                 | error    | PDF/UA-1 §7.2; WCAG 3.1.1         | catalog has `/Lang` set                                                                                             |
+| `a11y.structure-tree-present`                | error    | PDF/UA-1 §7.1                     | catalog has `/StructTreeRoot`                                                                                       |
+| `a11y.figures.all-have-alt-text`             | error    | WCAG 1.1.1                        | every `/Figure` has `/Alt` (empty string OK for decorative)                                                         |
+| `a11y.figures.alt-not-placeholder`           | warning  | WCAG 1.1.1 (quality)              | `/Alt` is not a placeholder ("image", "figure", "img1.jpg")                                                         |
+| `a11y.tables.headers-identified`             | error    | WCAG 1.3.1                        | every `/Table` has at least one `/TH` or row-1 header                                                               |
+| `a11y.tables.scope-set`                      | warning  | WCAG 1.3.1                        | `/TH` elements have `/Scope` attribute set                                                                          |
+| `a11y.reading.order-defined`                 | error    | WCAG 1.3.2; PDF/UA-1 §7.5         | `/StructTreeRoot/K` order is non-trivial                                                                            |
+| `a11y.content.non-text-tagged`               | error    | WCAG 1.1.1                        | no untagged image XObject on any page (`unevaluated` if the layout extractor isn't wired — see below)               |
+| `a11y.content.scanned-searchable`            | error    | WCAG (general)                    | no page is image-only without an OCR text layer (`unevaluated` if the layout extractor isn't wired)                 |
+| `a11y.behavior.javascript-no-form-actions`   | warning  | by-design (security policy §14.6) | no JavaScript actions in form fields                                                                                |
+| `a11y.appearance.color-contrast-spot-sample` | warning  | WCAG 1.4.3                        | spot-sample contrast ratio — **permanently `unevaluated` under pdf-lib** (full check needs a raster engine; future) |
+
+### The four-state outcome model
+
+Every rule emits **pass / warn / fail / unevaluated**. The fourth state is doing real work:
+
+- **`color-contrast-spot-sample`** is permanently `unevaluated` under pdf-lib. A future canvas / raster engine drops in with zero contract churn.
+- **`a11y.content.non-text-tagged`** and **`a11y.content.scanned-searchable`** require a layout text extractor. v0.8.0 does not wire the extractor in production, so both rules emit `unevaluated` honestly. When the extractor lands (same wave as the C4 Reading Order auto-detect path), both rules flip to pass/fail honestly.
+
+The summary pills at the top of the panel show all four buckets as **DISTINCT** — `unevaluated` is never folded into pass. This is the load-bearing P7.5-L-10 honesty obligation.
+
+### Rules explicitly NOT shipped (transparency)
+
+The 12 shipped rules are a SUBSET. The following common WCAG / PDF-UA criteria are **not** enforced in v0.8.0:
+
+- Heading-level skip detection (H1 → H3 without H2) — the auto-tag heuristic warns about this in the UI but the checker does not enforce.
+- Tab order matching reading order.
+- Form field labels.
+- Links have meaningful text.
+- Color-only-conveys-information.
+- Decorative-figure not in reading order.
+- (...and many more WCAG criteria.)
+
+If you need full WCAG / PDF-UA compliance for a document, treat the v0.8.0 checker as a triage tool, not a certification tool.
+
+---
+
+## What we don't do (yet) — v0.8.0 honesty disclosures
+
+The Acrobat parity audit (`docs/acrobat-parity-audit.md`) and Riley's comparison HTML (`docs/acrobat-comparison.html`) list more features than v0.8.0 ships. The honest deferral list, for every reader who hits a missing-feature wall and wonders whether to file an issue:
+
+### Explicitly NOT shipping (orthogonal to parity gap; honest defer)
+
+- **HTML / RTF / XML / EPS export.** Niche output formats; Word + Excel + PowerPoint + image trio covers ~95% of demand. Tracked.
+- **Audio comment recording.** Desktop-niche; not in the top-3 user asks.
+- **PDF Portfolio.** Adobe-proprietary container; weak open-source story.
+- **New Window / Cascade / Tile (multi-doc).** Single-doc architecture today; pair with future tabs feature.
+- **Native TWAIN scanner binding.** No clean MIT/Apache binding identified. Windows WIA ships from 0.7.3; macOS / Linux degrade to `scanner_unavailable`. **Workflow:** scan in your OS, then File → Open / drag-and-drop into PDF Viewer Editor.
+- **Distribute form (email aggregation).** Cloud-adjacent; principal cloud-exclusion policy.
+- **JavaScript form actions.** By-design stripped on save per security policy §14.6.
+- **Adobe Sign / Send for E-signature.** Cloud; principal cloud-exclusion policy.
+- **Cloud storage pickers** (Dropbox / Drive / OneDrive / Box). Cloud; principal cloud-exclusion policy.
+
+### v0.8.0-specific honest deferrals
+
+- **Spell Check — es-ES not shipped.** Hunspell Spanish dictionary is GPL-3 / LGPL-3 / MPL-1.1 (non-permissive). Future locales tracked.
+- **Compare Files — sequential page pairing only.** Content-hash matching is deferred to v0.9.0. Multi-column docs may show out-of-reading-order segments. Visual mode renders at fixed 1600 px width. Per-page LRU eviction queued for v0.9.0 — close the session before reopening to free memory on very long compares.
+- **Accessibility Checker — 12-rule subset of WCAG 2.1 + PDF/UA-1.** Verbatim disclosure surfaced in the panel. Color-contrast spot-sample is permanently `unevaluated` under pdf-lib (future raster engine). Two extractor-dependent rules emit `unevaluated` until the layout extractor is wired.
+- **Reading Order overlay auto-detect.** Falls back to tag-tree order with a permanent honest banner until the layout extractor is wired.
+- **Action Wizard — Edit on saved actions is rename-only.** Full per-op editor tracked.
+- **Action Wizard — custom destination folder.** Deferred to v0.9.0. The runner currently writes next to source.
+- **Font Swap (B18) — whole-document scope only in v0.8.0.** The forward-looking radio (this run / this page / whole document) is not yet wired to a per-page or per-run engine.
+- **Preflight — compliant subset.** ~30 rules across four profiles. Acrobat ships hundreds. PDF/X-3 / X-5 / X-6, PDF/A-1a / A-2a / A-3 / A-4 not shipped.
+- **espeak GPL-3 (Linux TTS) — user-installed.** Subprocess-only call (we shell out, we don't link, we don't bundle). User installs espeak system-wide via the distribution package manager; absent espeak surfaces an honest fallback.
+- **qpdf bundling — macOS gap.** Upstream qpdf 11.9.1 publishes no macOS binary (verified 2026-06-18). Falls back to system PATH (`brew install qpdf`). Tracked for Phase 7.6.
+- **qpdf bundling — Linux config-only.** Per the Phase 7 P7-L-1 convention.
+
+### Tracked follow-ups (filed; not v0.8.0)
+
+- **Color-contrast / non-text-tagged extractor wiring** — Diego's R12 follow-up; same extractor shape as the C4 auto-detect.
+- **R12 regression test against an externally-authored tagged PDF** — Julian's Wave 11 HIGH finding; ensures structure-tree round-trip preserves an Acrobat-authored tagged document end-to-end.
+- **macOS qpdf bundling** — Phase 7.6 candidate.
+- **Linux qpdf bundling verification** — same.
+- **Compare Files per-page LRU eviction** — v0.9.0.
+- **Compare Files content-hash page matching** — v0.9.0.
+- **Action Wizard custom destination folder + full op editor** — v0.9.0.
+- **Font swap finer-grained scope** — future enhancement.
+
+---
+
+(Pre-7.5 sections continue below.)

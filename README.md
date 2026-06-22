@@ -2,7 +2,87 @@
 
 A desktop PDF viewer and editor, built on permissive open-source libraries. **Windows verified; macOS + Linux configured but unverified — see [Platform support](#platform-support).**
 
-> **Status — Phase 7 Polish & Cross-Platform (0.7.6). The 7-phase roadmap is implementation-complete; the post-roadmap backlog-fix waves resolved every previously-deferred documented follow-up that did not require physical hardware.** The app opens PDFs, renders them at HiDPI crisply (Ctrl+scroll zoom is fluid, **cursor-anchored** so the page stays put under the cursor across the gesture, and the zoom dropdown stays synced), edits pages and forms, ships visual + PAdES cryptographic signatures, runs local OCR via Tesseract.js (all nine downloadable language packs work), **scans from a connected WIA scanner on Windows via a custom Node-API COM addon (Phase 5.1 — LIVE on Windows; degrades to `scanner_unavailable` on macOS/Linux)**, **combines two or more PDFs end-to-end via a real pdf-lib engine (H-30.1 — the Phase-1 stub is gone)**, exports to Word / Excel / PowerPoint / image formats (all six formats fully functional, including standard-font text in image exports), and adds the polish layer: an **auto-update client** wired to a real GitHub release feed (`SuperiorAg/PDF_Viewer_Editor`; the in-app "Check for updates" contacts the live feed and returns honest results), an **opt-in / default-OFF telemetry framework** (anonymous feature-usage counts only, nothing leaves your machine), **WCAG 2.1 AA accessibility** for the critical paths (keyboard navigation + Windows Narrator), an **i18next localization framework** (English baseline + a Spanish translation sample), **macOS + Linux build configuration**, a **new app icon** (white PDF document + folded corner + bold red "PDF" ribbon — embedded in the binary, no more "default Electron icon" warning), and a **comprehensive 13-section in-app Help modal** (F1) covering Getting started, Navigation, Editing pages, Annotations, Forms, Signing, OCR, Scanning, Export, Combine, Settings, Troubleshooting, and About. The two genuinely deferred items are real-hardware macOS/Linux verification and a Windows code-signing certificate; both are blocked on resources outside the codebase, not on remaining engineering work. Read [Platform support](#platform-support) and [Roadmap status](#roadmap-status) before relying on auto-update or non-Windows builds.
+> \*\*Status — Phase 7.5 Acrobat Parity Close (v0.8.0, June 2026). The Acrobat parity gap from Riley's `docs/acrobat-parity-audit.md` is closed: page operations (extract / split / replace / crop / combine / insert from file / rotate), watermarks / headers & footers / backgrounds, stamps + a stamp library, hyperlinks, area measure, page-content cut/copy/paste, font swap, compress, sanitize, password encryption (bundled qpdf, Apache-2.0), Document Properties dialog, auto-bookmarks from headings, Action Wizard, Spell Check (en-US — see honesty disclosure), Find / Search, Compare Files (text + visual diff), Read Aloud (TTS), Preflight (PDF/X + PDF/A subset), the full accessibility-authoring suite (Tag PDF tree editor, Reading Order overlay, Alt Text inspector, Accessibility Checker), Page Display modes, view-only rotation, and chromeless Read Mode all ship in v0.8.0. The Bucket A tooltip / wiring / shortcut cleanups land alongside the [tool registry foundation](#the-tool-registry) (R1 + R2 + R3) and the new L-007 ratchet (every user-facing tool surface MUST appear in `src/client/tools/registry.ts`). Read [What's new in v0.8.0](#whats-new-in-v080-phase-75-acrobat-parity-close) before relying on a subset claim or a deferred surface. The prior 7-phase roadmap (Phases 1–7 + 7.1–7.4) is preserved unchanged below and continues to ship.
+
+> **Status (carried from prior cuts) — Phase 7 Polish & Cross-Platform (0.7.6).** The app opens PDFs, renders them at HiDPI crisply (Ctrl+scroll zoom is fluid, **cursor-anchored** so the page stays put under the cursor across the gesture, and the zoom dropdown stays synced), edits pages and forms, ships visual + PAdES cryptographic signatures, runs local OCR via Tesseract.js (all nine downloadable language packs work), **scans from a connected WIA scanner on Windows via a custom Node-API COM addon (Phase 5.1 — LIVE on Windows; degrades to `scanner_unavailable` on macOS/Linux)**, **combines two or more PDFs end-to-end via a real pdf-lib engine (H-30.1 — the Phase-1 stub is gone)**, exports to Word / Excel / PowerPoint / image formats (all six formats fully functional, including standard-font text in image exports), and adds the polish layer: an **auto-update client** wired to a real GitHub release feed (`SuperiorAg/PDF_Viewer_Editor`; the in-app "Check for updates" contacts the live feed and returns honest results), an **opt-in / default-OFF telemetry framework** (anonymous feature-usage counts only, nothing leaves your machine), **WCAG 2.1 AA accessibility** for the critical paths (keyboard navigation + Windows Narrator), an **i18next localization framework** (English baseline + a Spanish translation sample), **macOS + Linux build configuration**, a **new app icon** (white PDF document + folded corner + bold red "PDF" ribbon — embedded in the binary, no more "default Electron icon" warning), and a **comprehensive 13-section in-app Help modal** (F1) covering Getting started, Navigation, Editing pages, Annotations, Forms, Signing, OCR, Scanning, Export, Combine, Settings, Troubleshooting, and About. The two genuinely deferred items are real-hardware macOS/Linux verification and a Windows code-signing certificate; both are blocked on resources outside the codebase, not on remaining engineering work. Read [Platform support](#platform-support) and [Roadmap status](#roadmap-status) before relying on auto-update or non-Windows builds.
+
+---
+
+## What's new in v0.8.0 (Phase 7.5 — Acrobat parity close)
+
+Phase 7.5 closes the parity gap surfaced in [`docs/acrobat-parity-audit.md`](docs/acrobat-parity-audit.md) (Riley, 588 lines, 2026-06-15) and the [`docs/acrobat-comparison.html`](docs/acrobat-comparison.html) principal-facing comparison. **35+ feature surfaces ship across 13 waves**; full plan in [`docs/project-plan.md`](docs/project-plan.md). The headline groupings:
+
+### Editing / page operations (Bucket A + B)
+
+- **Extract / Split / Replace pages** (B10 / B11) — new pages-modal pages; split by every-N-pages / by bookmark / explicit range; explicit replace-from-source-file flow.
+- **Insert pages from another PDF** (B11) — file picker → range selection → insert at index.
+- **Crop Pages** (B5) — overlay-driven box on the active page; apply-to-range.
+- **Combine** (Phase 1 closure carried) — multi-file picker, dedup-by-absolute-path, de-stub.
+- **Page Display modes** (B15) — single / two-up / scroll / facing.
+- **View-only rotation + true Read Mode** (B16) — non-destructive view rotation; F11 chromeless reader.
+- **Page-content Cut/Copy/Paste** (B12) — region clipboard overlay; cross-page paste; honors L-001 path sanitizer.
+- **Hyperlinks** (B13) — add / edit / remove; targets: page goto, URL, named destination.
+
+### Document-level edits
+
+- **Watermark / Header & Footer / Background** (B4) — one modal, three tabs; range-targeted; text + image variants; per-strip token expansion (page#, totalPages, fileName, date).
+- **Stamps + Stamp library** (B7) — built-in catalog + user-authored stamps stored in SQLite; place by drag.
+- **Compress / Optimize PDF** (B6) — bytes-only pass; reports before/after size.
+- **Sanitize / Remove hidden information** (B20) — rebuild-from-scratch (per P7.5-L-12 discipline carried from B1 Redaction); 13 sanitize categories including metadata, JS, embedded files, outline, AcroForm, layers, structure tree.
+- **Document Properties dialog** (B21) — description / fonts / custom-props / **Security tab**.
+- **Password protection / Encryption** (B8) — AES-128 / AES-256 via bundled qpdf (Apache-2.0); permission flags (print / copy / modify / annotate / fill-forms / accessibility / page-extract / assemble).
+- **Auto-bookmarks from headings** (B19) — heading heuristic → proposed-bookmark tree → user edits → commit.
+- **Edit text & images — font swap** (B18) — swap an embedded font name to a built-in standard font across the whole document. **Honest scope:** v0.8.0 swaps by font name; finer-grained scope (this run / this page / whole document) is forward-looking and tracked.
+
+### Actions / search / spell
+
+- **Action Wizard** (B9) — record-replay over the existing `replay-engine`. Edit on saved actions is **rename-only** in v0.8.0 (full op editor tracked). Custom destination folder for the runner is **deferred to v0.9.0** (runner currently writes next to each source).
+- **Find / Search** (B3) — Ctrl+F overlay; F3 / Shift+F3 next/prev; match counter; case + whole-word toggles; cross-page.
+- **Spell Check** (B14) — `nspell` (MIT) + Hunspell **en-US** (MIT scowl). **es-ES is NOT shipped** — the Hunspell Spanish dictionary is GPL-3 / LGPL-3 / MPL-1.1 (per the npm registry vet 2026-06-18) and does not meet the project policy of MIT / Apache / BSD permissive-only. The `spell:listLocales` IPC channel returns the verbatim user-facing reason; future locales are tracked.
+
+### Compare / Read Aloud / Preflight
+
+- **Compare Files** (B2) — open-pair flow; per-page sequential pairing (orphan pages on the longer side are surfaced); text-diff via `diff-match-patch` (Apache-2.0); visual-diff via `pixelmatch` (ISC) + `pngjs` (MIT) at a fixed 1600 px render width; lazy per-viewport (no eager rasterize). **Honest scope:** sequential pairing (no content-hash matching in v0.8.0); LRU eviction across long-doc compares is tracked for v0.9.0 (close the session before reopening to free memory on very long compares).
+- **Read Aloud / TTS** (C1) — floating bar; sentence highlighting in the text layer. Per OS: SAPI on Windows; `say` on macOS; `espeak` on Linux. **espeak is GPL-3 — subprocess-only call (we shell out, we don't link, we don't bundle).** Linux users install espeak via the system package manager; if absent, the bar surfaces an honest "engine_unavailable" fallback with the install hint.
+- **Preflight** (C2) — PDF/X-1a + PDF/X-4 + PDF/A-1b + PDF/A-2b. **Honest scope: a compliant subset.** v0.8.0 ships ~30 rules across four profiles. Acrobat's Preflight ships hundreds. The header subtitle in the panel reads "Subset of PDF/X-1a, PDF/X-4, PDF/A-1b, PDF/A-2b — see Help for the shipped rule set." See [`docs/preflight-spec.md`](docs/preflight-spec.md) for the enumerated rule set.
+
+### Accessibility authoring (C3–C6)
+
+- **Tag PDF tree editor** (C3) — sidebar panel surfacing the structure tree; drag-and-drop reparenting; add / rename / delete tags; auto-tag-from-content heuristic (font-size cluster + position-on-page → P / H1 / H2 / Figure / Table). Existing tagged docs default to Save-As-copy to protect the original's tags.
+- **Reading Order overlay** (C4) — numbered badges on each content block; drag-to-reorder; "Auto-detect from layout" button. **Honest fallback:** when the layout text extractor is not wired (v0.8.0 default), the overlay shows tag-tree order and surfaces a permanent banner "Auto-detect unavailable — layout text extractor not wired in this build."
+- **Alt Text inspector** (C5) — list of figures without alt text; per-figure input; pHash-based "set bulk alt text for similar figures".
+- **Accessibility Checker** (C6) — **a SUBSET of WCAG 2.1 + PDF/UA-1.** v0.8.0 ships **12 rules**; the canonical, regression-tested verbatim subtitle is "Subset of WCAG 2.1 + PDF/UA-1 — see Help for the shipped rule set." Four-state outcome model: **pass / warn / fail / unevaluated**. The color-contrast spot-sample rule is permanently `unevaluated` under pdf-lib (a raster engine is the future path). Two extractor-dependent rules (`a11y.content.non-text-tagged`, `a11y.content.scanned-searchable`) emit `unevaluated` honestly until the layout extractor is wired. The Export Report dialog (HTML default; JSON for tool integration) lands as Wave 5e. Full rule list in [`docs/accessibility-authoring-spec.md`](docs/accessibility-authoring-spec.md) §6.3.
+
+### Bucket A polish (Wave 2)
+
+- Stale `phase3()` tooltips and "Coming in Phase N" strings are gone (contract-test enforced).
+- Insert → Blank Page / Page from File menu items wired to real dispatchers.
+- Shapes toolbar button surfaces the shape sub-toolbar.
+- New shortcut chords: `Alt+B` (Bookmarks edit), `Alt+O` (Run OCR), `Alt+C` (Combine), `Ctrl+1` (Fit width), `Ctrl+2` (Fit page), `Ctrl+/` ("Find a tool…" palette), `Ctrl+F` (Find / Search), `Ctrl+Shift+A` (Run Accessibility Check), `Ctrl+Shift+C` (Compare Files), `Shift+Ctrl+R` (Read Aloud).
+- Menu mirrors for 9 toolbar-only items.
+- Cursor / Hand-tool button (V) on the toolbar.
+- i18n-wrapped shape sub-toolbar (en-US + es-ES partial).
+
+### The tool registry
+
+`src/client/tools/registry.ts` is now the single declarative source of truth for every user-facing tool surface. Each ToolDef carries a seven-dimension well-marked contract: `id`, `nameKey`, `tooltipKey`, `ariaLabelKey`, `icon`, `shortcutId`, `menu.top`, `surfaces`, `enabledWhen`, `dispatch`, `searchKeywords`. The four contract tests in `src/client/tools/registry.contract.test.ts` enforce: (1) every tool is well-marked across all seven dimensions; (2) every tool with a shortcut advertises it in its tooltip; (3) every shortcut maps to a tool (no orphans); (4) no stale "Coming in Phase N" tooltip survives a shipped phase. The L-007 ratchet (`scripts/ratchet-tool-registry-coverage.mjs`) runs in pre-commit and CI; any new user-facing surface that bypasses the registry fails the build with a file:line + suggested ToolDef shape. See [`docs/tool-registry-spec.md`](docs/tool-registry-spec.md) and [Developer guide → Adding a new tool](docs/developer-guide.md#adding-a-new-user-facing-tool-l-007-and-the-tool-registry).
+
+### What v0.8.0 does NOT ship (honest)
+
+Items explicitly deferred — see [`docs/project-roadmap.md`](docs/project-roadmap.md) for the tracked list:
+
+- HTML / RTF / XML / EPS export.
+- Audio comment recording.
+- PDF Portfolio container.
+- New Window / Cascade / Tile multi-doc layouts.
+- Native TWAIN scanner binding — Windows WIA ships from 0.7.3; macOS/Linux degrade to `scanner_unavailable`. TWAIN remains deferred until a permissive-OSS binding surfaces. Workflow: scan in your OS, then File → Open / drag-and-drop into PDF Viewer Editor.
+- Distribute Form (email aggregation), Adobe Sign / Send-for-E-Signature, cloud-storage pickers (Dropbox / Drive / OneDrive / Box) — all cloud-adjacent and excluded by the standing principal cloud-exclusion policy.
+- JavaScript form actions — by-design stripped on save per security policy §14.6.
+- es-ES Hunspell dictionary — license non-permissive (see Spell Check above).
+- macOS qpdf bundling — upstream qpdf 11.9.1 publishes no macOS prebuilt binary (verified 2026-06-18). The discovery in `encryption-engine.ts` falls through to system `qpdf` on macOS (install via `brew install qpdf`); `engine_unavailable` is surfaced honestly when neither is present. Tracked for Phase 7.6.
+- Linux qpdf bundling — **CONFIG-ONLY / UNVERIFIED** per the Phase 7 P7-L-1 convention.
+
+Full license trail in [`docs/license-manifest.md`](docs/license-manifest.md) (Diego, Wave 11). Full code-review verdict in [`docs/code-review.md`](docs/code-review.md) §11 (Julian — YELLOW with 1 HIGH follow-up + 3 MED + 2 LOW open; closed L-007 sign-off).
 
 ---
 
@@ -34,12 +114,14 @@ The Phase 2 architecture (replay engine, atomic save, command-pattern undo), Pha
 
 ## Install
 
-Two Windows builds ship with the 0.7.6 milestone (published as a real GitHub Release at [`SuperiorAg/PDF_Viewer_Editor`](https://github.com/SuperiorAg/PDF_Viewer_Editor/releases) — both the NSIS installer and the portable .exe are downloadable directly from there):
+Two Windows builds ship with the v0.8.0 milestone (published as a real GitHub Release at [`SuperiorAg/PDF_Viewer_Editor`](https://github.com/SuperiorAg/PDF_Viewer_Editor/releases) — both the NSIS installer and the portable .exe are downloadable directly from there). The v0.8.0 installer carries the bundled qpdf binary (Apache-2.0; ~7.5 MB on Windows) for B8 Password Encryption + B21 Document Properties Security tab.
 
-| File                                | Type                          | Notes                                                                                                                                                                           |
-| ----------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pdf-viewer-editor-setup-0.7.6.exe` | NSIS installer (~136 MB)      | One-click install, file-association checkbox is **on by default** (you can uncheck it during install). Adds Start Menu + Desktop entries; both carry the new PDF document icon. |
-| `pdf-viewer-editor-0.7.6.exe`       | Portable executable (~135 MB) | Single file, no install. Stores user data under `%APPDATA%/PDF Viewer & Editor/`.                                                                                               |
+| File                                | Type                           | Notes                                                                                                                                                                                                                       |
+| ----------------------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pdf-viewer-editor-setup-0.8.0.exe` | NSIS installer (~144 MB)       | One-click install, file-association checkbox is **on by default** (you can uncheck it during install). Adds Start Menu + Desktop entries; both carry the SSI PDF document icon. Includes bundled qpdf for encryption flows. |
+| `pdf-viewer-editor-0.8.0.exe`       | Portable executable (~143 MB)  | Single file, no install. Stores user data under `%APPDATA%/PDF Viewer & Editor/`.                                                                                                                                           |
+| `pdf-viewer-editor-setup-0.7.6.exe` | (prior cut, NSIS, ~136 MB)     | Pre–Phase 7.5 build, no Bucket B / C parity features.                                                                                                                                                                       |
+| `pdf-viewer-editor-0.7.6.exe`       | (prior cut, portable, ~135 MB) | Same.                                                                                                                                                                                                                       |
 
 The 0.7.x point releases since the 0.7.0 roadmap close are all additive — no Phase 7 dependency churn (`electron-updater`, `i18next`, `react-i18next`, `i18next-resources-to-backend`, all MIT and pure JS). Each binary carries a verified, packaged-binary visual proof: 0.7.1 = standard-font text renders in image exports (25,688 dark pixels vs 0/blank in 0.6.1); 0.7.2 = the bundled `app-update.yml` carries the real `SuperiorAg/PDF_Viewer_Editor` target (no placeholder) and the in-app update check contacts the live feed; 0.7.3 = `window.pdfApi` exposes 18 namespaces incl. `scan` (Phase 5.1 WIA addon ships); 0.7.4 = pixel-level proof of the HiDPI raster crispness, the live ctrl+scroll GPU transform, the centered transform-origin, and the 100% → 177% zoom-dropdown sync; 0.7.5 = the new app icon is embedded (titlebar shot + extraction proof) and the "default Electron icon is used" build warning is gone; 0.7.6 = pixel-level proof of cursor-anchored ctrl+wheel zoom (100% → 133% with the point under the cursor staying put across the gesture), the 13-section in-app Help modal (F1) navigated end-to-end, and a real Combine PDFs run that produces a multi-source merged document from File → Combine PDFs… (the Phase-1 `not_implemented` stub is gone from every renderer surface). The toolchain ratchets (husky pre-commit + `lint-staged` + tsc-after-autofix safeguard; all MIT, build/test-only — they do NOT ship in the binary) carry through unchanged.
 
@@ -267,7 +349,20 @@ The remaining brittle test failures are jsdom environment limitations (canvas in
 
 The project itself: **MIT** — see [`LICENSE`](LICENSE) at the repo root. The MIT file was added in Phase 1.1; `package.json` declares the same (`"license": "MIT"`).
 
-For the licenses of every dependency that ships in the binaries, see [`LICENSES.md`](LICENSES.md). Every direct and transitive dependency is under a permissive license (MIT, Apache-2.0, BSD, ISC, BlueOak-1.0.0, Python-2.0, or similar). No AGPL/GPL/commercial code is bundled. The four new Phase 7 direct dependencies are all **MIT** and pure-JS (no native module): `electron-updater` (the auto-update client), `i18next` (the localization engine), `react-i18next` (the React bindings — peer-requires i18next ≥ 26.2), and `i18next-resources-to-backend` (the lazy locale loader). Diego's Wave 29 license walk over the full reachable subtree from these four roots scanned 23 packages — all permissive (MIT / ISC / BlueOak-1.0.0 / Python-2.0), zero AGPL/GPL/LGPL/EPL ingress. Earlier-phase additions remain in place: `docx` + `pptxgenjs` (MIT, Phase 6 writers), `exceljs` / `@napi-rs/canvas` / `utif` (MIT, reused across phases). The pre-existing `buffers@0.1.1` UNKNOWN-license flag from Phase 3 is unchanged.
+For the licenses of every dependency that ships in the binaries (and the qpdf vendored binary), see the canonical **[`docs/license-manifest.md`](docs/license-manifest.md)** (Diego, Phase 7.5 Wave 11; signed-off GREEN, audit partner Julian).
+
+The headline Phase 7.5 additions are all permissive:
+
+- `pdf-lib` MIT, `pdfjs-dist` Apache-2.0, `tesseract.js` Apache-2.0, `electron` MIT (unchanged from prior phases).
+- `diff-match-patch` Apache-2.0, `pixelmatch` **ISC** (the Wave 7 brief said MIT — actual published license is ISC, surfaced honestly per the manifest §1), `pngjs` MIT — Compare Files (B2).
+- `nspell` MIT, `dictionary-en` `(MIT AND BSD)` — Spell Check (B14). `dictionary-es` REJECTED on license grounds (GPL-3 / LGPL-3 / MPL-1.1).
+- `qpdf` 11.9.1 Apache-2.0 — bundled binary for encryption + Document Properties Security tab. Per-OS bundling: Windows YES (verified; ~7.5 MB), Linux YES (config-only / unverified per P7-L-1), macOS NO (upstream publishes no macOS binary; falls back to system PATH).
+- Linux TTS uses `espeak` (GPL-3) **subprocess-only** — we shell out via `child_process.spawn('espeak', args)`, never link, never bundle. Approved on a no-binary-redistribution basis (FSF-endorsed aggregate-works pattern). The packaging config is hard-constrained never to add `espeak*` to `electron-builder.yml extraResources`.
+
+All deps permissive — **no AGPL or commercial SDKs.** The earlier `LICENSES.md` (Phase 1.1 inventory) is unchanged and continues to ship; the new authoritative license trail for Phase 7.5 lives in `docs/license-manifest.md`.
+
+For the full historical inventory:
+The legacy `LICENSES.md` summary remains: Every direct and transitive dependency is under a permissive license (MIT, Apache-2.0, BSD, ISC, BlueOak-1.0.0, Python-2.0, or similar). No AGPL/GPL/commercial code is bundled. The four new Phase 7 direct dependencies are all **MIT** and pure-JS (no native module): `electron-updater` (the auto-update client), `i18next` (the localization engine), `react-i18next` (the React bindings — peer-requires i18next ≥ 26.2), and `i18next-resources-to-backend` (the lazy locale loader). Diego's Wave 29 license walk over the full reachable subtree from these four roots scanned 23 packages — all permissive (MIT / ISC / BlueOak-1.0.0 / Python-2.0), zero AGPL/GPL/LGPL/EPL ingress. Earlier-phase additions remain in place: `docx` + `pptxgenjs` (MIT, Phase 6 writers), `exceljs` / `@napi-rs/canvas` / `utif` (MIT, reused across phases). The pre-existing `buffers@0.1.1` UNKNOWN-license flag from Phase 3 is unchanged.
 
 ---
 

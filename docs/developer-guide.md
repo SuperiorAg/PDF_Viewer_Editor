@@ -1837,4 +1837,475 @@ The canonical release path is the CI workflow at [`.github/workflows/release.yml
 - [`a11y-audit.md`](a11y-audit.md) — Phase 7 accessibility audit + remediation map
 - [`i18n-strategy.md`](i18n-strategy.md) — Phase 7 localization strategy
 
-If you're new to the codebase, read in this order: `README.md` → `ARCHITECTURE.md` → `architecture-phase-2.md` → `architecture-phase-3.md` → `architecture-phase-4.md` → `architecture-phase-5.md` → `architecture-phase-6.md` → `architecture-phase-7.md` → this file → `signature-engine.md` (if touching signing) → `ocr-engine.md` (if touching OCR) → `export-engine.md` (if touching export) → `a11y-audit.md` + `i18n-strategy.md` (if touching a11y/i18n) → `api-reference.md`. That should give you enough to ship a contained change.
+If you're new to the codebase, read in this order: `README.md` → `ARCHITECTURE.md` → `architecture-phase-2.md` → `architecture-phase-3.md` → `architecture-phase-4.md` → `architecture-phase-5.md` → `architecture-phase-6.md` → `architecture-phase-7.md` → `architecture-phase-7.5.md` → this file → `signature-engine.md` (if touching signing) → `ocr-engine.md` (if touching OCR) → `export-engine.md` (if touching export) → `a11y-audit.md` + `i18n-strategy.md` (if touching a11y/i18n) → `tool-registry-spec.md` (if touching toolbars / menus / palette) → `accessibility-authoring-spec.md` (if touching C3–C6) → `preflight-spec.md` (if touching C2) → `api-reference.md`. That should give you enough to ship a contained change.
+
+---
+
+# Phase 7.5 — Developer guide additions (v0.8.0)
+
+The sections below cover the discipline patterns Phase 7.5 established. Every new contributor touching Phase 7.5 surfaces (tool registry, structure-tree authoring, accessibility rules engine, Action Wizard, Spell Check, Compare Files, Read Aloud, Preflight, qpdf encryption) should read the relevant sub-section before opening a PR.
+
+## Adding a new user-facing tool (L-007 and the tool registry)
+
+**Lock L-007 in force since Phase 7.5 Wave 11 (2026-06-18):** every user-facing toolbar button, menu item, shape sub-toolbar entry, and palette entry MUST be declared in `src/client/tools/registry.ts` as a `ToolDef`. Surfaces that bypass the registry trip a hard CI fail at `scripts/ratchet-tool-registry-coverage.mjs` (runs in `.husky/pre-commit` AND `.github/workflows/ci.yml`). The lock text + unlock procedure live at [`.learnings/locked-instructions.md`](../.learnings/locked-instructions.md) L-007.
+
+### The seven-dimension ToolDef contract
+
+```ts
+// src/client/tools/registry.ts
+export interface ToolDef {
+  id: ToolId; // canonical id, kebab-case 'group:slug' (e.g. 'tools:preflight')
+  nameKey: I18nKey; // i18n key for the visible tool name
+  tooltipKey: I18nKey; // i18n key for the toolbar/menu tooltip (must end with the chord suffix when shortcutId is set)
+  ariaLabelKey: I18nKey; // i18n key for the WAI-ARIA accessible name
+  icon: IconRef | null; // glyph or null for text-label surfaces
+  shortcutId: ShortcutId | null; // global shortcut id (null = no chord)
+  menu: { top: MenuTop }; // top-level menu (file / edit / view / insert / tools / help)
+  surfaces: { menu: boolean; palette: boolean };
+  enabledWhen: EnabledPredicate; // (state) => boolean — feeds disable state in every surface
+  dispatch: ToolDispatch; // single canonical dispatch — every surface calls this
+  searchKeywords: string[]; // non-empty; surfaced by Find-a-tool palette (Ctrl+/)
+}
+```
+
+The four contract tests in `src/client/tools/registry.contract.test.ts` enforce:
+
+1. **Every tool is well-marked** — all seven dimensions populated; `nameKey` / `tooltipKey` / `ariaLabelKey` resolve in en-US AND es-ES; `searchKeywords.length > 0`; either `icon !== null` OR `surfaces.menu === true`; `menu.top` is set.
+2. **Tooltips advertise their shortcut** — if `shortcutId` is set, the tooltip string (en-US resolved) must contain the formatted chord suffix.
+3. **Every shortcut maps to a tool** — no orphan shortcuts (intrinsic shortcuts like `Esc` are allowlisted in `INTRINSIC_SHORTCUTS`).
+4. **No stale "Coming in Phase N" tooltips** — `SHIPPED_PHASES` includes every released phase; a stale tooltip pinned to a shipped phase fails the test. **When you ship a phase, add its number to `SHIPPED_PHASES` in `registry.contract.test.ts`.**
+
+### The L-007 ratchet — what it parses
+
+`scripts/ratchet-tool-registry-coverage.mjs` parses three surface files:
+
+- `src/client/components/toolbar/index.tsx`
+- `src/client/components/menu-bar/index.tsx`
+- `src/client/components/shape-tools/shape-toolbar.tsx`
+
+It scans for every `t('namespace:key')` and key-literal usage, cross-references against:
+
+- The registry's `nameKey` / `tooltipKey` / `ariaLabelKey` and ToolDef `id` sets.
+- `MENU_MIRROR_MAP` (37 entries today — alias for an existing ToolDef on a different surface).
+- `ALLOWLIST` (58 entries today — intentionally inert affordances, one-of-N presets, intrinsic shortcuts that can't themselves be ToolDefs; each entry carries a `reason` comment).
+
+It reports gaps with **file:line + a suggested ToolDef shape** so the author can paste-and-fill. The current state at Wave 11 sign-off: 67 ToolDefs covering 81 registered surfaces; 139 unique i18n keys (nameKey / tooltipKey / ariaLabelKey); 58 allowlist entries; 37 menu-mirrored surfaces; 0 gaps.
+
+### Adding a tool — the seven-step recipe
+
+1. **Declare a ToolDef** in `src/client/tools/registry.ts`. Pick `id` as `<group>:<slug>` (kebab). Wire i18n keys (en-US + es-ES required for the contract tests to pass).
+2. **Bind the shortcut** (if any) in `src/client/shortcuts.ts`. The contract test will reject an orphan shortcut.
+3. **Surface the tool** in toolbar / menu / shape-toolbar / palette per `surfaces.{menu,palette}` + `menu.top`. The L-007 ratchet enforces this.
+4. **Write the dispatch.** `dispatch` is a single function — every surface calls it. Avoid per-surface logic forks.
+5. **Write the enabled-when predicate.** Pulls from the appropriate slice / selector. The disable state is consistent across every surface.
+6. **Run the contract tests** — `npm test -- registry.contract.test.ts`.
+7. **Run the L-007 ratchet** — `node scripts/ratchet-tool-registry-coverage.mjs`. Exit 0 means no gaps; exit 1 reports the gap + suggested ToolDef.
+
+### Exempt surfaces — the allowlist procedure
+
+If a surface is legitimately exempt (intentionally inert affordance, one-of-N preset, intrinsic shortcut), add an entry to the ratchet's `ALLOWLIST` array with a `reason` string. **Principal approval required per L-007 unlock procedure (a).** The Accessibility sidebar tab (Tag PDF tree editor home; pure-display surface for the Accessibility Checker) is the canonical example — allowlisted carve-out per Julian's L-007 sign-off condition.
+
+## Adding a new IPC channel — the canonical seven-file flow (recap + L-007 / L-006 hooks)
+
+The Phase 2 worked example (above, [Adding a new IPC channel](#adding-a-new-ipc-channel--worked-example)) remains canonical. Phase 7.5 adds two structural hooks:
+
+- **L-006 (test-only channel gates).** Any test-only IPC channel registration MUST use dot syntax `process.env.NODE_ENV !== 'test'`, NEVER `process.env['NODE_ENV']`. The Vite `define` config constant-folds the dot form to `"production"` in prod mode; Rollup DCE drops the channel entirely. The bracket form does NOT match the define key (different AST shape) and silently re-leaks the channel. See the locked-instructions L-006 entry for the full mechanic + enforcement greps.
+- **L-007 (any UI surface a new channel ships with).** If your new channel surfaces a button / menu item / palette entry, that surface lives in `src/client/tools/registry.ts` per L-007. The dispatch function in the ToolDef calls your new channel through `services/api.ts` (never `window.pdfApi` directly — `api.ts` is the renderer-side feature-detect proxy).
+
+The canonical seven files for every new channel (Phase 7.5 reaffirmed):
+
+- [ ] `src/ipc/contracts.ts` — types + `Channels` entry + `PdfApi` interface
+- [ ] `src/ipc/handlers/<name>.ts` — handler implementation
+- [ ] `src/ipc/handlers/<name>.test.ts` — handler unit tests
+- [ ] `src/ipc/register.ts` — wire handler with real production deps
+- [ ] `src/preload/index.ts` — expose on `window.pdfApi`
+- [ ] `src/client/services/api.ts` — fallback shape for missing-bridge case
+- [ ] `src/client/types/ipc-contract.ts` — re-export the contract types under the renderer-local discriminated union widening (e.g. for `'bridge_unavailable'`)
+
+## Structure-tree authoring pattern (Wave 5b — C3)
+
+David's Wave 5b structure-tree engine at `src/main/pdf-ops/struct-tree-engine.ts` reads + writes the PDF's `/StructTreeRoot` via pdf-lib's low-level dictionary API (no high-level shortcut exists). The pattern:
+
+### Read side — `pdf:getStructTree`
+
+```ts
+// src/main/pdf-ops/struct-tree-engine.ts
+export async function getStructTree(doc: PDFDocument): Promise<StructTreeNode[]> {
+  const catalog = doc.catalog;
+  const structTreeRoot = catalog.lookup(PDFName.of('StructTreeRoot'));
+  if (!structTreeRoot || !(structTreeRoot instanceof PDFDict)) return [];
+  return walkStructTree(structTreeRoot, doc);
+}
+```
+
+The walker recurses the `/K` array, materializing every `StructElem` dict into our in-memory `StructTreeNode` shape (UUID id + structure type + alt-text + actualText + language + contentRefs + children). The `sourceObjectNumber` field records the PDF object number for nodes that came from the read; new nodes (authored in the editor) get `-1` until materialization.
+
+### Write side — `pdf:setStructTree`
+
+The **rebuild-from-scratch over strip-post-hoc** discipline (P7.5-L-12) applies: rather than mutating the existing `/StructTreeRoot` dict in place (which leaves orphan kids + parent back-pointers pointing at freed slots + the catalog's `/StructParents` array out of sync), the materializer:
+
+1. Loads the source PDF with `PDFDocument.load(bytes, { updateMetadata: false })`.
+2. Allocates fresh structure-element objects via `context.register(...)`.
+3. Writes `/Alt` / `/ActualText` / `/Lang` per node.
+4. Writes the new `/StructTreeRoot` to the catalog.
+5. Sets `/MarkInfo/Marked = true` in the catalog.
+6. Belt-and-braces `stripDocLevelJavaScript(doc)` per Julian's Wave 11 standing check.
+7. Returns serialized bytes.
+
+The side-table for in-progress edits lives in SQLite as `accessibility_edit_session` (per-document hash; cleared on successful Save). On open, the startup GC finds a surviving row (Save failed) and offers resume.
+
+### Auto-tag heuristic
+
+`src/main/pdf-ops/auto-tag-heuristic.ts` clusters fonts by size + position-on-page to emit a tentative tree (P / H1 / H2 / Figure / Table). The heuristic is honest — the v0.8.0 auto-tag confirm modal surfaces "Auto-tagging is approximate; review the result before saving." Do not strengthen the claim without strengthening the heuristic.
+
+### Save-as-copy default for already-tagged docs
+
+If `getStructTree(handle).hasExistingTags === true`, the Save dispatcher in the renderer triggers Save-As by default (per P7.5-L-5 / R12). A one-time toast surfaces: "This document has existing accessibility tags. Saving as a copy by default to protect the original." This is the **never-silently-overwrite** discipline.
+
+## Accessibility rules engine extension pattern (Wave 5d — C6)
+
+`src/main/pdf-ops/accessibility-rules/` is a one-rule-per-file directory under the engine. Every rule file:
+
+- Is **≤ 200 lines** per the project modularization rule.
+- Exports a single named function `rule<CamelCaseRuleId>(ctx: AccessibilityCheckContext): RuleResult`.
+- Is registered in `src/main/pdf-ops/accessibility-rules/index.ts` `ALL_A11Y_RULES` array.
+
+The engine:
+
+1. Builds a single `AccessibilityCheckContext` snapshot per run: flattened struct tree + catalog + per-page diagnostics (when the extractor is wired).
+2. Iterates `ALL_A11Y_RULES` and invokes each rule against the snapshot.
+3. Wraps each rule with a `try/catch` — a throwing rule yields a synthetic `{ severity: 'error', passed: false, message: 'rule.<id>.engine_failed' }` rather than killing the run.
+4. Aggregates results into `{ pass, warn, fail, unevaluated }` counts.
+
+### The four-state outcome model
+
+Every rule emits one of `pass | warn | fail | unevaluated`. The fourth state is doing real work:
+
+- **`unevaluated` is NEVER folded into `pass`.** The summary pills at the top of the panel show all four as distinct buckets. This is the load-bearing P7.5-L-10 honesty obligation.
+- **Use `unevaluated`** when the rule cannot be evaluated under the current engine surface — e.g. color-contrast under pdf-lib (no raster), or extractor-dependent rules when the layout extractor is not wired.
+
+### Adding a new rule
+
+```ts
+// src/main/pdf-ops/accessibility-rules/my-new-rule.ts
+import type {
+  AccessibilityCheckContext,
+  AccessibilityRuleResult,
+} from '../accessibility-engine.js';
+
+export function ruleMyNewRule(ctx: AccessibilityCheckContext): AccessibilityRuleResult {
+  // Snapshot is pure data — read from ctx; never call back into pdf-lib here.
+  if (!ctx.someContextField) {
+    return {
+      ruleId: 'a11y.my.new-rule',
+      severity: 'warning',
+      passed: false,
+      message: 'a11y.my.new-rule.fail.message-key', // i18n key — renderer resolves
+      locations: [{ pageIndex: 0 }],
+    };
+  }
+  return {
+    ruleId: 'a11y.my.new-rule',
+    severity: 'warning',
+    passed: true,
+    message: 'a11y.my.new-rule.pass.message-key',
+    locations: [],
+  };
+}
+```
+
+Then register in `src/main/pdf-ops/accessibility-rules/index.ts`:
+
+```ts
+import { ruleMyNewRule } from './my-new-rule.js';
+
+export const ALL_A11Y_RULES = [
+  // ...existing rules...
+  ruleMyNewRule,
+];
+```
+
+### Honest-disclosure regression test
+
+The engine ships a regression test in `accessibility-engine.test.ts`:
+
+```ts
+expect(response.shippedRuleCount).toBe(ALL_A11Y_RULES.length);
+expect(response.subsetDisclosure).toBe(
+  'Subset of WCAG 2.1 + PDF/UA-1 — see Help for the shipped rule set.',
+);
+```
+
+If you add a rule, `shippedRuleCount` increments automatically (the test reads `ALL_A11Y_RULES.length`). The `subsetDisclosure` string is a verbatim regression — any change there must update the test, the contract JSDoc, the user-guide section, and the README footnote in lock-step (the P7.5-L-10 verbatim-string rule).
+
+## Action Wizard schema (Wave 6 — B9)
+
+`src/main/persistence/actions-store.ts` exports `ACTION_SCRIPT_SCHEMA_VERSION = 1` (named const). Every saved script JSON envelope carries the schema version; future bumps trigger a migration test.
+
+**Banned-op allowlist** (`ALLOWED_OP_KINDS`) — 9 replayable kinds in v0.8.0 (text-edit / image-embed / page-design / watermark / form-fill / form-flatten / page-reorder / page-insert-blank / page-rotate). Banned kinds (anything mutating the structure tree, cryptographic operations, destructive without-confirm) are rejected at save AND at runtime (defensive re-validation in `runScript` even though save already gated — guards against allowlist tightening between save and run). Tests pin both kinds.
+
+The renderer mirrors the constants in `src/client/constants/actions.ts` (re-implemented, not imported — `actions-store.ts` pulls `node:crypto` / `node:fs` which Vite doesn't bundle). A **drift-gate test** at `src/client/constants/actions.drift.test.ts` reads `actions-store.ts` as text + regex-extracts the literal to assert the renderer mirror matches the canonical source. **This pattern is the canonical drift-gate example for any shared constant Riley needs to mirror — see [Parallel-wave coordination](#parallel-wave-coordination-norms).**
+
+## Spell Check engine wiring (Wave 6 — B14)
+
+`src/main/spell/spell-engine.ts` wraps `nspell` (MIT) + `dictionary-en` (MIT AND BSD). The locale loader at `src/main/spell/locale-loader.ts` surfaces the verbatim es-ES rejection reason (`spell:listLocales` field `reason`):
+
+```ts
+// src/main/spell/locale-loader.ts (excerpt)
+export const SPELL_LOCALES: SpellLocaleDescriptor[] = [
+  { id: 'en-US', displayName: 'English (United States)', available: true },
+  {
+    id: 'es-ES',
+    displayName: 'Spanish (Spain)',
+    available: false,
+    reason:
+      'Spanish dictionary not available in this build — Hunspell es-ES is GPL-3/LGPL-3/MPL-1.1 (per npm registry vet 2026-06-18), which does not meet the project policy of MIT/Apache/BSD permissive-only.',
+  },
+];
+```
+
+The `reason` string is a regression-tested verbatim contract — paraphrasing fails CI. **Adding a new locale:** vet the Hunspell `.aff` / `.dic` license first (must be MIT / Apache / BSD / ISC); if non-permissive, surface as `{ available: false, reason: '<verbatim reason>' }`; if permissive, install the dictionary package + flip `available: true`.
+
+## Compare Files engine pattern (Wave 7 — B2)
+
+`src/main/compare/` is a four-module engine:
+
+- `page-pairing.ts` — sequential v0.8.0; content-hash matching deferred to v0.9.0.
+- `text-compare-engine.ts` — `diff-match-patch` + `cleanupSemantic`.
+- `visual-compare-engine.ts` — `pixelmatch` + `pngjs` diff-mask compositor; `DEFAULT_PIXELMATCH_THRESHOLD = 0.1` + `MAX_RENDER_WIDTH_PX = 1600`.
+- `compare-session-store.ts` — UUID id + per-side textCache / renderCache + lazy pdf.js doc slot.
+
+Handlers under `src/ipc/handlers/pdf-compare-*.ts` each receive an **injected extractor / rasterizer / store dep** — engines stay pdf.js-free; production wiring in `register.ts` uses the canonical `loadAutoBookmarkPdfJs` helper (L-004 / L-005 compliance at the wiring boundary). The pattern: keep engines pure; thread pdf.js + canvas through DI seams. See the auto-tag heuristic + accessibility extractor for the precedents.
+
+**Open-session handlers MUST avoid eagerly parsing the docs** — verified by a test that asserts `getPageCount` is the ONLY documentStore probe called on open (no pdf.js calls). The 1064-page perf contract is enforced structurally.
+
+## qpdf encryption engine pattern (Wave 11 — B8)
+
+`src/main/pdf-ops/encryption-engine.ts` spawns the bundled `qpdf` binary (Apache-2.0) via `child_process.spawn`. The discovery order:
+
+```ts
+// src/main/pdf-ops/encryption-engine.ts (simplified)
+export function resolveQpdfRunner(): QpdfRunner | { kind: 'engine_unavailable'; reason: string } {
+  const bundledPath = defaultQpdfBinaryPath(); // process.resourcesPath + '/qpdf/bin/qpdf(.exe)' on win/linux
+  if (existsSync(bundledPath)) return { kind: 'bundled', path: bundledPath };
+  // macOS + fallback: bare 'qpdf' resolves from system PATH
+  return { kind: 'system-path', path: 'qpdf' };
+}
+```
+
+The runner pipes the input PDF on stdin, reads the encrypted PDF on stdout. When neither bundled nor system qpdf is present, the channel returns `engine_unavailable` with the install hint.
+
+**Hard constraint:** never add `espeak*` to `electron-builder.yml extraResources` / `extraFiles` / `files` (Linux TTS is subprocess-only). The license-manifest §2 documents the per-OS TTS decision; Julian's Wave 11 §11.8 LOW finding flags a future ratchet script (`scripts/ratchet-no-espeak-bundle.mjs`) as a safety net.
+
+## Locked instructions L-001..L-007 — quick reference card
+
+The authoritative lock text lives at [`.learnings/locked-instructions.md`](../.learnings/locked-instructions.md). One-line summaries (read the lock entry for the full mechanism + unlock procedure):
+
+| Lock  | Constraint                                                                                                                                         | Enforcement                                                                      |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| L-001 | `enableDragDropFiles` MUST remain `true` on the main `BrowserWindow`                                                                               | Unit test in `window-manager.test.ts`                                            |
+| L-002 | Packaging waves MUST capture an operator-level screenshot of the running binary before GREEN                                                       | Build-report row mandatory; PrintWindow / Playwright `_electron.launch` accepted |
+| L-003 | Node 20 LTS is the enforced local + CI baseline; never from-source-rebuild `better-sqlite3` on Node 24                                             | `scripts/check-node.mjs` `pretest` guard + `engines.node` `>=20.10.0 <21`        |
+| L-004 | pdf.js `getDocument({data})` MUST receive a copied buffer the call site owns (`new Uint8Array(input).slice()`)                                     | CI grep ratchet on `getDocument({`                                               |
+| L-005 | pdf.js polyfills MUST be installed BEFORE the dynamic import resolves; all `await import('pdfjs-dist/...')` MUST go through the `loadPdfJs` helper | CI grep ratchet on dynamic-import + polyfill-ordering regression test            |
+| L-006 | Test-only IPC channel gates MUST use dot syntax `process.env.NODE_ENV`; `electron.vite.config.ts` MUST define-fold to `"production"` in prod       | Bracket-form regex grep + prod-bundle grep for `ipcMain.handle('__test:...')`    |
+| L-007 | Every user-facing tool surface MUST be declared in `src/client/tools/registry.ts` (or covered by `MENU_MIRROR_MAP` or `ALLOWLIST` with reason)     | `scripts/ratchet-tool-registry-coverage.mjs` in pre-commit + CI                  |
+
+## Parallel-wave coordination norms (Phase 7.5 hard-won)
+
+Phase 7.5's wave structure was deliberate: David ships backend → Riley follows with renderer. Across seven waves (5a / 5b / 5c / 5d / 5e / 6 / 7) Riley repeatedly **waited rather than scaffold against speculative IPC**. The pattern is permanent.
+
+**The discriminator (run before starting a renderer wave):**
+
+1. `git log` on `main` shows a David commit dated within the same hour as the Riley dispatch? → contract stubs are safe.
+2. `src/ipc/contracts.ts` carries the expected channel names? → safe.
+3. `src/client/services/api.ts` has fallback stubs for the new namespaces? → safe.
+4. `src/main/<feature>/` directory exists? → safe.
+5. Any of the above missing → **wait**. Do not scaffold against speculative IPC shapes.
+
+The cost of scaffolding speculative shapes (refactor churn, `as any` smuggling, drift) is real; the cost of waiting is zero.
+
+### The drift-gate pattern (canonical example: Wave 5d-followup commit `22751d9`)
+
+When a renderer needs to mirror a constant from the backend that Vite cannot bundle (e.g. `ACTION_SCRIPT_SCHEMA_VERSION` from `actions-store.ts`, which pulls `node:crypto`), the canonical pattern is:
+
+1. Re-implement the constant in `src/client/constants/<feature>.ts`.
+2. Add a **drift-gate test** at `src/client/constants/<feature>.drift.test.ts` that reads the canonical source file as text + regex-extracts the literal + asserts the renderer mirror matches.
+3. CI fails the moment the two drift.
+
+This is the gold-standard pattern for any shared constant; do NOT use a TypeScript type-level mirror (it doesn't catch value drift).
+
+### The contract-stub-then-promote workflow
+
+When David's IPC types land in `contracts.ts`:
+
+1. Riley adds `src/client/types/<feature>-contract-stub.ts` as a re-export of David's canonical types under the renderer-local discriminated union widening (e.g. adding `'bridge_unavailable'` to the error variant). **No `as any`.**
+2. Renderer code imports from the stub.
+3. When the stub is no longer needed (the renderer-local widening becomes load-bearing or empty), the stub is collapsed into `src/client/types/ipc-contract.ts` proper.
+
+This pattern keeps the boundary between backend canonical types and renderer-local needs explicit.
+
+### The `api.ts` fallback obligation
+
+`src/client/services/api.ts` carries fallback stubs for every IPC namespace — `unavailable: () => Promise.resolve({ ok: false, error: 'bridge_unavailable' })`. Every backend wave (David) lands the fallback stub for its new namespace; the next renderer wave (Riley) finds the canonical types AND the fallback already wired. The contract: renderer never bypasses `services/api.ts` to reach `window.pdfApi` directly.
+
+## License-vet workflow
+
+The canonical license trail lives at [`docs/license-manifest.md`](license-manifest.md). New dependencies must be permissive (**MIT / Apache-2.0 / BSD / ISC**). AGPL or commercial-license dependencies are **rejected at the merge gate**.
+
+The Wave 6 `dictionary-es` rejection is the canonical example: the brief assumed a permissive Spanish Hunspell dictionary existed; `npm view dictionary-es license` returned `(GPL-3.0 OR LGPL-3.0 OR MPL-1.1)` (verified 2026-06-18); the dependency was REJECTED and Spell Check shipped en-US only with a verbatim user-facing disclosure surfaced via `spell:listLocales`. The honest disclosure is regression-tested verbatim — paraphrasing fails CI.
+
+### License-token discipline
+
+ALWAYS verify the license token verbatim from `npm view <pkg>@<ver> license` rather than trusting brief text. The Wave 7 `pixelmatch` lesson: brief said MIT, actual is ISC. ISC is permissive and acceptable for the project policy, but the manifest must list the verbatim token. The audit trail benefits from getting MIT / ISC / BSD-2-Clause / BSD-3-Clause right rather than treating them as interchangeable.
+
+### Subprocess-only dependencies (GPL exception)
+
+The project policy permits subprocess-only invocation of GPL software (the FSF-endorsed aggregate-works pattern), provided:
+
+1. We **never link** (no `require('gpl-package')` from any compiled module).
+2. We **never bundle** the binary (no entry in `electron-builder.yml extraResources` / `extraFiles` / `files`).
+3. We invoke via `child_process.spawn(...)` from the runtime; the user provides the binary via their system package manager.
+4. The packaging configuration is hard-constrained never to include the binary (a future `scripts/ratchet-no-<pkg>-bundle.mjs` enforces this — Julian Wave 11 §11.8 LOW finding for espeak).
+
+The `espeak` (Linux TTS) is the only current example. Future subprocess-only GPL deps follow the same template.
+
+## Honest-disclosure pattern (P7.5-L-10) — the verbatim-string rule
+
+User-facing claims about subset coverage, unavailable locales, engine-failed surfaces, or any partial-state behavior MUST be **verbatim strings** that ship through the contract — not paraphrased in each surface.
+
+### The pattern in code
+
+```ts
+// src/main/pdf-ops/accessibility-engine.ts
+export const SUBSET_DISCLOSURE =
+  'Subset of WCAG 2.1 + PDF/UA-1 — see Help for the shipped rule set.';
+
+// src/ipc/handlers/pdf-accessibility-check.ts
+return ok({
+  results,
+  summary,
+  ranAt: Date.now(),
+  shippedRuleCount: ALL_A11Y_RULES.length,
+  subsetDisclosure: SUBSET_DISCLOSURE, // ← the verbatim string ships in the IPC value
+});
+```
+
+The renderer **MUST NOT** paraphrase:
+
+```tsx
+// ✅ correct — surface the verbatim contract field
+<DisclosureBanner>{response.subsetDisclosure}</DisclosureBanner>
+
+// ❌ wrong — paraphrasing breaks the regression contract
+<DisclosureBanner>Some WCAG / PDF-UA rules are checked</DisclosureBanner>
+```
+
+### Where it applies
+
+- **C2 Preflight subset** — `subsetDisclosure` field on `PdfRunPreflightValue`.
+- **C6 Accessibility Checker subset** — `subsetDisclosure` field on `PdfRunAccessibilityCheckValue`.
+- **B14 Spell Check locale unavailability** — `reason` field on the unavailable locale's `SpellLocaleDescriptor`.
+- **C4 Reading Order auto-detect** — the warning code `'reading-order.recompute.no-extractor-wired'` carries the verbatim banner string at the renderer.
+
+### Regression contracts
+
+Every verbatim string above has a regression test that pins the literal. Changing the string requires updating the contract type JSDoc, the engine constant, the test, the user-guide section, and the README footnote — in lock-step. This is the load-bearing P7.5-L-10 honesty obligation.
+
+---
+
+## Phase 7.5 IPC reference card
+
+The new IPC channels added in Phase 7.5 (Waves 2–7 + 5a–5e). Full request / response shapes with error variants are documented in [`api-reference.md`](api-reference.md) §Phase 7.5; this card is the contributor-facing summary.
+
+### Wave 2 — page operations + Bucket A + Find
+
+| Channel                   | Request                                              | Response                                                               | Status |
+| ------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------- | ------ |
+| `pdf:cropPages`           | `{ handle, range, cropBox }`                         | `Result<{ op, warnings }, PdfCropPagesError>`                          | LIVE   |
+| `pdf:extractPages`        | `{ handle, range, outputPath }`                      | `Result<{ outputPath, pageCount, warnings }, PdfExtractPagesError>`    | LIVE   |
+| `pdf:splitDocument`       | `{ handle, strategy, outputFolder }`                 | `Result<{ outputs, warnings }, PdfSplitDocumentError>`                 | LIVE   |
+| `pdf:replacePages`        | `{ handle, replaceRange, sourcePath, sourceRange }`  | `Result<{ op, warnings }, PdfReplacePagesError>`                       | LIVE   |
+| `pdf:insertPagesFromFile` | `{ handle, sourcePath, sourceRange, insertAtIndex }` | `Result<{ op, insertedCount, warnings }, PdfInsertPagesFromFileError>` | LIVE   |
+
+### Waves 3–4 — page design + compress + hyperlinks + auto-bookmarks
+
+| Channel                                           | Request                                                   | Response                                                                              | Status                              |
+| ------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------- |
+| `pdf:applyWatermark`                              | `{ handle, target, source, position, opacity, rotation }` | `Result<{ op, warnings }, PdfApplyWatermarkError>`                                    | LIVE                                |
+| `pdf:applyHeaderFooter`                           | `{ handle, target, strips }`                              | `Result<{ op, warnings }, PdfApplyHeaderFooterError>`                                 | LIVE                                |
+| `pdf:applyBackground`                             | `{ handle, target, source }`                              | `Result<{ op, warnings }, PdfApplyBackgroundError>`                                   | LIVE                                |
+| `pdf:applyStamp`                                  | `{ handle, pageIndex, stampSpec, placement }`             | `Result<{ op, warnings }, PdfApplyStampError>`                                        | LIVE                                |
+| `stamps:list` / `stamps:create` / `stamps:delete` | (see contracts.ts)                                        | `Result<...>`                                                                         | LIVE — SQLite-backed stamps library |
+| `pdf:compressDocument`                            | `{ handle, outputPath, options }`                         | `Result<{ outputPath, beforeBytes, afterBytes, warnings }, PdfCompressDocumentError>` | LIVE                                |
+| `pdf:editLinks`                                   | `{ handle, edits[] }`                                     | `Result<{ op, warnings }, PdfEditLinksError>`                                         | LIVE                                |
+| `pdf:autoBookmarkFromHeadings`                    | `{ handle, range }`                                       | `Result<{ proposedBookmarks, warnings }, PdfAutoBookmarkFromHeadingsError>`           | LIVE                                |
+
+### Wave 5 — Security + Sanitize + Document Properties + Font Swap
+
+| Channel                     | Request                                                            | Response                                                                                 | Status                                                              |
+| --------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `pdf:setPasswordProtection` | `{ handle, algorithm, ownerPassword, userPassword?, permissions }` | `Result<{ outputPath, warnings }, PdfSetPasswordProtectionError>`                        | LIVE — qpdf bundled (Windows); system PATH fallback (macOS / Linux) |
+| `pdf:removeHiddenInfo`      | `{ handle, categories }`                                           | `Result<{ op, removedCategories, warnings }, PdfRemoveHiddenInfoError>`                  | LIVE — rebuild-from-scratch per P7.5-L-12                           |
+| `pdf:getDocumentProperties` | `{ handle }`                                                       | `Result<{ properties, embeddedFonts, isEncrypted, ... }, PdfGetDocumentPropertiesError>` | LIVE                                                                |
+| `pdf:setDocumentProperties` | `{ handle, properties }`                                           | `Result<{ op, warnings }, PdfSetDocumentPropertiesError>`                                | LIVE                                                                |
+| `pdf:swapEmbeddedFont`      | `{ handle, sourceFontName, targetStandardFont, scope }`            | `Result<{ op, replacementCount, warnings }, PdfSwapEmbeddedFontError>`                   | LIVE — whole-document swap; finer-grained scope tracked             |
+| `pdf:listEmbeddedFonts`     | `{ handle }`                                                       | `Result<{ fonts: EmbeddedFontInfo[] }, PdfListEmbeddedFontsError>`                       | LIVE — pure pdf-lib walk of /Resources/Font                         |
+
+### Wave 5a — Read Aloud + Preflight
+
+| Channel                                 | Direction     | Request                             | Response                                                                        | Status                                                                              |
+| --------------------------------------- | ------------- | ----------------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `tts:listVoices`                        | R → M         | `{ locale? }`                       | `Result<{ voices: TtsVoice[] }, TtsListVoicesError>`                            | LIVE — SAPI / `say` / `espeak` per OS; `engine_unavailable` on Linux without espeak |
+| `tts:speakText`                         | R → M         | `{ text, voiceId?, rate?, pitch? }` | `Result<{ jobId }, TtsSpeakTextError>`                                          | LIVE                                                                                |
+| `tts:pause` / `tts:resume` / `tts:stop` | R → M         | `{ jobId }`                         | `Result<{}, TtsControlError>`                                                   | LIVE                                                                                |
+| `tts:boundary`                          | M → R (event) | —                                   | `TtsBoundaryEvent { jobId, sentenceIndex, charOffset, charLength }`             | LIVE — drives sentence-highlight                                                    |
+| `pdf:runPreflight`                      | R → M         | `{ handle, profiles }`              | `Result<{ results, shippedRuleCount, subsetDisclosure }, PdfRunPreflightError>` | LIVE — ~30 rules subset; verbatim subset disclosure                                 |
+
+### Wave 5b — Tag PDF
+
+| Channel             | Request             | Response                                                   | Status                                        |
+| ------------------- | ------------------- | ---------------------------------------------------------- | --------------------------------------------- |
+| `pdf:getStructTree` | `{ handle }`        | `Result<{ tree, hasExistingTags }, PdfGetStructTreeError>` | LIVE                                          |
+| `pdf:setStructTree` | `{ handle, tree }`  | `Result<{ op, warnings }, PdfSetStructTreeError>`          | LIVE — rebuild-from-scratch materializer      |
+| `pdf:autoTagPages`  | `{ handle, range }` | `Result<{ proposedTree, warnings }, PdfAutoTagPagesError>` | LIVE — font-size + position-on-page heuristic |
+
+### Wave 5c — Reading Order + Alt Text
+
+| Channel                         | Request                             | Response                                                                     | Status                                                                                                             |
+| ------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `pdf:getReadingOrder`           | `{ handle, recompute? }`            | `Result<{ entries, warnings }, PdfGetReadingOrderError>`                     | LIVE — `recompute: true` returns warning `'reading-order.recompute.no-extractor-wired'` when extractor isn't wired |
+| `pdf:setReadingOrder`           | `{ handle, entries }`               | `Result<{ op, warnings }, PdfSetReadingOrderError>`                          | LIVE                                                                                                               |
+| `pdf:setAltText`                | `{ handle, structNodeId, altText }` | `Result<{ op, warnings }, PdfSetAltTextError>`                               | LIVE                                                                                                               |
+| `pdf:listFiguresWithoutAltText` | `{ handle }`                        | `Result<{ figures: FigureWithoutAlt[] }, PdfListFiguresWithoutAltTextError>` | LIVE                                                                                                               |
+
+### Wave 5d — Accessibility Checker
+
+| Channel                     | Request      | Response                                                                                                 | Status                                                                                                    |
+| --------------------------- | ------------ | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `pdf:runAccessibilityCheck` | `{ handle }` | `Result<{ results, summary, ranAt, shippedRuleCount, subsetDisclosure }, PdfRunAccessibilityCheckError>` | LIVE — 12-rule subset; verbatim `subsetDisclosure`; four-state outcome (pass / warn / fail / unevaluated) |
+
+### Wave 6 — Action Wizard + Spell Check + Font Swap UI
+
+| Channel                                                                                     | Request                                     | Response                                                              | Status                                                                |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `actions:saveScript`                                                                        | `{ name, ops, schemaVersion }`              | `Result<{ id, summary }, ActionsSaveScriptError>`                     | LIVE — banned-op allowlist enforced at save AND runtime               |
+| `actions:listScripts`                                                                       | `{}`                                        | `Result<{ scripts: ActionScriptSummary[] }, ActionsListScriptsError>` | LIVE                                                                  |
+| `actions:getScript`                                                                         | `{ id }`                                    | `Result<{ script }, ActionsGetScriptError>`                           | LIVE                                                                  |
+| `actions:deleteScript`                                                                      | `{ id }`                                    | `Result<{}, ActionsDeleteScriptError>`                                | LIVE                                                                  |
+| `actions:runScript`                                                                         | `{ id, targetHandles, destinationFolder? }` | `Result<{ results: ActionRunResult[] }, ActionsRunScriptError>`       | LIVE — `destinationFolder?` defaults to source dir in v0.8.0          |
+| `actions:exportScript` / `actions:importScript`                                             | (see contracts.ts)                          | `Result<...>`                                                         | LIVE — JSON envelope round-trip                                       |
+| `spell:listLocales`                                                                         | `{}`                                        | `Result<{ locales: SpellLocaleDescriptor[] }, SpellListLocalesError>` | LIVE — es-ES surfaces `available: false` + verbatim `reason`          |
+| `spell:checkText`                                                                           | `{ text, locale }`                          | `Result<{ misspellings: SpellMisspelling[] }, SpellCheckTextError>`   | LIVE                                                                  |
+| `spell:addWordToDictionary` / `spell:removeWordFromDictionary` / `spell:listUserDictionary` | (see contracts.ts)                          | `Result<...>`                                                         | LIVE — per-locale user dictionary persisted under `<userData>/spell/` |
+
+### Wave 7 — Compare Files
+
+| Channel                   | Request                                | Response                                                                                              | Status                                                         |
+| ------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `pdf:openComparePair`     | `{ leftHandle, rightHandle }`          | `Result<{ sessionId, pagePairs, leftPageCount, rightPageCount }, PdfOpenComparePairError>`            | LIVE — sequential pairing; orphans on the longer side surfaced |
+| `pdf:compareTextOnPage`   | `{ sessionId, pairIndex }`             | `Result<{ segments, summary }, PdfCompareTextOnPageError>`                                            | LIVE — `diff-match-patch` + `cleanupSemantic`                  |
+| `pdf:compareVisualOnPage` | `{ sessionId, pairIndex, threshold? }` | `Result<{ diffMaskPng, diffPixelCount, leftRenderPng, rightRenderPng }, PdfCompareVisualOnPageError>` | LIVE — `pixelmatch` + `pngjs`; fixed 1600 px render width      |
+| `pdf:closeCompareSession` | `{ sessionId }`                        | `Result<{ closed }, PdfCloseCompareSessionError>`                                                     | LIVE — revokes session caches                                  |
+
+For the full error-variant enumeration per channel, see [`api-reference.md`](api-reference.md) §Phase 7.5.
