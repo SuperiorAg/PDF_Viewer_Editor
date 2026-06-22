@@ -10359,9 +10359,57 @@ Tighter than v0.7.19 (~18m) and the Release workflow path itself was the fastest
 
 ### Tag + commit
 
-- **Tag:** `v0.8.0` (annotated) -> commit `<filled-in-after-commit>` (`chore(release): v0.8.0 — Phase 7.5 Acrobat parity close`). Single-line subject + bullet body summarising Phase 7.5 Waves 1–12 closure and the v0.8.0 milestone.
+- **Tag:** `v0.8.0` (annotated) -> commit `259bcfb` (`chore(release): v0.8.0 — Phase 7.5 Acrobat parity close`). Single-line subject + bullet body summarising Phase 7.5 Waves 1–12 closure and the v0.8.0 milestone.
 - **Local gates all GREEN** (executed in order: ratchet → typecheck → lint → vitest → build → dist:win → packaged-smoke → L-002 capture; details under "Gate results" below).
-- **CI / Release workflow run URL:** _TBD post-push._ Once `git push && git push --tags` runs, GitHub Actions will fire the Release workflow on the `v0.8.0` tag-push and the CI workflow on the main-push (same commit). This row will be amended in a documentation-only follow-up commit (`docs(build-report): v0.8.0 CI run URLs + GitHub Release promote`) with both workflow run URLs + wall-clocks + draft → Latest promote evidence + the downloaded-portable SHA256 verification rows. **Eight-release Hard-Won-Playbook recurrence #9** — the post-tag-push CI + Release-watch + Latest-promote sequence is the canonical second half of the ceremony, and this v0.8.0 row's local-ceremony scope makes the pre-push verification surface auditable.
+- **Post-push amendment landed** in a follow-up commit (this one). See the "Post-push amendment — 2026-06-22" subsection below for the CI + Release workflow URLs, the draft → Latest promote evidence, the canonical CI-built SHA256s (which the artifacts on GitHub Releases actually carry — different from the local pre-push SHAs), and the documented local-vs-CI build-size deviation. **Ninth Hard-Won-Playbook recurrence** of the post-wave release-ceremony handoff.
+
+### Post-push amendment — 2026-06-22 (Marcus + user — principal-authorized)
+
+After the local cut at `259bcfb` landed, the user authorized `git push origin main && git push origin v0.8.0`. The push fired three GitHub Actions workflows; this subsection captures what actually happened on the wire (which is the source of truth for the v0.8.0 release that users download).
+
+#### Workflow runs
+
+| Workflow                                                          | Commit                                                                                    | Run ID                                                                                  | Status     | Wall-clock | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| CI (Lint / Typecheck / Test, ubuntu-latest + windows-2025-vs2026) | `259bcfb` (cut)                                                                           | [27954474860](https://github.com/SuperiorAg/PDF_Viewer_Editor/actions/runs/27954474860) | ❌ failure | 4m34s      | One vitest snapshot mismatch in `src/client/components/accessibility-check-panel/json-report-serializer.test.ts:200` — `toMatchSnapshot()` against an external `__snapshots__/*.snap` file. The project's `.gitignore` excludes `*.snap` repo-wide, so the snapshot file was never committed. Local runs passed because vitest auto-created the snapshot on first run; CI failed because `vitest run` under `CI=true` rejects the missing-then-newly-created snapshot. Root cause was a Wave 5e Riley test that conflicted with the project's `.snap`-gitignored convention. Test-infrastructure issue only — the shipped binaries at this commit are valid (Release workflow GREEN; see below). |
+| Release (electron-builder dist:win against tag)                   | tag `v0.8.0`                                                                              | [27954516239](https://github.com/SuperiorAg/PDF_Viewer_Editor/actions/runs/27954516239) | ✅ success | ~3m        | Built the 4 release assets (NSIS installer + portable + blockmap + latest.yml) and uploaded to the v0.8.0 draft release. Independent of CI — Release workflow has its own gate stack and does not run the vitest unit suite.                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| CI (rerun on the snapshot-test fix)                               | `fc01b47` (`fix(test): remove orphan toMatchSnapshot in JSON report serializer (CI fix)`) | [27955052647](https://github.com/SuperiorAg/PDF_Viewer_Editor/actions/runs/27955052647) | ✅ success | ~5m        | Fix removed the broken snapshot test + deleted the orphan `.snap` file. The 15+ explicit per-field assertions earlier in the same file already cover the v1 shape that the holistic snapshot was redundantly testing. Comment added explaining the `*.snap`-gitignored project convention so a future contributor doesn't reintroduce the pattern.                                                                                                                                                                                                                                                                                                                                               |
+
+#### GitHub Release: draft → Latest
+
+- **Draft created** by the Release workflow at 2026-06-22T12:18:24Z with all 4 assets attached.
+- **Promoted to Latest** via `gh release edit v0.8.0 --draft=false --latest` at **2026-06-22T16:31:17Z** (principal-authorized after the SHA-deviation review below).
+- **Release URL:** https://github.com/SuperiorAg/PDF_Viewer_Editor/releases/tag/v0.8.0
+
+#### Canonical artifact SHA256s (CI-built — what users actually download)
+
+The artifacts on GitHub Releases are NOT bit-identical to Diego's local pre-push build. This is the authoritative SHA table for v0.8.0:
+
+| Asset                                                | Size (bytes)          | SHA256                                                             |
+| ---------------------------------------------------- | --------------------- | ------------------------------------------------------------------ |
+| `pdf-viewer-editor-setup-0.8.0.exe` (NSIS installer) | 136,217,075 (~130 MB) | `eca94480eadde06894c5836d522643f3cb62aeb19f593dc8f76fa120e2971ce9` |
+| `pdf-viewer-editor-0.8.0.exe` (portable)             | 135,919,044 (~130 MB) | `6da09a74194abaec0588f30621e64a8dbac3253957b321cfc60964e0af20742c` |
+| `pdf-viewer-editor-setup-0.8.0.exe.blockmap`         | 143,082               | `60bdb3142777e051708e45fb600d031bad1b76c541b028847c8527832733d447` |
+| `latest.yml`                                         | 363                   | `966191de964e187f92d9b800bd86b5e6b0c7f4445d1367122666d96faf14e0ba` |
+
+Verified by `gh release download v0.8.0` + `sha256sum`.
+
+#### Local-vs-CI build-size deviation (known issue, deferred to v0.9.0)
+
+Diego's local pre-push build produced installers ~4 MB larger than what CI built from the same commit `259bcfb`. The artifact set on GitHub Releases is the authoritative v0.8.0 — these are the binaries users will download — but the deviation is non-zero and worth documenting honestly.
+
+| Asset          | Local (Diego, pre-push)         | Remote (CI, canonical)              | Delta                                                 |
+| -------------- | ------------------------------- | ----------------------------------- | ----------------------------------------------------- |
+| NSIS installer | 140,632,471 bytes / `111dc6b7…` | **136,217,075 bytes / `eca94480…`** | -4,415,396 bytes (~3.1% smaller on CI)                |
+| Portable       | 140,334,491 bytes / `0587ea5e…` | **135,919,044 bytes / `6da09a74…`** | -4,415,447 bytes (~3.1% smaller on CI)                |
+| blockmap       | 146,970 bytes / `4f21fcc6…`     | **143,082 bytes / `60bdb314…`**     | -3,888 bytes (matches binary delta proportionally)    |
+| latest.yml     | 363 bytes / `7ae1d182…`         | 363 bytes / `966191de…`             | same size, different content (embeds the binary SHAs) |
+
+**Hypothesis (not yet investigated):** CI's `scripts/fetch-qpdf-binaries.mjs` may have pulled a different qpdf binary edition than Diego's local `vendor/qpdf/win32-x64/` tree (e.g., different VC++ runtime DLL set; different qpdf 11.9.1 archive variant). The fetch script is SHA-verified per `scripts/qpdf-version.json`, so the most likely explanation is a packaging-level difference (electron-builder asar metadata, Node/Electron version delta between Diego's Windows 11 host and the `windows-2025-vs2026` runner). Both binaries passed their respective gate stacks (local packaged-smoke + L-002 capture for Diego's build; Release workflow + CI for the CI build); neither is broken.
+
+**Decision (principal-authorized 2026-06-22):** Accept the CI-built binaries as canonical v0.8.0. The Release workflow GREEN status is the v0.8.0 stamp of approval; the CI rerun GREEN on `fc01b47` proves the post-cut test-infrastructure fix did not affect the artifacts (the fix is test-only). Reproducible-build verification (bit-identical local-vs-CI artifact production) is **deferred to v0.9.0** as a known-issue with a small dedicated dispatch budget.
+
+### Version bump
 
 ### Version bump
 
