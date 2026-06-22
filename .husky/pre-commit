@@ -14,7 +14,28 @@
 #    survives the autofix (warnings are errors here — matches CI `npm run lint`).
 npx lint-staged || exit 1
 
-# 2. tsc SAFEGUARD (NON-NEGOTIABLE — read this before removing it).
+# 2. L-007 RATCHET — tool-registry coverage gate (Diego, Wave 11, 2026-06-18).
+#    Every user-facing toolbar button / menu item / shape sub-toolbar entry MUST be
+#    declared in src/client/tools/registry.ts as a ToolDef (or covered by the
+#    MENU_MIRROR_MAP / ALLOWLIST in the ratchet script). The ratchet runs against
+#    the WHOLE renderer tree (not just staged files) because adding a surface
+#    in one file may need a registry entry in registry.ts in the same commit; a
+#    staged-only check would miss the cross-file invariant. See L-007 entry in
+#    .learnings/locked-instructions.md for the full constraint + unlock procedure.
+echo "[pre-commit] L-007 ratchet — tool-registry coverage..."
+node scripts/ratchet-tool-registry-coverage.mjs || {
+  echo ""
+  echo "[pre-commit] BLOCKED by L-007 ratchet (see output above)."
+  echo "[pre-commit] Either:"
+  echo "[pre-commit]   (a) add a ToolDef in src/client/tools/registry.ts for the new surface, OR"
+  echo "[pre-commit]   (b) extend MENU_MIRROR_MAP in scripts/ratchet-tool-registry-coverage.mjs"
+  echo "[pre-commit]       if the new key mirrors an existing ToolDef, OR"
+  echo "[pre-commit]   (c) extend ALLOWLIST in the same script with a justifying reason"
+  echo "[pre-commit]       (requires principal approval per L-007 unlock)."
+  exit 1
+}
+
+# 3. tsc SAFEGUARD (NON-NEGOTIABLE — read this before removing it).
 #    `eslint --fix` for @typescript-eslint/consistent-type-imports AGGRESSIVELY
 #    mis-converts mixed value+type `import { ... }` into `import type { ... }`,
 #    which silently breaks value usages (instanceof operands, `.of()` static

@@ -1,0 +1,94 @@
+{
+  "_comment": "Pinned qpdf release used by Phase 7.5 B8 password encryption. Diego owns. License: Apache-2.0 (Source URL: https://github.com/qpdf/qpdf, LICENSE.txt in tarball). Per-OS SHA256s are from the upstream PGP-signed manifest at https://github.com/qpdf/qpdf/releases/download/v11.9.1/qpdf-11.9.1.sha256 (signed by jberkenbilt, the qpdf maintainer). The fetch script (scripts/fetch-qpdf-binaries.mjs) verifies the archive SHA256 strictly and refuses to install a mismatched binary. Source for the layout details below: archive contents verified by manual extract on 2026-06-18.",
+  "qpdfVersion": "11.9.1",
+  "licenseUrl": "https://github.com/qpdf/qpdf/blob/v11.9.1/LICENSE.txt",
+  "licenseSpdx": "Apache-2.0",
+  "licenseFile": "scripts/qpdf-LICENSE.txt",
+  "licenseFileSha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+  "_layoutNotes": {
+    "win32-x64": "msvc64 zip extracts to qpdf-11.9.1-msvc64/. bin/ contains qpdf.exe + the qpdf29.dll runtime + 7 Visual C++ runtime DLLs (concrt140, msvcp140, msvcp140_1, msvcp140_2, msvcp140_atomic_wait, msvcp140_codecvt_ids, vcruntime140, vcruntime140_1). All 9 DLLs are shipped alongside qpdf.exe because (a) qpdf.exe imports qpdf29.dll at startup, (b) qpdf29.dll imports the VC++ runtime DLLs, and (c) we can't depend on the user's machine having the VC++ Redistributable installed (Windows 10/11 Home editions often don't). Ship cost: ~7.5 MB total.",
+    "linux-x64": "Linux zip extracts FLAT to bin/qpdf + lib/libqpdf.so.29.9.1 (with libqpdf.so.29 symlink) + 7 other system shared libs (libffi, libgnutls, libhogweed, libidn2, libjpeg, libnettle, libp11-kit, libtasn1, libunistring). The bin/qpdf binary uses relative RPATH/RUNPATH to find ../lib at runtime — so the bin/ + lib/ layout MUST be preserved in the packaged resources. Ship cost: ~9.5 MB total. CONFIG-ONLY / UNVERIFIED on real Linux hardware per electron-builder.yml Phase 7 P7-L-1 convention.",
+    "darwin": "Upstream qpdf 11.9.1 publishes NO macOS prebuilt binary (verified 2026-06-18 from https://api.github.com/repos/qpdf/qpdf/releases/tags/v11.9.1 — assets are msvc/mingw Windows + linux-x86_64 + AppImage source + tarball source; no .dmg / no darwin zip). On macOS the binary discovery in src/main/pdf-ops/encryption-engine.ts (defaultQpdfBinaryPath) falls back to system PATH, typically populated by `brew install qpdf` (Apache-2.0 in Homebrew core). When neither is present the engine returns engine_unavailable with guidance. Documented limitation; tracked for Phase 7.6 if a permissive macOS binary source surfaces."
+  },
+  "binaries": {
+    "win32-x64": {
+      "url": "https://github.com/qpdf/qpdf/releases/download/v11.9.1/qpdf-11.9.1-msvc64.zip",
+      "sha256": "b5061e09aa45b63a36200c130b4cce15dc322338ea91f698760c3b8732fc41ef",
+      "sizeBytes": 14480523,
+      "archiveType": "zip",
+      "archiveRoot": "qpdf-11.9.1-msvc64",
+      "binaryPathInArchive": "qpdf-11.9.1-msvc64/bin/qpdf.exe",
+      "supportingFiles": [
+        "qpdf-11.9.1-msvc64/bin/qpdf29.dll",
+        "qpdf-11.9.1-msvc64/bin/concrt140.dll",
+        "qpdf-11.9.1-msvc64/bin/msvcp140.dll",
+        "qpdf-11.9.1-msvc64/bin/msvcp140_1.dll",
+        "qpdf-11.9.1-msvc64/bin/msvcp140_2.dll",
+        "qpdf-11.9.1-msvc64/bin/msvcp140_atomic_wait.dll",
+        "qpdf-11.9.1-msvc64/bin/msvcp140_codecvt_ids.dll",
+        "qpdf-11.9.1-msvc64/bin/vcruntime140.dll",
+        "qpdf-11.9.1-msvc64/bin/vcruntime140_1.dll"
+      ],
+      "vendorOutputLayout": {
+        "qpdf.exe": "qpdf-11.9.1-msvc64/bin/qpdf.exe",
+        "qpdf29.dll": "qpdf-11.9.1-msvc64/bin/qpdf29.dll",
+        "concrt140.dll": "qpdf-11.9.1-msvc64/bin/concrt140.dll",
+        "msvcp140.dll": "qpdf-11.9.1-msvc64/bin/msvcp140.dll",
+        "msvcp140_1.dll": "qpdf-11.9.1-msvc64/bin/msvcp140_1.dll",
+        "msvcp140_2.dll": "qpdf-11.9.1-msvc64/bin/msvcp140_2.dll",
+        "msvcp140_atomic_wait.dll": "qpdf-11.9.1-msvc64/bin/msvcp140_atomic_wait.dll",
+        "msvcp140_codecvt_ids.dll": "qpdf-11.9.1-msvc64/bin/msvcp140_codecvt_ids.dll",
+        "vcruntime140.dll": "qpdf-11.9.1-msvc64/bin/vcruntime140.dll",
+        "vcruntime140_1.dll": "qpdf-11.9.1-msvc64/bin/vcruntime140_1.dll"
+      }
+    },
+    "linux-x64": {
+      "url": "https://github.com/qpdf/qpdf/releases/download/v11.9.1/qpdf-11.9.1-bin-linux-x86_64.zip",
+      "sha256": "64eb765a32f41a79d881cc41b867cc23916c3b444f80cc1de6c02ed9547db8e4",
+      "sizeBytes": 3308311,
+      "archiveType": "zip",
+      "archiveRoot": "",
+      "binaryPathInArchive": "bin/qpdf",
+      "supportingFiles": [
+        "bin/fix-qdf",
+        "bin/zlib-flate",
+        "lib/libqpdf.so.29",
+        "lib/libqpdf.so.29.9.1",
+        "lib/libffi.so.6",
+        "lib/libgnutls.so.30",
+        "lib/libhogweed.so.4",
+        "lib/libidn2.so.0",
+        "lib/libjpeg.so.8",
+        "lib/libnettle.so.6",
+        "lib/libp11-kit.so.0",
+        "lib/libtasn1.so.6",
+        "lib/libunistring.so.2"
+      ],
+      "vendorOutputLayout": {
+        "bin/qpdf": "bin/qpdf",
+        "lib/libqpdf.so.29": "lib/libqpdf.so.29",
+        "lib/libqpdf.so.29.9.1": "lib/libqpdf.so.29.9.1"
+      }
+    },
+    "darwin-x64": {
+      "url": null,
+      "sha256": null,
+      "sizeBytes": 0,
+      "archiveType": null,
+      "archiveRoot": null,
+      "binaryPathInArchive": null,
+      "supportingFiles": [],
+      "vendorOutputLayout": null
+    },
+    "darwin-arm64": {
+      "url": null,
+      "sha256": null,
+      "sizeBytes": 0,
+      "archiveType": null,
+      "archiveRoot": null,
+      "binaryPathInArchive": null,
+      "supportingFiles": [],
+      "vendorOutputLayout": null
+    }
+  }
+}

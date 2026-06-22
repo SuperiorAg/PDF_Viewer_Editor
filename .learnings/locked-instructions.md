@@ -199,3 +199,59 @@ export function registerTestWhichBridge(opts: {...}): void {
 - Any future `src/ipc/handlers/test-*.ts` test-only channel — same dot-form gate pattern, same comment block (David / Diego)
 
 **To unlock:** A change to the build that proves the prod bundle is structurally clean by an even stronger mechanism (e.g. a build-time plugin that physically deletes every `src/ipc/handlers/test-*.ts` from the rollup graph before transform, removing even the comment + Channels-enum-string residue). The unlock entry must cite a green prod build that produces a `dist/main/index.js` with literally zero references to `__test:`, `whichBridge`, `seedOcrJob`, or `registerTest*`, AND a green CI e2e run against a separately-built test bundle.
+
+---
+
+## L-007 (2026-06-18, Diego) — Every user-facing tool surface MUST be declared in `src/client/tools/registry.ts`
+
+**Constraint:** Every user-facing toolbar button, menu item, shape sub-toolbar entry, and palette entry MUST be declared in `src/client/tools/registry.ts` as a `ToolDef` — OR covered by `MENU_MIRROR_MAP` (alias for an existing ToolDef on a different surface) OR by `ALLOWLIST` (intentionally inert affordance / one-of-N preset / intrinsic shortcut) in `scripts/ratchet-tool-registry-coverage.mjs`, each entry carrying a justifying `reason` comment. The scope is "all post-Wave-10 toolbar/menu surfaces" per the principal's R14 mitigation in `docs/project-plan.md §4`. The Accessibility sidebar tab (Tag PDF tree editor's home; pure-display surface for the Accessibility Checker) is explicitly an allowlisted carve-out per Julian's L-007 sign-off condition.
+
+**The rule (one line):**
+
+> If a user can see it, click it, type it, or hear it announced, it lives in the registry. Surfaces that bypass the registry lose their chord, palette text, i18n key, accessibility name, and Find-a-tool discoverability — and on every audit they reappear as un-discoverable scar tissue.
+
+**Why locked:** The principal's Wave 8 ruling explicitly overrides audit §5.4 (which proposed permitting orphan tool surfaces). The walking-rule that emerged from Waves 8–10: every time we added a tool button without a registry entry, two things broke silently — (a) the Find-a-tool palette (Ctrl+/) couldn't surface it (the palette renders ToolDefs only), (b) the i18n + a11y + chord triad drifted out of sync because the surface authored its own strings. Both pathologies are the same shape as L-006's test-channel structural defense: a runtime gate is necessary but not sufficient; the CI-enforced structural rule is what holds the line as the surface count grows. Locking the rule means a NEW surface that bypasses the registry trips a hard CI fail with file:line + a suggested ToolDef shape — the gap can never grow silently. Tracked in `docs/project-plan.md §4` R14 mitigation; first floated as a Marcus follow-up after Wave 8; ratified by the principal on the Wave 11 dispatch.
+
+**Reference implementation:** The canonical ToolDef shape (every field documented at `src/client/tools/registry.ts`):
+
+```ts
+// src/client/tools/registry.ts — seven-dimension contract per ToolDef
+export interface ToolDef {
+  id: ToolId; // canonical id, e.g. 'file:open' (group:slug, kebab)
+  nameKey: I18nKey; // i18n key for the visible tool name
+  tooltipKey: I18nKey; // i18n key for the toolbar/menu tooltip
+  ariaLabelKey: I18nKey; // i18n key for the WAI-ARIA accessible name
+  icon: IconRef | null; // glyph or null (text-label surfaces)
+  shortcutId: ShortcutId | null; // global shortcut id (null = no chord)
+  menu: { top: MenuTop }; // which top-level menu it mirrors to
+  surfaces: { menu: boolean; palette: boolean };
+  enabledWhen: EnabledPredicate; // (state) => boolean
+  dispatch: ToolDispatch; // single canonical dispatch
+  searchKeywords: string[]; // surfaced by Find-a-tool palette
+}
+```
+
+Allowlist entries in the ratchet script must each carry a `reason` string. The ratchet currently lists 58 allowlisted surfaces and 37 menu-mirrored surfaces against 67 ToolDefs (139 unique i18n keys for nameKey/tooltipKey/ariaLabelKey) covering 81 registered surfaces; 0 gaps. Stale-entry detection on both the allowlist and `MENU_MIRROR_MAP` runs in the same script (soft warning today; reviewers prune at audit).
+
+**Enforcement:**
+
+1. `scripts/ratchet-tool-registry-coverage.mjs` runs in `.husky/pre-commit` (gate 2, after lint-staged, before tsc) AND in `.github/workflows/ci.yml` (between Lint and Typecheck on BOTH OSes — windows-2025-vs2026 and ubuntu-latest). Exit code 1 on any unregistered surface.
+2. The ratchet's heuristic is documented at the top of the script: it parses three surface files (`src/client/components/toolbar/index.tsx`, `src/client/components/menu-bar/index.tsx`, `src/client/components/shape-tools/shape-toolbar.tsx`) for every `t('namespace:key')` and key-literal usage, cross-references against the registry's `nameKey`/`tooltipKey`/`ariaLabelKey` and ToolDef `id` sets, and reports gaps with file:line + a suggested ToolDef shape so the author can paste-and-fill.
+3. Adding an `ALLOWLIST` entry requires a `reason` comment AND principal approval per the unlock procedure below. The allowlist is the accountability surface — its job is to shrink toward zero as Wave-2-B (the registry-aware menu-bar cutover) and post-Wave-12 ToolDef promotions land.
+
+**Affected files:**
+
+- `src/client/tools/registry.ts` — canonical registry (Riley owns)
+- `src/client/components/toolbar/index.tsx` — primary toolbar (Riley owns)
+- `src/client/components/menu-bar/index.tsx` — app menu (Riley owns)
+- `src/client/components/shape-tools/shape-toolbar.tsx` — shape sub-toolbar (Riley owns)
+- `src/client/components/find-a-tool-palette/index.tsx` — informational consumer (Riley owns)
+- `src/client/components/accessibility-check-panel/**` — Accessibility sidebar tab (Tag PDF tree editor home; allowlisted carve-out per Julian's sign-off condition; Riley owns)
+- `scripts/ratchet-tool-registry-coverage.mjs` — the ratchet (Diego owns)
+- `.husky/pre-commit` — pre-commit wire (Diego owns)
+- `.github/workflows/ci.yml` — CI wire (Diego owns)
+
+**To unlock:** Principal approval. Two paths:
+
+- (a) **Soft unlock — extend ALLOWLIST.** Add a new entry to the ratchet's `ALLOWLIST` array with a `reason` string explaining why the new surface is legitimately exempt (e.g. an intentionally inert affordance, a one-of-N preset, an intrinsic shortcut that can't itself be a ToolDef). The principal must approve each addition; the comment is the audit trail.
+- (b) **Hard unlock — replace the rule.** Replace the ratchet with an even stronger mechanism (e.g. a registry-aware menu-bar cutover where every surface call site consumes a ToolDef from the registry directly, eliminating the heuristic). The unlock entry must point to the green CI run that demonstrates the replacement is equivalent. Reverting to "no registry coverage rule" is NOT a valid unlock — the rule exists because surfaces-without-registry-entries created the Find-a-tool drift problem this lock prevents.

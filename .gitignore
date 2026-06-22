@@ -6,6 +6,16 @@ release/
 .cache/
 *.log
 
+# Phase 7.5 Wave 11 (Diego, 2026-06-18) — bundled qpdf binary tree.
+# Populated by `node scripts/fetch-qpdf-binaries.mjs` on demand. SHA256-
+# pinned per scripts/qpdf-version.json. Source is the upstream qpdf 11.9.1
+# release (Apache-2.0); we never check the binary into the repo to keep the
+# tree small + license-clean (the LICENSE.txt copy lives in scripts/ and
+# is the authoritative on-disk-in-repo notice). Packaging (CI) runs the
+# fetch step before electron-builder; developers run it on first dev-mode
+# run of the encryption engine.
+vendor/
+
 # Native addon build output (keep source: *.cc, *.h, binding.gyp, README)
 native/**/build/
 native/**/Release/

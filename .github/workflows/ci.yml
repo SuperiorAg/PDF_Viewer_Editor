@@ -112,6 +112,15 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Phase 7.5 Wave 11 (Diego) — L-007 ratchet. Tool-registry coverage
+      # gate. Every user-facing toolbar button / menu item / shape sub-toolbar
+      # entry MUST be declared in src/client/tools/registry.ts (or covered by
+      # the MENU_MIRROR_MAP / ALLOWLIST in the ratchet script). See
+      # .learnings/locked-instructions.md L-007 for the full constraint.
+      # Runs on BOTH OSes because the renderer surfaces are platform-independent.
+      - name: L-007 ratchet — tool-registry coverage
+        run: node scripts/ratchet-tool-registry-coverage.mjs
+
       - name: Typecheck (main + preload + renderer)
         run: npm run typecheck
 

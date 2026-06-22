@@ -266,20 +266,92 @@ export function resolveRunner(discovery: QpdfDiscovery): Result<QpdfRunner, Encr
     return ok(discovery.runner);
   }
   const path = discovery.qpdfBinaryPath ?? defaultQpdfBinaryPath();
-  if (path === null || !existsSync(path)) {
+  if (path === null) {
     return fail<EncryptionEngineError>(
       'engine_unavailable',
-      `qpdf binary not found (looked at ${path ?? '<no path resolved>'}). Diego Wave 11 bundles per-OS qpdf at process.resourcesPath/qpdf/. For development, set qpdfBinaryPath explicitly.`,
+      `qpdf binary not found (no path resolved). Diego Wave 11 bundles per-OS qpdf at process.resourcesPath/qpdf/bin/. For development, run \`node scripts/fetch-qpdf-binaries.mjs\` to populate vendor/qpdf/<platform>/, or set qpdfBinaryPath explicitly.`,
+    );
+  }
+  // On macOS the bundled-binary path resolves to the bare exe name `'qpdf'`
+  // when no packaged / dev-vendored binary is found — child_process.spawn
+  // will then resolve it from PATH at run time (typically populated by
+  // `brew install qpdf`). On Windows / Linux we always have an absolute
+  // path because we bundle the binary; existsSync gates that.
+  const isBareExeName =
+    path === 'qpdf' || path === 'qpdf.exe' || (!path.includes('/') && !path.includes('\\'));
+  if (!isBareExeName && !existsSync(path)) {
+    return fail<EncryptionEngineError>(
+      'engine_unavailable',
+      `qpdf binary not found at ${path}. Diego Wave 11 bundles per-OS qpdf at process.resourcesPath/qpdf/bin/. For development, run \`node scripts/fetch-qpdf-binaries.mjs\` to populate vendor/qpdf/<platform>/, or set qpdfBinaryPath explicitly. On macOS, install via \`brew install qpdf\`.`,
     );
   }
   return ok(spawnRunner(path));
 }
 
 function defaultQpdfBinaryPath(): string | null {
-  const resourcesPath = process.resourcesPath;
-  if (!resourcesPath) return null;
+  // Phase 7.5 Wave 11 (Diego) — discovery order:
+  //   1. Packaged Electron: `process.resourcesPath/qpdf/bin/qpdf{.exe}`.
+  //      Layout authored by electron-builder.yml `extraResources` blocks
+  //      under `win:` / `linux:`. The `bin/` subdir is load-bearing on Linux
+  //      because the Linux qpdf binary uses RUNPATH `../lib` to locate
+  //      `libqpdf.so.29.9.1` — flattening the layout breaks dlopen.
+  //   2. Dev mode (no packaging): `<repo>/vendor/qpdf/<platform>/bin/qpdf{.exe}`.
+  //      Populated by `scripts/fetch-qpdf-binaries.mjs`. Lets `npm run dev`
+  //      / vitest exercise the real subprocess path without packaging.
+  //   3. System PATH (macOS Homebrew `brew install qpdf` + any Linux/Windows
+  //      operator who installed qpdf system-wide). Falling all the way back
+  //      to PATH is the ONLY supported macOS production path: upstream qpdf
+  //      11.9.1 publishes no macOS prebuilt binary (verified 2026-06-18),
+  //      so there is no bundle-tree to discover on darwin.
+  //
+  // Returning `null` from this function means "no path resolved" — the
+  // caller surfaces engine_unavailable with guidance text. The check at
+  // resolveRunner adds an existsSync() gate before accepting whatever we
+  // return.
   const exe = process.platform === 'win32' ? 'qpdf.exe' : 'qpdf';
-  return pathJoin(resourcesPath, 'qpdf', exe);
+
+  // (1) Packaged resourcesPath.
+  const resourcesPath = process.resourcesPath;
+  if (resourcesPath) {
+    const packaged = pathJoin(resourcesPath, 'qpdf', 'bin', exe);
+    if (existsSync(packaged)) return packaged;
+  }
+
+  // (2) Dev-mode vendor tree. The path here is computed relative to the
+  // running module — when this engine runs out of `dist/main/`, the repo
+  // root is two levels up; when it runs under vitest from `src/main/`,
+  // it is also two levels up. Both cases land at `<repo>/vendor/qpdf/`.
+  // We use `process.cwd()` as a stable anchor for the dev case (vitest
+  // and `npm run dev` both cwd to the repo root). Production packaged
+  // binaries never reach this branch because (1) wins.
+  const platformKey =
+    process.platform === 'win32'
+      ? 'win32-x64'
+      : process.platform === 'linux'
+        ? 'linux-x64'
+        : process.platform === 'darwin' && process.arch === 'arm64'
+          ? 'darwin-arm64'
+          : 'darwin-x64';
+  const devVendored = pathJoin(process.cwd(), 'vendor', 'qpdf', platformKey, 'bin', exe);
+  if (existsSync(devVendored)) return devVendored;
+
+  // (3) System PATH (production macOS + any operator who installed qpdf
+  // system-wide). `null` here means "let the OS resolve it from PATH at
+  // spawn time" — but we ALSO need to satisfy the existsSync() gate in
+  // resolveRunner, which won't pass on `null`. So we return the bare
+  // exe name; the existsSync() gate will reject it; resolveRunner
+  // surfaces engine_unavailable with the bundled-binary guidance, which
+  // is the right behavior on every platform EXCEPT macOS where the
+  // operator may have qpdf on PATH. To support that macOS case without
+  // a redundant `which qpdf` shell-out, we let macOS-specifically fall
+  // through to a `'qpdf'` literal and rely on spawn() to find it on
+  // PATH. On Windows / Linux we keep returning `null` so the missing-
+  // bundled-binary surface is unambiguous.
+  if (process.platform === 'darwin') {
+    return exe; // resolved by child_process.spawn from PATH at run time
+  }
+
+  return null;
 }
 
 function spawnRunner(binaryPath: string): QpdfRunner {

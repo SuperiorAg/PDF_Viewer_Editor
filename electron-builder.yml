@@ -163,6 +163,23 @@ extraResources:
     filter: ["**/*"]
   - from: node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz
     to: tessdata/eng.traineddata.gz
+  # Phase 7.5 Wave 11 (Diego, 2026-06-18) — qpdf binary bundling for B8
+  # Password Encryption / Document Properties Security tab.
+  #
+  # qpdf is Apache-2.0 (LICENSE: https://github.com/qpdf/qpdf/blob/v11.9.1/LICENSE.txt;
+  # canonical copy at scripts/qpdf-LICENSE.txt, SHA256 pinned in
+  # scripts/qpdf-version.json). The binary is fetched by
+  # `scripts/fetch-qpdf-binaries.mjs` (SHA256-verified against the upstream
+  # PGP-signed manifest at qpdf-11.9.1.sha256) into `vendor/qpdf/<platform>/`.
+  # That tree gets copied into `app.asar.unpacked/resources/qpdf/` at pack time,
+  # which is where `process.resourcesPath/qpdf/` resolves at runtime
+  # (encryption-engine.ts:defaultQpdfBinaryPath).
+  #
+  # Per-platform qpdf trees live UNDER each platform's `extraResources`
+  # block (`win:`, `mac:`, `linux:` below) so a Windows installer carries
+  # ONLY the Windows qpdf, a Linux AppImage carries ONLY the Linux qpdf,
+  # and macOS carries nothing (falls back to system PATH via Homebrew).
+  # This is the per-OS isolation the Wave 11 brief calls for.
 
 # ============================================================================
 # Windows targets — NSIS installer + portable .exe
@@ -195,6 +212,22 @@ win:
       # Note: electron-builder writes the registry keys; the installer
       # checkbox that controls WHETHER these are written is wired in
       # build/installer.nsh below (Decision 4: default ON).
+  # Phase 7.5 Wave 11 (Diego) — qpdf binary for B8 Password Encryption.
+  # Lays the Windows-only qpdf tree at `resources/qpdf/` inside the asar.
+  # Source: vendor/qpdf/win32-x64/ (fetched + SHA256-verified by
+  # scripts/fetch-qpdf-binaries.mjs against the upstream PGP-signed manifest).
+  # Runtime: encryption-engine.ts:defaultQpdfBinaryPath reads
+  # `${process.resourcesPath}/qpdf/bin/qpdf.exe`. The bin/ subtree carries
+  # qpdf.exe + qpdf29.dll + 8 VC++ runtime DLLs (concrt140 / msvcp140 /
+  # msvcp140_{1,2,atomic_wait,codecvt_ids} / vcruntime140 / vcruntime140_1)
+  # — all sitting next to qpdf.exe satisfies the DLL search order without
+  # depending on the user having the VC++ Redistributable installed.
+  extraResources:
+    - from: vendor/qpdf/win32-x64/bin
+      to: qpdf/bin
+      filter: ["**/*"]
+    - from: vendor/qpdf/win32-x64/LICENSE.txt
+      to: qpdf/LICENSE.txt
 
 # ============================================================================
 # NSIS installer config — file-association checkbox default ON (Decision 4)
@@ -282,6 +315,16 @@ mac:
   # reference a non-existent file.
   # entitlements: build/entitlements.mac.plist   # Phase 7.1
   # entitlementsInherit: build/entitlements.mac.plist
+  # Phase 7.5 Wave 11 (Diego) — qpdf for B8 Password Encryption on macOS.
+  # Upstream qpdf 11.9.1 publishes NO prebuilt macOS binary (verified
+  # 2026-06-18 from https://api.github.com/repos/qpdf/qpdf/releases/tags/v11.9.1
+  # — only msvc/mingw Windows + linux-x86_64 + AppImage + source). The
+  # runtime engine therefore falls back to system PATH (`which qpdf` =
+  # `/opt/homebrew/bin/qpdf` after `brew install qpdf`, which IS Apache-2.0
+  # in Homebrew core). When neither is present the engine returns
+  # engine_unavailable with guidance. Documented gap; tracked for Phase
+  # 7.6 if a permissive macOS binary source surfaces. No extraResources
+  # block here — there is no binary to ship.
 
 # ============================================================================
 # Linux targets — Phase 7 (Diego, Wave 29). CONFIG-ONLY, **UNVERIFIED**.
@@ -302,6 +345,21 @@ linux:
       Comment: View, edit, annotate, sign, and export PDFs
       MimeType: application/pdf
       Categories: Office;Utility;
+  # Phase 7.5 Wave 11 (Diego) — qpdf binary for B8 Password Encryption.
+  # Lays the Linux-only qpdf tree at `resources/qpdf/`. Source:
+  # vendor/qpdf/linux-x64/ (bin/qpdf + lib/libqpdf.so.29.9.1 + symlink +
+  # 8 supporting system libs). The Linux qpdf binary uses RUNPATH ../lib
+  # so the bin/ + lib/ split MUST be preserved. CONFIG-ONLY / UNVERIFIED
+  # per P7-L-1 (electron-builder does not run on real Linux hardware in CI).
+  extraResources:
+    - from: vendor/qpdf/linux-x64/bin
+      to: qpdf/bin
+      filter: ["**/*"]
+    - from: vendor/qpdf/linux-x64/lib
+      to: qpdf/lib
+      filter: ["**/*"]
+    - from: vendor/qpdf/linux-x64/LICENSE.txt
+      to: qpdf/LICENSE.txt
 
 # ============================================================================
 # Auto-update publish config — Phase 7 (Diego, Wave 29; REAL target wired
