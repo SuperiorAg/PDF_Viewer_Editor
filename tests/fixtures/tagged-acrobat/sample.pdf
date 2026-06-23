@@ -1,0 +1,190 @@
+%PDF-1.7
+%ÅÅÅÅ
+
+1 0 obj
+<<
+/Type /Pages
+/Kids [ 4 0 R 5 0 R 6 0 R ]
+/Count 3
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/StructTreeRoot 7 0 R
+/MarkInfo <<
+/Marked true
+>>
+/Lang (en-US)
+>>
+endobj
+
+3 0 obj
+<<
+/Producer <FEFF007000640066002D006C006900620020002800680074007400700073003A002F002F006700690074006800750062002E0063006F006D002F0048006F007000640069006E0067002F007000640066002D006C006900620029>
+/ModDate (D:20260623102213Z)
+/Creator <FEFF007000640066002D006C006900620020002800680074007400700073003A002F002F006700690074006800750062002E0063006F006D002F0048006F007000640069006E0067002F007000640066002D006C006900620029>
+/CreationDate (D:20260623102213Z)
+>>
+endobj
+
+4 0 obj
+<<
+/Type /Page
+/Parent 1 0 R
+/Resources <<
+>>
+/MediaBox [ 0 0 612 792 ]
+/StructParents 0
+>>
+endobj
+
+5 0 obj
+<<
+/Type /Page
+/Parent 1 0 R
+/Resources <<
+>>
+/MediaBox [ 0 0 612 792 ]
+/StructParents 1
+>>
+endobj
+
+6 0 obj
+<<
+/Type /Page
+/Parent 1 0 R
+/Resources <<
+>>
+/MediaBox [ 0 0 612 792 ]
+/StructParents 2
+>>
+endobj
+
+7 0 obj
+<<
+/Type /StructTreeRoot
+/RoleMap <<
+/Title /H1
+/Subtitle /H2
+/Body /P
+>>
+/K [ 8 0 R 13 0 R ]
+/ParentTree <<
+/Nums [ 0 14 0 R 1 15 0 R 2 16 0 R ]
+>>
+/ParentTreeNextKey 3
+>>
+endobj
+
+8 0 obj
+<<
+/Type /StructElem
+/S /H1
+/P 7 0 R
+/Pg 4 0 R
+/ActualText (Title)
+/K [ 0 11 0 R 12 0 R 9 0 R ]
+>>
+endobj
+
+9 0 obj
+<<
+/Type /StructElem
+/S /H2
+/P 8 0 R
+/Pg 5 0 R
+/ActualText (Section)
+/K [ 3 10 0 R ]
+>>
+endobj
+
+10 0 obj
+<<
+/Type /StructElem
+/S /P
+/P 9 0 R
+/Pg 5 0 R
+/ActualText (section body)
+/K 4
+>>
+endobj
+
+11 0 obj
+<<
+/Type /StructElem
+/S /P
+/P 8 0 R
+/Pg 4 0 R
+/ActualText (intro)
+/K 1
+>>
+endobj
+
+12 0 obj
+<<
+/Type /StructElem
+/S /P
+/P 8 0 R
+/Pg 5 0 R
+/ActualText (more intro)
+/K 2
+>>
+endobj
+
+13 0 obj
+<<
+/Type /StructElem
+/S /Figure
+/P 7 0 R
+/Pg 6 0 R
+/Alt (company logo)
+/Lang (en-US)
+/K 5
+>>
+endobj
+
+14 0 obj
+[ 8 0 R 11 0 R ]
+endobj
+
+15 0 obj
+[ 12 0 R 9 0 R 10 0 R ]
+endobj
+
+16 0 obj
+[ 13 0 R ]
+endobj
+
+xref
+0 17
+0000000000 65535 f 
+0000000016 00000 n 
+0000000088 00000 n 
+0000000203 00000 n 
+0000000673 00000 n 
+0000000781 00000 n 
+0000000889 00000 n 
+0000000997 00000 n 
+0000001186 00000 n 
+0000001301 00000 n 
+0000001405 00000 n 
+0000001503 00000 n 
+0000001594 00000 n 
+0000001690 00000 n 
+0000001800 00000 n 
+0000001834 00000 n 
+0000001875 00000 n 
+
+trailer
+<<
+/Size 17
+/Root 2 0 R
+/Info 3 0 R
+>>
+
+startxref
+1903
+%%EOF
