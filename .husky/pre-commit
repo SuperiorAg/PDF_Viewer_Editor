@@ -35,7 +35,24 @@ node scripts/ratchet-tool-registry-coverage.mjs || {
   exit 1
 }
 
-# 3. tsc SAFEGUARD (NON-NEGOTIABLE — read this before removing it).
+# 3. ESPEAK NO-BUNDLE RATCHET (Diego, post-v0.8.0 follow-up, 2026-06-18).
+#    Safety-net for the GPL-3 subprocess-only stance on the Linux Read Aloud
+#    TTS engine (docs/license-manifest.md §2). espeak MUST never be bundled in
+#    `electron-builder.yml extraResources`. Bundling contaminates the entire
+#    installer with strong-copyleft GPL-3 obligations. Julian §11.8 LOW
+#    follow-up; canonical ratchet at scripts/ratchet-no-espeak-bundle.mjs.
+echo "[pre-commit] espeak no-bundle ratchet..."
+node scripts/ratchet-no-espeak-bundle.mjs || {
+  echo ""
+  echo "[pre-commit] BLOCKED by espeak no-bundle ratchet (see output above)."
+  echo "[pre-commit] espeak is GPL-3.0 and APPROVED ONLY for subprocess use"
+  echo "[pre-commit] (\`spawn('espeak', ...)\`). Bundling the binary inside"
+  echo "[pre-commit] electron-builder.yml extraResources contaminates the"
+  echo "[pre-commit] installer's license terms — remove the entry."
+  exit 1
+}
+
+# 4. tsc SAFEGUARD (NON-NEGOTIABLE — read this before removing it).
 #    `eslint --fix` for @typescript-eslint/consistent-type-imports AGGRESSIVELY
 #    mis-converts mixed value+type `import { ... }` into `import type { ... }`,
 #    which silently breaks value usages (instanceof operands, `.of()` static

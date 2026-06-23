@@ -121,6 +121,19 @@ jobs:
       - name: L-007 ratchet — tool-registry coverage
         run: node scripts/ratchet-tool-registry-coverage.mjs
 
+      # Phase 7.5 post-v0.8.0 (Diego, 2026-06-18) — espeak no-bundle ratchet.
+      # Safety-net for the GPL-3 subprocess-only stance on the Linux Read
+      # Aloud TTS engine (docs/license-manifest.md §2). espeak MUST never be
+      # bundled in electron-builder.yml extraResources — bundling
+      # contaminates the entire installer with strong-copyleft obligations.
+      # Julian §11.8 LOW follow-up. Runs on BOTH OSes because the YAML
+      # config is platform-independent. The ratchet's self-test runs in
+      # the same step so a detector regression trips the gate immediately.
+      - name: espeak no-bundle ratchet (license safety net)
+        run: |
+          node scripts/ratchet-no-espeak-bundle.mjs
+          node scripts/ratchet-no-espeak-bundle.test.mjs
+
       - name: Typecheck (main + preload + renderer)
         run: npm run typecheck
 
