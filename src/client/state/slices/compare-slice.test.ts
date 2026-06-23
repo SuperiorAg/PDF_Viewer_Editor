@@ -8,19 +8,24 @@ import compareReducer, {
   type ComparePageTextValue,
   type ComparePageVisualValue,
   COMPARE_DEFAULT_RENDER_WIDTH,
+  COMPARE_LRU_WINDOW_SIZE,
   COMPARE_MULTI_COLUMN_FOOTNOTE,
   COMPARE_ORPHAN_LEFT_LABEL,
   COMPARE_ORPHAN_RIGHT_LABEL,
   COMPARE_SEQUENTIAL_PAIRING_BANNER,
   COMPARE_VISUAL_RENDER_WIDTH_TEMPLATE,
   cleared,
+  lruEvictionCompleted,
   pairEvicted,
+  selectCompareAccessOrder,
   selectCompareEvictableBlobs,
   selectCompareIsActive,
   selectComparePairBadgeColor,
   selectComparePairEntry,
   selectComparePairTextStatus,
   selectComparePairVisualStatus,
+  selectComparePendingEvictionBlobs,
+  selectComparePendingLruEviction,
   selectCompareSession,
   selectCompareSetup,
   selectCompareSetupCanCompare,
@@ -455,5 +460,194 @@ describe('compare-slice — selectors smoke', () => {
   test('selectCompareSetup is exposed', () => {
     const s = compareReducer(initial(), setupOpened());
     expect(selectCompareSetup({ compare: s }).open).toBe(true);
+  });
+});
+
+// ============================================================================
+// LRU eviction tests — post-v0.8.0 follow-up (Riley, 2026-06-18, Julian 11.5
+// + Wave 7 deferral close).
+// ============================================================================
+
+function visualPayload(pairIndex: number) {
+  return {
+    pairIndex,
+    value: fakeVisualValue(1000),
+    diffMaskUrl: `blob:diff-${pairIndex}`,
+    leftUrl: `blob:left-${pairIndex}`,
+    rightUrl: `blob:right-${pairIndex}`,
+  };
+}
+
+describe('compare-slice — LRU constant', () => {
+  test('window size is documented at 30', () => {
+    // The brief locks the window-size choice for the slice — change the
+    // const + test together.
+    expect(COMPARE_LRU_WINDOW_SIZE).toBe(30);
+  });
+});
+
+describe('compare-slice — LRU access order', () => {
+  test('textRequestSucceeded pushes to front of access order', () => {
+    let s = compareReducer(
+      initial(),
+      textRequestSucceeded({ pairIndex: 0, value: fakeTextValue(false) }),
+    );
+    s = compareReducer(s, textRequestSucceeded({ pairIndex: 1, value: fakeTextValue(true) }));
+    s = compareReducer(s, textRequestSucceeded({ pairIndex: 2, value: fakeTextValue(true) }));
+    expect(selectCompareAccessOrder({ compare: s })).toEqual([2, 1, 0]);
+  });
+
+  test('visualRequestSucceeded pushes to front and merges with text access', () => {
+    let s = compareReducer(
+      initial(),
+      textRequestSucceeded({ pairIndex: 0, value: fakeTextValue(true) }),
+    );
+    s = compareReducer(s, visualRequestSucceeded(visualPayload(1)));
+    s = compareReducer(s, textRequestSucceeded({ pairIndex: 2, value: fakeTextValue(true) }));
+    expect(selectCompareAccessOrder({ compare: s })).toEqual([2, 1, 0]);
+  });
+
+  test('re-loading an existing pair moves it to front, does not duplicate', () => {
+    let s = compareReducer(
+      initial(),
+      textRequestSucceeded({ pairIndex: 0, value: fakeTextValue(true) }),
+    );
+    s = compareReducer(s, textRequestSucceeded({ pairIndex: 1, value: fakeTextValue(true) }));
+    s = compareReducer(s, textRequestSucceeded({ pairIndex: 2, value: fakeTextValue(true) }));
+    s = compareReducer(s, textRequestSucceeded({ pairIndex: 0, value: fakeTextValue(false) }));
+    const order = selectCompareAccessOrder({ compare: s });
+    expect(order).toEqual([0, 2, 1]);
+    expect(order.length).toBe(3); // no duplicate
+  });
+
+  test('sessionOpened resets access order and pending eviction', () => {
+    let s = compareReducer(
+      initial(),
+      textRequestSucceeded({ pairIndex: 0, value: fakeTextValue(true) }),
+    );
+    s = compareReducer(s, sessionOpened(fakeSession()));
+    expect(selectCompareAccessOrder({ compare: s })).toEqual([]);
+    expect(selectComparePendingLruEviction({ compare: s })).toEqual([]);
+  });
+
+  test('sessionClosed resets access order and pending eviction', () => {
+    let s = compareReducer(
+      initial(),
+      textRequestSucceeded({ pairIndex: 0, value: fakeTextValue(true) }),
+    );
+    s = compareReducer(s, sessionClosed());
+    expect(selectCompareAccessOrder({ compare: s })).toEqual([]);
+    expect(selectComparePendingLruEviction({ compare: s })).toEqual([]);
+  });
+});
+
+describe('compare-slice — LRU window overflow', () => {
+  test('loading 100 pairs caps live entries at the window size + queues overflow', () => {
+    let s: CompareState = initial();
+    for (let i = 0; i < 100; i++) {
+      s = compareReducer(s, visualRequestSucceeded(visualPayload(i)));
+    }
+    // pageAccessOrder is capped at COMPARE_LRU_WINDOW_SIZE.
+    expect(selectCompareAccessOrder({ compare: s }).length).toBe(COMPARE_LRU_WINDOW_SIZE);
+    // The most-recently-loaded pair is at the front; the least-recent in
+    // the live window is at the back.
+    expect(selectCompareAccessOrder({ compare: s })[0]).toBe(99);
+    expect(selectCompareAccessOrder({ compare: s })[COMPARE_LRU_WINDOW_SIZE - 1]).toBe(
+      100 - COMPARE_LRU_WINDOW_SIZE,
+    );
+    // The overflow (pairs that fell off the back) sits in
+    // pendingLruEviction waiting for the thunk to drain it.
+    const pending = selectComparePendingLruEviction({ compare: s });
+    expect(pending.length).toBe(100 - COMPARE_LRU_WINDOW_SIZE);
+    expect(pending).toContain(0);
+    expect(pending).toContain(100 - COMPARE_LRU_WINDOW_SIZE - 1);
+    expect(pending).not.toContain(100 - COMPARE_LRU_WINDOW_SIZE);
+  });
+
+  test('exactly LRU_WINDOW_SIZE pairs produces no pending eviction', () => {
+    let s: CompareState = initial();
+    for (let i = 0; i < COMPARE_LRU_WINDOW_SIZE; i++) {
+      s = compareReducer(s, textRequestSucceeded({ pairIndex: i, value: fakeTextValue(false) }));
+    }
+    expect(selectCompareAccessOrder({ compare: s }).length).toBe(COMPARE_LRU_WINDOW_SIZE);
+    expect(selectComparePendingLruEviction({ compare: s })).toEqual([]);
+  });
+});
+
+describe('compare-slice — LRU pending eviction selector', () => {
+  test('selectComparePendingEvictionBlobs returns visual blob URLs for evicted pairs', () => {
+    let s: CompareState = initial();
+    for (let i = 0; i < COMPARE_LRU_WINDOW_SIZE + 3; i++) {
+      s = compareReducer(s, visualRequestSucceeded(visualPayload(i)));
+    }
+    const snapshot = selectComparePendingEvictionBlobs({ compare: s });
+    expect(snapshot.length).toBe(3);
+    // Each evicted entry carries its three blob URLs.
+    for (const entry of snapshot) {
+      expect(entry.urls).toContain(`blob:diff-${entry.pairIndex}`);
+      expect(entry.urls).toContain(`blob:left-${entry.pairIndex}`);
+      expect(entry.urls).toContain(`blob:right-${entry.pairIndex}`);
+    }
+  });
+
+  test('selectComparePendingEvictionBlobs ignores text-only entries (no URLs)', () => {
+    let s: CompareState = initial();
+    for (let i = 0; i < COMPARE_LRU_WINDOW_SIZE + 1; i++) {
+      s = compareReducer(s, textRequestSucceeded({ pairIndex: i, value: fakeTextValue(false) }));
+    }
+    const snapshot = selectComparePendingEvictionBlobs({ compare: s });
+    expect(snapshot.length).toBe(1);
+    expect(snapshot[0]?.urls).toEqual([]);
+  });
+});
+
+describe('compare-slice — lruEvictionCompleted reducer', () => {
+  test('drops the named pageResults entries + clears matching pending eviction', () => {
+    let s: CompareState = initial();
+    for (let i = 0; i < COMPARE_LRU_WINDOW_SIZE + 2; i++) {
+      s = compareReducer(s, visualRequestSucceeded(visualPayload(i)));
+    }
+    const beforePending = selectComparePendingLruEviction({ compare: s });
+    expect(beforePending.length).toBe(2);
+    // Process them.
+    s = compareReducer(s, lruEvictionCompleted([...beforePending]));
+    expect(selectComparePendingLruEviction({ compare: s })).toEqual([]);
+    for (const idx of beforePending) {
+      expect(selectComparePairEntry({ compare: s }, idx)).toBeUndefined();
+    }
+    // Surviving entries are still present.
+    expect(selectComparePairEntry({ compare: s }, COMPARE_LRU_WINDOW_SIZE + 1)).toBeDefined();
+  });
+
+  test('partial completion leaves remaining pending entries intact', () => {
+    let s: CompareState = initial();
+    for (let i = 0; i < COMPARE_LRU_WINDOW_SIZE + 3; i++) {
+      s = compareReducer(s, visualRequestSucceeded(visualPayload(i)));
+    }
+    const allPending = [...selectComparePendingLruEviction({ compare: s })];
+    expect(allPending.length).toBe(3);
+    // Complete only the first.
+    s = compareReducer(s, lruEvictionCompleted([allPending[0]!]));
+    const stillPending = selectComparePendingLruEviction({ compare: s });
+    expect(stillPending).toEqual(allPending.slice(1));
+  });
+});
+
+describe('compare-slice — pairEvicted housekeeping', () => {
+  test('pairEvicted also removes the pair from pageAccessOrder + pendingLruEviction', () => {
+    let s: CompareState = initial();
+    for (let i = 0; i < COMPARE_LRU_WINDOW_SIZE + 2; i++) {
+      s = compareReducer(s, visualRequestSucceeded(visualPayload(i)));
+    }
+    // Manually drop one of the surviving pairs.
+    const survivor = COMPARE_LRU_WINDOW_SIZE + 1;
+    s = compareReducer(s, pairEvicted(survivor));
+    expect(selectCompareAccessOrder({ compare: s })).not.toContain(survivor);
+    // Drop one of the pending-eviction pairs too — the pending queue
+    // should also drop it.
+    const pending = selectComparePendingLruEviction({ compare: s });
+    const target = pending[0]!;
+    s = compareReducer(s, pairEvicted(target));
+    expect(selectComparePendingLruEviction({ compare: s })).not.toContain(target);
   });
 });

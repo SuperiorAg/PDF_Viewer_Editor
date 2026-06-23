@@ -118,6 +118,27 @@ export const COMPARE_ORPHAN_RIGHT_LABEL = 'Only on right';
  *  `width` David echoes back. */
 export const COMPARE_DEFAULT_RENDER_WIDTH = 800;
 
+/**
+ * Per-page LRU window for compare-files cache eviction.
+ *
+ * Post-v0.8.0 follow-up (Riley, 2026-06-18, Julian 11.5 + Wave 7 deferral
+ * close): a long full-scroll compare session on a 1000+-page document
+ * could otherwise accumulate ~3000 live `URL.createObjectURL` blob URLs
+ * (diff-mask + left + right per pair). Capping the live window at this
+ * many pages bounds the heap. 30 is slightly more than a typical
+ * virtualised viewport + overscan, so scroll-back inside the window stays
+ * cache-hot.
+ *
+ * Tradeoff (documented honestly per the brief): this is a heuristic LRU,
+ * not a viewport-aware cache. A user who scrolls past the window and then
+ * scrolls back will pay a re-load round-trip on the evicted page. The
+ * v0.8.0 design accepts that as a memory-ceiling protection — v0.9.0+
+ * could promote to a more sophisticated viewport-aware cache if user
+ * feedback warrants. The window size was picked to keep the common case
+ * (linear scroll, occasional 1–2 page scroll-back) free.
+ */
+export const COMPARE_LRU_WINDOW_SIZE = 30;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -192,6 +213,21 @@ export interface CompareState {
   inflightText: Record<number, true>;
   /** Set of pairIndexes whose visual-mode IPC is in flight. */
   inflightVisual: Record<number, true>;
+  /**
+   * LRU queue of pairIndexes — index 0 is the most-recently-accessed.
+   * Updated whenever a page-result lands. Capped at
+   * `COMPARE_LRU_WINDOW_SIZE`; overflow pairs are pushed into
+   * `pendingLruEviction` for the thunk layer to revoke + drop.
+   */
+  pageAccessOrder: number[];
+  /**
+   * Pair indexes that fell out of the LRU window on the most recent
+   * `text|visualRequestSucceeded`. The thunk reads this, revokes any blob
+   * URLs the entries held, then dispatches `lruEvictionCompleted` (which
+   * clears the queue AND removes the entries from `pageResults`).
+   * Always-empty between thunks; a buffer, not durable state.
+   */
+  pendingLruEviction: number[];
 }
 
 const initialSetup: CompareSetupState = {
@@ -209,7 +245,33 @@ const initialState: CompareState = {
   pageResults: {},
   inflightText: {},
   inflightVisual: {},
+  pageAccessOrder: [],
+  pendingLruEviction: [],
 };
+
+/**
+ * Push `pairIndex` to the front of the LRU queue (or move it there if
+ * already present), then drain any pair indexes that fell out of the
+ * back of the LRU window into `pendingLruEviction`. Pair indexes that
+ * are still in the access window are left untouched.
+ *
+ * The reducers below call this for both text + visual success — either
+ * one "uses" the pair from a memory-pressure standpoint, so the access
+ * count merges across modes.
+ */
+function bumpAccessOrder(state: CompareState, pairIndex: number): void {
+  const existing = state.pageAccessOrder.indexOf(pairIndex);
+  if (existing !== -1) {
+    state.pageAccessOrder.splice(existing, 1);
+  }
+  state.pageAccessOrder.unshift(pairIndex);
+  while (state.pageAccessOrder.length > COMPARE_LRU_WINDOW_SIZE) {
+    const evicted = state.pageAccessOrder.pop();
+    if (evicted !== undefined && !state.pendingLruEviction.includes(evicted)) {
+      state.pendingLruEviction.push(evicted);
+    }
+  }
+}
 
 function emptyEntry(): ComparePairResults {
   return {
@@ -262,6 +324,8 @@ export const compareSlice = createSlice({
       state.pageResults = {};
       state.inflightText = {};
       state.inflightVisual = {};
+      state.pageAccessOrder = [];
+      state.pendingLruEviction = [];
       state.viewMode = 'text';
     },
     sessionClosed(state) {
@@ -269,6 +333,8 @@ export const compareSlice = createSlice({
       state.pageResults = {};
       state.inflightText = {};
       state.inflightVisual = {};
+      state.pageAccessOrder = [];
+      state.pendingLruEviction = [];
       state.viewMode = 'text';
     },
     viewModeChanged(state, action: PayloadAction<CompareViewMode>) {
@@ -293,6 +359,7 @@ export const compareSlice = createSlice({
       entry.text.textValue = value;
       entry.text.errorMessage = null;
       state.pageResults[pairIndex] = entry;
+      bumpAccessOrder(state, pairIndex);
     },
     textRequestFailed(state, action: PayloadAction<{ pairIndex: number; message: string }>) {
       const { pairIndex, message } = action.payload;
@@ -330,6 +397,7 @@ export const compareSlice = createSlice({
       entry.visual.rightUrl = rightUrl;
       entry.visual.errorMessage = null;
       state.pageResults[pairIndex] = entry;
+      bumpAccessOrder(state, pairIndex);
     },
     visualRequestFailed(state, action: PayloadAction<{ pairIndex: number; message: string }>) {
       const { pairIndex, message } = action.payload;
@@ -340,9 +408,40 @@ export const compareSlice = createSlice({
       state.pageResults[pairIndex] = entry;
     },
     /** Clears the cached entry for a pair index. Thunks call this AFTER
-     *  revoking any blob URLs the entry held. */
+     *  revoking any blob URLs the entry held. Also drops the pair from the
+     *  LRU queue + pending-eviction buffer (in case it was about to be
+     *  evicted anyway). */
     pairEvicted(state, action: PayloadAction<number>) {
-      delete state.pageResults[action.payload];
+      const pairIndex = action.payload;
+      delete state.pageResults[pairIndex];
+      const accessIdx = state.pageAccessOrder.indexOf(pairIndex);
+      if (accessIdx !== -1) state.pageAccessOrder.splice(accessIdx, 1);
+      const pendingIdx = state.pendingLruEviction.indexOf(pairIndex);
+      if (pendingIdx !== -1) state.pendingLruEviction.splice(pendingIdx, 1);
+    },
+    /**
+     * Mark the LRU-driven eviction as fully processed. The thunk revokes
+     * outstanding blob URLs first (per the close-thunk pattern), then
+     * dispatches this to drop the actual `pageResults` entries + clear the
+     * pending queue in one atomic reducer call.
+     *
+     * Accepts the exact list the thunk just processed so the slice does
+     * not race against newer LRU pushes between the read + the dispatch.
+     */
+    lruEvictionCompleted(state, action: PayloadAction<number[]>) {
+      for (const pairIndex of action.payload) {
+        delete state.pageResults[pairIndex];
+        // pageAccessOrder doesn't carry these pairs (they fell off the
+        // back) but clear defensively in case a same-tick re-load brought
+        // them back to the head.
+        const idx = state.pageAccessOrder.indexOf(pairIndex);
+        if (idx !== -1) state.pageAccessOrder.splice(idx, 1);
+      }
+      // Drop the matching pending-eviction entries; leave any newer
+      // overflow that landed between the thunk read + dispatch in place.
+      state.pendingLruEviction = state.pendingLruEviction.filter(
+        (idx) => !action.payload.includes(idx),
+      );
     },
     /** Resets to initial. The thunks revoke any outstanding blob URLs first. */
     cleared() {
@@ -368,6 +467,7 @@ export const {
   visualRequestSucceeded,
   visualRequestFailed,
   pairEvicted,
+  lruEvictionCompleted,
   cleared,
 } = compareSlice.actions;
 
@@ -475,4 +575,43 @@ export function selectCompareTextInflight(state: RootSlice, pairIndex: number): 
 
 export function selectCompareVisualInflight(state: RootSlice, pairIndex: number): boolean {
   return state.compare.inflightVisual[pairIndex] === true;
+}
+
+/** Current LRU access order — most-recent first. Exposed for tests; the
+ *  thunks don't normally read this. */
+export function selectCompareAccessOrder(state: RootSlice): readonly number[] {
+  return state.compare.pageAccessOrder;
+}
+
+/** Pair indexes the LRU window pushed out — the thunk reads, processes,
+ *  then dispatches `lruEvictionCompleted` to clear. Always-empty between
+ *  thunks, by design. */
+export function selectComparePendingLruEviction(state: RootSlice): readonly number[] {
+  return state.compare.pendingLruEviction;
+}
+
+/**
+ * For each pair index in `pendingLruEviction`, the list of blob URLs the
+ * entry currently holds (visual mode only — text mode has none). Used by
+ * the eviction thunk to revoke before dispatching `lruEvictionCompleted`.
+ */
+export function selectComparePendingEvictionBlobs(
+  state: RootSlice,
+): ReadonlyArray<{ pairIndex: number; urls: string[] }> {
+  const out: { pairIndex: number; urls: string[] }[] = [];
+  for (const pairIndex of state.compare.pendingLruEviction) {
+    const entry = state.compare.pageResults[pairIndex];
+    if (!entry) {
+      // Already gone — push an empty so the thunk still dispatches the
+      // completion for the index (idempotent guard).
+      out.push({ pairIndex, urls: [] });
+      continue;
+    }
+    const urls: string[] = [];
+    if (entry.visual.diffMaskUrl) urls.push(entry.visual.diffMaskUrl);
+    if (entry.visual.leftUrl) urls.push(entry.visual.leftUrl);
+    if (entry.visual.rightUrl) urls.push(entry.visual.rightUrl);
+    out.push({ pairIndex, urls });
+  }
+  return out;
 }

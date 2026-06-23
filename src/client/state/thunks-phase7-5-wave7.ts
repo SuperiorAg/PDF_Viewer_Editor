@@ -42,6 +42,7 @@ import {
   cleared,
   fromContractTextValue,
   fromContractVisualValue,
+  lruEvictionCompleted,
   sessionClosed,
   sessionOpened,
   setupOpeningFailed,
@@ -54,6 +55,8 @@ import {
   visualRequestSucceeded,
   COMPARE_DEFAULT_RENDER_WIDTH,
   selectComparePairEntry,
+  selectComparePendingEvictionBlobs,
+  selectComparePendingLruEviction,
   selectCompareEvictableBlobs,
   selectCompareSession,
   selectCompareTextInflight,
@@ -154,6 +157,43 @@ export const openCompareSessionThunk = createAsyncThunk<
 });
 
 // ---------------------------------------------------------------------------
+// processPendingLruEvictionThunk
+// ---------------------------------------------------------------------------
+
+/**
+ * Post-v0.8.0 follow-up (Riley, 2026-06-18 — Julian 11.5 + Wave 7 deferral
+ * close). Whenever a text or visual page load lands and bumps the LRU,
+ * pairs that fell out of `COMPARE_LRU_WINDOW_SIZE` accumulate in
+ * `pendingLruEviction`. This thunk drains them:
+ *   1. Read the pending list + each pair's blob URLs (selector snapshot).
+ *   2. Revoke every blob URL — same hygiene as the close-thunk's
+ *      `selectCompareEvictableBlobs` loop.
+ *   3. Dispatch `lruEvictionCompleted(indexes)` to atomically drop the
+ *      page-result entries AND clear the pending queue.
+ *
+ * Idempotent — a no-op when the queue is empty. Safe to call at the tail
+ * of every success arm; the cost is one selector + one branch.
+ */
+export const processPendingLruEvictionThunk = createAsyncThunk<
+  void,
+  void,
+  { state: RootState; dispatch: AppDispatch }
+>('compare/processPendingLruEviction', async (_unused, thunkApi) => {
+  const state = thunkApi.getState();
+  const pending = selectComparePendingLruEviction(state);
+  if (pending.length === 0) return;
+  const snapshot = selectComparePendingEvictionBlobs(state);
+  for (const entry of snapshot) {
+    for (const url of entry.urls) {
+      URL.revokeObjectURL(url);
+    }
+  }
+  // Atomic completion — pass the exact snapshot index list so the reducer
+  // doesn't race against newer overflow that landed between read + dispatch.
+  thunkApi.dispatch(lruEvictionCompleted(snapshot.map((e) => e.pairIndex)));
+});
+
+// ---------------------------------------------------------------------------
 // ensureCompareTextLoadedThunk
 // ---------------------------------------------------------------------------
 
@@ -190,6 +230,9 @@ export const ensureCompareTextLoadedThunk = createAsyncThunk<
       value: fromContractTextValue(res.value),
     }),
   );
+  // The success reducer may have pushed an old pair off the LRU window;
+  // drain anything that fell out before returning so blob URLs don't pile up.
+  await thunkApi.dispatch(processPendingLruEvictionThunk());
 });
 
 // ---------------------------------------------------------------------------
@@ -246,6 +289,9 @@ export const ensureCompareVisualLoadedThunk = createAsyncThunk<
       rightUrl,
     }),
   );
+  // Drain LRU overflow (visual loads create the most blob URLs, so this
+  // is the high-traffic path for memory protection).
+  await thunkApi.dispatch(processPendingLruEvictionThunk());
 });
 
 // ---------------------------------------------------------------------------
