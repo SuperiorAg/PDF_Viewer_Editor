@@ -2,33 +2,34 @@
 // Sanitize (B20). Per docs/ui-spec-phase-7.5.md §8/§20/§21 and
 // docs/api-contracts.md §19.4.2-§19.4.4.
 //
-// IPC routing follows the same parallel-wave coordination pattern Wave 2
-// established for `pdf:applyRedactions` (see thunks-phase7-4.ts module
-// header): feature-detect the bridge method on `window.pdfApi?.pdf?.<name>`
-// and short-circuit with a structurally-correct `'bridge_unavailable'` /
-// `'engine_failed'` Result when missing. The thunks never `as any` the api
-// proxy — they only narrow the bridge namespace inline at call time so
-// David's parallel preload-bridge commit can land without renderer
-// re-mapping. When David lands the canonical types in `src/ipc/contracts.ts`,
-// the locally-typed stubs in `types/{document-properties,sanitize}-contract-stub.ts`
-// will be promoted to re-export wrappers (mirroring the
-// `links-contract-stub.ts` Wave-4 promotion path).
+// Post-v0.8.0 cleanup 2026-06-18 (Riley, Julian 11.2 close):
+// David's preload bridge for `getDocumentProperties`, `setDocumentProperties`,
+// `setPasswordProtection`, `removeHiddenInfo` has landed (`src/preload/index.ts`,
+// canonical types at `src/ipc/contracts.ts:5293-5302`). The four
+// `(window.pdfApi!.pdf as any).method(req)` scars from Wave 5 are removed —
+// the renderer now narrows through the proper PdfApi type. Only the outer
+// `!window.pdfApi` honesty gate remains (it survives a renderer
+// preload-bridge fault — the same shape every other thunks-phase* uses).
+//
+// The renderer's `applySanitizeThunk` arg keeps the legacy field name
+// `invalidatesSignaturesConfirmed` for parity with the redaction + OCR
+// renderer-side argument shapes (see `applyRedactionsThunk`,
+// `runOcrOnDocumentThunk`). At the IPC boundary the thunk maps it to the
+// canonical field name `confirmSignedDocOverwrite` David's handler validates.
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
 
-import {
-  type DocumentProperties,
-  type PdfGetDocumentPropertiesRequest,
-  type PdfGetDocumentPropertiesResponse,
-  type PdfSetDocumentPropertiesRequest,
-  type PdfSetDocumentPropertiesResponse,
-  type PdfSetPasswordProtectionRequest,
-  type PdfSetPasswordProtectionResponse,
-} from '../types/document-properties-contract-stub';
-import {
-  type PdfRemoveHiddenInfoRequest,
-  type PdfRemoveHiddenInfoResponse,
-} from '../types/sanitize-contract-stub';
+import type {
+  DocumentProperties,
+  PdfGetDocumentPropertiesRequest,
+  PdfGetDocumentPropertiesResponse,
+  PdfRemoveHiddenInfoRequest,
+  PdfRemoveHiddenInfoResponse,
+  PdfSetDocumentPropertiesRequest,
+  PdfSetDocumentPropertiesResponse,
+  PdfSetPasswordProtectionRequest,
+  PdfSetPasswordProtectionResponse,
+} from '../types/ipc-contract';
 
 import {
   setDocPropertiesApplyError,
@@ -49,102 +50,68 @@ import { pushToast } from './slices/ui-slice';
 import { type AppDispatch, type RootState } from './store';
 
 // ============================================================================
-// Feature-detect adapters — same pattern as thunks-phase7-4.ts.
+// IPC boundary — narrow `window.pdfApi.pdf` through the canonical PdfApi type.
+// `bridge_unavailable` survives only as the outermost honesty gate (the
+// renderer must not crash if preload didn't expose `window.pdfApi` at all);
+// per-method feature-detect is no longer needed now David's Wave 5 bridge has
+// landed and the methods are part of the canonical `PdfApi['pdf']` surface.
+//
+// The renderer-side response unions widen each canonical response with the
+// renderer-only `bridge_unavailable` failure shape so the thunks' single
+// `res.error === 'bridge_unavailable'` discriminant covers both. The
+// canonical error union is the source of truth on the wire — this widening
+// is renderer-local only.
 // ============================================================================
 
-function bridgeOk(): boolean {
+/** Renderer-only failure shape returned by the IPC helpers when
+ *  `window.pdfApi` is undefined (the preload bridge didn't run). */
+interface BridgeUnavailableResult {
+  ok: false;
+  error: 'bridge_unavailable';
+  message: string;
+}
+
+const BRIDGE_UNAVAILABLE: BridgeUnavailableResult = {
+  ok: false,
+  error: 'bridge_unavailable',
+  message: 'window.pdfApi is not exposed',
+};
+
+type RendererResponse<R> = R | BridgeUnavailableResult;
+
+function pdfBridgeAvailable(): boolean {
   return typeof window !== 'undefined' && window.pdfApi !== undefined;
 }
 
 async function callGetDocumentProperties(
   req: PdfGetDocumentPropertiesRequest,
-): Promise<PdfGetDocumentPropertiesResponse> {
-  if (!bridgeOk()) {
-    return {
-      ok: false,
-      error: 'bridge_unavailable',
-      message: 'window.pdfApi is not exposed',
-    };
-  }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfNs = window.pdfApi!.pdf as any;
-  if (typeof pdfNs?.getDocumentProperties !== 'function') {
-    return {
-      ok: false,
-      error: 'bridge_unavailable',
-      message:
-        'window.pdfApi.pdf.getDocumentProperties is not exposed (David Wave 5 not yet landed)',
-    };
-  }
-  return (await pdfNs.getDocumentProperties(req)) as PdfGetDocumentPropertiesResponse;
+): Promise<RendererResponse<PdfGetDocumentPropertiesResponse>> {
+  if (!pdfBridgeAvailable()) return BRIDGE_UNAVAILABLE;
+  // pdfBridgeAvailable() narrows at runtime; TS can't carry that narrowing
+  // across the call boundary, so the non-null assertion is the right
+  // expression here (no `as any`).
+  return window.pdfApi!.pdf.getDocumentProperties(req);
 }
 
 async function callSetDocumentProperties(
   req: PdfSetDocumentPropertiesRequest,
-): Promise<PdfSetDocumentPropertiesResponse> {
-  if (!bridgeOk()) {
-    return {
-      ok: false,
-      error: 'bridge_unavailable',
-      message: 'window.pdfApi is not exposed',
-    };
-  }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfNs = window.pdfApi!.pdf as any;
-  if (typeof pdfNs?.setDocumentProperties !== 'function') {
-    return {
-      ok: false,
-      error: 'bridge_unavailable',
-      message:
-        'window.pdfApi.pdf.setDocumentProperties is not exposed (David Wave 5 not yet landed)',
-    };
-  }
-  return (await pdfNs.setDocumentProperties(req)) as PdfSetDocumentPropertiesResponse;
+): Promise<RendererResponse<PdfSetDocumentPropertiesResponse>> {
+  if (!pdfBridgeAvailable()) return BRIDGE_UNAVAILABLE;
+  return window.pdfApi!.pdf.setDocumentProperties(req);
 }
 
 async function callSetPasswordProtection(
   req: PdfSetPasswordProtectionRequest,
-): Promise<PdfSetPasswordProtectionResponse> {
-  if (!bridgeOk()) {
-    return {
-      ok: false,
-      error: 'bridge_unavailable',
-      message: 'window.pdfApi is not exposed',
-    };
-  }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfNs = window.pdfApi!.pdf as any;
-  if (typeof pdfNs?.setPasswordProtection !== 'function') {
-    return {
-      ok: false,
-      error: 'bridge_unavailable',
-      message:
-        'window.pdfApi.pdf.setPasswordProtection is not exposed (David Wave 5 not yet landed)',
-    };
-  }
-  return (await pdfNs.setPasswordProtection(req)) as PdfSetPasswordProtectionResponse;
+): Promise<RendererResponse<PdfSetPasswordProtectionResponse>> {
+  if (!pdfBridgeAvailable()) return BRIDGE_UNAVAILABLE;
+  return window.pdfApi!.pdf.setPasswordProtection(req);
 }
 
 async function callRemoveHiddenInfo(
   req: PdfRemoveHiddenInfoRequest,
-): Promise<PdfRemoveHiddenInfoResponse> {
-  if (!bridgeOk()) {
-    return {
-      ok: false,
-      error: 'bridge_unavailable',
-      message: 'window.pdfApi is not exposed',
-    };
-  }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfNs = window.pdfApi!.pdf as any;
-  if (typeof pdfNs?.removeHiddenInfo !== 'function') {
-    return {
-      ok: false,
-      error: 'bridge_unavailable',
-      message: 'window.pdfApi.pdf.removeHiddenInfo is not exposed (David Wave 5 not yet landed)',
-    };
-  }
-  return (await pdfNs.removeHiddenInfo(req)) as PdfRemoveHiddenInfoResponse;
+): Promise<RendererResponse<PdfRemoveHiddenInfoResponse>> {
+  if (!pdfBridgeAvailable()) return BRIDGE_UNAVAILABLE;
+  return window.pdfApi!.pdf.removeHiddenInfo(req);
 }
 
 // ============================================================================
@@ -286,7 +253,14 @@ export interface ApplySanitizeArg {
 /** Apply the sanitize categories the user has checked. Mirrors the redaction
  *  Apply flow's PAdES gate: first call without the confirm flag; if engine
  *  returns `signed_pdf_requires_confirm`, surface the field-name list in the
- *  slice + leave the modal open for the user to re-arm with confirmed=true. */
+ *  slice + leave the modal open for the user to re-arm with confirmed=true.
+ *
+ *  At the IPC boundary the renderer's `invalidatesSignaturesConfirmed` is
+ *  mapped to the canonical handler-side field `confirmSignedDocOverwrite`
+ *  (the renderer keeps the legacy name for parity with redactions + OCR).
+ *  When the engine returns the signed-PDF gate error, the field-name list
+ *  lives at `details.signatureFieldNames` per the canonical `Result.fail`
+ *  shape — read it from there, not from the legacy stub field. */
 export const applySanitizeThunk = createAsyncThunk<
   void,
   ApplySanitizeArg,
@@ -308,13 +282,17 @@ export const applySanitizeThunk = createAsyncThunk<
     const res = await callRemoveHiddenInfo({
       handle: doc.handle,
       categories,
-      ...(arg.invalidatesSignaturesConfirmed === true
-        ? { invalidatesSignaturesConfirmed: true }
-        : {}),
+      ...(arg.invalidatesSignaturesConfirmed === true ? { confirmSignedDocOverwrite: true } : {}),
     });
     if (!res.ok) {
       if (res.error === 'signed_pdf_requires_confirm') {
-        const fields = res.invalidatedSignatureFields ?? [];
+        // Canonical `Result.fail` surfaces engine-side metadata via the
+        // `details` bag. The sanitize engine populates
+        // `details.signatureFieldNames` (see
+        // `src/main/pdf-ops/sanitize-engine.ts` `signed_pdf_requires_confirm`
+        // branch).
+        const detailFields = (res.details?.['signatureFieldNames'] ?? []) as string[];
+        const fields = Array.isArray(detailFields) ? detailFields : [];
         dispatch(setPendingInvalidatedSignatureFields(fields));
         // Modal stays open; user re-clicks Sanitize after confirming the
         // signature paragraph.
@@ -328,7 +306,7 @@ export const applySanitizeThunk = createAsyncThunk<
     for (const w of res.value.warnings) {
       dispatch(pushToast({ kind: 'warning', message: w }));
     }
-    const removedTotal = Object.values(res.value.itemsRemoved).reduce(
+    const removedTotal = Object.values(res.value.itemsRemoved).reduce<number>(
       (sum, n) => sum + (n ?? 0),
       0,
     );

@@ -1,132 +1,93 @@
-// Document Properties + Password Protection contract stub — Phase 7.5 B21+B8 (Riley Wave 5).
+// Document Properties + Password Protection types — Phase 7.5 B21+B8 (Riley Wave 5).
 //
-// David's canonical `pdf:getDocumentProperties`, `pdf:setDocumentProperties`,
-// and `pdf:setPasswordProtection` channels land in his parallel Wave 5 commit
-// to `src/ipc/contracts.ts`. Until those types are re-exported through the
-// renderer gatekeeper (`./ipc-contract`), the renderer types the surface
-// LOCALLY here against the exact shape in `docs/api-contracts.md §19.4.2` and
-// `§19.4.4`. When David lands, this file becomes a thin re-export wrapper (the
-// same promotion path the `links-contract-stub.ts` followed in Wave 4).
+// PROMOTED 2026-06-18 (Riley, post-v0.8.0 follow-up): David's canonical contract
+// landed in `src/ipc/contracts.ts` Wave 5; the renderer now re-exports from the
+// gatekeeper module (`./ipc-contract`) — the same promotion path the
+// `links-contract-stub.ts` followed in Wave 4. The file kept its filename so
+// existing import sites work unchanged; new code may import directly from
+// `./ipc-contract`.
 //
-// The runtime dispatcher in `state/thunks-phase7-5-wave5.ts` feature-detects
-// the bridge method (`window.pdfApi?.pdf?.getDocumentProperties` etc.) so the
-// renderer compiles and runs even before David's preload bridge exposes them
-// — same `bridge_unavailable` fallback shape `applyRedactions` used in Wave 2.
+// Renderer-only constants (`DEFAULT_PERMISSIONS`) live here — they are UI seed
+// values, not part of the IPC contract.
+//
+// Legacy alias `PdfSecurityPermissions = EncryptionPermissions` (kept as a
+// type-only re-export with a TODO for slice + UI rename) preserves the
+// existing call sites' identifier while canonical reigns on the wire.
 
-import type { DocumentHandle } from './ipc-contract';
+import type {
+  DocumentProperties,
+  EncryptionPermissions,
+  PdfGetDocumentPropertiesError,
+  PdfGetDocumentPropertiesRequest,
+  PdfGetDocumentPropertiesResponse,
+  PdfGetDocumentPropertiesValue,
+  PdfSetDocumentPropertiesError,
+  PdfSetDocumentPropertiesRequest,
+  PdfSetDocumentPropertiesResponse,
+  PdfSetDocumentPropertiesValue,
+  PdfSetPasswordProtectionError,
+  PdfSetPasswordProtectionRequest,
+  PdfSetPasswordProtectionResponse,
+  PdfSetPasswordProtectionValue,
+} from './ipc-contract';
+
+export type {
+  DocumentProperties,
+  EncryptionPermissions,
+  PdfGetDocumentPropertiesError,
+  PdfGetDocumentPropertiesRequest,
+  PdfGetDocumentPropertiesResponse,
+  PdfGetDocumentPropertiesValue,
+  PdfSetDocumentPropertiesError,
+  PdfSetDocumentPropertiesRequest,
+  PdfSetDocumentPropertiesResponse,
+  PdfSetDocumentPropertiesValue,
+  PdfSetPasswordProtectionError,
+  PdfSetPasswordProtectionRequest,
+  PdfSetPasswordProtectionResponse,
+  PdfSetPasswordProtectionValue,
+};
+
+/**
+ * Legacy renderer identifier — alias for canonical `EncryptionPermissions`.
+ *
+ * Kept to avoid a sprawling rename in the slice + UI in this dispatch. New
+ * code should import `EncryptionPermissions` directly. v0.9.0+ may complete
+ * the rename to drop this alias.
+ */
+export type PdfSecurityPermissions = EncryptionPermissions;
 
 // ============================================================================
-// `pdf:getDocumentProperties` + `pdf:setDocumentProperties` (api-contracts §19.4.4)
+// Renderer-only derived types — not part of the IPC contract.
 // ============================================================================
 
-export interface DocumentProperties {
-  title: string | null;
-  author: string | null;
-  subject: string | null;
-  /** PDF /Info Keywords is a single string; split on commas. */
-  keywords: string[];
-  /** The application that originally authored the doc (read-only). */
-  creator: string | null;
-  /** The last-write tool (set by our save path; read-only here). */
-  producer: string | null;
-  /** ms since epoch. Read-only — David's engine handles PDF date parsing. */
-  creationDate: number | null;
-  modificationDate: number | null;
-  trapped: 'true' | 'false' | 'unknown' | null;
-  customMetadata: Record<string, string>;
-}
-
-export interface PdfGetDocumentPropertiesRequest {
-  handle: DocumentHandle;
-}
-
-export type PdfGetDocumentPropertiesError =
-  | 'invalid_payload'
-  | 'handle_not_found'
-  | 'engine_failed';
-
+/**
+ * Inline shape mirror for the `securitySummary` field of the canonical
+ * `PdfGetDocumentPropertiesValue`. Surfaced as a named type so slice + UI
+ * call sites can name the shape they hold without reaching into the nested
+ * canonical type.
+ */
 export interface DocumentSecuritySummary {
   encrypted: boolean;
   encryptionAlgorithm: 'aes-128' | 'aes-256' | 'rc4-128' | 'none';
-  /** Permissions map (`print`, `modify`, `copy`, ...). Empty when not encrypted. */
   permissions: Record<string, boolean>;
 }
 
+/**
+ * Inline shape mirror for the per-page entry in `pageSizes`. Same rationale
+ * as `DocumentSecuritySummary` above.
+ */
 export interface DocumentPageSize {
   pageIndex: number;
   widthPt: number;
   heightPt: number;
 }
 
-export interface PdfGetDocumentPropertiesValue {
-  properties: DocumentProperties;
-  securitySummary: DocumentSecuritySummary;
-  pageSizes: DocumentPageSize[];
-}
-
-export type PdfGetDocumentPropertiesResponse =
-  | { ok: true; value: PdfGetDocumentPropertiesValue }
-  | { ok: false; error: PdfGetDocumentPropertiesError | 'bridge_unavailable'; message: string };
-
-export interface PdfSetDocumentPropertiesRequest {
-  handle: DocumentHandle;
-  /** Only fields the user changed; engine merges into existing /Info dict. */
-  properties: Partial<DocumentProperties>;
-}
-
-export type PdfSetDocumentPropertiesError =
-  | 'invalid_payload'
-  | 'handle_not_found'
-  | 'engine_failed';
-
-export type PdfSetDocumentPropertiesValue = { applied: true };
-
-export type PdfSetDocumentPropertiesResponse =
-  | { ok: true; value: PdfSetDocumentPropertiesValue }
-  | { ok: false; error: PdfSetDocumentPropertiesError | 'bridge_unavailable'; message: string };
-
 // ============================================================================
-// `pdf:setPasswordProtection` (api-contracts §19.4.2, qpdf subprocess)
+// Renderer-only constants — UI seed values.
 // ============================================================================
 
-export interface PdfSecurityPermissions {
-  print: boolean;
-  modify: boolean;
-  copy: boolean;
-  annotate: boolean;
-  fillForms: boolean;
-  extract: boolean;
-  assemble: boolean;
-  printHighRes: boolean;
-}
-
-export interface PdfSetPasswordProtectionRequest {
-  handle: DocumentHandle;
-  /** null = no open password (printing-only restriction case). */
-  openPassword: string | null;
-  /** null = no permissions password. */
-  permissionsPassword: string | null;
-  permissions: PdfSecurityPermissions;
-  encryption: 'aes-128' | 'aes-256';
-}
-
-export type PdfSetPasswordProtectionError =
-  | 'invalid_payload'
-  | 'handle_not_found'
-  | 'engine_unavailable'
-  | 'password_too_short'
-  | 'engine_failed';
-
-export interface PdfSetPasswordProtectionValue {
-  outputBytes: number;
-  newFileHash: string;
-}
-
-export type PdfSetPasswordProtectionResponse =
-  | { ok: true; value: PdfSetPasswordProtectionValue }
-  | { ok: false; error: PdfSetPasswordProtectionError | 'bridge_unavailable'; message: string };
-
-export const DEFAULT_PERMISSIONS: PdfSecurityPermissions = {
+export const DEFAULT_PERMISSIONS: EncryptionPermissions = {
   print: true,
   modify: true,
   copy: true,

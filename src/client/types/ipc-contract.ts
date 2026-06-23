@@ -596,6 +596,42 @@ export type {
   DialogPickExportOutputPathResponse,
 } from '../../ipc/contracts';
 
+// =============================================================================
+// Phase 7.5 Wave 5 — Document Properties (B21) + Security (B8) + Sanitize (B20).
+//
+// David's canonical types land in `src/ipc/contracts.ts` Wave 5. The renderer
+// re-exports the surface so the renderer-local stubs at
+// `./document-properties-contract-stub.ts` and `./sanitize-contract-stub.ts`
+// can be thin re-export wrappers (same pattern as `links-contract-stub` Wave 4
+// promotion). Post-v0.8.0 promotion 2026-06-18 (Riley).
+// =============================================================================
+
+export type {
+  // §19.4.4 — pdf:getDocumentProperties / pdf:setDocumentProperties
+  DocumentProperties,
+  PdfGetDocumentPropertiesRequest,
+  PdfGetDocumentPropertiesError,
+  PdfGetDocumentPropertiesValue,
+  PdfGetDocumentPropertiesResponse,
+  PdfSetDocumentPropertiesRequest,
+  PdfSetDocumentPropertiesError,
+  PdfSetDocumentPropertiesValue,
+  PdfSetDocumentPropertiesResponse,
+  // §19.4.2 — pdf:setPasswordProtection
+  EncryptionAlgorithm,
+  EncryptionPermissions,
+  PdfSetPasswordProtectionRequest,
+  PdfSetPasswordProtectionError,
+  PdfSetPasswordProtectionValue,
+  PdfSetPasswordProtectionResponse,
+  // §19.4.3 — pdf:removeHiddenInfo
+  SanitizeCategory,
+  PdfRemoveHiddenInfoRequest,
+  PdfRemoveHiddenInfoError,
+  PdfRemoveHiddenInfoValue,
+  PdfRemoveHiddenInfoResponse,
+} from '../../ipc/contracts';
+
 // Renderer-only namespace aliases + value-named imports — derived from David's
 // canonical PdfApi shape for use in services/api.ts proxy declarations and the
 // renderer-local helper types below. Consolidated into one import statement
