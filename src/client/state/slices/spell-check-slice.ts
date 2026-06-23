@@ -256,15 +256,26 @@ export const selectSpellSettingsOpen = (state: { spellCheck: SpellCheckState }):
 export const selectSpellPopup = (state: { spellCheck: SpellCheckState }): SuggestionPopupState =>
   state.spellCheck.popup;
 
+/** Stable empty array — returned when there's nothing to show. Reusing the
+ *  same reference prevents `useSelector` "selector returned a different
+ *  value" identity warnings on every render (post-v0.8.0 follow-up,
+ *  Riley 2026-06-18). */
+const EMPTY_MISSPELLINGS: readonly SpellMisspelling[] = [];
+
 export const selectMisspellingsFor = (
   state: { spellCheck: SpellCheckState },
   pageIndex: number,
   objectId: string,
-): SpellMisspelling[] => {
-  if (!state.spellCheck.enabled) return [];
+): readonly SpellMisspelling[] => {
+  if (!state.spellCheck.enabled) return EMPTY_MISSPELLINGS;
   const entry = state.spellCheck.recentChecks[`${pageIndex}:${objectId}`];
-  if (!entry) return [];
-  // Filter out ignored-once words.
+  if (!entry) return EMPTY_MISSPELLINGS;
+  // Fast path: when no ignored-once entries touch this object, the cache
+  // entry's array IS the answer — return the underlying reference so
+  // useSelector stays referentially stable across renders.
+  const ignorePrefix = `${pageIndex}:${objectId}:`;
+  const hasRelevantIgnore = state.spellCheck.ignoredOnce.some((k) => k.startsWith(ignorePrefix));
+  if (!hasRelevantIgnore) return entry.misspellings;
   return entry.misspellings.filter(
     (m) =>
       !state.spellCheck.ignoredOnce.includes(`${pageIndex}:${objectId}:${m.word.toLowerCase()}`),

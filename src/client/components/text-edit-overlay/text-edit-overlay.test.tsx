@@ -14,6 +14,7 @@ import { Provider } from 'react-redux';
 import { describe, expect, it } from 'vitest';
 
 import documentReducer from '../../state/slices/document-slice';
+import spellCheckReducer from '../../state/slices/spell-check-slice';
 import uiReducer from '../../state/slices/ui-slice';
 
 import { TextEditOverlay } from './index';
@@ -37,7 +38,7 @@ interface TestStoreOpts {
 
 function makeStore(opts: TestStoreOpts): ReturnType<typeof configureStore> {
   return configureStore({
-    reducer: { ui: uiReducer, document: documentReducer },
+    reducer: { ui: uiReducer, document: documentReducer, spellCheck: spellCheckReducer },
     preloadedState: {
       ui: {
         sidebarTab: 'thumbnails' as const,

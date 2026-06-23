@@ -126,3 +126,52 @@
 .cancelEditButton:hover {
   background: var(--color-bg-hover);
 }
+
+/* Spell-check wavy underlines — post-v0.8.0 follow-up (Riley, Wave 6 deferral
+ * close). Absolutely positioned over the inline editor input at the character
+ * offset of each misspelling. Per-character widths come from the active span's
+ * font.glyphWidths, so the underline aligns under the glyphs the user typed
+ * (NOT the proportional CSS-font-rendered glyphs, which may drift on
+ * non-Helvetica system fonts; this is the same width source measureText() uses
+ * for clip detection, so the two are guaranteed to agree).
+ *
+ * `pointerEvents: auto` on the underline lets right-click reach the span and
+ * trigger the suggestion popup. `userSelect: none` keeps the underline out of
+ * text selections in the input.
+ */
+.spellUnderlineLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 61;
+}
+
+.spellUnderline {
+  position: absolute;
+  bottom: 1px;
+  height: 4px;
+  /* Pure-CSS wavy underline using a stacked radial-gradient pattern; degrades
+   * gracefully to a solid red underline on browsers that don't render
+   * text-decoration: wavy in absolute-positioned overlays. */
+  background-image: radial-gradient(
+    circle at 50% 100%,
+    var(--color-accent-red, #d33) 30%,
+    transparent 35%
+  );
+  background-size: 4px 4px;
+  background-repeat: repeat-x;
+  cursor: context-menu;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.spellUnderline:hover {
+  background-image: radial-gradient(
+    circle at 50% 100%,
+    var(--color-accent-red-hover, #b00) 30%,
+    transparent 35%
+  );
+}

@@ -31,7 +31,9 @@ import {
 } from '../../state/slices/ui-slice';
 import { replaceTextThunk } from '../../state/thunks';
 
+import { SpellUnderlineLayer } from './spell-underline-layer';
 import styles from './text-edit-overlay.module.css';
+import { useSpellCheckTextEdit } from './use-spell-check-text-edit';
 
 interface MeasureResult {
   newWidth: number;
@@ -79,6 +81,15 @@ export function TextEditOverlay(): JSX.Element | null {
       inputRef.current?.select();
     }
   }, [activeSpan]);
+
+  // Debounced spell-check trigger — hook handles the enabled-flag gate
+  // internally so it's safe to call unconditionally before the activeSpan
+  // null branch below.
+  useSpellCheckTextEdit({
+    pageIndex: activeSpan?.pageIndex ?? null,
+    objectId: activeSpan?.objectId ?? null,
+    draftText,
+  });
 
   if (!active) return null;
 
@@ -177,6 +188,15 @@ export function TextEditOverlay(): JSX.Element | null {
           onChange={(e) => dispatch(setTextEditDraft(e.target.value))}
           onKeyDown={onKeyDown}
           aria-label="Edit text"
+        />
+        <SpellUnderlineLayer
+          pageIndex={activeSpan.pageIndex}
+          objectId={activeSpan.objectId}
+          glyphWidths={activeSpan.font.glyphWidths}
+          fontSize={activeSpan.font.size}
+          draftText={draftText}
+          anchorBaseX={activeSpan.runBoundingRect.x}
+          anchorBaseY={activeSpan.runBoundingRect.y + activeSpan.runBoundingRect.height}
         />
         {hasMissingGlyph && (
           <div className={styles.missingGlyphTooltip} role="alert">
