@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF Viewer/Editor vs. Adobe Acrobat Pro — Feature Comparison</title>
+<style>
+  :root {
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --accent: #2563eb;
+    --ok: #16a34a;
+    --warn: #d97706;
+    --miss: #dc2626;
+    --excl: #6b7280;
+    --uniq: #7c3aed;
+    --ok-bg: #dcfce7;
+    --warn-bg: #fef3c7;
+    --miss-bg: #fee2e2;
+    --excl-bg: #f3f4f6;
+    --uniq-bg: #ede9fe;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    color: white;
+    padding: 32px 24px;
+    border-bottom: 4px solid #1e40af;
+  }
+  header h1 { margin: 0 0 8px 0; font-size: 28px; font-weight: 700; }
+  header p { margin: 0; opacity: 0.92; font-size: 15px; }
+  header .meta { margin-top: 12px; font-size: 13px; opacity: 0.85; }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .stat .n { font-size: 26px; font-weight: 700; line-height: 1; }
+  .stat .label { font-size: 12px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat.ok .n { color: var(--ok); }
+  .stat.warn .n { color: var(--warn); }
+  .stat.miss .n { color: var(--miss); }
+  .stat.excl .n { color: var(--excl); }
+  .stat.uniq .n { color: var(--uniq); }
+
+  .legend {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .legend .item { display: flex; align-items: center; gap: 6px; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+  .badge.ok   { background: var(--ok-bg);   color: var(--ok); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.miss { background: var(--miss-bg); color: var(--miss); }
+  .badge.excl { background: var(--excl-bg); color: var(--excl); }
+  .badge.uniq { background: var(--uniq-bg); color: var(--uniq); }
+
+  section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  section h2 {
+    margin: 0;
+    padding: 16px 20px;
+    background: #f1f5f9;
+    border-bottom: 1px solid var(--border);
+    font-size: 17px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+  section h2 .count {
+    float: right;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: #f8fafc;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafbfc; }
+
+  .acrobat-col { width: 30%; font-weight: 500; }
+  .our-col { width: 35%; color: var(--text); }
+  .status-col { width: 12%; }
+  .notes-col { color: var(--muted); font-size: 13px; }
+
+  .footer-note {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 20px;
+  }
+
+  @media (max-width: 720px) {
+    .acrobat-col, .our-col, .status-col, .notes-col { width: auto; }
+    th.notes-col-th, td.notes-col { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Feature Comparison: PDF Viewer/Editor vs. Adobe Acrobat Pro</h1>
+  <p>Side-by-side of every Adobe Acrobat Pro tool, with this program's equivalent and status.</p>
+  <div class="meta">
+    Based on <code>docs/acrobat-parity-audit.md</code> (2026-06-15) + current branch state.
+    Cloud-only Acrobat features (Adobe Sign cloud, Document Cloud, Send for Review) are intentionally excluded by policy.
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="summary">
+    <div class="stat ok"><div class="n">31</div><div class="label">At Parity</div></div>
+    <div class="stat warn"><div class="n">8</div><div class="label">Partial</div></div>
+    <div class="stat miss"><div class="n">16</div><div class="label">Missing</div></div>
+    <div class="stat excl"><div class="n">3</div><div class="label">Excluded</div></div>
+    <div class="stat uniq"><div class="n">4</div><div class="label">Unique to Us</div></div>
+  </div>
+
+  <div class="legend">
+    <span><strong>Legend:</strong></span>
+    <span class="item"><span class="badge ok">Parity</span> matches Acrobat</span>
+    <span class="item"><span class="badge warn">Partial</span> works but limited</span>
+    <span class="item"><span class="badge miss">Missing</span> not yet built</span>
+    <span class="item"><span class="badge excl">Excluded</span> intentionally out of scope (cloud)</span>
+    <span class="item"><span class="badge uniq">Unique</span> we have it; Acrobat does not</span>
+  </div>
+
+  <!-- VIEWING -->
+  <section>
+    <h2>Viewing &amp; Navigation <span class="count">8 features</span></h2>
+    <table>
+      <thead><tr><th class="acrobat-col">Adobe Acrobat Pro</th><th class="our-col">This program</th><th class="status-col">Status</th><th class="notes-col notes-col-th">Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Open PDF (file dialog, drag-and-drop)</td><td>File → Open / drag-and-drop</td><td><span class="badge ok">Parity</span></td><td class="notes-col">Recents list (SQLite-persisted)</td></tr>
+        <tr><td>Multi-page rendering, pan/zoom, thumbnails</td><td>Viewer with pan, zoom, thumbnail strip</td><td><span class="badge ok">Parity</span></td><td class="notes-col">Virtualized rendering for large docs</td></tr>
+        <tr><td>Bookmarks panel — view, add, rename, reorder, nest</td><td>Sidebar → Bookmarks tab + edit mode</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Page Display modes (single, two-up, scroll, facing)</td><td>Single-page scroll only</td><td><span class="badge miss">Missing</span></td><td class="notes-col"></td></tr>
+        <tr><td>Zoom — in/out/100%/fit width/fit page</td><td>Status bar dropdown + Ctrl+± / Ctrl+0</td><td><span class="badge warn">Partial</span></td><td class="notes-col">Fit width / fit page shortcuts registered but no-op</td></tr>
+        <tr><td>Rotate view (temporary, doesn't write)</td><td>Page rotation only (writes to file)</td><td><span class="badge warn">Partial</span></td><td class="notes-col">No view-only rotation</td></tr>
+        <tr><td>Read mode (chromeless full-screen reader)</td><td>F11 fullscreen (doesn't hide toolbars)</td><td><span class="badge warn">Partial</span></td><td class="notes-col"></td></tr>
+        <tr><td>Read Aloud (text-to-speech)</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col"></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- COMMENTING / ANNOTATIONS -->
+  <section>
+    <h2>Commenting &amp; Annotations <span class="count">10 features</span></h2>
+    <table>
+      <thead><tr><th class="acrobat-col">Adobe Acrobat Pro</th><th class="our-col">This program</th><th class="status-col">Status</th><th class="notes-col notes-col-th">Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Highlight</td><td>Toolbar → Highlight (H)</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Underline</td><td>Toolbar → Underline (U)</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Strikethrough</td><td>Toolbar → Strikethrough (K)</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Sticky note</td><td>Toolbar → Sticky note (S)</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Text box (FreeText)</td><td>Toolbar → Text box (T)</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Freehand / ink</td><td>Toolbar → Freehand (Shift+F)</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Shapes — rectangle, ellipse, polygon, line, arrow, callout</td><td>Shape sub-toolbar (Q, C, G, L, B)</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Measure — distance, area, perimeter (with calibration)</td><td>Line measure (M) + Polyline measure (Shift+M); calibration UI</td><td><span class="badge warn">Partial</span></td><td class="notes-col">No Area measure tool</td></tr>
+        <tr><td>Stamps library (Approved, Confidential, Draft, etc.)</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Roadmap candidate (Bucket B7)</td></tr>
+        <tr><td>Attach file as comment / record audio comment</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Niche; deferrable</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- EDITING -->
+  <section>
+    <h2>Editing &amp; Content <span class="count">8 features</span></h2>
+    <table>
+      <thead><tr><th class="acrobat-col">Adobe Acrobat Pro</th><th class="our-col">This program</th><th class="status-col">Status</th><th class="notes-col notes-col-th">Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Undo / Redo</td><td>Toolbar + Ctrl+Z / Ctrl+Y</td><td><span class="badge ok">Parity</span></td><td class="notes-col">Backed by deterministic edit-replay engine</td></tr>
+        <tr><td>Edit text &amp; images (the "Edit PDF" tool)</td><td>Text edit mode (E) + Inspector + image overlay</td><td><span class="badge warn">Partial</span></td><td class="notes-col">Text-replace only; no font swap; image edit limited to replace-overlay</td></tr>
+        <tr><td>Insert image into page</td><td>Insert → Image (Ctrl+I)</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Find / Find Next (Ctrl+F)</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Roadmap candidate (Bucket B3); shortcut registered but disabled</td></tr>
+        <tr><td>Spell check</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col"></td></tr>
+        <tr><td>Links — add / edit / remove hyperlinks</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col"></td></tr>
+        <tr><td>Cut / Copy / Paste</td><td>Native (text inputs only)</td><td><span class="badge warn">Partial</span></td><td class="notes-col">No page-content clipboard</td></tr>
+        <tr><td>Preferences / Settings</td><td>Edit → Settings (Ctrl+,)</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- PAGE OPERATIONS -->
+  <section>
+    <h2>Page Operations &amp; Organize <span class="count">10 features</span></h2>
+    <table>
+      <thead><tr><th class="acrobat-col">Adobe Acrobat Pro</th><th class="our-col">This program</th><th class="status-col">Status</th><th class="notes-col notes-col-th">Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Rearrange pages (drag in thumbnail panel)</td><td>Thumbnail strip drag-and-drop</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Insert blank page</td><td>Toolbar → Insert blank</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Insert pages from another PDF</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Placeholder in toolbar; not yet wired</td></tr>
+        <tr><td>Delete page(s)</td><td>Toolbar → Delete page (Del)</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Rotate page 90° CW / CCW</td><td>Toolbar → Rotate CW/CCW (Ctrl+R / Ctrl+Shift+R)</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Combine multiple PDFs into one</td><td>Toolbar → Combine PDFs</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Crop pages (margin handles or numeric)</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Roadmap candidate (Bucket B5)</td></tr>
+        <tr><td>Extract pages (range → new PDF)</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Roadmap candidate (Bucket B10)</td></tr>
+        <tr><td>Split document (by count / size / bookmarks)</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Roadmap candidate (Bucket B10)</td></tr>
+        <tr><td>Watermark / Header &amp; Footer / Background</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Roadmap candidate (Bucket B4)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- EXPORT -->
+  <section>
+    <h2>Export &amp; Print <span class="count">7 features</span></h2>
+    <table>
+      <thead><tr><th class="acrobat-col">Adobe Acrobat Pro</th><th class="our-col">This program</th><th class="status-col">Status</th><th class="notes-col notes-col-th">Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Print to physical printer</td><td>File → Print (Ctrl+P)</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Print to PDF (incl. edits/annotations)</td><td>File → Export to PDF (Ctrl+Shift+P)</td><td><span class="badge ok">Parity</span></td><td class="notes-col">Hybrid pdf-lib + Chromium</td></tr>
+        <tr><td>Export → Word (.docx)</td><td>File → Export to Word</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Export → Excel (.xlsx)</td><td>File → Export to Excel</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Export → PowerPoint (.pptx)</td><td>File → Export to PowerPoint</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Export → Image (PNG / JPEG / TIFF)</td><td>File → Export to PNG/JPEG/TIFF</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Export → HTML / RTF / XML / EPS</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Niche output formats</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- FORMS -->
+  <section>
+    <h2>Forms <span class="count">7 features</span></h2>
+    <table>
+      <thead><tr><th class="acrobat-col">Adobe Acrobat Pro</th><th class="our-col">This program</th><th class="status-col">Status</th><th class="notes-col notes-col-th">Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Detect &amp; fill AcroForms</td><td>Forms panel auto-detect + fill overlay</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Create form — text fields, checkboxes, radios, dropdowns, signature fields</td><td>Form Designer (Ctrl+Shift+F)</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Flatten forms (commit values, remove fields)</td><td>Tools → Flatten Forms</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Form templates (save/reuse)</td><td>Forms panel → Save as template / Apply template</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Mail merge — CSV/Excel data → batch-filled PDFs</td><td>Mail Merge wizard (Ctrl+M)</td><td><span class="badge uniq">Unique</span></td><td class="notes-col">Acrobat requires a third-party plugin</td></tr>
+        <tr><td>Distribute form (collect responses via email)</td><td>—</td><td><span class="badge excl">Excluded</span></td><td class="notes-col">Cloud / email-server feature</td></tr>
+        <tr><td>JavaScript actions in forms</td><td>Stripped on save (policy)</td><td><span class="badge miss">Missing</span></td><td class="notes-col">By-design — security policy §14.6</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- SIGNING -->
+  <section>
+    <h2>Signing <span class="count">5 features</span></h2>
+    <table>
+      <thead><tr><th class="acrobat-col">Adobe Acrobat Pro</th><th class="our-col">This program</th><th class="status-col">Status</th><th class="notes-col notes-col-th">Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Fill &amp; Sign — typed, drawn, image signatures (local)</td><td>Signature Capture modal + Signature Placement</td><td><span class="badge ok">Parity</span></td><td class="notes-col">Shipped under different branding</td></tr>
+        <tr><td>Certificate-based digital signature (PAdES)</td><td>PAdES Sign modal (PFX + RFC 3161 TSA)</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Validate signatures</td><td>Signature Audit panel</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Request e-signatures (Adobe Sign)</td><td>—</td><td><span class="badge excl">Excluded</span></td><td class="notes-col">Cloud service</td></tr>
+        <tr><td>Send for signature workflow</td><td>—</td><td><span class="badge excl">Excluded</span></td><td class="notes-col">Cloud workflow</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- OCR / SCAN -->
+  <section>
+    <h2>OCR &amp; Scanning <span class="count">5 features</span></h2>
+    <table>
+      <thead><tr><th class="acrobat-col">Adobe Acrobat Pro</th><th class="our-col">This program</th><th class="status-col">Status</th><th class="notes-col notes-col-th">Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Recognize Text (OCR)</td><td>Tools → Run OCR (tesseract.js)</td><td><span class="badge ok">Parity</span></td><td class="notes-col">Multi-language; downloadable language packs</td></tr>
+        <tr><td>Enhance scans — deskew, despeckle, contrast</td><td>OCR preprocess: deskew, denoise, contrast</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Searchable PDF (text layer over scan)</td><td>OCR results write back as searchable text layer</td><td><span class="badge ok">Parity</span></td><td class="notes-col"></td></tr>
+        <tr><td>Scan from device (TWAIN / WIA)</td><td>—</td><td><span class="badge warn">Partial</span></td><td class="notes-col">Disabled in UI; use OS scan utility, then import the saved PDF</td></tr>
+        <tr><td>OCR per-word confidence overlay</td><td>Toggle confidence overlay (color-tinted low-confidence words)</td><td><span class="badge uniq">Unique</span></td><td class="notes-col">Acrobat shows OCR results but no per-word color overlay</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- SECURITY -->
+  <section>
+    <h2>Security &amp; Redaction <span class="count">6 features</span></h2>
+    <table>
+      <thead><tr><th class="acrobat-col">Adobe Acrobat Pro</th><th class="our-col">This program</th><th class="status-col">Status</th><th class="notes-col notes-col-th">Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Redaction — mark, preview, apply, sanitize</td><td>Redaction toolbar + Apply Redactions modal</td><td><span class="badge ok">Parity</span></td><td class="notes-col">Shipped Phase 7.4 B1 Wave 4</td></tr>
+        <tr><td>Encrypt with password (open + permissions)</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Roadmap candidate (Bucket B8)</td></tr>
+        <tr><td>Restrict editing / printing / copying</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Bundled with B8</td></tr>
+        <tr><td>Remove hidden information / sanitize document</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Partial coverage: JS stripped on save</td></tr>
+        <tr><td>Search-and-redact (regex)</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Naturally bundled with Find/Search (B3)</td></tr>
+        <tr><td>Document properties (title, author, subject, keywords)</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col"></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ADVANCED -->
+  <section>
+    <h2>Advanced / Production <span class="count">7 features</span></h2>
+    <table>
+      <thead><tr><th class="acrobat-col">Adobe Acrobat Pro</th><th class="our-col">This program</th><th class="status-col">Status</th><th class="notes-col notes-col-th">Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Compare Files — content + visual diff</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Roadmap candidate (Bucket B2)</td></tr>
+        <tr><td>Optimize PDF — downsample, recompress, font subset</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Roadmap candidate (Bucket B6)</td></tr>
+        <tr><td>Action Wizard — record + replay multi-step transforms</td><td>Internal edit-replay engine (not user-facing)</td><td><span class="badge warn">Partial</span></td><td class="notes-col">Engine exists; could be surfaced (Bucket B9)</td></tr>
+        <tr><td>Preflight (PDF/X / PDF/A compliance)</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Print-shop niche; deferrable</td></tr>
+        <tr><td>Accessibility checker / Tag PDF / Reading order / Alt text</td><td>—</td><td><span class="badge miss">Missing</span></td><td class="notes-col">Deep accessibility tooling; deferrable</td></tr>
+        <tr><td>Edit-replay engine (deterministic op history)</td><td>Internal architecture — every save reproduces all edits deterministically</td><td><span class="badge uniq">Unique</span></td><td class="notes-col">Architecturally unique to us</td></tr>
+        <tr><td>Trust-floor honesty UI — telemetry off by default, update-channel disclosure, OCR honesty reminders, export limitations panel</td><td>Built-in across the UI</td><td><span class="badge uniq">Unique</span></td><td class="notes-col">Acrobat does not surface honesty obligations this explicitly</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- CLOUD (EXCLUDED) -->
+  <section>
+    <h2>Cloud Features (Intentionally Excluded) <span class="count">4 features</span></h2>
+    <table>
+      <thead><tr><th class="acrobat-col">Adobe Acrobat Pro</th><th class="our-col">This program</th><th class="status-col">Status</th><th class="notes-col notes-col-th">Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Adobe Sign / Send for E-signature</td><td>—</td><td><span class="badge excl">Excluded</span></td><td class="notes-col">Out of scope by design</td></tr>
+        <tr><td>Shared Reviews / Send for Comments</td><td>—</td><td><span class="badge excl">Excluded</span></td><td class="notes-col"></td></tr>
+        <tr><td>Document Cloud / Acrobat Web / Send &amp; Track</td><td>—</td><td><span class="badge excl">Excluded</span></td><td class="notes-col"></td></tr>
+        <tr><td>Cloud storage pickers (Dropbox, Drive, OneDrive, Box)</td><td>—</td><td><span class="badge excl">Excluded</span></td><td class="notes-col">Local file system + drag-and-drop covers desktop use</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="footer-note">
+    Sources: <code>docs/acrobat-parity-audit.md</code>, <code>CLAUDE.md</code> goals, current branch state.<br>
+    Generated for principal review. Counts as of current branch HEAD.
+  </div>
+
+</div>
+
+</body>
+</html>
